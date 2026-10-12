@@ -80,7 +80,7 @@ function drMode(m) { D.mode = m; D.modeT = 0; D.faceHold = 0; }   // yeni mod: z
 function drSay(k, opt) { if (typeof SES !== 'undefined' && SES && SES.soyle) { try { SES.soyle(k, opt); } catch (e) {} } }
 function drSfx(k, v) { if (typeof AU !== 'undefined' && AU && AU.sfx) { try { AU.sfx(k, v); } catch (e) {} } }
 function drFree() { return D.mode === 'follow' || D.mode === 'orbit'; }
-function drBusy() { return D.mode === 'push' || D.mode === 'tasi' || D.mode === 'dalis' || D.mode === 'nefes' || D.mode === 'yardim'; }
+function drBusy() { return D.mode === 'push' || D.mode === 'tasi' || D.mode === 'dalis' || D.mode === 'nefes' || D.mode === 'yardim' || D.mode === 'sakli'; }
 function drPlaying() { return DURUM === 'oyun' && P.fade <= 0 && !(P.kilit > 0); }
 function drGlow(x, col, px, py, r, a) { x.globalAlpha = a; x.drawImage(glow(col), px - r, py - r, r * 2, r * 2); x.globalAlpha = 1; }
 
@@ -127,7 +127,10 @@ function drPraise() {
 }
 function drSayKurtar() { if (D.t - D.kurtarT > 25) { D.kurtarT = D.t; drSay('p_kurtar'); } else if (D.yardimSoz) { D.praiseT = -99; drPraise(); } D.yardimSoz = false; }
 function drBuyuk() { if (D.buyukO === undefined) D.buyukO = NESNELER.find(n => n.tip === 'buyukPofuduk') || null; return D.buyukO; }
-OLAY.on('konusma', v => { dragonInit(); if (v && v.kim === 'p') D.talkT = Math.max(D.talkT, v.sure || 2); });
+OLAY.on('konusma', v => {
+  dragonInit(); if (v && v.kim === 'p') D.talkT = Math.max(D.talkT, v.sure || 2);
+  if (v && v.anahtar === 'p_sakli') D.sakliIste = D.t;   // "yukarıda gizli bir yol var": girişi göstermeye uç (stepDragon uygun anı bekler)
+});
 OLAY.on('cicek', o => {
   dragonInit(); D.nCicek++;
   if (D.nCicek === 1) { drSay('p_cicek_ilk'); D.since = 0; return; }
@@ -178,9 +181,14 @@ OLAY.on('ziplama', () => { dragonInit(); D.jumps++; });
 OLAY.on('agac', () => { dragonInit(); D.danceAfter = true; });
 OLAY.on('durum', d => { dragonInit(); if (d === 'final') D.danceAfter = true; });
 OLAY.on('kayboldu', () => { dragonInit(); if (drPlaying() && drFree() && D.guideCd <= 0) drGuide(); });
-OLAY.on('aydinlat', () => {   // başka yerden gelirse de nilüfer cümlesi bir kez
+function drNilufer(grup) {   // nilüfer cümlesi her gölde bir kez (ses.js de göl başına bir kez, seyrek)
+  const g = grup || 'gol', bk = 'nilufer:' + g;
+  if (D.bayrak[bk]) return false;
+  D.bayrak[bk] = true; drSay('p_nilufer', { yer: g }); return true;
+}
+OLAY.on('aydinlat', grup => {   // başka yerden gelirse de nilüfer cümlesi (göl başına bir kez)
   dragonInit();
-  if (D.mode !== 'nefes' && !D.bayrak.nilufer) { D.bayrak.nilufer = true; setTimeout(() => drSay('p_nilufer'), 1200); }
+  if (D.mode !== 'nefes' && !D.bayrak['nilufer:' + (grup || 'gol')]) setTimeout(() => drNilufer(grup), 1200);
 });
 
 // ── yol gösterme ──
@@ -412,6 +420,17 @@ function stepDragon(dt) {
       break;
     }
   }
+  // saklı yol: "yukarıda gizli bir yol var!" derken girişe uçar, çevresinde parıltılı tur atar, el eder, geri döner
+  if (D.sakliIste != null) {
+    const sg = typeof BOLUM !== 'undefined' && BOLUM.sakliGiris;
+    const uygun = drFree() || D.mode === 'yol' || D.mode === 'ilgi' || D.mode === 'oyna';   // başka gösteri sırasında asla
+    if (!sg || D.t - D.sakliIste > 3.5 || D.danceAfter) D.sakliIste = null;
+    else if (playing && uygun && D.t - (D.sakliT || -99) > 40 && Math.abs(sg.x - P.x) < 520) {
+      D.sakliIste = null; D.sakliT = D.t; D.sg = sg;
+      drMode('sakli'); D.sp = 0; D.yawnT = -1; D.spo = null; D.guideCd = Math.max(D.guideCd, 12);
+      D.expr = 'wow'; D.exprT = 0.5; drSparkle(D.x, D.y, 6, 80);
+    }
+  }
   // boşta kendi küçük oyunları (kısa, Feza'nın yüzünü kapatmadan): çiçek koklama, uçuşan sporu yakalayıp yeme, minik takla
   if (playing && drFree() && D.idleCd <= 0 && P.ground && Math.abs(P.vx) < 150 && D.talkT <= 0 && D.modeT > 1.2 && !D.spo) {
     D.idleCd = 8 + Math.random() * 7;
@@ -586,7 +605,7 @@ function stepDragon(dt) {
       if (D.modeT > BT) {
         D.np = 4; D.modeT = 0; D.blowM = 0; D.puff = 0; D.stretch = 0;
         for (let i = 0; i < 7; i++) drFx(D.x, D.y - 8, i % 2 ? 'heart' : 'star');
-        if (!D.bayrak.nilufer) { D.bayrak.nilufer = true; drSay('p_nilufer'); }
+        drNilufer(D.nfO && D.nfO.grup);
         P.kilit = Math.min(P.kilit || 0, 0.05);
         OLAY.emit('nefes', { asama: 'bitti' });
       }
@@ -624,6 +643,39 @@ function stepDragon(dt) {
     if (D.yp < 2) {   // noktalı ışık izi (birkaç saniye kalır)
       D.izT -= dt;
       if (D.izT <= 0 && !(Math.abs(D.x - P.x) < 34 && D.y > P.y - 96 && D.y < P.y - 20)) { D.izT = 0.04; D.iz.push({ x: D.x - D.fs * 6 + (Math.random() - 0.5) * 4, y: D.y + 4 + (Math.random() - 0.5) * 4, life: 4.2, max: 4.2, ph: Math.random() * 6.283, col: DR_IZ[D.iz.length % 4] }); }
+    }
+  } else if (D.mode === 'sakli') {     // saklı yolun girişi: uç → parıltılı çember → "gel!" → dön
+    const sg = D.sg, cx = sg.x, cy = clamp(sg.y - 70, cam.y + 70, cam.y + VH - 80);   // yaprak kemerinin ortası
+    const dirG = Math.sign(cx - P.x) || P.f;
+    if (D.sp === 0) {                  // girişe uç (sırtı bize dönük, hafif derine)
+      tx = cx - dirG * 30; ty = cy - 22; k = 34; damp = 9.5; flapW = 5.5;
+      if (Math.abs(tx - D.x) > 70 && D.modeT < 1.5) { awayW = 1; D.awayS = dirG; D.awayDeep = 1; }
+      D.lookAt.x = cx; D.lookAt.y = cy; D.lookAtT = 0.2;
+      if (Math.hypot(D.x - tx, D.y - ty) < 24 || D.modeT > 1.8) {
+        D.sp = 1; D.modeT = 0; D.sa = Math.atan2((D.y - cy) / 0.63, D.x - cx);
+        drPulse(cx, sg.y - 6, 48, 3); burst(cx, sg.y - 8, 12, ['#fff2a8', '#ffe0f6', '#ffffff'], 110, 0.9, 6);
+      }
+    } else if (D.sp === 1) {           // girişin çevresinde bir buçuk parıltılı tur
+      const TUR_S = 1.7, a = D.sa - dirG * D.modeT * 6.283 * 1.5 / TUR_S;
+      tx = cx + Math.cos(a) * 60; ty = cy + Math.sin(a) * 38;   // en alt nokta dalın üstünde kalır k = 140; damp = 19; flapW = 5.5;
+      D.expr = 'happy'; D.exprT = 0.3;
+      D.fxT -= dt; if (D.fxT < 0) { D.fxT = 0.11; drFx(D.x, D.y - 4, 'star'); }
+      if (D.modeT > TUR_S) { D.sp = 2; D.modeT = 0; drSfx('parilti', 0.6); }
+    } else if (D.sp === 2) {           // girişin üstünde Feza'ya dönüp pençesiyle "gel!"
+      tx = cx - dirG * 8; ty = cy - 6 + Math.sin(D.modeT * 7) * 2.5; k = 45; damp = 11;
+      D.ft = Math.sign(P.x - D.x) || -dirG; D.faceHold = 0.15;
+      D.beckonW = 1; D.expr = 'happy'; D.exprT = 0.3;
+      hopW = Math.abs(Math.sin(D.modeT * 6)) * 3;
+      if (D.modeT > 0.5 && Math.random() < dt * 2) drPulse(cx, sg.y - 6, 40, 1);
+      const geldi = Math.abs(P.x - cx) < 70 && P.y < sg.y + 20;
+      if (D.modeT > 1.8 || (geldi && D.modeT > 0.4)) { drMode('follow'); D.beckonW = 0; D.lockF = 0.3; }
+    } else drMode('follow');
+    if (D.mode === 'sakli') {
+      if (D.sp < 2) {   // noktalı ışık izi (birkaç saniye kalır): girişe giden yol
+        D.izT -= dt;
+        if (D.izT <= 0 && !(Math.abs(D.x - P.x) < 34 && D.y > P.y - 96 && D.y < P.y - 20)) { D.izT = 0.04; D.iz.push({ x: D.x - D.fs * 6 + (Math.random() - 0.5) * 4, y: D.y + 4 + (Math.random() - 0.5) * 4, life: 4.2, max: 4.2, ph: Math.random() * 6.283, col: DR_IZ[D.iz.length % 4] }); }
+      }
+      if (Math.abs(P.x - cx) > 650 || D.modeT > 4 || DURUM !== 'oyun') { drMode('follow'); D.beckonW = 0; }   // Feza uzaklaştı: bırak
     }
   } else if (D.mode === 'oyna') {      // uyanık Pofuduğun çevresinde oyuncu bir tur
     const o = D.po, big = o.tip === 'buyukPofuduk', r = big ? 105 : 44, cy = o.y - (big ? 95 : 30);
@@ -733,7 +785,7 @@ function stepDragon(dt) {
   if (D.mode !== 'irkil') D.gasp = Math.max(0, D.gasp - dt * 4);
   D.hop = hopW > 0 ? hopW : Math.max(0, D.hop - dt * 20);
   if (D.mode !== 'nefes') { D.puff = Math.max(0, D.puff - dt * 4); D.blowM = Math.max(0, D.blowM - dt * 6); D.stretch = Math.max(0, D.stretch - dt * 3); }
-  if (D.mode !== 'yol') D.beckonW = 0;
+  if (D.mode !== 'yol' && D.mode !== 'sakli') D.beckonW = 0;
   D.beckon = lerp(D.beckon, D.beckonW, 1 - Math.exp(-dt * 10));
   D.headRoll = lerp(D.headRoll, rollW, 1 - Math.exp(-dt * 6));
 

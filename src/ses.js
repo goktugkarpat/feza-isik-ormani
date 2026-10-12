@@ -11,6 +11,9 @@
    Sıra kuralları (Feza okuyamaz: ses tek talimat kanalı; ama BAYAT talimat kafa karıştırır):
    · Her cümlenin bir ömrü ve bir GEÇERLİLİK koşulu var; çalma anında koşul tutmuyorsa cümle atılır
      (göl aydınlandıysa "burası karanlık" söylenmez, Feza 8+ kare ilerlediyse "zıpla" söylenmez...).
+   · Konuşma tetikleyicisinden gelen cümle o nesneyi taşır (s.o): Feza o.gec'i geçtiyse ya da o.konu uyandı/açıldı/aydınlandıysa
+     sıradan atılır. Tekrarlanan anahtarlar (iki göl: p_karanlik, p_nilufer {yer: grup}; iki uyuyan Pofuduk: p_uyuyor) tetikleyici
+     başına bir kez söylenir, aynı anahtar en az 20 sn arayla (seyrek).
    · Aynı konudaki yeni cümle eskisini siler (Büyük Pofuduk aşamaları: yalnız sonuncusu).
    · Oyun cümleleri arasında nefes payı 2,5–4 sn (uzun cümleden sonra daha uzun); olay tepkileri 1 sn sonra ve
      öne geçer; acil cümleler (kurtarma, yardım, "üstüne zıpla", "ağaca dokun") 0,35 sn sonra, gerekirse çalan
@@ -88,22 +91,46 @@ const SES = (() => {
     if (!(ad in sesOnb)) { const o = sesTetik(k); sesOnb[ad] = o ? gN().filter(n => n.tip === tip && n.x >= o.x - 2).sort((a, b) => a.x - b.x)[0] || null : null; }
     return sesOnb[ad];
   }
-  const sesIleride = (k, kare) => { const o = sesTetik(k), p = gP(); return !!(o && p && p.x > o.x + kare * T); };
+  // tetikleyen konuşma nesnesi: oyun.js SES.soyle(anahtar)'ı dokun anında çağırır (o.dokundu artık true) → Feza'ya en yakın dokunulmuş olan
+  function sesTetikBul(k) {
+    const p = gP(); let best = null, bd = 1e9, yedek = null, yd = 1e9;
+    for (const n of gN()) {
+      if (n.tip !== 'konusma' || n.anahtar !== k) continue;
+      const d = p ? Math.abs(n.x - p.x) : n.x;
+      if (n.dokundu) { if (d < bd) { bd = d; best = n; } } else if (d < yd) { yd = d; yedek = n; }
+    }
+    return best || yedek;
+  }
+  const sesIleride = (k, kare, s) => { const o = (s && s.o) || sesTetik(k), p = gP(); return !!(o && p && p.x > o.x + kare * T); };
+  // cümlenin konusu bitti mi (uyandı / açıldı / göl aydınlandı)? karanlık nokta Pırıl üflerken değil, ışık gölü bulunca "bitmiş" sayılır
+  const sesKonuBitti = n => !!(n && (n.tip === 'karanlik' ? sesAydinG[n.grup] : (n.done || n.uyandi || n.lit)));
+  function sesGolAraligi(grup) {   // grubun nilüferlerinin x aralığı (yoksa BOLUM.gol)
+    const ad = 'gol>' + grup;
+    if (!(ad in sesOnb)) {
+      let a = 1e9, b = -1e9;
+      for (const n of gN()) if (n.tip === 'nilufer' && n.grup === grup) { a = Math.min(a, n.x); b = Math.max(b, n.x); }
+      const gl = typeof BOLUM !== 'undefined' && BOLUM.gol;
+      sesOnb[ad] = a < b ? { x0: a, x1: b } : (gl ? { x0: gl.x0, x1: gl.x1 } : null);
+    }
+    return sesOnb[ad];
+  }
   const sesBitmis = (k, tip) => { const o = sesSonraki(k, tip); return !!(o && (o.done || o.uyandi || o.lit)); };
-  let sesAsama = 0, sesBuyukZip = false, sesBuyukO, sesAydin = false;
+  let sesAsama = 0, sesBuyukZip = false, sesBuyukO;
+  const sesAydinG = {};   // aydınlanan göl grupları
   const sesBuyuk = () => { if (sesBuyukO === undefined) sesBuyukO = gN().find(n => n.tip === 'buyukPofuduk') || null; return sesBuyukO; };
   const sesBuyukAsama = () => { const b = sesBuyuk(); return Math.max(sesAsama, b && b.uyandi ? 3 : 0, (b && b.pf && b.pf.asama) || 0); };
+  let sesZipladi = false; OLAY.on('ziplama', () => { sesZipladi = true; });
   const agacYandi = () => !!(typeof TREE !== 'undefined' && TREE && TREE.done);
   // her talimatın "hâlâ yerinde mi?" koşulu (çalma anında bakılır)
-  const KOSUL = {
-    p_merhaba: () => !sesBitmis('p_merhaba', 'cicek') && !sesIleride('p_merhaba', 10),
-    p_zipla: () => !sesIleride('p_zipla', 8),
-    p_uyuyor: () => { const o = sesSonraki('p_uyuyor', 'pofuduk'), p = gP(); return !(o && (o.uyandi || (p && p.x > o.x + 3 * T))); },
-    p_karanlik: () => !sesAydin && !sesIleride('p_karanlik', 12),   // Pırıl üflerken de söylenebilir; ışık gelince değil
-    p_nilufer: () => { const p = gP(), gl = typeof BOLUM !== 'undefined' && BOLUM.gol; return !p || !gl || (p.x > gl.x0 - 16 * T && p.x < gl.x1 + T); },
-    p_minder: () => !sesBitmis('p_minder', 'cicek') && !sesIleride('p_minder', 14),
-    p_ciftzipla: () => !sesBitmis('p_ciftzipla', 'cicek') && !sesIleride('p_ciftzipla', 13),
-    p_sakli: () => !gN().some(n => n.tip === 'tohum' && n.done) && !sesIleride('p_sakli', 9),
+  const KOSUL = {   // s: sıradaki cümle (s.o = tetikleyen konuşma nesnesi, s.yer = göl grubu vb.)
+    p_merhaba: s => !sesBitmis('p_merhaba', 'cicek') && !sesIleride('p_merhaba', 10, s),
+    p_zipla: s => !sesZipladi || !sesIleride('p_zipla', 8, s),   // hiç zıplamadıysa talimat geçerli kalır (5 yaşında: öğrenmesi şart)
+    p_uyuyor: s => { const o = (s.o && s.o.konu) || sesSonraki('p_uyuyor', 'pofuduk'), p = gP(); return !(o && (o.uyandi || (p && p.x > o.x + 3 * T))); },
+    p_karanlik: s => { const o = s.o && s.o.konu; return !(o ? sesAydinG[o.grup] : sesAydinG.gol) && !sesIleride('p_karanlik', 12, s); },   // Pırıl üflerken de söylenebilir; ışık gelince değil
+    p_nilufer: s => { const p = gP(), gl = sesGolAraligi(s.yer || 'gol'); return !p || !gl || (p.x > gl.x0 - 16 * T && p.x < gl.x1 + T); },
+    p_minder: s => !sesBitmis('p_minder', 'cicek') && !sesIleride('p_minder', 14, s),
+    p_ciftzipla: s => !sesBitmis('p_ciftzipla', 'cicek') && !sesIleride('p_ciftzipla', 13, s),
+    p_sakli: s => !gN().some(n => n.tip === 'tohum' && n.done) && !sesIleride('p_sakli', 9, s),
     p_buyuk: () => sesBuyukAsama() < 1,
     p_buyuk_goz: () => sesBuyukAsama() < 2,
     p_buyuk_esne: () => sesBuyukAsama() < 3,
@@ -123,15 +150,18 @@ const SES = (() => {
     if (anlatici(s.k)) return '';
     if (!sesSert(s)) return 'oyun bitti';
     if (agacYandi() && !ovguMu(s.k)) return 'ağaç yandı';
+    const o = s.o, p = gP();
+    if (o && p && typeof o.gec === 'number' && p.x > o.gec) return 'yeri geçti (gec)';
+    if (o && o.konu && sesKonuBitti(o.konu)) return 'konusu bitti';
     const f = KOSUL[s.k];
-    if (f) { try { if (!f()) return 'yeri geçti'; } catch (e) {} }
+    if (f) { try { if (!f(s)) return 'yeri geçti'; } catch (e) {} }
     return '';
   }
 
   // ── çözme / çalma ──
   const sesBuf = {}, sesCoz = {};
   let sesSira = [], sesCalan = null, sesKaynak = null, sesBitisZ = null;
-  const sesSoylendi = {}, tekrarli = k => ovguMu(k) || k === 'p_yol' || k === 'p_kurtar' || /^p_yardim/.test(k);
+  const sesSoylendi = {}, sesSonCal = {}, SES_AYNI_ARA = 20, tekrarli = k => ovguMu(k) || k === 'p_yol' || k === 'p_kurtar' || /^p_yardim/.test(k);
   let sesSonBitis = -1e9, sesSonSure = 0, sesSonOvgu = -1e9, sesOvguGecmis = [], sesYardimN = 0;
   const kayit = [];
   const sesNot = (ne, k, neden) => { kayit.push([+sesSaat().toFixed(2), ne, k, neden || '']); if (kayit.length > 400) kayit.shift(); };
@@ -192,8 +222,15 @@ const SES = (() => {
     }
     if (ovguMu(k) && t - sesSonOvgu < 12) { sesNot('at', k, 'övgü sık'); return; }
     if ((sesCalan && sesCalan.k === k) || sesSira.some(s => s.k === k)) return;   // aynı cümle zaten sırada
-    if (sesSoylendi[k] && !tekrarli(k)) return;                                     // talimatlar/tepkiler bir kez
-    const s = { k, oncelik, acil: oncelik >= 3 ? 0 : b.acil, konu: b.konu, t, son: t + omur, kez: 0, bas: 0, sure: sesSure(k) };
+    // talimatlar/tepkiler bir kez — ama tetikleyici nesne başına (iki göl, iki uyuyan Pofuduk), oyun başına değil
+    const o = (ops && ops.o) || (anlatici(k) || ovguMu(k) ? null : sesTetikBul(k));
+    const yer = o ? 'o' + (o.id != null ? o.id : Math.round(o.x)) : (ops && ops.yer != null ? String(ops.yer) : '');
+    const tek = yer ? k + '@' + yer : k;
+    if (!tekrarli(k)) {
+      if (sesSoylendi[tek] || (!yer && sesSoylendi[k])) return;
+      if (sesSonCal[k] != null && t - sesSonCal[k] < SES_AYNI_ARA) { sesNot('at', k, 'aynısı az önce'); return; }   // seyrek kalsın
+    }
+    const s = { k, oncelik, acil: oncelik >= 3 ? 0 : b.acil, konu: b.konu, t, son: t + omur, kez: 0, bas: 0, sure: sesSure(k), o, yer, tek };
     // aynı konudaki eski cümleler geçersiz (yalnız en yeni aşama söylenir)
     if (s.konu) {
       const ks = KONU_SIRA[k] || 9;
@@ -213,6 +250,8 @@ const SES = (() => {
         }
         sesKes(eskidi ? 'eskidi: ' + k : 'araya girdi: ' + k);
       }
+    } else if (c && s.acil >= 1 && c.oncelik < 3 && c.acil < 1 && c.bas && c.bas + c.sure - t > 0.8 && c.o && c.o.konu && sesKonuBitti(c.o.konu)) {
+      sesKes('eskidi: ' + k);   // olay tepkisi geldi ve çalan talimatın konusu artık bitti (ör. "üstüne zıpla" derken Pofuduk uyandı): yumuşakça sus
     } else if (c && oncelik >= 3 && c.oncelik < 3 && !(c.bas && c.bas + c.sure - t < 1)) sesKes('sahne');   // anlatıcı gelirse oyun cümlesi susar (bitmek üzereyse bitsin)
     sesTik();
   }
@@ -248,7 +287,7 @@ const SES = (() => {
       const sure = buf ? buf.duration : sesSure(s.k);
       const kim = sesKim(s.k);
       s.sure = sure; s.bas = sesSaat() + 0.12;
-      sesSoylendi[s.k] = 1;
+      sesSoylendi[s.k] = 1; if (s.tek) sesSoylendi[s.tek] = 1; sesSonCal[s.k] = sesSaat();
       if (ovguMu(s.k)) { sesSonOvgu = sesSaat(); sesOvguGecmis.push(s.k); if (sesOvguGecmis.length > 3) sesOvguGecmis.shift(); }
       sesNot('cal', s.k, (s.bas - s.t).toFixed(1) + ' sn bekledi');
       if (typeof ARAYUZ !== 'undefined' && ARAYUZ.altyazi) ARAYUZ.altyazi(LINES[s.k], sure + 0.6, kim);
@@ -273,7 +312,7 @@ const SES = (() => {
   setInterval(sesTik, 100);
 
   // oyun olaylarından durum
-  OLAY.on('aydinlat', () => { sesAydin = true; });
+  OLAY.on('aydinlat', g => { sesAydinG[g || 'gol'] = true; });
   OLAY.on('buyukAsama', v => { if (v && v.asama) sesAsama = Math.max(sesAsama, v.asama); });
   OLAY.on('uyandi', o => { if (o && o.tip === 'buyukPofuduk') sesAsama = 3; });
   // Büyük Pofuduk Feza'yı tepeye fırlatınca "İşte Işık Ağacı! Koş, dokun!" hemen (tepedeki tetikleyici ağaca çok yakın)
