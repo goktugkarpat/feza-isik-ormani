@@ -24,7 +24,7 @@ import edge_tts
 
 VOICE = "tr-TR-EmelNeural"
 STYLE = {            # prefix → (rate, pitch, volume)
-    "a_": ("-14%", "-3Hz", "+0%"),
+    "a_": ("-18%", "-3Hz", "+0%"),
     "p_": ("+6%", "+38Hz", "+0%"),
 }
 DEFAULT = ("-5%", "+2Hz", "+0%")

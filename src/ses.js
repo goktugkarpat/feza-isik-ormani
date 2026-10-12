@@ -9,28 +9,28 @@
 'use strict';
 const SES = (() => {
   const LINES = /*SESLER*/{
-    "a_giris1": "Bir varmış, bir yokmuş. Feza adında küçük bir çocuk varmış. Her gece, en sevdiği oyuncağı Pırıl'a sarılıp uyurmuş.",
+    "a_giris1": "Bir varmış, bir yokmuş. Feza adında, küçük bir çocuk varmış. Her gece, en sevdiği oyuncağı Pırıl'a sarılıp uyurmuş.",
     "a_giris2": "Pırıl, mor renkli, minicik bir ejderhaymış. Bir gece Feza uykuya dalınca, Pırıl'ın gözleri yavaşça parlamaya başlamış.",
-    "a_giris3": "Ve oda, sessizce, sihirli bir ormana dönüşmüş. Işık Ormanı'na!",
+    "a_giris3": "Ve oda, yavaş yavaş, sihirli bir ormana dönüşmüş. Işık Ormanı'na!",
     "p_uyan": "Feza, uyan! Ormanımızın ışığı sönmüş, bize yardım lazım!",
-    "p_merhaba": "Bak Feza, orada parlayan bir çiçek var! Hadi ona gidelim!",
-    "p_zipla": "Düğmeye bas, hop diye zıpla!",
-    "p_cicek_ilk": "Yaşasın, çiçek açtı! Orman biraz aydınlandı!",
-    "p_uyuyor": "Bak, bir Pofuduk uyuyor! Üstüne zıplayıp onu uyandıralım mı?",
-    "p_uyandi": "Çok yaşa, Pofuduk! Günaydın!",
+    "p_merhaba": "Parmağını ekrana koy, o tarafa yürürsün! Hadi, şu parlayan çiçeğe gidelim!",
+    "p_zipla": "Zıplamak için, köşedeki yuvarlak düğmeye bas! Hop!",
+    "p_cicek_ilk": "Yaşasın, çiçek açtı! Orman biraz aydınlandı. Hadi, öbür çiçekleri de bulalım!",
+    "p_uyuyor": "Bak, yolda bir Pofuduk uyuyor! Üstüne zıpla, onu uyandır!",
+    "p_uyandi": "Çok yaşa, Pofuduk! Günaydın! Artık yolumuz açık.",
     "p_karanlik": "Burası çok karanlık. Bekle, ben ışık üfleyeceğim!",
-    "p_nilufer": "Bak, nilüferler parlıyor! Üstlerine basarak geçelim!",
-    "p_minder": "Bu Pofuduk yumuşacık bir minder gibi! Üstüne zıpla, yükseklere uç!",
-    "p_ciftzipla": "Havadayken bir daha bas, ben seni iterim!",
-    "p_sakli": "Bak, yukarıda gizli bir yol var! Parlayan tohumları bulalım mı?",
-    "p_tohum": "Gizli bir ışık tohumu! Ne kadar güzel parlıyor!",
-    "p_buyuk": "Vay, ne kocaman bir Pofuduk! Çiçekleri açarsak belki uyanır.",
-    "p_buyuk_goz": "Bak bak, bir gözünü açtı!",
-    "p_buyuk_esne": "Esniyor! Bir çiçek daha kaldı!",
-    "p_buyuk_kalk": "Uyandı! Hadi, üstüne zıpla!",
-    "p_agac": "İşte Işık Ağacı! Hadi Feza, ona dokun!",
-    "p_yol": "Bu taraftan Feza, beni takip et!",
-    "p_kurtar": "Tuttum seni! Hadi, bir daha deneyelim.",
+    "p_nilufer": "Bak, nilüferler parlıyor! Zıplaya zıplaya üstlerinden geç!",
+    "p_minder": "Bu Pofuduk yumuşacık bir minder! Üstüne zıpla, seni yukarı fırlatsın!",
+    "p_ciftzipla": "Havadayken düğmeye bir daha bas! Ben seni yukarı iterim!",
+    "p_sakli": "Bak, yukarıda gizli bir yol var! Oradaki parlak tohumları toplayalım mı?",
+    "p_tohum": "Gizli bir ışık tohumu buldun! Ne güzel parlıyor!",
+    "p_buyuk": "Vay, ne kocaman bir Pofuduk! Onu uyandırmak için, buradaki üç çiçeği aç!",
+    "p_buyuk_goz": "Bak bak, bir gözünü açtı! Başka bir çiçek daha bul!",
+    "p_buyuk_esne": "Esniyor! Son çiçeği de aç, uyansın!",
+    "p_buyuk_kalk": "Uyandı! Hadi, üstüne zıpla, seni ağaca fırlatsın!",
+    "p_agac": "İşte Işık Ağacı! Hadi Feza, koş, ağaca dokun!",
+    "p_yol": "Bu tarafa gel Feza, beni takip et!",
+    "p_kurtar": "Tuttum seni! Bir daha deneyelim, sen yaparsın!",
     "p_aferin1": "Aferin sana!",
     "p_aferin2": "Süpersin, Feza!",
     "p_aferin3": "Harika zıpladın!",
@@ -38,7 +38,7 @@ const SES = (() => {
     "p_aferin5": "Çok güzel oldu!",
     "p_aferin6": "Sen gerçek bir kahramansın!",
     "a_final1": "Feza ile Pırıl, Işık Ağacı'nı yeniden yakmışlar. Bütün orman ışıl ışıl olmuş, Pofuduklar sevinçle dans etmiş.",
-    "a_final2": "Sabah olunca, Feza yatağında gözlerini açmış. Pırıl da ona tatlı tatlı göz kırpmış.",
+    "a_final2": "Sabah olunca, Feza yatağında gözlerini açmış. Pırıl da ona, tatlı tatlı göz kırpmış.",
     "a_final3": "Ve her gece, yeni bir macera onları bekliyordu..."
   }/*SESLER-SON*/;
 
@@ -91,11 +91,11 @@ const SES = (() => {
     }
     if ((sesCalan && sesCalan.k === k) || sesSira.some(s => s.k === k)) return;   // aynı cümle zaten sırada
     if (oncelik <= 0 && (sesCalan || sesSira.length)) return;
-    // daha düşük öncelikli bekleyenleri at (sıra kısa kalsın, eski ipuçları geç gelmesin)
-    sesSira = sesSira.filter(s => s.oncelik >= oncelik || s.oncelik >= 3);
+    // talimatlar (öncelik ≥ 2) asla atılmaz: Feza okuyamıyor, ne yapacağını sesten öğreniyor.
+    // Yalnız "bu tarafa gel" gibi yönlendirmeler (1) daha önemli bir cümle gelince sıradan çıkar.
+    sesSira = sesSira.filter(s => s.oncelik >= 2 || s.oncelik >= oncelik);
     sesSira.push({ k, oncelik, t });
     sesSira.sort((a, b) => b.oncelik - a.oncelik || a.t - b.t);
-    if (sesSira.length > 4) sesSira.length = 4;
     // anlatıcı/sahne cümlesi gelirse ve bir ipucu çalıyorsa: ipucu yumuşakça kesilsin
     if (sesCalan && oncelik >= 3 && sesCalan.oncelik < 2) sesKes();
     sesCozumle(k);
@@ -117,8 +117,8 @@ const SES = (() => {
   }
   function sesSonraki() {
     const t = sesSaat();
-    // çok bekleyen ipuçlarını at (anlatıcı hariç)
-    while (sesSira.length && sesSira[0].oncelik < 3 && t - sesSira[0].t > 7) sesSira.shift();
+    // çok bekleyen yönlendirmeleri at (talimatlar ve anlatıcı hep söylenir)
+    sesSira = sesSira.filter(s => s.oncelik >= 2 || t - s.t < 8);
     const s = sesSira.shift(); if (!s) return;
     sesCalan = s;
     sesCozumle(s.k).then(buf => {
@@ -147,7 +147,7 @@ const SES = (() => {
   }
   let sesHazir = false;
   OLAY.on('durum', d => {
-    if (d === 'final' || d === 'giris') sesSira = sesSira.filter(s => s.oncelik >= 3);   // eski ipuçları atılsın
+    if (d === 'final') sesSira = sesSira.filter(s => s.oncelik >= 3);   // oyun bitti: kalan ipuçları gereksiz
     if (!sesHazir && !SESSIZ) { sesHazir = true; setTimeout(sesOnceden, 400); }        // ses bağlamı artık var
   });
   return { LINES, soyle, konusuyor: () => !!sesCalan, sure: k => LINES[k] ? sesSure(k) : 0 };

@@ -7,7 +7,7 @@
    Tasarım kuralları: tek zıplamalık boşluklar ≤ 2 kare, basamaklar ≤ 2 kare; tek çift-zıplama yeri (4 kare);
    düşülebilen tek yer göl (Pırıl geri taşır). */
 'use strict';
-const ROWS = 22, COLS = 336;
+const ROWS = 22, COLS = 300;
 const grid = Array.from({ length: ROWS }, () => new Uint8Array(COLS));
 const ground = (a, b, h) => { for (let x = a; x <= b; x++) for (let y = ROWS - h; y < ROWS; y++) grid[y][x] = 1; };
 const plat = (a, b, row) => { for (let x = a; x <= b; x++) grid[row][x] = 2; };
@@ -29,17 +29,20 @@ const BL_ZEMIN = [
   // 4. Yüksek Dallar (141–203): minder, yüksek dal, çift zıplama sırtı, çukur + basamak Pofuduk
   [141, 158, 4], [159, 166, 5], [167, 176, 9], [177, 178, 8], [179, 180, 7], [181, 182, 6], [183, 189, 4], [190, 199, 7],
   // 5. Saklı Yol (200–252): ana yol aşağıda, saklı yol dallarda
-  [200, 201, 6], [202, 203, 5], [204, 214, 4], [215, 219, 5], [220, 238, 4], [239, 242, 5], [243, 252, 4],
-  // 6. Açıklık (253–335): sakin düzlük, küçük tümsek, Büyük Pofuduk, ağacın tepesi
-  [253, 270, 4], [271, 275, 5], [276, 305, 4], [306, 307, 5], [308, 311, 6], [312, 322, 4], [323, 335, 12],
+  [200, 201, 6], [202, 203, 5], [204, 214, 4], [215, 219, 5], [220, 238, 4], [239, 242, 5],
+  // 6. Açıklık (243–299): sakin düzlük, küçük tümsek; Büyük Pofuduk ağaç tepesinin dibindeki yuvasında (1 kare çukur:
+  //    uyurken başından çift zıplamayla tepeye çıkılamasın); tepe 9 kare yüksek, yalnız onun zıplatmasıyla çıkılır
+  [243, 252, 4], [253, 256, 5], [257, 269, 4], [270, 271, 5], [272, 275, 6], [276, 280, 4], [281, 286, 3], [287, 299, 13],
 ];
 for (const [a, b, h] of BL_ZEMIN) ground(a, b, h);
 // ── Dallar (üstten geçilir): [ilk, son, satır] ──
 const BL_DAL = [
   [39, 42, 16],                                   // patikada ilk dal (2 kare): "dallara çıkılabilir"
+  [76, 78, 16],                                   // göle inmeden küçük bir dal
   [146, 156, 12],                                 // minderin tam üstündeki yüksek dal
   [196, 199, 13], [202, 205, 11], [208, 212, 9], [215, 219, 9], [223, 227, 10], [231, 234, 12], [238, 240, 14], // saklı yol
-  [309, 314, 14],                                 // açıklıkta Büyük Pofuduk'un solundaki dal
+  [254, 256, 15],                                 // açıklığa girişte oyunluk dal
+  [273, 278, 14],                                 // Büyük Pofuduk'un solundaki dal (ikinci çiçek)
 ];
 for (const [a, b, r] of BL_DAL) plat(a, b, r);
 
@@ -47,14 +50,15 @@ const BL_SU = ROWS * T - 26;   // göl yüzeyi (dunya.js suyu buraya çizer)
 const BOLUM = {
   ad: 'Işık Ormanı: Uykucu Pofuduklar',
   baslangic: { x: nx(5), y: yuzey(5) },
-  // dunya.js / muzik.js bölgeye göre süsleme ve ezgi seçer (dünya x aralıkları; bitişik ve sıralı)
+  // dunya.js / muzik.js bölgeye göre süsleme ve ezgi seçer. Ana bölgeler bitişik ve sıralı; 'sakli' bir ÜST KATMAN:
+  // yalnız Feza yukarıdaki dallardayken (P.y < ust) geçerli, listede sonra geldiği için o an 'dallar'ın yerine geçer.
   bolgeler: [
     { ad: 'patika', x0: 0, x1: 47 * T },
     { ad: 'pofuduk', x0: 47 * T, x1: 85 * T },
     { ad: 'gol', x0: 85 * T, x1: 141 * T },
-    { ad: 'dallar', x0: 141 * T, x1: 200 * T },
-    { ad: 'sakli', x0: 200 * T, x1: 253 * T, ust: 15 * T },   // ust: bu y'nin üstü saklı yol (dallar)
-    { ad: 'aciklik', x0: 253 * T, x1: COLS * T },
+    { ad: 'dallar', x0: 141 * T, x1: 243 * T },
+    { ad: 'aciklik', x0: 243 * T, x1: COLS * T },
+    { ad: 'sakli', x0: 195 * T, x1: 243 * T, ust: 15 * T },   // saklı yol: dallar satır 9–14 (y < 600)
   ],
   gol: { x0: 100 * T, x1: 127 * T, su: BL_SU, ada: { x0: 112 * T, x1: 116 * T } },   // su yüzeyi (yansımalar), adacık
   // Kamera ipuçları (oyun.js isterse kullanır): zoom < 1 → daha geniş görüş; yOfs < 0 → kamera biraz yukarı bakar.
@@ -63,8 +67,8 @@ const BOLUM = {
     { x0: 88 * T, x1: 132 * T, zoom: 0.84, yOfs: 30 },         // göl: geniş, suyu ve yansımaları göster
     { x0: 143 * T, x1: 162 * T, zoom: 0.9, yOfs: -60 },        // minder + yüksek dal
     { x0: 165 * T, x1: 177 * T, zoom: 0.94, yOfs: -30 },       // çift zıplama sırtı
-    { x0: 195 * T, x1: 245 * T, zoom: 0.86, yOfs: -70 },       // saklı yol yukarıda
-    { x0: 296 * T, x1: COLS * T, zoom: 0.78, yOfs: -90 },      // açıklık: Büyük Pofuduk + yüksekte ağaç birlikte
+    { x0: 195 * T, x1: 242 * T, zoom: 0.86, yOfs: -70 },       // saklı yol yukarıda
+    { x0: 262 * T, x1: COLS * T, zoom: 0.78, yOfs: -90 },      // açıklık: Büyük Pofuduk + yüksekte ağaç birlikte
   ],
 };
 P.x = P.safeX = BOLUM.baslangic.x; P.y = P.safeY = BOLUM.baslangic.y;
@@ -101,14 +105,14 @@ nesne('tohum', 232.5, blDal(12), { r: 30 });
 nesne('cicek', 217, yuzey(217), { r: 34 });                     // ana yolda, küçük tümseğin üstü
 nesne('pofuduk', 229, yuzey(229), { tur: 'yol' });
 // 6. Açıklık
-nesne('pofuduk', 262, yuzey(262), { tur: 'yol' });
-nesne('konusma', 300, yuzey(300), { anahtar: 'p_buyuk', r: 80 });
-nesne('cicek', 304, yuzey(304), { r: 34, buyukIcin: true });     // yerde
-nesne('cicek', 312, blDal(14), { r: 34, buyukIcin: true });      // tümsekten dala
-nesne('cicek', 316.5, yuzey(316), { r: 34, buyukIcin: true });   // Büyük Pofuduk'un burnunun dibinde
-nesne('buyukPofuduk', 320.3, yuzey(320), {});                   // ağacın tepesine çıkan yolu kapatır
-nesne('konusma', 325, yuzey(325), { anahtar: 'p_agac', r: 70 });
-nesne('agac', 330, yuzey(330), { r: 90 });
+nesne('pofuduk', 249, yuzey(249), { tur: 'yol' });
+nesne('konusma', 264, yuzey(264), { anahtar: 'p_buyuk', r: 80 });
+nesne('cicek', 268, yuzey(268), { r: 34, buyukIcin: true });     // yerde
+nesne('cicek', 276, blDal(14), { r: 34, buyukIcin: true });      // tümsekten dala
+nesne('cicek', 280.5, yuzey(280), { r: 34, buyukIcin: true });   // Büyük Pofuduk'un burnunun dibinde
+nesne('buyukPofuduk', 284.3, yuzey(284), {});                   // yuvasında; ağacın tepesine çıkan yolu kapatır
+nesne('konusma', 289, yuzey(289), { anahtar: 'p_agac', r: 70 });
+nesne('agac', 294, yuzey(294), { r: 90 });
 
 // Eski adlar (dunya.js uyumluluğu)
 const FLOWERS = NESNELER.filter(n => n.tip === 'cicek');
