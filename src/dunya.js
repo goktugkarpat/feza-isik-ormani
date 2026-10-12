@@ -2154,7 +2154,7 @@ function dnTreeGeo(o) {
   }
   for (let i = 0; i < 300; i++) { const cx = (R() * 2 - 1) * 330, [yt, yb] = env(cx), cy = lerp(yt + 20, yb, Math.pow(R(), 0.8)); G.leaves.push([cx, cy, 8 + R() * 10, 2.5 + R() * 2.5, R() * 6.283, R()]); }
   for (let i = 0; i < 90; i++) { const cx = (R() * 2 - 1) * 310, [yt] = env(cx); G.backLeaves.push([cx, yt + R() * 60, 8 + R() * 9, 2.5 + R() * 2, R() * 6.283, R()]); }
-  dnTreeVeins(G, R, cxT, hwT);
+  G.vfn = () => { G.vfn = null; dnTreeVeins(G, rng(9191), cxT, hwT); };   // damarlar ayrı iş olarak (boşta) üretilir
   for (let i = 0; i < 54; i++) {   // finalde açan ışık çiçekleri (taçta, kalpten uzaklığa göre sırayla)
     const cx = (R() * 2 - 1) * 320, [yt, yb] = env(cx), cy = lerp(yt + 25, yb - 10, Math.pow(R(), 0.9));
     G.blossoms.push({ x: cx, y: cy, s: 0.7 + R() * 0.7, d: Math.hypot(cx + 4, cy + 150), ph: R() * 6.283, c: i % 4 === 0 ? 1 : i % 4 === 1 ? 2 : 0, rot: R() * 6.283 });
@@ -2201,8 +2201,10 @@ function dnTreeVeins(G, R, cxT, hwT) {
     const ws = curve(pts, i < 2 ? 2.1 : 1.6, 0.45, 0); twigs(pts, ws, 1);
   });
 }
-function dnVeinPaths(G, k, lmax) {   // tüm damarlar tek yol (üst üste binen yerler iki kat parlamasın)
-  const p = new Path2D();
+function dnVeinPaths(G, k, lmax) {   // tüm damarlar tek yol (üst üste binen yerler iki kat parlamasın); önbellekli
+  if (G.vfn) G.vfn();
+  const key = k + '_' + lmax, C = G.vp || (G.vp = {}); if (C[key]) return C[key];
+  const p = C[key] = new Path2D();
   for (const v of G.veins) if (v.lvl <= lmax) p.addPath(dnPolyTaper(v.pts, v.ws.map(w => w * k + (k > 1 ? 1.2 : 0))));
   return p;
 }
@@ -2316,6 +2318,10 @@ function dnTreeWarmup() {   // yaklaşırken ağaç görüntülerini boşta önc
   if (dnTreeCool && dnTreeCool.dnSc === sc && dnTreeWarm && dnTreeWarm.dnSc === sc) { if (o.x + DN_TB.x0 < cam.x + VW + 2400) dnTreeVeinWarm(sc); return; }
   if (o.x + DN_TB.x0 > cam.x + VW + 2400 || o.x + DN_TB.x1 < cam.x - 1500) return;
   if (!dnTreeG) { dnQueue(4, 'TG', () => { dnTreeG = dnTreeG || dnTreeGeo(o); }); return; }
+  if (dnTreeG.vfn) { dnQueue(4, 'TVG', () => dnTreeG.vfn && dnTreeG.vfn()); return; }
+  if (!dnTreeG.vp || Object.keys(dnTreeG.vp).length < 7) {   // damar yollarını da parça parça önceden kur
+    for (const [k, l] of [[6, 1], [2.6, 2], [1, 2], [0.35, 0], [4.5, 1], [2, 2], [0.9, 2]]) if (!(dnTreeG.vp && dnTreeG.vp[k + '_' + l])) { dnQueue(4, 'TVP', () => dnVeinPaths(dnTreeG, k, l)); return; }
+  }
   if (!(dnTreeCool && dnTreeCool.dnSc === sc)) dnQueue(4, 'TC', () => dnTreeStep(o, false, sc));
   else dnQueue(5, 'TW', () => dnTreeStep(o, true, sc));
 }

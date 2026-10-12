@@ -318,10 +318,14 @@ function omYereYakin(mesafe) {
   }
   return false;
 }
+// Bütün göller (bolum.js BOLUM.gollar; yoksa tek BOLUM.gol)
+function omGollar() { return (BOLUM.gollar && BOLUM.gollar.length) ? BOLUM.gollar : (BOLUM.gol ? [BOLUM.gol] : []); }
+function omGolde(x, pay) { for (const gl of omGollar()) if (gl && x > gl.x0 - pay && x < gl.x1 + pay) return gl; return null; }
 function omDusus(suda) {
   P.fade = 1.2; P.respawned = false; P.vx *= 0.3;
   if (suda) {
-    const sy = BOLUM.gol.su;
+    const gl = (suda && suda.su !== undefined) ? suda : (omGolde(P.x, 4) || BOLUM.gol);
+    const sy = gl ? gl.su : ROWS * T - 60;
     omSfx('splash'); burst(P.x, sy - 4, 26, ['#bfe6ff', '#ffffff', '#d9c8ff'], 170, 0.9, 7);
     ripples.push({ x: P.x, y: sy, r: 0, life: 0.9, small: true }); ripples.push({ x: P.x, y: sy, r: -14, life: 1.1, small: true });
   } else { omSfx('splash'); burst(P.x, ROWS * T - 60, 24, ['#bfe6ff', '#ffffff'], 160, 0.9, 7); }
@@ -403,8 +407,8 @@ function stepPlayer(dt) {
   moveX((P.vx + ek) * dt); moveY(P.vy * dt);
   P.jumpT += dt; if (!P.ground) P.air += dt;
   omGuvenliYer();
-  const gol = BOLUM.gol;
-  if (gol && P.x > gol.x0 - 4 && P.x < gol.x1 + 4 && P.y > gol.su + 22) omDusus(true);
+  const gol = omGolde(P.x, 4);
+  if (gol && P.y > gol.su + 22) omDusus(gol);
   else if (P.y > ROWS * T + 60) omDusus(false);
   // animasyon için ham değerler (feza.js kendi durum makinesini fezaUpdate'te kurar)
   const sp = Math.abs(P.vx);
@@ -480,6 +484,8 @@ TUR.kaydet('agac', { dokun(o) {
   P.kilit = Math.max(P.kilit || 0, 4); omHepsiniBirak(); jumpPressed = false; P.buf = 0;
   OLAY.emit('agac', o);
   omZamanla(2.6, finaleGec);   // oyun saatiyle: sekme gizliyken beklesin
+  // yedek: cihaz yavaşsa (<10 kare/sn) oyun saati gerçek saatten geri kalır; kutlama yine ~3 sn'de başlasın (sekme açıksa)
+  setTimeout(() => { if (!document.hidden) finaleGec(); }, 3000);
 } });
 function bloom(fl) {
   SAYAC.cicek++;
@@ -708,8 +714,10 @@ function stepCam(dt, snap) {
   omC.bak = snap ? bakHedef : lerp(omC.bak, bakHedef, 1 - Math.exp(-dt * (Math.abs(sp) > 0.3 ? 1.6 : 0.7)));
   let odak = px + omC.bak;
   // bölgeye göre çerçeve: gölde karşı kıyı / nilüferler, açıklıkta Büyük Pofuduk ve ağaç görünsün
-  const gol = BOLUM.gol;
-  if (gol) { const w = omBolgeAgirlik(gol.x0 - 3 * T, gol.x1, px, 4 * T) * 0.3; if (w > 0) odak = lerp(odak, (gol.x0 + gol.x1) / 2, w); }
+  for (const gol of omGollar()) {
+    const w = omBolgeAgirlik(gol.x0 - 3 * T, gol.x1, px, 4 * T) * 0.3;
+    if (w > 0) { odak = lerp(odak, (gol.x0 + gol.x1) / 2, w); break; }
+  }
   if (!omBuyuk) omBuyuk = NESNELER.find(n => n.tip === 'buyukPofuduk') || TREE || null;
   for (const b of BOLUM.bolgeler) if (b.ad === 'aciklik' && omBuyuk && px > b.x0 - 4 * T) {
     const hedefX = omBuyuk.uyandi && TREE ? (omBuyuk.x + TREE.x) / 2 : omBuyuk.x;
