@@ -342,9 +342,9 @@ function pfKareBasi(dt) {   // her karede bir kez: parçacıklar + Feza'nın izi
   pfSuzulGuncelle(dt);
   pfParcaGuncelle(dt);
   pfIzGuncelle();
-  pfSlotHesapla();
+  pfSlotHesapla(dt);
   pfEtkilesim(dt);
-  if (pfFinal) pfFinal.t += dt;
+  if (pfFinal) { pfFinal.t += dt; pfVurusEsle(pfFinal); }
 }
 
 // ── Feza'nın izi: geçit töreni bu izi takip eder (atlayışlarını taklit ederler) ──
@@ -368,9 +368,9 @@ function pfIzGuncelle() {
   let d = 0;
   for (let i = pfIz.length - 1; i > 0; i--) {
     if (!pfIz[i].bos) d += Math.hypot(pfIz[i].x - pfIz[i - 1].x, pfIz[i].y - pfIz[i - 1].y);
-    if (d > 640) { pfIz.splice(0, i - 1); break; }
+    if (d > 1100) { pfIz.splice(0, i - 1); break; }
   }
-  if (pfIz.length > 400) pfIz.splice(0, pfIz.length - 400);
+  if (pfIz.length > 700) pfIz.splice(0, pfIz.length - 700);
 }
 // Feza'nın d birim gerisindeki iz noktası (boşluk segmentleri sıfır uzunlukta sayılır: sıçrayarak geçilir)
 function pfIzHedef(d) {
@@ -832,11 +832,18 @@ function pfTakip(o, p, dt) {
   if (p.gerin) { pfGerin(o, p, dt); return; }
   let tx, ty, yer = true, bos = false;
   const bekle = P.idle > 0.8 && P.ground && P.fade <= 0;
-  let slot = null;
-  const H = pfIzHedef(64 + i * 52);
-  if (bekle || (P.ground && Math.abs(H.x - P.x) < 36 && Math.abs(H.y - P.y) < 70)) slot = pfSlotBul(i);
+  const slot = pfSlotBul(i);
   if (slot) { tx = slot.x; ty = slot.y; }
-  else { tx = H.x; ty = H.y; yer = H.yer; bos = H.bos; }
+  else if (p.sihir) { tx = p.aex; ty = p.aey; }
+  else {   // uygun yer yok: olduğu yerde bekler — ama yalnız yerdeyse; değilse en yakın zemine (ya da Feza'nın yanına) süzülür
+    tx = o.x; ty = p.yt;
+    if (pfYerBul(o.x, p.yt, 8) === null && !pfUstteCisim(o.x, p.yt)) {
+      const yy = pfZeminAlti(o.x, p.yt);
+      if (yy !== null && yy - p.yt < 400) ty = yy;
+      else { tx = P.x - P.f * 70; const y2 = pfYerBul(tx, P.y, 40); if (y2 !== null) ty = y2; else { tx = P.x; ty = P.y; } }
+    }
+  }
+  if (!p.sihir && Math.abs(tx - o.x) > 24 && Math.abs(tx - o.x) < 140) bos = pfAradaBosluk(o.x, p.yt, tx, ty);
   if (!bekle || p.sihir) pfHuyBitir(o, p);
   if (p.saklan) {   // utangaç: Feza'nın hemen arkasına
     const sx = P.x - P.f * 17, yy = pfYerBul(sx, P.y, 30);
@@ -1036,31 +1043,133 @@ function pfKovalaCiz(p, tm) {   // kovalanan ışık: yumuşak ışıltı + mini
   const s = 7 * a * tw; g.globalAlpha = a; g.save(); g.translate(K.x, K.y); g.rotate(tm * 1.5); g.drawImage(pfYildiz('#fff3b0'), -s, -s, s * 2, s * 2); g.restore();
   g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
 }
+function pfUstteCisim(x, y) {   // (x, y) bir platform cismin (nilüfer, minder…) üstünde mi
+  if (typeof CISIMLER === 'undefined') return false;
+  for (const c of CISIMLER) { const k = c.cisim; if (k.aktif && Math.abs(c.x - x) < k.w / 2 + 6 && Math.abs(c.y - k.h - y) < 10) return true; }
+  return false;
+}
+function pfAradaBosluk(x0, y0, x1, y1) {   // yürüyerek gidilecek düz yolda zemin yoksa (çukur) true → yayla süzülür
+  const n = Math.ceil(Math.abs(x1 - x0) / 20);
+  for (let k = 1; k < n; k++) { const u = k / n; if (pfYerBul(lerp(x0, x1, u), lerp(y0, y1, u), 44) === null) return true; }
+  return false;
+}
 function pfAyir(o, p, dt) {   // kuyruktakiler üst üste binmesin: yakındakini yumuşakça it
   if (p.sihir || p.saklan) return;
   for (const q of pfKuyruk) {
     if (q === o || q.pf.sihir || q.pf.saklan || Math.abs(o.y - q.y) > 40) continue;
     const d = o.x - q.x, ad = Math.abs(d);
-    if (ad < 44) o.x += (ad < 0.5 ? (p.sira > q.pf.sira ? -1 : 1) : Math.sign(d)) * (44 - ad) * Math.min(1, dt * 7);
+    if (ad < 48) {
+      const nx = o.x + (ad < 0.5 ? (p.sira > q.pf.sira ? -1 : 1) : Math.sign(d)) * (48 - ad) * Math.min(1, dt * 7);
+      if (pfYerBul(nx, p.yt, 12) !== null || pfYerBul(o.x, p.yt, 12) === null) o.x = nx;   // itilip kenardan boşluğa taşmasın
+    }
   }
 }
-// Bekleme yerleri: Feza durunca kuyruk çevresine dağılır (sırayla arka/ön); zemin yoksa aynı taraftan bir sonraki yer.
-const PF_SLOTLAR = [];
-function pfSlotHesapla() {
-  let arka = 0, on = 0;
-  const yakin = P.idle > PF_UYU_SN ? 0.82 : 1;   // uyurken biraz daha sokulur
-  for (let i = 0; i < pfKuyruk.length; i++) {
-    const s = PF_SLOTLAR[i] || (PF_SLOTLAR[i] = { x: 0, y: 0, var: false });
-    s.var = false;
-    for (let deneme = 0; deneme < 2 && !s.var; deneme++) {
-      const onde = (i % 2 === 1) !== (deneme === 1), k = onde ? on : arka;
-      if (k > 2) continue;
-      const sx = P.x + (onde ? 1 : -1) * P.f * (58 + k * 46) * yakin, yy = pfYerBul(sx, P.y, 45);
-      if (yy !== null) { s.x = sx; s.y = yy; s.var = true; if (onde) on++; else arka++; }
+// Kuyruk yerleri (her karede bir kez, sırayla): HER hedef yerde (Feza'nın yürüdüğü zemin izi ya da çevresindeki zemin),
+// birbirinden ≥ PF_ARA uzak, çiçek/tohumların ve Pırıl'ın üstünde değil. Feza'nın hemen yanında en çok PF_YAKIN_N tane;
+// diğerleri izde daha geride (PF_UZAK_D'den sonra) bekler. Dar çıkıntıda yer yoksa izde aşağıda bekler, Feza ilerleyince
+// pırıltılı bir yayla yetişir. Yer hiç bulunamazsa olduğu yerde (zaten yerde) bekler — asla havada, asla üst üste değil.
+const PF_SLOTLAR = [], PF_ARA = 54, PF_YAKIN_N = 3, PF_UZAK_D = 290;
+const pfEngel = [];   // {x, y, r} kaçınılacak yerler (bu kare)
+let pfBekleSlotT = 0, pfBekleX = 0, pfBekleY = 0, pfBekleF = 0, pfBekleOnce = false;
+function pfEngelKur() {
+  pfEngel.length = 0;
+  for (const n of NESNELER) {
+    if ((n.tip === 'cicek' || n.tip === 'tohum') && Math.abs(n.x - P.x) < 900) pfEngel.push(n);
+  }
+}
+function pfYerUygun(x, y, kadar) {
+  if (Math.abs(x - P.x) < 36 && Math.abs(y - P.y) < 56) return false;                  // Feza'nın içinde değil
+  for (const n of pfEngel) if (Math.abs(n.x - x) < 50 && n.y - y < 60 && y - n.y < 110) return false;   // çiçek / tohum
+  if (typeof D !== 'undefined' && Math.abs(D.x - x) < 42 && D.y > y - 105 && D.y < y + 25) return false;  // Pırıl alçaktaysa
+  for (let j = 0; j < kadar; j++) {
+    const s = PF_SLOTLAR[j];
+    if (s.var && Math.abs(s.x - x) < PF_ARA && Math.abs(s.y - y) < 56) return false;
+  }
+  return true;
+}
+// iz boyunca örnekler (Feza'dan geriye; boşluklar sıfır uzunlukta): f(x, y, yer, d) true dönerse durur
+function pfIzTara(f) {
+  let i = pfIz.length - 1; if (i < 0) return;
+  let px, py, pyer, acc = 0, sonraki = 0;
+  if (pfIzBos) { const q = pfIz[i]; px = q.x; py = q.y; pyer = q.yer; i--; }
+  else { px = P.x; py = P.y; pyer = P.ground; }
+  let bosOnce = pfIzBos ? pfIz[pfIz.length - 1].bos : false;
+  for (; i >= 0; i--) {
+    const q = pfIz[i];
+    if (bosOnce) {   // boşluk (zıplanan çukur): atla; çok uzunsa (kurtarılma / ışınlanma) iz orada biter
+      if (Math.abs(q.x - px) + Math.abs(q.y - py) > 360) return;
+      px = q.x; py = q.y; pyer = q.yer; bosOnce = q.bos; continue;
+    }
+    const sl = Math.hypot(q.x - px, q.y - py);
+    while (sonraki <= acc + sl) {
+      const k = sl > 0 ? (sonraki - acc) / sl : 0;
+      if (pyer && q.yer && f(lerp(px, q.x, k), lerp(py, q.y, k), sonraki)) return;
+      sonraki += 8;
+    }
+    acc += sl; px = q.x; py = q.y; pyer = q.yer; bosOnce = q.bos;
+  }
+}
+function pfSlotHesapla(dt) {
+  const n = pfKuyruk.length; if (!n) return;
+  for (let i = 0; i < n; i++) if (!PF_SLOTLAR[i]) PF_SLOTLAR[i] = { x: 0, y: 0, var: false, yakin: false };
+  const bekle = P.idle > 0.8 && P.ground && P.fade <= 0;
+  // beklerken yerler sık sık değişmesin (Pırıl uçuştukça titreşmesin): ≈0,7 sn'de bir ya da Feza kıpırdayınca
+  if (bekle) {
+    pfBekleSlotT -= dt;
+    if (pfBekleOnce && pfBekleSlotT > 0 && Math.abs(P.x - pfBekleX) < 6 && Math.abs(P.y - pfBekleY) < 6 && P.f === pfBekleF) return;
+    pfBekleSlotT = 0.7; pfBekleX = P.x; pfBekleY = P.y; pfBekleF = P.f; pfBekleOnce = true;
+  } else pfBekleOnce = false;
+  pfEngelKur();
+  for (let i = 0; i < n; i++) { PF_SLOTLAR[i].var = false; PF_SLOTLAR[i].yakin = false; }
+  // sıra: kuyruktaki uyanma sırası (p.sira)
+  let yakinN = 0;
+  if (bekle) {   // Feza'nın çevresi: arka, ön, arka… (aynı zemin; en çok PF_YAKIN_N)
+    const yakin = P.idle > PF_UYU_SN ? 0.86 : 1;
+    let arka = 0, on = 0;
+    for (let i = 0; i < n && yakinN < PF_YAKIN_N; i++) {
+      const s = PF_SLOTLAR[i];
+      for (let deneme = 0; deneme < 4 && !s.var; deneme++) {
+        const onde = (i % 2 === 1) !== (deneme % 2 === 1), k = (onde ? on : arka) + (deneme >> 1);
+        if (k > 2) continue;
+        const sx = P.x + (onde ? 1 : -1) * P.f * (60 + k * 50) * yakin, yy = pfYerBul(sx, P.y, 24);
+        if (yy !== null && pfYerUygun(sx, yy, n)) { s.x = sx; s.y = yy; s.var = true; s.yakin = true; yakinN++; if (onde) on++; else arka++; }
+      }
+    }
+  }
+  // geri kalanlar: iz boyunca, sırayla
+  let dMin = 60, yakinIz = yakinN;
+  let i = 0;
+  const sonrakiBos = () => { while (i < n && PF_SLOTLAR[i].var) i++; return i < n; };
+  if (sonrakiBos()) pfIzTara((x, y, d) => {
+    if (d < dMin) return false;
+    if (yakinIz >= PF_YAKIN_N && d < PF_UZAK_D) return false;
+    if (!pfYerUygun(x, y, n)) return false;
+    const s = PF_SLOTLAR[i]; s.x = x; s.y = y; s.var = true;
+    if (d < PF_UZAK_D) { s.yakin = true; yakinIz++; }
+    dMin = d + 30;
+    return !sonrakiBos();
+  });
+  // yakın iki arkadaşın yerleri çaprazsa (birbirinin içinden geçmeleri gerekecekse) yerlerini değiştir
+  for (let j = 0; j < n; j++) for (let k = j + 1; k < n; k++) {
+    const A = PF_SLOTLAR[j], B = PF_SLOTLAR[k], a = pfKuyruk[j], b = pfKuyruk[k];
+    if (!A.var || !B.var || !a || !b || a.pf.sihir || b.pf.sihir) continue;
+    if (Math.abs(a.x - b.x) < 70 && Math.abs(a.y - b.y) < 40 && Math.abs(A.y - B.y) < 40 && (a.x - b.x) * (A.x - B.x) < 0) {
+      const x = A.x, y = A.y, yk = A.yakin; A.x = B.x; A.y = B.y; A.yakin = B.yakin; B.x = x; B.y = y; B.yakin = yk;
+    }
+  }
+  // iz yetmediyse (Pırıl taşıdı, kurtarıldı…): kalanlar kendi yerlerinin çevresinde boş bir zemin bulur (üst üste kalmasın)
+  for (let j = 0; j < n; j++) {
+    const s = PF_SLOTLAR[j]; if (s.var) continue;
+    const o = pfKuyruk[j]; if (!o || o.pf.sihir) continue;
+    const yon = o.x < P.x ? -1 : 1;   // önce Feza'dan uzak yana
+    for (let k = 0; k <= 12 && !s.var; k++) {
+      const x = o.x + (k === 0 ? 0 : (k % 2 ? yon : -yon) * Math.ceil(k / 2) * 27), yy = pfYerBul(x, o.pf.yt, 30);
+      if (yy !== null && pfYerUygun(x, yy, n)) { s.x = x; s.y = yy; s.var = true; }
     }
   }
 }
 function pfSlotBul(i) { const s = PF_SLOTLAR[i]; return s && s.var ? s : null; }
+
 function pfDonGuncelle(p, dt) {   // olduğu yerde bir tur (havada) — yatay ölçek cos ile
   if (p.donH) { p.donT = (p.donT || 0) + dt * 2.4; if (p.donT >= 1) { p.donT = 0; p.donH = 0; } }
   const yon = p.f;
@@ -1181,7 +1290,21 @@ function pfBasamak(o, p, dt) {
 
 // ── Final: tepede, ağacın önünde, Feza'nın çevresinde dizilip hep birlikte dans ederler ──
 // Koreografi (4 vuruş, vuruş 0,5 sn, döngü): hop · hop · havada bir tur · patiler havaya! Feza'dan dışa doğru minik dalga gecikmesi.
-const PF_VURUS = 0.5;
+const PF_VURUS = 0.6;   // final müziği 4/4, ölçü 2,4 sn → dörtlük 0,6 sn (muzik.js BAR)
+// Müzikle aynı fazda: final akorları her ölçüde değişir; akor değişimini (AU.akor) görünce ölçü başını yakala.
+// Ses yoksa (?sessiz) akor hiç değişmez → faz 0 kalır.
+function pfVurusEsle(F) {
+  if (typeof AU === 'undefined' || !AU || typeof AU.akor !== 'function') return;
+  const ak = AU.akor(); if (!ak || !ak.length) return;
+  const k = ak[0] * 1000 + (ak[1] || 0) + (ak[2] || 0) * 0.001;
+  if (F.akK !== undefined && k !== F.akK) {
+    const bar = PF_VURUS * 4, hedef = ((F.t % bar) + bar) % bar;    // ölçü başı şimdi: (t - faz) % bar = 0 olmalı
+    let fark = ((hedef - (F.faz || 0)) % bar + bar) % bar; if (fark > bar / 2) fark -= bar;
+    F.faz = (F.faz || 0) + (F.akSay ? clamp(fark, -0.08, 0.08) : fark);   // ilk seferde otur, sonra küçük düzeltmeler
+    F.akSay = (F.akSay || 0) + 1;
+  }
+  F.akK = k;
+}
 // Dans yerleri: Feza'nın durduğu düzlüğün (kenarlardan pay bırakarak) içinde, sırayla sağ/sol, Feza'dan uzaklaşarak
 function pfZeminAlti(x, y) {   // x sütununda y'den aşağıya ilk zemin üstü
   const tx = Math.floor(x / T); if (tx < 0 || tx >= COLS) return null;
@@ -1189,9 +1312,12 @@ function pfZeminAlti(x, y) {   // x sütununda y'den aşağıya ilk zemin üstü
   return null;
 }
 function pfSahne(F) {
-  const fx = P.x;
+  // sahne ağacın tepesinde: Feza ağaca havadan dokunduysa (ya da başka yerdeyse) yer, ağacın dibine göre seçilir
+  let fx = P.x, fy = P.y;
+  const agac = typeof TREE !== 'undefined' && TREE;
+  if (agac && !(P.ground && Math.abs(P.y - TREE.y) < 30 && Math.abs(P.x - TREE.x) < 400)) { fx = TREE.x - 18; fy = TREE.y; }
   if (F.fx !== undefined && Math.abs(fx - F.fx) < 20) return F;
-  const y = pfZeminAlti(fx, P.y);
+  const y = pfZeminAlti(fx, fy);
   if (y === null) return F;
   F.fx = fx; F.y = y;
   let Lr = fx, Rr = fx;
@@ -1199,12 +1325,21 @@ function pfSahne(F) {
   while (Rr < fx + 460 && pfYerBul(Rr + 8, y, 4) !== null) Rr += 8;
   Rr = Math.min(Rr, COLS * T); F.Lr = Lr; F.Rr = Rr;
   const L = Lr + 24, R = Math.min(Rr - 22, COLS * T - 36), n = F.kucuk.length;
-  const sp = clamp((R - L) / (n + 1), 38, 50);
-  const yer = [];
-  for (let j = 0; yer.length < n && j < 12; j++) {
+  // Büyük Pofuduk'un yeri: herkesin SOLUNDA (ağaç gövdesi açık kalsın), gövdesi (200 geniş) Feza'ya değmesin;
+  // düzlük dar ise sol kenardan biraz taşar. Yer hiç yoksa sağ uç; o da yoksa yerinde kalır (null).
+  const agacX = typeof TREE !== 'undefined' && TREE ? TREE.x : fx + 40;
+  let bx = Math.min(Lr + 92, fx - 160, agacX - 190);
+  if (bx < Lr + 40) bx = Rr - fx >= 300 ? Rr - 96 : fx - Lr >= 80 ? Lr + 60 : null;
+  F.bx = bx;
+  // küçüklerin yerleri: Feza'dan dışa doğru; önce Büyük Pofuduk'un gövdesinin DIŞI, sığmayanlar onun önüne (o arkada çizilir)
+  const sp = clamp((R - L) / (n + 1), 40, 50);
+  const aday = [];
+  for (let j = 0; j < 16; j++) {
     const d = 52 + j * sp;
-    for (const s of [1, -1]) { const x = fx + s * d; if (yer.length < n && x >= L && x <= R) yer.push(x); }
+    for (const s of [1, -1]) { const x = fx + s * d; if (x >= L && x <= R) aday.push({ x, k: (bx !== null && Math.abs(x - bx) < 104 ? 1000 : 0) + d }); }
   }
+  aday.sort((a, b) => a.k - b.k);
+  const yer = aday.slice(0, n).map(a => a.x);
   for (let j = 0; yer.length < n; j++) yer.push(clamp(fx + (j % 2 ? -1 : 1) * (60 + j * 20), L, R));   // sığmazsa (çok dar) üst üste
   yer.sort((a, b) => a - b);
   F.yer = yer.map(x => ({ x, y: pfYerBul(x, y, 30) ?? y, sira: 0 }));
@@ -1233,7 +1368,7 @@ function pfDans(o, p, dt) {
   // yerinde: yer kayarsa (Feza birkaç adım attı) yürüyerek kay; hiç zıplayıp düşmez
   if (Math.abs(tx - o.x) > 30 || Math.abs(ty - p.yt) > 6) { p.dansHazir = false; return; }
   o.x = lerp(o.x, tx, 1 - Math.exp(-dt * 6)); p.yt = ty; o.y = ty; p.wy = lerp(p.wy, 0, 1 - Math.exp(-dt * 10)); p.gy = 0; p.rot = lerp(p.rot, 0, 1 - Math.exp(-dt * 10));
-  const lt = F.t - s.sira * 0.07, k = Math.floor(lt / PF_VURUS), b = ((k % 4) + 4) % 4, u = lt / PF_VURUS - k;
+  const lt = F.t - (F.faz || 0) - s.sira * 0.07, k = Math.floor(lt / PF_VURUS), b = ((k % 4) + 4) % 4, u = lt / PF_VURUS - k;
   if (k !== p.dansK && lt > 0) {
     p.dansK = k;
     if (b === 0 || b === 1) { p.jv = -250; pfZipla(p, 3.5); }
@@ -1390,6 +1525,7 @@ function pfBuyukGuncelle(o, dt) {
     OLAY.emit('buyukAsama', { o, asama: p.asama });
     pfZipla(p, 3);
     if (p.asama === 2 && typeof AU !== 'undefined') AU.sfx('esneme', 1);
+    pfUykuFxSil(o, p.asama >= 3);
   }
   p.kirpT -= dt;
   if (p.kirpT < 0) { p.kirp = Math.min(1, -p.kirpT / 0.1); if (p.kirpT < -0.24) { p.kirpT = 2.5 + Math.random() * 3; p.kirp = 0; } } else p.kirp = 0;
@@ -1418,7 +1554,7 @@ function pfBuyukGuncelle(o, dt) {
       // görünür nefes: ağızdan çıkan, dönerek uçuşan iki yumuşak kıvrım (horlamanın "fıırr"ı)
       pfParca(5, bx - 16, o.y - 62, -170 * p.pufG - 50, -30, 2.0, 46 * (0.75 + 0.25 * p.pufG), 1);
       pfParca(5, bx - 12, o.y - 54, -100 * p.pufG - 40, 4, 1.6, 26, -1);
-      pfParca(1, bx + 30, top0 + 40, 26, -26, 3, 14 + Math.random() * 4, 0);
+      if (a < 2) pfParca(1, bx + 30, top0 + 40, 26, -26, 3, 14 + Math.random() * 4, 0);
       if (typeof AU !== 'undefined') AU.sfx('horlama', a === 0 ? 1 : 0.6);
     }
   } else { p.nef = 0.5 + 0.5 * Math.sin(p.t * 1.4); p.kab = Math.max(0, (p.kab || 0) - dt * 3); }
@@ -1493,6 +1629,14 @@ function pfBuyukGuncelle(o, dt) {
   p.ff = lerp(p.ff, a === 0 ? -0.3 : clamp(df / 300, -1, 1) * 0.45, 1 - Math.exp(-dt * 3));
   pfYay(p, dt);
 }
+// Uyku efektleri (z'ler, horlama nefesi): esnemede z'ler, tam uyanınca hepsi HEMEN minik pırıltıya dönüşüp kaybolur
+function pfUykuFxSil(o, hemen) {
+  for (const q of pfP) {
+    if ((q.tip !== 1 && q.tip !== 5) || Math.abs(q.x - o.x) > 420 || Math.abs(q.y - (o.y - 120)) > 360) continue;
+    if (!hemen && q.tip === 5) continue;   // esnerken son nefes bulutçuğu uçup gitsin; z'ler hemen pıt diye söner
+    q.tip = 0; q.col = '#ffffff'; q.s = 5; q.vx *= 0.3; q.vy = -30; q.max = q.life = 0.35;
+  }
+}
 function pfBuyukGuc(o) {   // ağacın yüksekliğine göre: tepe noktası ağaç zemininin en az ~120 birim üstünde olsun
   const ag = typeof TREE !== 'undefined' && TREE ? TREE.y : o.y;
   const gerek = (o.y - 96) - ag + 120;
@@ -1506,10 +1650,8 @@ function pfBuyukDans(o, p, dt) {
   if (p.fHedef === undefined && (t > 0.5 || P.ground)) {   // nereye konacak? (bir kez, Feza yere indikten sonra) — tercihen solda (ağacın gövdesini kapatmasın)
     p.fHedef = null;
     const S0 = pfSahne(F);
-    if (S0.y !== undefined && Math.abs(S0.y - o.y) > 20) {
-      const sol = S0.fx - S0.Lr, sag = S0.Rr - S0.fx;
-      if (sol >= 120) p.fHedef = { x: S0.Lr + 96, y: S0.y };   // Feza'ya biraz değse de olur: o, Feza'nın arkasında çizilir
-      else if (sag >= 180) p.fHedef = { x: S0.Rr - 96, y: S0.y };
+    if (S0.y !== undefined && Math.abs(S0.y - o.y) > 20 && S0.bx !== null && S0.bx !== undefined) {
+      p.fHedef = { x: S0.bx, y: S0.y };
       if (p.fHedef) { const yy = pfYerBul(p.fHedef.x, S0.y, 30); if (yy !== null) p.fHedef.y = yy; }
     }
     p.fx0 = o.x; p.fy0 = o.y; p.fT0 = Math.max(0, t - 0.5);
@@ -1550,7 +1692,7 @@ function pfBuyukDans(o, p, dt) {
     }
   } else dansta = true;
   if (dansta) {
-    const lt = t - 0.1, k = Math.floor(lt / PF_VURUS), b = ((k % 4) + 4) % 4, u = lt / PF_VURUS - k;
+    const lt = t - (F.faz || 0) - 0.04, k = Math.floor(lt / PF_VURUS), b = ((k % 4) + 4) % 4, u = lt / PF_VURUS - k;
     if (k !== p.dansK && p.hy === 0 && p.hv === 0 && (!H || t > (p.konT || (p.konT = t)) + 0.3)) {
       p.dansK = k;
       if (b === 0 || b === 1) { p.hv = -290; pfZipla(p, 3); }
@@ -1664,7 +1806,11 @@ OLAY.on('carpti', o => {
   } else if (o.tip === 'buyukPofuduk') {
     if (o.cisim.tip === 'ziplat') {
       if (P.vy > -200 && P.x < o.x) { P.vy = -o.cisim.guc; P.ground = false; P.dj = true; P.jumpT = 0; P.bounce = true; OLAY.emit('ziplatti', o); TUR.al('buyukPofuduk').ustune(o, 0); }
-    } else if (p.mir <= 0) { p.mir = 1.4; pfZipla(p, 1.6); pfParca(1, o.x + 40, o.y - 200, 20, -24, 2.6, 14, 0); }
+    } else if (p.mir <= 0) {   // tosladı: uyurken uykulu bir "z", uyanıksa (z yok!) kıkırdayıp minik bir kalp
+      p.mir = 1.4; pfZipla(p, 1.6);
+      if (p.asama < 2) pfParca(1, o.x + 40, o.y - 200, 20, -24, 2.6, 14, 0);
+      else { p.kikir = Math.max(p.kikir, 0.5); pfParca(4, o.x - 60, o.y - 150, -30, -60, 1.3, 8, '#ff9cc4'); }
+    }
   }
 });
 OLAY.on('kurtarildi', () => { pfIzBos = true; });
@@ -1677,7 +1823,7 @@ function pfFinalBasla() {
   const sirali = kucuk.slice().sort((a, b) => a.x - b.x);
   sirali.forEach((o, i) => { o.pf.dansI = i; });
   const bo = pfFinal.buyuk;
-  if (bo) { const p = bo.pf; if (p.asama < 3) { p.asama = 3; p.aT = 2.6; bo.uyandi = true; p.bloom = 1; } }
+  if (bo) { const p = bo.pf; if (p.asama < 3) { p.asama = 3; p.aT = 2.6; bo.uyandi = true; p.bloom = 1; } pfUykuFxSil(bo, true); }
   const solX = cam.x - 70, sagX = cam.x + VW + 70;
   for (const o of kucuk) {
     const p = o.pf;
