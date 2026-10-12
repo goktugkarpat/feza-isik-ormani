@@ -32,10 +32,15 @@ const PF_BAS_W = 60, PF_BAS_H = 106;     // basamak olunca (uzamış hali; tek z
 const PF_MINDER_GUC = 1100;
 const PF_BRX = 100, PF_BRY = 100;        // Büyük Pofuduk (cisim en fazla 200 geniş)
 const PF_BUYUK_GUC = 1360;
+const PF_BUYUK_YAT = 0.3;            // uyanınca çökme miktarı (0: dimdik top · 1: yassı minder)
 
 // ── sprite önbelleği ──
 let pfRes = 0, pfResH = -1, pfZMax = 0;
 const PF_SPR = new Map();
+// hızlı arama (kare başına dize birleştirme yok): tüy sprite'ları palet başına sayısal anahtarla, küçük sprite'lar renk dizesiyle
+const PF_SPRK = [], PF_YM = new Map(), PF_KM = new Map(), PF_LM = new Map();
+let pfPalN = 0;
+function pfSprSil() { PF_SPR.clear(); PF_SPRK.length = 0; PF_YM.clear(); PF_KM.clear(); PF_LM.clear(); }
 // Çözünürlük, kameranın o anki yakınlığına göre DEĞİL, bu ekranda olabilecek en yakın görüşe göre seçilir: böylece bölgeler
 // arası yumuşak yakınlaştırmalarda önbellek hiç boşaltılmaz (boşaltmak = bütün tüyleri tek karede yeniden çizmek = takılma).
 function pfResGuncel() {
@@ -45,7 +50,7 @@ function pfResGuncel() {
     pfZMax *= (typeof OM_TABAN_ZOOM === 'number' ? OM_TABAN_ZOOM : 1) * 1.04;
   }
   const r = clamp(Math.round(Math.max(H / VH * pfZMax, S) * 2) / 2, 1, 3);
-  if (r !== pfRes) { pfRes = r; PF_SPR.clear(); pfIsitSifirla(); }
+  if (r !== pfRes) { pfRes = r; pfSprSil(); pfIsitSifirla(); }
 }
 // ── Önceden ısıtma: gereken bütün sprite'lar oyun başında, karelere yayılarak (kare başına 1–2 tane) hazırlanır.
 //    Kuru çizim (pfKayit) gerçek çizim yollarını ekran dışında çalıştırır; pfKurk o sırada çizmez, yalnız kuyruğa yazar.
@@ -78,6 +83,7 @@ function pfIsitKur() {
   pfIsitQ.push(pfZ, () => pfYuva(false), () => pfYuva(true));
 }
 function pfIsitAdim() {   // çizim aşamasında (pfFx) çağrılır
+  if (pfOnIsitAktif) return;   // başlık/girişte kendi döngüsü hazırlıyor
   pfResGuncel();
   if (pfIsitGerek) pfIsitKur();
   if (!pfIsitQ.length) return;
@@ -87,6 +93,24 @@ function pfIsitAdim() {   // çizim aşamasında (pfFx) çağrılır
   for (let n = 0; pfIsitQ.length && n < 3 && (n === 0 || performance.now() - t0 < 1.2); n++) { const c = pfIsitQ.shift()(); if (c && c.width) g.drawImage(c, 0, 0, 1, 1); }
   g.restore();
 }
+// Başlık ve giriş sahnesi boyunca (nesneler çizilmese de) her karede küçük bir bütçeyle (~1.5 ms; en az 1 sprite) hazırla:
+// çocuk başlığa hemen dokunsa bile 40 sn'lik giriş sahnesi bütün sprite'lara yeter, oyun karesinde tüy sprite'ı kurulmaz.
+// Oyun başlayınca durur (kalan olursa pfIsitAdim devralır).
+let pfOnIsitAktif = false;
+const pfIsitX = (() => { const c = document.createElement('canvas'); c.width = c.height = 2; return c.getContext('2d'); })();
+function pfOnIsit() {
+  const d = typeof DURUM !== 'undefined' ? DURUM : '';
+  if (d !== 'baslik' && d !== 'giris') { pfOnIsitAktif = false; return; }
+  pfOnIsitAktif = true; requestAnimationFrame(pfOnIsit);
+  if (!(H > 0) || !(S > 0) || typeof g === 'undefined') return;
+  pfResGuncel();
+  if (pfIsitGerek) { pfIsitKur(); return; }   // kuru çizim bu karede, ilk sprite bir sonrakinde
+  if (!pfIsitQ.length) return;
+  const t0 = performance.now();
+  // yeni sprite'ı küçük gizli bir tuvale çiz: tarayıcı onu şimdi hazırlasın (ilk oyun karesinde değil)
+  for (let n = 0; pfIsitQ.length && (n === 0 || performance.now() - t0 < 1.5); n++) { const c = pfIsitQ.shift()(); if (c && c.width) pfIsitX.drawImage(c, 0, 0, 1, 1); }
+}
+requestAnimationFrame(pfOnIsit);
 const pfRgba = (h, a) => { const c = hex(h); return `rgba(${c[0]},${c[1]},${c[2]},${a})`; };
 
 // Tüylü gövde: peluş ponpon. Siluet = süper-elips (n=2 elips; büyük n → yastık) + kenar boyunca yuvarlak tüy topakları;
@@ -95,8 +119,12 @@ const pfRgba = (h, a) => { const c = hex(h); return `rgba(${c[0]},${c[1]},${c[2]
 // Gövde merkezi sprite merkezinde. Dünya boyu: c.ww × c.wh. Önbellekli (kare başına çizilmez).
 const PF_OL = new Float32Array(2 * 260);
 function pfKurk(pal, w, h, seed, n = 2) {
+  const pm = PF_SPRK[pal.__pi || (pal.__pi = ++pfPalN)] || (PF_SPRK[pal.__pi] = new Map());
+  const nk = ((w * 1024 + h) * 100000 + seed) * 64 + Math.round(n * 10);
+  let c = pm.get(nk); if (c) return c;
   const key = pal.a + w + 'x' + h + ':' + seed + ':' + n;
-  let c = PF_SPR.get(key); if (c) return c;
+  if (!(pfRes > 0)) pfResGuncel();
+  if (!(pfRes > 0) || !(w > 0) || !(h > 0)) return PF_BOS;   // tuval henüz boyutsuz: boş sprite'ı ÖNBELLEĞE ALMA
   if (pfKayit) { if (!pfIsitSet.has(key)) { pfIsitSet.add(key); pfIsitQ.push(() => pfKurk(pal, w, h, seed, n)); } return PF_BOS; }
   const R = rng(seed), rx = w / 2, ry = h / 2, r = Math.min(rx, ry), rm = (rx + ry) / 2;
   const pad = r * 0.2 + 3;
@@ -104,6 +132,7 @@ function pfKurk(pal, w, h, seed, n = 2) {
   c.width = Math.ceil((w + pad * 2) * pfRes); c.height = Math.ceil((h + pad * 2) * pfRes);
   c.ww = c.width / pfRes; c.wh = c.height / pfRes;
   const x = c.getContext('2d');
+  if (!x || !(c.width > 0) || !(c.height > 0)) return PF_BOS;   // bellek dolu / boyutsuz: önbelleğe alma, sonra yeniden dene
   x.setTransform(pfRes, 0, 0, pfRes, c.width / 2, c.height / 2);
   x.lineCap = 'round'; x.lineJoin = 'round';
   // süper-elipsin kutupsal yarıçapı (yön açısı a)
@@ -219,14 +248,14 @@ function pfKurk(pal, w, h, seed, n = 2) {
   x.lineWidth = fw;
   x.strokeStyle = pfRgba(mixc8(pal.a, pal.l, 0.5), 0.36); x.stroke(sac[0]);
   x.strokeStyle = pfRgba(mixc8(pal.a, pal.d, 0.3), 0.3); x.stroke(sac[1]);
-  PF_SPR.set(key, c); return c;
+  PF_SPR.set(key, c); pm.set(nk, c); return c;
 }
 // iki hex rengin karışımı (hex döner; önbellek kurulumunda kullanılır)
 function mixc8(a, b, t) { const A = hex(a), B = hex(b); return '#' + [0, 1, 2].map(i => Math.round(lerp(A[i], B[i], t)).toString(16).padStart(2, '0')).join(''); }
 
 // Yıldız pırıltısı (4 köşeli), 'z' harfi, yaprak sprite'ları
 function pfYildiz(col) {
-  const key = 'y' + col; let c = PF_SPR.get(key); if (c) return c;
+  let c = PF_YM.get(col); if (c) return c; const key = 'y' + col;
   c = document.createElement('canvas'); c.width = c.height = 64;
   const x = c.getContext('2d'), [r, gg, b] = hex(col);
   const gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
@@ -236,7 +265,7 @@ function pfYildiz(col) {
   for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 - Math.PI / 2, rr = i % 2 ? 4.5 : 27; x.lineTo(32 + Math.cos(a) * rr, 32 + Math.sin(a) * rr); }
   x.closePath(); x.fill();
   x.fillStyle = `rgba(${r},${gg},${b},0.55)`; x.beginPath(); x.arc(32, 32, 6, 0, 6.283); x.fill();
-  PF_SPR.set(key, c); return c;
+  PF_SPR.set(key, c); PF_YM.set(col, c); return c;
 }
 function pfZ() {
   let c = PF_SPR.get('z'); if (c) return c;
@@ -252,7 +281,7 @@ function pfZ() {
   PF_SPR.set('z', c); return c;
 }
 function pfKalp(col) {
-  const key = 'k' + col; let c = PF_SPR.get(key); if (c) return c;
+  let c = PF_KM.get(col); if (c) return c; const key = 'k' + col;
   c = document.createElement('canvas'); c.width = c.height = 64;
   const x = c.getContext('2d'), [r, gg, b] = hex(col);
   const gr = x.createRadialGradient(32, 34, 0, 32, 34, 32);
@@ -262,15 +291,15 @@ function pfKalp(col) {
   kalp(); x.fillStyle = col; x.fill();
   x.lineWidth = 2.5; x.strokeStyle = 'rgba(255,255,255,0.85)'; x.stroke();
   x.fillStyle = 'rgba(255,255,255,0.9)'; x.beginPath(); x.ellipse(25, 25, 3.2, 2.2, -0.6, 0, 6.283); x.fill();
-  PF_SPR.set(key, c); return c;
+  PF_SPR.set(key, c); PF_KM.set(col, c); return c;
 }
 function pfYaprak(col) {
-  const key = 'l' + col; let c = PF_SPR.get(key); if (c) return c;
+  let c = PF_LM.get(col); if (c) return c; const key = 'l' + col;
   c = document.createElement('canvas'); c.width = 40; c.height = 24;
   const x = c.getContext('2d');
   x.fillStyle = col; x.beginPath(); x.moveTo(3, 12); x.quadraticCurveTo(18, -2, 37, 12); x.quadraticCurveTo(18, 26, 3, 12); x.fill();
   x.strokeStyle = 'rgba(255,255,255,0.55)'; x.lineWidth = 1.6; x.beginPath(); x.moveTo(5, 12); x.quadraticCurveTo(20, 10, 34, 12); x.stroke();
-  PF_SPR.set(key, c); return c;
+  PF_SPR.set(key, c); PF_LM.set(col, c); return c;
 }
 
 // ── parçacıklar (pırıltı, z, yaprak, hapşu bulutu) ──
@@ -1076,7 +1105,7 @@ function pfAyir(o, p, dt) {   // kuyruktakiler üst üste binmesin: yakındakini
 // birbirinden ≥ PF_ARA uzak, çiçek/tohumların ve Pırıl'ın üstünde değil. Feza'nın hemen yanında en çok PF_YAKIN_N tane;
 // diğerleri izde daha geride (PF_UZAK_D'den sonra) bekler. Dar çıkıntıda yer yoksa izde aşağıda bekler, Feza ilerleyince
 // pırıltılı bir yayla yetişir. Yer hiç bulunamazsa olduğu yerde (zaten yerde) bekler — asla havada, asla üst üste değil.
-const PF_SLOTLAR = [], PF_ARA = 46, PF_YAKIN_N = 3, PF_UZAK_D = 290;
+const PF_SLOTLAR = [], PF_ARA = 46, PF_YAKIN_N = 3, PF_UZAK_D = 290, PF_GORUNUR_N = 4, PF_GIZLI_D = 760;
 const pfEngel = [];   // {x, y, r} kaçınılacak yerler (bu kare)
 let pfBekleSlotT = 0, pfBekleX = 0, pfBekleY = 0, pfBekleF = 0, pfBekleOnce = false;
 function pfEngelKur() {
@@ -1145,15 +1174,17 @@ function pfSlotHesapla(dt) {
     }
   }
   // geri kalanlar: iz boyunca, sırayla
-  let dMin = 60, yakinIz = yakinN;
+  let dMin = 60, yakinIz = yakinN, gorunur = yakinN;   // gorunur: ekranda Feza'nın yakınında kalanlar (en çok PF_GORUNUR_N)
   let i = 0;
   const sonrakiBos = () => { while (i < n && PF_SLOTLAR[i].var) i++; return i < n; };
   if (sonrakiBos()) pfIzTara((x, y, d) => {
     if (d < dMin) return false;
     if (yakinIz >= PF_YAKIN_N && d < PF_UZAK_D) return false;
+    if (gorunur >= PF_GORUNUR_N && d < PF_GIZLI_D) return false;   // kalabalık olmasın: diğerleri ekranın dışında, çok geride
     if (!pfYerUygun(x, y, n)) return false;
     const s = PF_SLOTLAR[i]; s.x = x; s.y = y; s.var = true;
     if (d < PF_UZAK_D) { s.yakin = true; yakinIz++; }
+    if (d < PF_GIZLI_D) gorunur++;
     dMin = d + 30;
     return !sonrakiBos();
   });
@@ -1624,8 +1655,8 @@ function pfBuyukGuncelle(o, dt) {
     // yere yatma: alçalır ve yayvanlaşır; cisim de alçalır
     if (!pfFinal) {
       const yk = smooth(clamp((t - 2.7) / 1.0, 0, 1));
-      p.yat = yk;
-      const eskiH = o.cisim.h, yeniH = lerp(196, 96, yk);
+      p.yat = yk * PF_BUYUK_YAT;   // yuvarlak kalır: yalnız hafifçe çöker (yassı minder değil)
+      const eskiH = o.cisim.h, yeniH = lerp(196, 196 * (1 - 0.48 * PF_BUYUK_YAT), yk);
       o.cisim.h = yeniH; o.cisim.dy = -(yeniH - eskiH);
       if (t > 3.7 && o.cisim.tip !== 'ziplat') { o.cisim.tip = 'ziplat'; o.cisim.guc = pfBuyukGuc(o); o.cisim.dy = 0; }
     }
@@ -1635,13 +1666,16 @@ function pfBuyukGuncelle(o, dt) {
       else {
         p.goz = 'acik'; p.agiz = yakin ? 'acik' : 'gulus'; p.agizB = 0.45;
         p.pati = lerp(p.pati, yakin ? 0.6 : 0.2, 1 - Math.exp(-dt * 5)); p.patiS += dt * 6;
-        if (yakin && P.ground && t > 3.7) { p.davetT -= dt; if (p.davetT < 0) { p.davetT = 1.3; pfZipla(p, 2.4); } }
+        if (P.ground && t > 3.7) {   // davet: yerinde, Feza'ya doğru eğilerek küçük tombul zıplamalar (yakındaysa daha sık)
+          p.davetT -= dt;
+          if (p.davetT < 0 && p.hy >= 0) { p.davetT = yakin ? 1.3 : 2.2; p.hv = yakin ? -330 : -260; pfZipla(p, 1.2); }
+        }
       }
     }
     if (pfFinal) pfBuyukDans(o, p, dt);
   }
   // zıplama (hy)
-  if (p.hy < 0 || p.hv < 0) { p.hv += 1700 * dt; p.hy += p.hv * dt; if (p.hy >= 0) { p.hy = 0; p.hv = 0; pfZipla(p, pfFinal ? 2.6 : 5); } }
+  if (p.hy < 0 || p.hv < 0) { p.hv += 1700 * dt; p.hy += p.hv * dt; if (p.hy >= 0) { p.hy = 0; p.hv = 0; pfZipla(p, pfFinal ? 2.6 : p.asama >= 3 && o.uyandi ? 2 : 5); } }
   p.ff = lerp(p.ff, a === 0 ? -0.3 : clamp(df / 300, -1, 1) * 0.45, 1 - Math.exp(-dt * 3));
   pfYay(p, dt);
 }
@@ -1791,7 +1825,7 @@ function pfBuyukCiz(o, tm) {
   cz.sy = (1 - sq) * (1 + nef * 0.05) * ysy;
   cz.yuzSx = 1 / ysx; cz.yuzSy = lerp(1, 0.78, yat) / ysy;
   cz.patiAgiz = p.asama === 2 ? p.patiAgiz || 0 : 0; cz.kabO = 0.6;
-  cz.yastik = yat; cz.kivO = 1.45; cz.yuzO = 1.22; cz.isilti = p.asama >= 3 ? p.bloom : 0; cz.bakY = p.bakY || 0; cz.am = 1;
+  cz.yastik = 0; cz.kivO = 1.45; cz.yuzO = 1.22; cz.isilti = p.asama >= 3 ? p.bloom : 0; cz.bakY = p.bakY || 0; cz.am = 1;
   cz.don = p.don || 1; cz.seed = 7; cz.salla = 0;
   cz.p0 = PF_BUYUK_UYKU; cz.p1 = PF_BUYUK; cz.bloom = p.bloom;
   cz.w = PF_BRX * 2; cz.sw = PF_BRX * 2; cz.h = PF_BRY * 2; cz.gH = PF_BRY * 2; cz.n = 2; cz.yuzY = lerp(0.55, 0.5, yat);
@@ -1830,6 +1864,8 @@ OLAY.on('carpti', o => {
   }
 });
 OLAY.on('kurtarildi', () => { pfIzBos = true; });
+// ekran/çözünürlük değişti (döndürme, uyarlanan piksel yoğunluğu): çözünürlüğü yeniden hesapla; gerekirse sprite'lar yeniden ısıtılır
+OLAY.on('boyut', () => { pfResH = -1; pfResGuncel(); });
 function pfFinalBasla() {
   if (pfFinal) return;
   const kucuk = NESNELER.filter(o => o.tip === 'pofuduk' && o.pf);

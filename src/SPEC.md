@@ -85,7 +85,7 @@ Pırıl, from `konusma` triggers placed by bolum.js: `p_merhaba` `p_zipla` `p_uy
 `p_sakli` `p_buyuk` `p_agac`. Pırıl, event-driven by piril.js: `p_uyan` (sahne.js, end of intro), `p_cicek_ilk` (first flower),
 `p_uyandi` (first Pofuduk woken), `p_nilufer` (after 'aydinlat'), `p_tohum` (first seed), `p_buyuk_goz` `p_buyuk_esne`
 `p_buyuk_kalk` (Big Pofuduk stages, on `OLAY 'buyukAsama' {o, asama:1|2|3}` emitted by pofuduk.js), `p_yol` (guidance),
-`p_kurtar` (rescue after a real fall), `p_yardim` (assist lift for a stuck child; alternates `p_yardim1`/`p_yardim2`), occasional varied praise `p_aferin1..p_aferin6` (never every time).
+`p_kurtar` (rescue after a real fall), `p_yardim` (assist lift for a stuck child; alternates `p_yardim1`/`p_yardim2`), occasional varied praise `p_aferin1..p_aferin9`; second-lake variants `p_karanlik2`, `p_nilufer2` are chosen inside ses.js automatically (never every time).
 `SES.soyle(key, {oncelik})` queues lines (no overlap; low-priority lines may be dropped), shows the subtitle via
 `ARAYUZ.altyazi(text, seconds, kim)` and emits `OLAY 'konusma' {anahtar, kim:'a'|'p', sure}` so Pırıl can move her mouth.
 

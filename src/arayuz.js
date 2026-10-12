@@ -362,23 +362,28 @@ const ARAYUZ = (() => {
   // ══════════ PARMAK IŞIĞI (yürürken basılı tutulan yer) ══════════
   let parA = 0, parX = 0, parY = 0;
   function parmakCiz(tm, dt) {
+    // yalnız parmağın gerçekten durduğu yerde: küçük, hafif bir ışık (parmak yoksa/yeri bilinmiyorsa hiç çizilmez)
     const hx = GIRDI.hedefX;
+    let var_ = false;
     if (hx != null) {
       let ty = null;
       if (GIRDI.hedefY != null) ty = GIRDI.hedefY;
       else try { if (typeof OM_PARMAK !== 'undefined') { let s = -1; for (const t of OM_PARMAK) if (t.aktif && !t.jump && t.sira > s) { s = t.sira; ty = t.y; } } } catch (e) {}
-      const tx = hx * DPR, tyy = (ty != null ? ty : innerHeight * 0.7) * DPR;
-      if (parA < 0.05) { parX = tx; parY = tyy; }
-      parX = lerp(parX, tx, 1 - Math.exp(-dt * 30)); parY = lerp(parY, tyy, 1 - Math.exp(-dt * 30));
+      if (ty != null) {
+        var_ = true;
+        const tx = hx * DPR, tyy = ty * DPR;
+        if (parA < 0.05) { parX = tx; parY = tyy; }
+        parX = lerp(parX, tx, 1 - Math.exp(-dt * 30)); parY = lerp(parY, tyy, 1 - Math.exp(-dt * 30));
+      }
     }
-    parA = clamp(parA + (hx != null ? dt * 6 : -dt * 4), 0, 1);
+    parA = clamp(parA + (var_ ? dt * 6 : -dt * 10), 0, 1);   // parmak kalkınca ≈0.1 sn'de söner
     if (parA <= 0.01) return;
-    const r = Math.min(W, H) * 0.06, yon = Math.sign(GIRDI.eksen || 0);
+    const r = Math.min(W, H) * 0.04, yon = Math.sign(GIRDI.eksen || 0);
     g.globalCompositeOperation = 'lighter';
-    dglow('#c4a8ff', parX, parY, r * 2.1, parA * 0.42);
-    dglow('#ffffff', parX, parY, r * 0.7, parA * 0.18);
-    halka(parX, parY, r * (0.66 + 0.05 * Math.sin(tm * 6)), parA * 0.32, r * 0.04 + 1);
-    if (yon) for (let i = 0; i < 2; i++) { const q = ((tm * 1.4 + i * 0.5) % 1); oku(parX + yon * r * (0.95 + q * 0.6), parY, r * 0.16, yon, parA * Math.sin(q * Math.PI) * 0.7); }
+    dglow('#c4a8ff', parX, parY, r * 1.8, parA * 0.22);
+    dglow('#ffffff', parX, parY, r * 0.6, parA * 0.1);
+    halka(parX, parY, r * (0.66 + 0.04 * Math.sin(tm * 6)), parA * 0.22, r * 0.035 + 1);
+    if (yon) for (let i = 0; i < 2; i++) { const q = ((tm * 1.4 + i * 0.5) % 1); oku(parX + yon * r * (0.95 + q * 0.6), parY, r * 0.16, yon, parA * Math.sin(q * Math.PI) * 0.3); }
     g.globalCompositeOperation = 'source-over';
   }
 
@@ -802,6 +807,10 @@ const ARAYUZ = (() => {
     // her parça ayrı korunur: birinde hata olursa diğerleri (özellikle zıplama düğmesi) yine çizilir
     const dene = (ad, fn) => { try { fn(); } catch (e) { if (!uiHata[ad]) { uiHata[ad] = 1; console.warn('[arayuz] ' + ad, e); } g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; } };
     if (uiBaslikA > 0.005) dene('baslik', () => baslikCiz(tm, uiEase(uiBaslikA), dt));
+    else if (DURUM !== 'baslik' && C.logo) {   // başlık söndü: logo tuvallerini (2732×666 ×2 ≈ 15 MB) hemen bırak
+      for (const c of [C.logo.metin, C.logo.glow, bant]) if (c) { c.width = 0; c.height = 0; }
+      C.logo = null; bant = null;
+    }
     // oyun içi
     dene('ipucu', () => ipucuGuncelle(dt));
     zipT = Math.max(0, zipT - dt * 2.5);

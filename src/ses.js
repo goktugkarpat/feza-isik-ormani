@@ -3,7 +3,9 @@
    Sözleşme: src/SPEC.md › "Voice line keys".
    SES.soyle(anahtar, {oncelik}) → sıraya koyar (cümleler asla üst üste binmez), altyazıyı gösterir
    (ARAYUZ.altyazi(metin, saniye, kim)) ve OLAY 'konusma' {anahtar, kim:'a'|'p', sure} yayar (yalnız gerçekten çalınca).
-   Takma adlar: 'p_aferin' → p_aferin1..6 (son çalınanlar tekrarlanmaz) · 'p_yardim' → p_yardim1 / p_yardim2 sırayla.
+   Takma adlar: 'p_aferin' → p_aferin1..9 (son çalınanlar tekrarlanmaz) · 'p_yardim' → p_yardim1 / p_yardim2 sırayla.
+   İkinci göl: p_karanlik / p_nilufer ikinci gölcük için istenince (tetikleyicinin konusu ya da ops.yer 'gol2', yoksa
+   Feza BOLUM.gollar[1]'in yakınında) p_karanlik2 / p_nilufer2 çalınır; geçerlilik/ömür kuralları asıl anahtarınkiyle aynı.
    Ses AU'nun WebAudio bağlamından çalar (müzik konuşma boyunca kısılır); sesler.js yüklü değilse ya da ?sessiz
    ise yalnız altyazı + olay (kayıt süresiyle) çalışır.
    SES.sus() → susar, sırayı boşaltır. SES.konusuyor() · SES.sure(anahtar) · SES.kayit (deneme günlüğü) · SES.sira().
@@ -34,6 +36,8 @@ const SES = (() => {
     "p_uyandi": "Çok yaşa, Pofuduk! Günaydın! Artık yolumuz açık.",
     "p_karanlik": "Burası çok karanlık. Bekle, ben ışık üfleyeceğim!",
     "p_nilufer": "Bak, suyun üstünde nilüfer yaprakları çıktı! Zıplaya zıplaya, üstlerinden geç!",
+    "p_karanlik2": "Bir gölcük daha! Hadi, ben yine ışık üfleyeyim!",
+    "p_nilufer2": "Yine yapraklar çıktı! Hop hop, üstlerinden geç!",
     "p_minder": "Bu Pofuduk yumuşacık bir minder! Üstüne zıpla, seni yukarı fırlatsın!",
     "p_ciftzipla": "Zıpla, havadayken düğmeye bir daha bas! Ben seni yukarı iterim!",
     "p_sakli": "Bak, yukarıda gizli bir yol var! Oradaki parlak tohumları toplayalım mı?",
@@ -53,6 +57,9 @@ const SES = (() => {
     "p_aferin4": "Bravo!",
     "p_aferin5": "İşte böyle!",
     "p_aferin6": "Sen gerçek bir kahramansın!",
+    "p_aferin7": "Harikasın!",
+    "p_aferin8": "Yaşasın, başardın!",
+    "p_aferin9": "Ne kadar da cesursun!",
     "a_final1": "Feza ile Pırıl, Işık Ağacı'nı yeniden parlatmışlar. Bütün orman ışıl ışıl olmuş, Pofuduklar sevinçle dans etmiş.",
     "a_final2": "Sabah olunca, Feza yatağında gözlerini açmış. Pırıl da ona, tatlı tatlı göz kırpmış.",
     "a_final3": "Ve her gece, yeni bir macera onları bekliyordu..."
@@ -63,8 +70,10 @@ const SES = (() => {
   const anlatici = k => k.startsWith('a_') || k === 'p_uyan';
   const sesKim = k => k.startsWith('a_') ? 'a' : 'p';
   // ── cümle bilgisi: oncelik (3 sahne · 2 oyun · 1 yönlendirme · 0 övgü), acil (2 araya girer · 1 olay tepkisi), ömür (sn), konu ──
-  const KONU_SIRA = { p_buyuk: 1, p_buyuk_goz: 2, p_buyuk_esne: 3, p_buyuk_kalk: 4, p_agac: 5, p_karanlik: 1, p_nilufer: 2 };
+  const KONU_SIRA = { p_buyuk: 1, p_buyuk_goz: 2, p_buyuk_esne: 3, p_buyuk_kalk: 4, p_agac: 5, p_karanlik: 1, p_nilufer: 2, p_karanlik2: 1, p_nilufer2: 2 };
+  const sesTaban = k => (k === 'p_karanlik2' || k === 'p_nilufer2') ? k.slice(0, -1) : k;   // ikinci göl cümlesi → asıl anahtar (kurallar için)
   function sesBilgi(k) {
+    k = sesTaban(k);
     if (anlatici(k)) return { oncelik: 3, acil: 0, omur: 1e9, konu: null };
     if (ovguMu(k)) return { oncelik: 0, acil: 0, omur: 1.5, konu: null };
     if (k === 'p_yol') return { oncelik: 1, acil: 0, omur: 3, konu: null };
@@ -153,7 +162,7 @@ const SES = (() => {
     const o = s.o, p = gP();
     if (o && p && typeof o.gec === 'number' && p.x > o.gec) return 'yeri geçti (gec)';
     if (o && o.konu && sesKonuBitti(o.konu)) return 'konusu bitti';
-    const f = KOSUL[s.k];
+    const f = KOSUL[sesTaban(s.k)];
     if (f) { try { if (!f(s)) return 'yeri geçti'; } catch (e) {} }
     return '';
   }
@@ -210,6 +219,12 @@ const SES = (() => {
     if (s.acil >= 1 || sesSonOvgu === sesSonBitis) return 1.0;   // kısa övgüden sonra uzun bekleme gerekmez
     return clamp(1.0 + 0.45 * sesSonSure, 2.5, 4.0);
   }
+  function sesIkinciGol(o, ops) {   // istek ikinci gölcük için mi?
+    const gr = (o && o.konu && o.konu.grup) || (ops && ops.yer != null ? String(ops.yer) : '');
+    if (gr) return gr === 'gol2';
+    const g2 = typeof BOLUM !== 'undefined' && Array.isArray(BOLUM.gollar) && BOLUM.gollar[1], p = gP();
+    return !!(g2 && p && p.x > g2.x0 - 16 * T && p.x < g2.x1 + 2 * T);
+  }
   function soyle(k, ops) {
     if (k === 'p_aferin' || ovguMu(k)) k = sesOvguSec(k);
     if (k === 'p_yardim') k = 'p_yardim' + (1 + (sesYardimN++ % 2));
@@ -221,9 +236,10 @@ const SES = (() => {
       else if (ops.oncelik <= 0 && !ovguMu(k)) { oncelik = Math.min(oncelik, 1); omur = Math.min(omur, 3); }
     }
     if (ovguMu(k) && t - sesSonOvgu < 12) { sesNot('at', k, 'övgü sık'); return; }
+    const o = (ops && ops.o) || (anlatici(k) || ovguMu(k) ? null : sesTetikBul(k));
+    if ((k === 'p_karanlik' || k === 'p_nilufer') && sesIkinciGol(o, ops)) k = k + '2';   // ikinci gölcükte yeni cümle
     if ((sesCalan && sesCalan.k === k) || sesSira.some(s => s.k === k)) return;   // aynı cümle zaten sırada
     // talimatlar/tepkiler bir kez — ama tetikleyici nesne başına (iki göl, iki uyuyan Pofuduk), oyun başına değil
-    const o = (ops && ops.o) || (anlatici(k) || ovguMu(k) ? null : sesTetikBul(k));
     const yer = o ? 'o' + (o.id != null ? o.id : Math.round(o.x)) : (ops && ops.yer != null ? String(ops.yer) : '');
     const tek = yer ? k + '@' + yer : k;
     if (!tekrarli(k)) {
