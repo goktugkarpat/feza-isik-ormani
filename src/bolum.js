@@ -33,8 +33,8 @@ const BL_ZEMIN = [
   // 5. Saklı Yol (200–252): ana yol aşağıda, saklı yol dallarda
   [200, 201, 6], [202, 203, 5], [204, 214, 4], [215, 219, 5], [220, 238, 4], [239, 242, 5],
   // 6. Açıklık (243–299): sakin düzlük, küçük tümsek; Büyük Pofuduk ağaç tepesinin dibindeki yuvasında (1 kare çukur:
-  //    uyurken başından çift zıplamayla tepeye çıkılamasın); tepe 9 kare yüksek, yalnız onun zıplatmasıyla çıkılır
-  [243, 252, 4], [253, 256, 5], [257, 269, 4], [267, 270, 5], [271, 275, 6], [276, 280, 4], [281, 286, 3], [287, 299, 13],
+  //    uyurken başından çift zıplamayla tepeye çıkılamasın); tepe 8 kare yüksek (7 kare olunca uyurken çıkılabiliyor – bot sınadı), yalnız onun zıplatmasıyla çıkılır
+  [243, 252, 4], [253, 256, 5], [257, 269, 4], [267, 270, 5], [271, 275, 6], [276, 280, 4], [281, 286, 3], [287, 299, 12],
 ];
 for (const [a, b, h] of BL_ZEMIN) ground(a, b, h);
 // ── Dallar (üstten geçilir): [ilk, son, satır] ──

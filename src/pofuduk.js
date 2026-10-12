@@ -40,101 +40,135 @@ function pfResGuncel() {
 }
 const pfRgba = (h, a) => { const c = hex(h); return `rgba(${c[0]},${c[1]},${c[2]},${a})`; };
 
-// Tüylü gövde: süper-elips (n=2 elips; daha büyük n → yuvarlak köşeli kutu), sivri tutamlı kenar, yumuşak gölge,
-// yüzlerce kısa tüy çizgisi, üstte kenar ışığı. Gövde merkezi sprite merkezinde. Dünya boyu: c.ww × c.wh.
-function pfKurk(pal, w, h, seed, n = 2, sik = 1) {
+// Tüylü gövde: peluş ponpon. Siluet = süper-elips (n=2 elips; büyük n → yastık) + kenar boyunca yuvarlak tüy topakları;
+// topaklar "yumuşak maksimum" ile birleşir → dalgalı ama hiç sivri olmayan, yuvarlak kabarık kenar. Üstüne: yumuşak tüylenmiş
+// kenar (genişletilmiş soluk dolgular), topak başına ışık/gölge, kısa ince tüyler, kenarda çok ince yumuşak saçak.
+// Gövde merkezi sprite merkezinde. Dünya boyu: c.ww × c.wh. Önbellekli (kare başına çizilmez).
+const PF_OL = new Float32Array(2 * 260);
+function pfKurk(pal, w, h, seed, n = 2) {
   const key = pal.a + w + 'x' + h + ':' + seed + ':' + n;
   let c = PF_SPR.get(key); if (c) return c;
-  const R = rng(seed), rx = w / 2, ry = h / 2, r = Math.min(rx, ry);
-  const pad = r * 0.28 + 2;
+  const R = rng(seed), rx = w / 2, ry = h / 2, r = Math.min(rx, ry), rm = (rx + ry) / 2;
+  const pad = r * 0.2 + 3;
   c = document.createElement('canvas');
   c.width = Math.ceil((w + pad * 2) * pfRes); c.height = Math.ceil((h + pad * 2) * pfRes);
   c.ww = c.width / pfRes; c.wh = c.height / pfRes;
   const x = c.getContext('2d');
   x.setTransform(pfRes, 0, 0, pfRes, c.width / 2, c.height / 2);
   x.lineCap = 'round'; x.lineJoin = 'round';
-  const e = 2 / n;
-  const pt = (a, k) => { const cs = Math.cos(a), sn = Math.sin(a); return [Math.sign(cs) * Math.pow(Math.abs(cs), e) * rx * k, Math.sign(sn) * Math.pow(Math.abs(sn), e) * ry * k]; };
-  // siluet: saat yönünde kıvrılan sivri tutamlar; alt taraf daha düz (yere otursun)
-  const rm = (rx + ry) / 2, N = Math.max(18, Math.round((rx + ry) * Math.PI / clamp(r * 0.21, 3, 11) * sik)), wa = 2.4 / rm;
-  const sil = new Path2D(), a0 = -Math.PI / 2 + R() * 0.3, da = Math.PI * 2 / N;
-  let p = pt(a0, 0.94); sil.moveTo(p[0], p[1]);
-  for (let i = 0; i < N; i++) {
-    const aa = a0 + i * da, ab = aa + da, alt = Math.sin(aa + da / 2) > 0.6;
-    const tip = alt ? 1.0 + R() * 0.01 : 1 + (0.6 + R()) * clamp(r * 0.035, 0.8, 3.2) / rm, am = aa + da * (0.6 + R() * 0.2);
-    const c1 = pt(aa + da * 0.22, tip * 0.985), t = pt(am, tip), c2 = pt(ab - da * 0.05, tip * 0.965), en = pt(ab, alt ? 0.985 : 0.94);
-    sil.quadraticCurveTo(c1[0], c1[1], t[0], t[1]); sil.quadraticCurveTo(c2[0], c2[1], en[0], en[1]);
+  // süper-elipsin kutupsal yarıçapı (yön açısı a)
+  const rb = a => { const cs = Math.abs(Math.cos(a)), sn = Math.abs(Math.sin(a)); return 1 / Math.pow(Math.pow(cs / rx, n) + Math.pow(sn / ry, n), 1 / n); };
+  // kenar topakları
+  const NC = clamp(Math.round(Math.PI * 2 * rm / (r * 0.46)), 9, 26), a0 = R() * 6.283;
+  const top = [];
+  for (let i = 0; i < NC; i++) {
+    const a = a0 + (i + (R() - 0.5) * 0.3) * 6.283 / NC, alt = Math.sin(a) > 0.62;
+    const rc = r * (alt ? 0.15 : 0.19 + R() * 0.05), d = rb(a) - rc * (alt ? 1.02 : 0.98);
+    top.push({ x: Math.cos(a) * d, y: Math.sin(a) * d, r: rc, alt });
   }
+  // dış çizgi: her yönde topakların / tabanın yumuşak maksimumu (vadiler yuvarlanır)
+  const M = clamp(Math.round(rm * 2.4), 64, 256), kk = 1 / Math.max(0.6, r * 0.045);
+  for (let j = 0; j < M; j++) {
+    const a = j / M * 6.283, ux = Math.cos(a), uy = Math.sin(a);
+    let s = Math.exp(kk * (rb(a) * 0.86 - rm));   // taban (biraz içeride)
+    for (const q of top) {
+      const b = ux * q.x + uy * q.y, dsc = b * b - (q.x * q.x + q.y * q.y) + q.r * q.r;
+      if (dsc > 0) s += Math.exp(kk * (b + Math.sqrt(dsc) - rm));
+    }
+    const t = rm + Math.log(s) / kk;
+    PF_OL[j * 2] = ux * t; PF_OL[j * 2 + 1] = uy * t;
+  }
+  const sil = new Path2D();
+  const mxp = j => (PF_OL[(j % M) * 2] + PF_OL[((j + 1) % M) * 2]) / 2, myp = j => (PF_OL[(j % M) * 2 + 1] + PF_OL[((j + 1) % M) * 2 + 1]) / 2;
+  sil.moveTo(mxp(0), myp(0));
+  for (let j = 1; j <= M; j++) sil.quadraticCurveTo(PF_OL[(j % M) * 2], PF_OL[(j % M) * 2 + 1], mxp(j), myp(j));
   sil.closePath();
-  // kenardan taşan ince tüyler (arkada)
-  x.strokeStyle = pfRgba(pal.a, 0.45); x.lineWidth = clamp(r * 0.06, 0.9, 2);
-  x.beginPath();
-  for (let i = 0; i < N * 0.8; i++) {
-    const a = R() * 6.283; if (Math.sin(a) > 0.55) continue;
-    const b = pt(a, 1 - 4 / rm), tp = pt(a + wa * (1 + R() * 0.8), 1 + 1.4 / rm + R() * 1.2 / rm), cp = pt(a + wa * 0.2, 1 + 0.6 / rm);
-    x.moveTo(b[0], b[1]); x.quadraticCurveTo(cp[0], cp[1], tp[0], tp[1]);
-  }
-  x.stroke();
-  // ana dolgu: sol üstten gelen yumuşak ışık
   const big = Math.max(rx, ry);
-  let gr = x.createRadialGradient(-rx * 0.32, -ry * 0.45, 0, -rx * 0.1, -ry * 0.1, big * 1.35);
-  gr.addColorStop(0, pal.l); gr.addColorStop(0.38, pal.a); gr.addColorStop(0.78, mixc(pal.a, pal.d, 0.55)); gr.addColorStop(1, pal.d);
+  // yumuşak tüylenmiş kenar: biraz büyütülmüş soluk dolgular
+  for (const [k, al] of [[1.07, 0.1], [1.045, 0.16], [1.022, 0.28]]) {
+    x.save(); x.scale(k, k + (k - 1) * 0.4); x.fillStyle = pfRgba(mixc8(pal.a, pal.d, 0.25), al); x.fill(sil); x.restore();
+  }
+  // ana dolgu: sol üstten gelen yumuşak ışık
+  let gr = x.createRadialGradient(-rx * 0.3, -ry * 0.42, 0, -rx * 0.08, -ry * 0.08, big * 1.3);
+  gr.addColorStop(0, pal.l); gr.addColorStop(0.4, pal.a); gr.addColorStop(0.8, mixc8(pal.a, pal.d, 0.5)); gr.addColorStop(1, pal.d);
   x.fillStyle = gr; x.fill(sil);
   x.save(); x.clip(sil);
   // göbek: hafif açık yama
-  gr = x.createRadialGradient(0, ry * 0.3, 0, 0, ry * 0.3, r * 0.75);
-  gr.addColorStop(0, pfRgba(pal.l, 0.32)); gr.addColorStop(1, pfRgba(pal.l, 0));
+  gr = x.createRadialGradient(0, ry * 0.25, 0, 0, ry * 0.25, r * 0.8);
+  gr.addColorStop(0, pfRgba(pal.l, 0.3)); gr.addColorStop(1, pfRgba(pal.l, 0));
   x.fillStyle = gr; x.fillRect(-rx, -ry, w, h * 1.1);
-  // pamuk kümeleri: yumuşak, kabarık topaklar (üstleri aydınlık, altları gölgeli)
-  const K = Math.round(w * h / (r * r * 0.32));
+  // iç pamuk kümeleri (çok yumuşak)
+  const K = Math.round(w * h / (r * r * 0.4));
   for (let i = 0; i < K; i++) {
-    let u, v; do { u = R() * 2 - 1; v = R() * 2 - 1; } while (Math.pow(Math.abs(u), n) + Math.pow(Math.abs(v), n) > 0.85);
-    const px = u * rx, py = v * ry, kr = r * (0.2 + R() * 0.14), lum = -u * 0.4 - v * 0.7;
-    let g2 = x.createRadialGradient(px, py + kr * 0.35, 0, px, py + kr * 0.35, kr * 1.1);
-    g2.addColorStop(0, pfRgba(pal.d, 0)); g2.addColorStop(0.7, pfRgba(pal.d, 0.1)); g2.addColorStop(1, pfRgba(pal.d, 0));
-    x.fillStyle = g2; x.fillRect(px - kr * 1.2, py - kr, kr * 2.4, kr * 2.6);
-    g2 = x.createRadialGradient(px - kr * 0.2, py - kr * 0.3, 0, px - kr * 0.2, py - kr * 0.3, kr);
-    g2.addColorStop(0, pfRgba(pal.l, 0.2 + clamp(lum, 0, 1) * 0.25)); g2.addColorStop(1, pfRgba(pal.l, 0));
-    x.fillStyle = g2; x.fillRect(px - kr * 1.3, py - kr * 1.4, kr * 2.4, kr * 2.4);
+    let u, v; do { u = R() * 2 - 1; v = R() * 2 - 1; } while (Math.pow(Math.abs(u), n) + Math.pow(Math.abs(v), n) > 0.7);
+    const px = u * rx, py = v * ry, kr = r * (0.22 + R() * 0.14), lum = -u * 0.4 - v * 0.7;
+    let g2 = x.createRadialGradient(px, py + kr * 0.45, 0, px, py + kr * 0.45, kr);
+    g2.addColorStop(0, pfRgba(pal.d, 0.1)); g2.addColorStop(1, pfRgba(pal.d, 0));
+    x.fillStyle = g2; x.fillRect(px - kr, py - kr * 0.55, kr * 2, kr * 2);
+    g2 = x.createRadialGradient(px - kr * 0.15, py - kr * 0.25, 0, px - kr * 0.15, py - kr * 0.25, kr * 0.9);
+    g2.addColorStop(0, pfRgba(pal.l, 0.16 + clamp(lum, 0, 1) * 0.22)); g2.addColorStop(1, pfRgba(pal.l, 0));
+    x.fillStyle = g2; x.fillRect(px - kr * 1.1, py - kr * 1.2, kr * 2, kr * 2);
   }
-  // tüy çizgileri: yönleri dışa doğru, alt yarıda aşağı sarkık
-  const len = clamp(r * 0.12, 2.6, 6.5), lw = clamp(r * 0.03, 0.7, 1.5);
-  const M = Math.round(w * h / (len * len * 0.6));
-  const yollar = [new Path2D(), new Path2D(), new Path2D(), new Path2D()];
-  for (let i = 0; i < M; i++) {
+  // kenar topakları: her biri hafifçe yuvarlak görünsün (iç yanında yumuşak gölge, dış üstünde ışık)
+  for (const q of top) {
+    const lum = clamp((-q.x / rx) * 0.45 - (q.y / ry) * 0.8, -1, 1);
+    const L = Math.hypot(q.x, q.y) || 1, ix = -q.x / L, iy = -q.y / L;
+    const sx = q.x + ix * q.r * 0.9, sy = q.y + iy * q.r * 0.9;
+    let g2 = x.createRadialGradient(sx, sy, q.r * 0.2, sx, sy, q.r * 1.05);
+    g2.addColorStop(0, pfRgba(pal.d, 0)); g2.addColorStop(0.75, pfRgba(pal.d, q.alt ? 0.05 : 0.1)); g2.addColorStop(1, pfRgba(pal.d, 0));
+    x.fillStyle = g2; x.fillRect(sx - q.r * 1.1, sy - q.r * 1.1, q.r * 2.2, q.r * 2.2);
+    g2 = x.createRadialGradient(q.x - q.r * 0.25, q.y - q.r * 0.3, 0, q.x - q.r * 0.25, q.y - q.r * 0.3, q.r * 0.85);
+    g2.addColorStop(0, pfRgba(pal.l, 0.12 + Math.max(0, lum) * 0.3)); g2.addColorStop(1, pfRgba(pal.l, 0));
+    x.fillStyle = g2; x.fillRect(q.x - q.r * 1.2, q.y - q.r * 1.2, q.r * 2, q.r * 2);
+  }
+  // kısa ince tüyler (yumuşak, düşük kontrast); yönleri dışa, alt yarıda aşağı sarkık
+  const len = clamp(r * 0.09, 1.8, 5), lw = clamp(r * 0.022, 0.5, 1.1);
+  const Mt = Math.round(w * h / (len * len * 0.9));
+  const yollar = [new Path2D(), new Path2D(), new Path2D()];
+  for (let i = 0; i < Mt; i++) {
     let u, v; do { u = R() * 2 - 1; v = R() * 2 - 1; } while (Math.pow(Math.abs(u), n) + Math.pow(Math.abs(v), n) > 1);
     const px = u * rx, py = v * ry;
-    let ang = Math.atan2(v, u) + (R() - 0.5) * 0.9;
+    let ang = Math.atan2(v, u) + (R() - 0.5) * 0.8;
     if (v > 0) ang = lerp(ang, Math.PI / 2, 0.35);
-    const L = len * (0.6 + R() * 0.7), ex = px + Math.cos(ang) * L, ey = py + Math.sin(ang) * L;
-    const cx = (px + ex) / 2 - Math.sin(ang) * L * 0.25, cy = (py + ey) / 2 + Math.cos(ang) * L * 0.25;
+    const Lh = len * (0.6 + R() * 0.6), ex = px + Math.cos(ang) * Lh, ey = py + Math.sin(ang) * Lh;
+    const cx = (px + ex) / 2 - Math.sin(ang) * Lh * 0.3, cy = (py + ey) / 2 + Math.cos(ang) * Lh * 0.3;
     const lum = -u * 0.55 - v * 0.85 + (R() - 0.5) * 0.7;
-    const k = lum > 0.45 ? 0 : lum > 0 ? 1 : lum > -0.5 ? 2 : 3;
+    const k = lum > 0.35 ? 0 : lum > -0.45 ? 1 : 2;
     yollar[k].moveTo(px, py); yollar[k].quadraticCurveTo(cx, cy, ex, ey);
   }
   x.lineWidth = lw;
-  x.strokeStyle = pfRgba(pal.l, 0.42); x.stroke(yollar[0]);
-  x.strokeStyle = pfRgba(pal.l, 0.2); x.stroke(yollar[1]);
-  x.strokeStyle = pfRgba(pal.d, 0.12); x.stroke(yollar[2]);
-  x.strokeStyle = pfRgba(pal.d, 0.22); x.stroke(yollar[3]);
-  // alt gölge ve üst kenar ışığı
-  gr = x.createLinearGradient(0, ry * 0.25, 0, ry);
-  gr.addColorStop(0, pfRgba(pal.d, 0)); gr.addColorStop(1, pfRgba(pal.d, 0.5));
-  x.fillStyle = gr; x.fillRect(-rx * 1.2, ry * 0.25, w * 1.2, ry);
-  gr = x.createLinearGradient(0, -ry, 0, ry * 0.1);
-  gr.addColorStop(0, pfRgba(pal.l, 0.5)); gr.addColorStop(1, pfRgba(pal.l, 0));
-  x.strokeStyle = gr; x.lineWidth = clamp(r * 0.11, 1.5, 5); x.stroke(sil);
+  x.strokeStyle = pfRgba(pal.l, 0.3); x.stroke(yollar[0]);
+  x.strokeStyle = pfRgba(pal.l, 0.1); x.stroke(yollar[1]);
+  x.strokeStyle = pfRgba(pal.d, 0.14); x.stroke(yollar[2]);
+  // alt gölge ve üst kenar ışığı (içeriden)
+  gr = x.createLinearGradient(0, ry * 0.2, 0, ry * 1.05);
+  gr.addColorStop(0, pfRgba(pal.d, 0)); gr.addColorStop(1, pfRgba(pal.d, 0.45));
+  x.fillStyle = gr; x.fillRect(-rx * 1.3, ry * 0.2, w * 1.3, ry);
+  gr = x.createLinearGradient(0, -ry * 1.05, 0, ry * 0.1);
+  gr.addColorStop(0, pfRgba(pal.l, 0.55)); gr.addColorStop(1, pfRgba(pal.l, 0));
+  x.strokeStyle = gr; x.lineWidth = clamp(r * 0.12, 1.4, 6); x.stroke(sil);
   x.restore();
-  // ön tarafta birkaç parlak tutam (sol üst)
-  x.strokeStyle = pfRgba(pal.l, 0.6); x.lineWidth = clamp(r * 0.04, 0.8, 1.6);
-  x.beginPath();
-  for (let i = 0; i < N * 0.5; i++) {
-    const a = -Math.PI * (0.25 + R() * 0.75); const b = pt(a, 1 - 3 / rm), tp = pt(a + wa * 1.2, 1 + 0.8 / rm + R() * 0.8 / rm), cp = pt(a + wa * 0.3, 1);
-    x.moveTo(b[0], b[1]); x.quadraticCurveTo(cp[0], cp[1], tp[0], tp[1]);
+  // kenarda çok ince, kısa, yumuşak saçak (dışa doğru; sivri değil, yarı saydam)
+  const fl = clamp(r * 0.075, 1.2, 4.5), fw = clamp(r * 0.02, 0.45, 1);
+  const sac = [new Path2D(), new Path2D()];
+  for (let j = 0; j < M; j++) {
+    const ax = PF_OL[j * 2], ay = PF_OL[j * 2 + 1], L = Math.hypot(ax, ay) || 1;
+    if (ay / L > 0.7 && R() < 0.7) continue;
+    for (let m = 0; m < 2; m++) {
+      const jt = (R() - 0.5) * 0.5, nx0 = ax / L, ny0 = ay / L, cs = Math.cos(jt), sn = Math.sin(jt);
+      const ux = nx0 * cs - ny0 * sn, uy = nx0 * sn + ny0 * cs, Lh = fl * (0.5 + R() * 0.7);
+      const bx = ax - nx0 * fl * 0.8, by = ay - ny0 * fl * 0.8, ex = ax + ux * Lh, ey = ay + uy * Lh;
+      const k = ay / L < -0.1 && ax < rx * 0.4 ? 0 : 1;
+      sac[k].moveTo(bx, by); sac[k].quadraticCurveTo(ax + ux * Lh * 0.3 - uy * Lh * 0.25, ay + uy * Lh * 0.3 + ux * Lh * 0.25, ex, ey);
+    }
   }
-  x.stroke();
+  x.lineWidth = fw;
+  x.strokeStyle = pfRgba(mixc8(pal.a, pal.l, 0.5), 0.45); x.stroke(sac[0]);
+  x.strokeStyle = pfRgba(mixc8(pal.a, pal.d, 0.35), 0.38); x.stroke(sac[1]);
   PF_SPR.set(key, c); return c;
 }
+// iki hex rengin karışımı (hex döner; önbellek kurulumunda kullanılır)
+function mixc8(a, b, t) { const A = hex(a), B = hex(b); return '#' + [0, 1, 2].map(i => Math.round(lerp(A[i], B[i], t)).toString(16).padStart(2, '0')).join(''); }
 
 // Yıldız pırıltısı (4 köşeli), 'z' harfi, yaprak sprite'ları
 function pfYildiz(col) {
@@ -229,6 +263,7 @@ function pfKareBasi(dt) {   // her karede bir kez: parçacıklar + Feza'nın izi
   pfPSon = now;
   pfParcaGuncelle(dt);
   pfIzGuncelle();
+  pfSlotHesapla();
   if (pfFinal) pfFinal.t += dt;
 }
 
@@ -508,7 +543,7 @@ function pfYay(p, dt) {   // yaylar: ezilme, kulak, tutam (kararlılık için k�
     p.kulv += (-p.kul * 150 - p.kulv * 6) * h; p.kul += p.kulv * h;
     p.tutv += (-p.tut * 120 - p.tutv * 5) * h; p.tut += p.tutv * h;
   }
-  p.sq = clamp(p.sq, -0.32, 0.42); p.kul = clamp(p.kul, -0.9, 0.9); p.tut = clamp(p.tut, -1, 1);
+  p.sq = clamp(p.sq, -0.28, 0.34); p.kul = clamp(p.kul, -0.9, 0.9); p.tut = clamp(p.tut, -1, 1);
   p.sqv = clamp(p.sqv, -12, 12);
 }
 function pfZipla(p, guc) { p.sqv += guc; p.kulv += guc * 1.6 * (Math.random() < 0.5 ? -1 : 1); p.tutv += guc * 1.2; }
@@ -635,7 +670,7 @@ function pfUyanisAnim(o, p, dt) {
 function pfHop(o, p, dt) {   // balistik zıplama (jy: zeminden yukarı, eksi)
   if (p.jy < 0 || p.jv < 0) {
     p.jv += 1500 * dt; p.jy += p.jv * dt;
-    if (p.jy >= 0) { p.jy = 0; p.jv = 0; pfZipla(p, 4); }
+    if (p.jy >= 0) { p.jy = 0; p.jv = 0; pfZipla(p, 2.8); }
   }
 }
 function pfBasamakBoy(o, p, k) {
@@ -649,9 +684,9 @@ function pfTakip(o, p, dt) {
   let tx, ty, yer = true, bos = false;
   const bekle = P.idle > 0.8 && P.ground && P.fade <= 0;
   let slot = null;
-  const H = pfIzHedef(62 + i * 46);
+  const H = pfIzHedef(64 + i * 52);
   if (bekle || (P.ground && Math.abs(H.x - P.x) < 36 && Math.abs(H.y - P.y) < 70)) slot = pfSlotBul(i);
-  if (slot) { tx = slot[0]; ty = slot[1]; }
+  if (slot) { tx = slot.x; ty = slot.y; }
   else { tx = H.x; ty = H.y; yer = H.yer; bos = H.bos; }
   pfGit(o, p, dt, tx, ty, yer, bos);
   pfAyir(o, p, dt);
@@ -674,19 +709,25 @@ function pfAyir(o, p, dt) {   // kuyruktakiler üst üste binmesin: yakındakini
   for (const q of pfKuyruk) {
     if (q === o || q.pf.sihir || Math.abs(o.y - q.y) > 40) continue;
     const d = o.x - q.x, ad = Math.abs(d);
-    if (ad < 36) o.x += (ad < 0.5 ? (p.sira > q.pf.sira ? -1 : 1) : Math.sign(d)) * (36 - ad) * Math.min(1, dt * 7);
+    if (ad < 44) o.x += (ad < 0.5 ? (p.sira > q.pf.sira ? -1 : 1) : Math.sign(d)) * (44 - ad) * Math.min(1, dt * 7);
   }
 }
-const PF_SB = [0, 0];
-function pfSlotBul(i) {   // Feza'nın yanında, zemini olan bir bekleme yeri (önce arkası, sonra önü)
-  const d0 = Math.abs(PF_SLOT[i % PF_SLOT.length]), on = PF_SLOT[i % PF_SLOT.length] > 0 ? 1 : -1;
-  for (let k = 0; k < 6; k++) {
-    const yan = (k % 2 ? -on : on) * P.f, d = d0 + Math.floor(k / 2) * 34, sx = P.x + yan * d;
-    const yy = pfYerBul(sx, P.y, 30);
-    if (yy !== null) { PF_SB[0] = sx; PF_SB[1] = yy; return PF_SB; }
+// Bekleme yerleri: Feza durunca kuyruk çevresine dağılır (sırayla arka/ön); zemin yoksa aynı taraftan bir sonraki yer.
+const PF_SLOTLAR = [];
+function pfSlotHesapla() {
+  let arka = 0, on = 0;
+  for (let i = 0; i < pfKuyruk.length; i++) {
+    const s = PF_SLOTLAR[i] || (PF_SLOTLAR[i] = { x: 0, y: 0, var: false });
+    s.var = false;
+    for (let deneme = 0; deneme < 2 && !s.var; deneme++) {
+      const onde = (i % 2 === 1) !== (deneme === 1), k = onde ? on : arka;
+      if (k > 2) continue;
+      const sx = P.x + (onde ? 1 : -1) * P.f * (58 + k * 42), yy = pfYerBul(sx, P.y, 45);
+      if (yy !== null) { s.x = sx; s.y = yy; s.var = true; if (onde) on++; else arka++; }
+    }
   }
-  return null;
 }
+function pfSlotBul(i) { const s = PF_SLOTLAR[i]; return s && s.var ? s : null; }
 function pfDonGuncelle(p, dt) {   // olduğu yerde bir tur (havada) — yatay ölçek cos ile
   if (p.donH) { p.donT = (p.donT || 0) + dt * 2.4; if (p.donT >= 1) { p.donT = 0; p.donH = 0; } }
   const yon = p.f;

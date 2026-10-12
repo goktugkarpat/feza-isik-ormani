@@ -7,7 +7,7 @@
 // ════════════════════════════ giriş ════════════════════════════
 // iPad: sol altta zıplama düğmesi (sol el); ekranın başka yerine basılı tutmak → Feza parmağın tarafına yürür.
 // Parmak Feza'ya yakınsa yavaş yürür, uzaksa koşar; tam üstündeyse durur (titreme olmasın diye histerezis).
-const GIRDI = { eksen: 0, ziplaBasili: false, dugme: { x: 0, y: 0, r: 0, basili: false }, hedefX: null, hareket: false };
+const GIRDI = { eksen: 0, ziplaBasili: false, dugme: { x: 0, y: 0, r: 0, basili: false }, hedefX: null, hedefY: null, hareket: false };
 let axis = 0, jumpHeld = false, jumpPressed = false, started = false, startT = 0, moved = false;
 const keys = {};
 const OM_PARMAK = [];   // sabit parmak yuvaları (her karede yeni nesne/dizi yok)
@@ -73,13 +73,13 @@ addEventListener('keydown', e => {
 addEventListener('keyup', e => { keys[e.code] = false; });
 function readInput() {
   let a = 0, yurur = null, jb = false;
-  GIRDI.hedefX = null;
+  GIRDI.hedefX = null; GIRDI.hedefY = null;
   for (const t of OM_PARMAK) if (t.aktif) { if (t.jump) jb = true; else if (!yurur || t.sira > yurur.sira) yurur = t; }
   if (yurur) {
     // parmak ile Feza'nın ekrandaki yeri arasındaki fark, dünya biriminde
     const olc = S / DPR, fx = ((P.rx !== undefined ? P.rx : P.x) - cam.x) * olc;
     const d = (yurur.x - fx) / olc, ad = Math.abs(d);
-    GIRDI.hedefX = yurur.x;
+    GIRDI.hedefX = yurur.x; GIRDI.hedefY = yurur.y;
     // histerezis: durmuşken 26 birimden uzakta başla; yürürken 12 birime kadar yaklaşınca dur
     if (omYon === 0) { if (ad > 26) omYon = Math.sign(d); }
     else if (ad < 12 || Math.sign(d) !== omYon && ad > 26) omYon = ad < 12 ? 0 : Math.sign(d);
@@ -197,10 +197,10 @@ function moveY(dy) {
     const a0 = Math.floor((P.x - PW) / T), a1 = Math.floor((P.x + PW - 0.01) / T);
     let hit = false;
     for (let tx = a0; tx <= a1; tx++) { const c = cell(tx, ty); if (c === 1 || (c === 2 && prev <= top + 0.5)) { hit = true; break; } }
-    if (!hit && !was && prev <= top + 0.5) {
+    if (!hit && !was && P.air > 0.12 && prev <= top + 0.5) {
       for (let s = -1; s <= 1 && !hit; s += 2) {
         const tx = Math.floor((P.x + s * (PW + OM.PAY)) / T);
-        if ((s < 0 && tx >= a0) || (s > 0 && tx <= a1)) continue;
+        if ((s < 0 && tx >= a0) || (s > 0 && tx <= a1) || P.vx * s < -30) continue;   // kenardan uzaklaşıyorsa yakalama
         const c = cell(tx, ty);
         if ((c === 1 || c === 2) && cell(tx, ty - 1) !== 1) {
           const nxp = s > 0 ? tx * T - PW + 2 : (tx + 1) * T + PW - 2;   // kenarın üstüne hafifçe kaydır
@@ -212,7 +212,7 @@ function moveY(dy) {
     for (const o of CISIMLER) {
       const c = o.cisim; if (!c.aktif) continue;
       const k = omK(o);
-      const p = was ? 0 : OM.PAY;
+      const p = (was || P.air <= 0.12 || (o.x < P.x ? P.vx > 30 : P.vx < -30)) ? 0 : OM.PAY;
       if (P.x + PW + p <= k.x0 || P.x - PW - p >= k.x1) continue;
       // cömert ezme/iniş: önceki ayak üst kenarın biraz altında bile olsa (hızlı düşüş / yükselen cisim) say
       const tol = 2 + Math.max(0, -(c.dy || 0)) + (P.vy > 0 ? Math.min(OM.KENAR, P.vy * OM.STEP * 2) : 0);
