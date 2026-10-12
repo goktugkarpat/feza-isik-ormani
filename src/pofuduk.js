@@ -1489,7 +1489,7 @@ function pfBuyukGuncelle(o, dt) {
     if (pfFinal) pfBuyukDans(o, p, dt);
   }
   // zıplama (hy)
-  if (p.hy < 0 || p.hv < 0) { p.hv += 1700 * dt; p.hy += p.hv * dt; if (p.hy >= 0) { p.hy = 0; p.hv = 0; pfZipla(p, 5); } }
+  if (p.hy < 0 || p.hv < 0) { p.hv += 1700 * dt; p.hy += p.hv * dt; if (p.hy >= 0) { p.hy = 0; p.hv = 0; pfZipla(p, pfFinal ? 2.6 : 5); } }
   p.ff = lerp(p.ff, a === 0 ? -0.3 : clamp(df / 300, -1, 1) * 0.45, 1 - Math.exp(-dt * 3));
   pfYay(p, dt);
 }
@@ -1503,26 +1503,27 @@ function pfBuyukGuc(o) {   // ağacın yüksekliğine göre: tepe noktası ağa�
 function pfBuyukDans(o, p, dt) {
   o.cisim.aktif = false;
   const F = pfFinal, t = F.t;
-  if (p.fHedef === undefined) {   // nereye konacak? (bir kez) — Feza'nın solunda/sağında yeterli yer varsa
+  if (p.fHedef === undefined && (t > 0.5 || P.ground)) {   // nereye konacak? (bir kez, Feza yere indikten sonra) — tercihen solda (ağacın gövdesini kapatmasın)
     p.fHedef = null;
     const S0 = pfSahne(F);
     if (S0.y !== undefined && Math.abs(S0.y - o.y) > 20) {
       const sol = S0.fx - S0.Lr, sag = S0.Rr - S0.fx;
-      if (sol >= 180) p.fHedef = { x: S0.Lr + 96, y: S0.y };
+      if (sol >= 120) p.fHedef = { x: S0.Lr + 96, y: S0.y };   // Feza'ya biraz değse de olur: o, Feza'nın arkasında çizilir
       else if (sag >= 180) p.fHedef = { x: S0.Rr - 96, y: S0.y };
       if (p.fHedef) { const yy = pfYerBul(p.fHedef.x, S0.y, 30); if (yy !== null) p.fHedef.y = yy; }
     }
-    p.fx0 = o.x; p.fy0 = o.y;
+    p.fx0 = o.x; p.fy0 = o.y; p.fT0 = Math.max(0, t - 0.5);
   }
   p.yat = lerp(p.yat, 0, 1 - Math.exp(-dt * 4));
   const H = p.fHedef;
-  let dansta = !H;
+  let dansta = p.fHedef === null;
+  if (p.fHedef === undefined) { p.goz = 'mutlu'; p.agiz = 'acik'; p.agizB = 0.8; p.pati = lerp(p.pati, 1, 1 - Math.exp(-dt * 10)); p.patiS += dt * 14; return; }
   if (H && !p.kondu) {
-    const T0 = 0.55, T1 = 1.0, UC = 1.15;
-    if (t < T1) {   // sevinç + çömelme
+    const T0 = 0.55, T1 = 1.0, UC = 1.15, tl = t - p.fT0;
+    if (tl < T1) {   // sevinç + çömelme
       p.goz = 'mutlu'; p.agiz = 'acik'; p.agizB = 0.8;
       p.pati = lerp(p.pati, 1, 1 - Math.exp(-dt * 10)); p.patiS += dt * 14;
-      p.sqH = t < T0 ? 0 : 0.2 * smooth(clamp((t - T0) / 0.35, 0, 1));
+      p.sqH = tl < T0 ? 0 : 0.2 * smooth(clamp((tl - T0) / 0.35, 0, 1));
       p.ff = lerp(p.ff, Math.sign(H.x - o.x) * 0.4, 1 - Math.exp(-dt * 6));
     } else {
       if (!p.ucti) {
@@ -1531,7 +1532,7 @@ function pfBuyukDans(o, p, dt) {
         burst(o.x, o.y - 10, 12, [PF_BUYUK.i, '#ffd6f2'], 200, 1.0, 7);
         if (typeof AU !== 'undefined') AU.sfx('boing', 1.3);
       }
-      const u = clamp((t - T1) / UC, 0, 1), it = 1 - u;
+      const u = clamp((tl - T1) / UC, 0, 1), it = 1 - u;
       const cy = Math.min(p.fy0, H.y) - 150;
       o.x = lerp(p.fx0, H.x, smooth(clamp((u - 0.22) / 0.78, 0, 1)));
       o.y = it * it * p.fy0 + 2 * it * u * cy + u * u * H.y;
@@ -1541,7 +1542,7 @@ function pfBuyukDans(o, p, dt) {
       p.pati = lerp(p.pati, 1, 1 - Math.exp(-dt * 10)); p.patiS += dt * 18;
       if (Math.random() < dt * 30) pfParca(0, o.x + (Math.random() - 0.5) * 150, o.y - Math.random() * 160, 0, 20, 0.8, 7 + Math.random() * 5, Math.random() < 0.5 ? PF_BUYUK.i : '#ffffff');
       if (u >= 1) {
-        p.kondu = true; o.x = H.x; o.y = H.y; p.rot = 0; p.sqH = 0; pfZipla(p, 10);
+        p.kondu = true; o.x = H.x; o.y = H.y; p.rot = 0; p.sqH = 0; pfZipla(p, 7);
         for (let i = 0; i < 16; i++) { const a = Math.PI + i / 15 * Math.PI; pfParca(0, o.x + Math.cos(a) * 100, o.y - 4, Math.cos(a) * 220, -40 - Math.random() * 80, 0.9, 9 + Math.random() * 5, i % 2 ? PF_BUYUK.i : '#fff3b0'); }
         for (let i = 0; i < 4; i++) pfParca(3, o.x + (i - 1.5) * 50, o.y - 8, (i - 1.5) * 60, -20, 0.8, 22, '#f4e4ff');
         if (typeof AU !== 'undefined') AU.sfx('puf', 1);

@@ -797,12 +797,13 @@ function fezaUpdate(dt) {
   const gr = P.ground && P.fade <= 0 && !carry;
   // olaylar: yere iniş, kalkış, kayma (ters yöne dönerken)
   if (gr && !P.a_wasG) {
-    P.a_landT = 0; P.a_landP = P.a_wasCarry ? 0.34 : clamp(P.a_prevVy / 850, 0.18, 0.88);
+    P.a_landT = 0; P.a_landP = P.a_wasCarry ? 0.34 : clamp(P.a_prevVy / 850, 0.18, 0.88) * (1 - 0.22 * clamp((sp - 120) / 130, 0, 1));   // koşarak inişte daha az çöker
     if (fzMover()) P.a_balKick = 1;
     if (P.a_fromL) { P.a_tadaT = 0; P.a_fromL = false; }
+    if (!P.a_wasCarry) { P.a_pose.air = Math.min(P.a_pose.air, 0.15); P.a_pv.air = Math.min(P.a_pv.air, 0); }   // ayak yere değince kalça hemen yere göre (iniş yumuşak ama gecikmesiz)
     if (!P.a_wasCarry) OLAY.emit('adim', { x: P.x, y: P.y, hiz: sp, inis: true });   // parmak ucuyla yumuşak iniş
   }
-  if (!gr && P.a_wasG && vy < -300 && P.a_launch <= 0 && P.a_stomp <= 0) P.a_take = 1;
+  if (!gr && P.a_wasG && vy < -300 && P.a_launch <= 0 && P.a_stomp <= 0) { P.a_take = 1; P.a_takeP = clamp(-vy / 730, 0.5, 1.25); }   // ne kadar hızlı kalkarsa o kadar uzar
   P.a_wasG = gr; P.a_prevVy = vy; P.a_wasCarry = carry;
   P.a_landT += dt; P.a_tadaT += dt; P.a_take = Math.max(0, P.a_take - dt / 0.18);
   if (gr) { P.a_launch = 0; P.a_stomp = 0; }
@@ -1123,9 +1124,13 @@ function fezaUpdate(dt) {
   // çizim pozu = yumuşak poz + iniş çökmesi + kalkış uzaması + çarpma
   const R = Object.assign(P.a_R, cur), lt = P.a_landT;
   // kalkış uzaması iki karede yükselir (tek karede bacak düzelip kalça sıçramasın), sonra söner
-  // iniş çökmesi: u² e^(2-2u) (0.13 sn'de en dipte, tepe noktası ve dönüş yumuşak); kalkış uzaması: 6.75 p (1-p)² (sonu yumuşak)
-  const lu = lt / 0.13, tp = Math.pow(1 - P.a_take, 1.3);
-  const cr = gr ? P.a_landP * lu * lu * Math.exp(2 - 2 * lu) : 0, tk = P.a_take > 0 ? 6.75 * tp * (1 - tp) * (1 - tp) : 0;
+  // iniş çökmesi fiziğe bağlı: kalça yere düşüş hızıyla değer ve hemen yavaşlamaya başlar. c(t) = p·A·(e^(-t/τ2) − e^(-t/τ1)):
+  // ilk karede en hızlı çöker (dünyadaki kalça hızı düşüşten kesintisiz devam eder, sonra tekdüze yavaşlar; net iniş),
+  // ~55 ms'de en dipte, ~0.13 sn zaman sabitiyle yumuşak kalkar. Sert inişte daha derin ve biraz daha çabuk.
+  // Kalkış uzaması: 6.75 p (1-p)², kalkış hızıyla ölçekli (sonu yumuşak).
+  const t1 = lerp(0.042, 0.032, P.a_landP), t2 = 0.13, tpk = Math.log(t2 / t1) * t1 * t2 / (t2 - t1);
+  const lA = 1 / (Math.exp(-tpk / t2) - Math.exp(-tpk / t1)), tp = Math.pow(1 - P.a_take, 1.3);
+  const cr = gr ? P.a_landP * lA * (Math.exp(-lt / t2) - Math.exp(-lt / t1)) : 0, tk = P.a_take > 0 ? 6.75 * tp * (1 - tp) * (1 - tp) * (P.a_takeP || 1) : 0;
   R.lt1 += 0.8 * cr; R.lt2 -= 1.5 * cr; R.bt1 += 0.6 * cr; R.bt2 -= 1.4 * cr; R.lean += 0.25 * cr; R.head += 0.12 * cr;
   R.la1 += 0.5 * cr; R.ba1 += 0.4 * cr; R.sx += 0.1 * cr; R.sy -= 0.08 * cr; R.lid *= 1 - 0.3 * cr;
   R.sy += 0.08 * tk; R.sx -= 0.06 * tk; R.lt1 -= 0.6 * tk * R.lt1; R.lt2 *= 1 - 0.7 * tk;
