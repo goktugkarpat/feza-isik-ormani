@@ -215,7 +215,7 @@ const DN_CH = 512;
 // parça tuvali havuzu: atılan parçaların tuvalleri yeniden kullanılır (Safari'de bellek GC'ye kadar geri gelmiyor; sürekli yeni tuval açmayalım)
 const DN_CPOOL = [];
 const dnPoolGet = () => DN_CPOOL.pop() || document.createElement('canvas');
-function dnPoolPut(c) { if (!c || !c.cv) return; if (DN_CPOOL.length < 14) DN_CPOOL.push(c.cv); else { c.cv.width = c.cv.height = 0; } c.cv = null; }
+function dnPoolPut(c) { if (!c || !c.cv) return; if (DN_CPOOL.length < 6) DN_CPOOL.push(c.cv); else { c.cv.width = c.cv.height = 0; } c.cv = null; }
 const dnQS = v => Math.pow(2, Math.ceil(Math.log2(Math.max(0.05, v)) * 4 - 0.02) / 4);
 // önbellek ölçeği kamera yakınlaşmasından BAĞIMSIZ (bölge geçişinde zoom değişince bütün parçalar yeniden boyanmasın → takılma yok);
 // yakınlaşma ≤ ~1.06 olduğundan büyütme fark edilmez. iPad'de (dokunmatik, büyük tuval) bellek için tavan.
@@ -687,17 +687,18 @@ function dnLightSrc() {   // uzaktaki ışık kaynağı (ay/şafak), ekran birim
 }
 // gök tuvali + bölge tonu (soft-light) + ışık kaynağı haleleri tek bir ½ çözünürlüklü tuvale; yalnız aydınlık / bölge / ışık kaynağı
 // konumu değişince yeniden boyanır (karede tam ekran soft-light ve 'lighter' dolguları yok)
-const dnBack = document.createElement('canvas'); let dnBackK = '';
+const dnBack = document.createElement('canvas'); let dnBackK = '', dnPondW = 0, dnAmberW = 0;
+const dnSpanW = (cx, a, b) => smooth(clamp(Math.min(cx - a, b - cx) / 400 + 0.5, 0, 1));
 function dnBackCanvas(lsx, lsy) {
   const w = Math.max(2, Math.round(W / 2)), h = Math.max(2, Math.round(H / 2)), q = v => Math.round(v * 60);
-  const key = q(light) + ':' + q(DNR.pofuduk) + ':' + q(DNR.gol) + ':' + q(DNR.sakli) + ':' + q(DNR.dallar) + ':' + q(DNR.aciklik) + ':' + q(dnOpen) + ':' + Math.round(lsx / 3) + ':' + Math.round(lsy / 3) + ':' + w + ':' + h;
+  const key = q(light) + ':' + q(dnPondW) + ':' + q(dnAmberW) + ':' + q(DNR.pofuduk) + ':' + q(DNR.gol) + ':' + q(DNR.sakli) + ':' + q(DNR.dallar) + ':' + q(DNR.aciklik) + ':' + q(dnOpen) + ':' + Math.round(lsx / 3) + ':' + Math.round(lsy / 3) + ':' + w + ':' + h;
   if (key === dnBackK) return dnBack;
   dnBackK = key; if (dnBack.width !== w || dnBack.height !== h) { dnBack.width = w; dnBack.height = h; }
   const x = dnBack.getContext('2d'), k = w / W;
   x.setTransform(1, 0, 0, 1, 0, 0); x.globalCompositeOperation = 'copy'; x.globalAlpha = 1; x.drawImage(dnSky, 0, 0, w, h);
   x.globalCompositeOperation = 'soft-light';
   const tint = (col, a) => { if (a > 0.004) { x.fillStyle = dnRgba(col, a); x.fillRect(0, 0, w, h); } };
-  tint('#ff9ad8', DNR.pofuduk * 0.22); tint('#2a5cff', DNR.gol * 0.28); tint('#b070ff', DNR.sakli * 0.35); tint('#40ffc8', DNR.dallar * 0.16); tint('#ffd080', DNR.aciklik * (0.08 + light * 0.2));
+  tint('#ff9ad8', DNR.pofuduk * 0.22); tint('#2a5cff', DNR.gol * 0.28 * (1 - dnPondW * 0.7)); tint('#ff8ac8', dnPondW * 0.26); tint('#ffb060', dnAmberW * 0.45); tint('#b070ff', DNR.sakli * 0.35); tint('#40ffc8', DNR.dallar * 0.16); tint('#ffd080', DNR.aciklik * (0.08 + light * 0.2));
   x.globalCompositeOperation = 'lighter';
   const sk = 1 - light * 0.45, sx = lsx * S * k, sy = lsy * S * k, hh = H * k;   // şafakta gök zaten açık: toplamalı ışık beyaza patlamasın
   dnG(x, dq('hazeHi'), sx, sy, hh * 0.95, (0.22 + light * 0.14 + dnOpen * 0.06) * sk);
@@ -714,6 +715,7 @@ function drawBackground(tm) {
   if (Math.abs(skyLight - light) > 0.02 || dnSky.width !== Math.max(2, Math.round(W / 3)) || dnSky.height !== Math.max(2, Math.round(H / 3))) dnPaintSky();
   g.setTransform(1, 0, 0, 1, 0, 0);
   g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
+  { const cx = cam.x + VW / 2; dnPondW = DN_ZOK ? dnSpanW(cx, 258 * T, 294 * T) : 0; dnAmberW = DN_ZOK ? dnSpanW(cx, 296 * T, 364 * T) * (1 - DNR.sakli * 0.6) : 0; }
   const LS = dnLightSrc(), lsx = LS[0], lsy = LS[1], sx = lsx * S, sy = lsy * S;
   g.drawImage(dnBackCanvas(lsx, lsy), 0, 0, W, H);   // gök + bölge tonu + ışık kaynağının haleleri: ½ çözünürlükte önbellekli
   // yıldızlar (açık gökyüzünde; şafakta söner)
@@ -729,7 +731,7 @@ function drawBackground(tm) {
     g.globalAlpha = 1;
   }
   // ay diski (açık gökyüzünde)
-  const ma = clamp(DNR.gol * 1.1 + DNR.aciklik * (1 - light) * 0.8, 0, 1) * (1 - light * 0.5);
+  const ma = clamp(DNR.gol * 1.1 + DNR.aciklik * (1 - light) * 0.8, 0, 1) * (1 - light * 0.5) * (1 - dnPondW * 0.9);   // gölcükte ay yok: sıcak fener ışığı
   if (ma > 0.02) {
     g.globalCompositeOperation = 'source-over'; const mr = 30 * S;
     g.globalAlpha = ma * 0.95; g.drawImage(dnMoon(), sx - mr, sy - mr, mr * 2, mr * 2); g.globalAlpha = 1;
@@ -739,7 +741,8 @@ function drawBackground(tm) {
   dnDrawLayer(DN_LAYERS.gris);
   dnFog(470, 300, 0.55, 'haze', 0.07);
   dnDrawLayer(DN_LAYERS.far);
-  g.fillStyle = dc('haze', 0.12); g.fillRect(0, 0, W, H);
+  { const zw = dnPondW + dnAmberW;   // gölcük pembe-lila, dal merdiveni / saklı yolun altı kehribar: sis rengi bölgeye göre
+    g.fillStyle = zw > 0.01 ? mixc(dq('haze'), dnPondW > dnAmberW ? '#e49ad0' : '#ffb868', (dnPondW > dnAmberW ? 0.6 : 0.8) * Math.min(1, zw), 0.12 + (dnPondW > dnAmberW ? 0.12 : 0.22) * Math.min(1, zw)) : dc('haze', 0.12); g.fillRect(0, 0, W, H); }
   dnVista(tm);
   dnFog(490, 260, 0.5, 'haze', 0.22);
   dnLake(tm, sx);
@@ -749,7 +752,7 @@ function drawBackground(tm) {
   const oyP = 110 * 0.35 + dnDY() * 0.35 * DN_FYK;   // orta derinlikte ışık cepleri
   for (let i = 0, n = Math.ceil(DN_LW * 0.35 / 520) + 3; i < n; i++) {
     const lx = i * 520 + 180 - cam.x * 0.35; if (lx < -400 || lx > VW + 400) continue;
-    dglow(i % 3 === 1 ? dq('warm') : DNR.sakli > 0.4 ? '#b88aff' : dq('bio'), lx * S, (170 + (i * 67) % 120 - oyP) * S, (200 + (i * 53) % 100) * S, (0.13 + 0.04 * Math.sin(tm * 0.4 + i)) * (0.8 + light * 0.4));
+    dglow(i % 3 === 1 ? dq('warm') : DNR.sakli > 0.4 ? '#b88aff' : dnPondW > 0.5 ? '#ff9ad8' : dnAmberW > 0.5 ? '#ffc070' : dq('bio'), lx * S, (170 + (i * 67) % 120 - oyP) * S, (200 + (i * 53) % 100) * S, (0.13 + 0.04 * Math.sin(tm * 0.4 + i)) * (0.8 + light * 0.4));
   }
   // hacimsel ışık huzmeleri (dallarda ve açıklıkta güçlü, gölde zayıf)
   const shK = (1 + DNR.dallar * 0.5 + DNR.aciklik * 0.3 - DNR.gol * 0.55) * (1 + dnBlaze * 0.8);
@@ -765,6 +768,7 @@ function drawBackground(tm) {
   g.globalAlpha = clamp(1 - DNR.gol * 0.6 - dnVistaW * 0.4, 0, 1); dnDrawLayer(DN_LAYERS.mid);
   g.globalAlpha = 1; dnFog(560, 220, 0.38, 'haze', 0.45);
   g.globalAlpha = clamp(1 - DNR.gol * 1.15 - dnVistaW * 0.75, 0, 1); if (g.globalAlpha > 0.01) dnDrawLayer(DN_LAYERS.near); g.globalAlpha = 1;
+  if (dnPondW + dnAmberW > 0.01) { g.fillStyle = dnPondW > dnAmberW ? dnRgba('#d070b8', 0.07 * dnPondW) : dnRgba('#ff9a40', 0.11 * dnAmberW); g.fillRect(0, 0, W, H); }
   g.globalCompositeOperation = 'lighter';   // önde ikinci, daha soluk huzme katmanı
   const ox2 = cam.x * 0.8, oy2 = 110 * 0.8 + dnDY() * 0.8 * DN_FYK;
   for (let i = 0; i < DN_SHAFTS.length; i += 3) {
@@ -948,6 +952,7 @@ for (const [gi, G] of DN_GOLS.entries()) {
   const lb = G.x0 - 3.5 * T, rb = G.x1 + 4.5 * T, sm = G.x1 - G.x0 < 14 * T ? 0.8 : 1;   // küçük havuzda söğütler de biraz küçük
   if (topOf(Math.floor(lb / T)) < ROWS && !DN_WILLOWS.some(w => Math.abs(w.x - lb) < 300)) DN_WILLOWS.push(mk(lb, 1, 4711 + gi * 131, 360 * sm));
   if (topOf(Math.floor(rb / T)) < ROWS && !DN_WILLOWS.some(w => Math.abs(w.x - rb) < 300)) DN_WILLOWS.push(mk(rb, -1, 9077 + gi * 131, 330 * sm));
+  if (gi > 0) for (const w of DN_WILLOWS) if (w.x > G.x0 - 600 && w.x < G.x1 + 600 && !w.pond) { w.pond = true; const R = rng(333 + Math.round(w.x)); for (const v of w.vines) if (R() < 0.35) v[4] = true; }   // gölcük: çiçekli söğüt
 }
 // söğütler önbellekli: gövde+taç bir tuvale, sarmaşık perdesi ayrı bir tuvale (aydınlık 0.05 adımında, boşta yeniden boyanır).
 // Karede yalnız iki drawImage: gövde tabandan eğilir (shear), perde tepesinden salınır. Binlerce yaprağı her karede yeniden taramıyoruz.
@@ -972,7 +977,7 @@ function dnWillowPaint(w, which, lq) {
   const C = (k, al) => dcAt(k, lq, al);
   if (!which) {
     x.save(); x.translate(1.5, -1.5); x.fillStyle = C('rim', 0.22); x.fill(w.crownB); x.restore();
-    x.fillStyle = C('mid', 0.92); x.fill(w.crownB);
+    x.fillStyle = w.pond ? mixc(dcol('mid', lq), '#c080d0', 0.22, 0.92) : C('mid', 0.92); x.fill(w.crownB);
     x.save(); x.translate(2.2 * -w.sd, -1); x.fillStyle = C('rim', 0.4); for (const q of w.parts) x.fill(q); x.fill(w.crown); x.restore();
     const tg = x.createLinearGradient(0, w.base - 420, 0, w.base); tg.addColorStop(0, C('near', 1)); tg.addColorStop(1, C('mid', 1));
     x.fillStyle = tg; for (const q of w.parts) x.fill(q); x.fill(w.crown);
@@ -1004,7 +1009,7 @@ function dnDrawWillows(tm, vx0, vx1, bio) {
     g.transform(1, 0, sw, 1, -sw * top, 0);
     g.drawImage(w.cv, w.cvX, w.cvY, w.cvW, w.cvH);
     g.globalCompositeOperation = 'lighter';
-    for (const v of w.vines) if (v[4]) { const ph = v[3], pul = 0.6 + 0.4 * Math.sin(tm * 1.5 + ph * 3), ex = v[0] + sw * (v[1] + v[2] + 2 - top); dglow(ph < 2 ? '#c9b2ff' : bio, v[0], v[1] + v[2] + 2, 9, 0.6 * pul); dglow('#ffffff', v[0], v[1] + v[2] + 2, 2, 0.7 * pul); }
+    for (const v of w.vines) if (v[4]) { const ph = v[3], pul = 0.6 + 0.4 * Math.sin(tm * 1.5 + ph * 3); dglow(w.pond ? (ph < 3 ? '#ffc4e8' : '#ffd890') : ph < 2 ? '#c9b2ff' : bio, v[0], v[1] + v[2] + 2, w.pond ? 11 : 9, 0.6 * pul); dglow('#ffffff', v[0], v[1] + v[2] + 2, 2, 0.7 * pul); }
     g.globalCompositeOperation = 'source-over';
     g.restore();
   }
@@ -2921,10 +2926,14 @@ function drawMotes(tm, zMin, zMax) {
   g.setTransform(S, 0, 0, S, 0, 0);
   g.globalCompositeOperation = 'lighter';
   const bz = dnBlaze, bio = bz > 0.5 ? '#ffd890' : DNR.sakli > 0.5 ? '#c9a2ff' : dq('bio'), warm = dq('warm'), wrap = VW * 1.4;
-  for (const m of DN_MOTES) {
+  const hv = H / S + 140, vh = H / S;
+  for (let i = 0; i < DN_MOTES.length; i++) {
+    const m = DN_MOTES[i];
     if (m.z < zMin || m.z >= zMax) continue;
     const x = ((m.x + Math.sin(tm * 0.3 * m.sp + m.ph) * 30 - cam.x * m.z) % wrap + wrap) % wrap - VW * 0.2;
-    const hv = H / S + 140, y = ((m.y - tm * 7 * m.sp * (1 + bz) - cam.y * m.z) % hv + hv) % hv - 60;
+    if (x < -50 || x > VW + 50) continue;   // ekran dışı: çizme
+    const y = ((m.y - tm * 7 * m.sp * (1 + bz) - cam.y * m.z) % hv + hv) % hv - 60;
+    if (y < -50 || y > vh + 50) continue;
     const tw = 0.5 + 0.5 * Math.sin(tm * 2 * m.sp + m.ph);
     if (m.bk) {
       const r = 14 + m.z * 12, col = m.c < 0.6 ? bio : warm;
@@ -2973,7 +2982,7 @@ function dnFgSprites() {
   let all = true;
   for (const arr of [DN_FG.top, DN_FG.fern]) arr.forEach((sp, k) => {
     if (sp.l === lq) return; all = false;
-    dnQueue(2, 'FG' + sp.i, () => { if (sp.l === lq || arr[k] !== sp) return; const c = document.createElement('canvas'); dnFgPaint(c, sp.i, sp.w, sp.h, sp.ox, sp.oy, sp.draw, sc, lq, rimOf(lq), body); arr[k] = Object.assign({}, sp, { c, l: lq }); });
+    dnQueue(2, 'FG' + sp.i, () => { if (sp.l === lq || arr[k] !== sp) return; const c = document.createElement('canvas'); dnFgPaint(c, sp.i, sp.w, sp.h, sp.ox, sp.oy, sp.draw, sc, lq, rimOf(lq), body); arr[k] = Object.assign({}, sp, { c, l: lq }); if (sp.c) sp.c.width = sp.c.height = 0; });
   });
   if (all) DN_FG.l = lq;
 }
