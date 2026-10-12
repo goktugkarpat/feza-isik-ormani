@@ -1019,3 +1019,10 @@ function drawVignette() {
   g.globalAlpha = 0.09; g.globalCompositeOperation = 'overlay'; g.fillStyle = grainPat; g.fillRect(0, 0, W, H);
   g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
 }
+
+// ── Nilüferler (yer tutucu): 'aydinlat' olayıyla belirir, üstüne basılır ──
+TUR.kaydet('nilufer', {
+  kur(o) { o.acik = 0; o.cisim = { w: 64, h: 6, tip: 'ustten', aktif: false, dx: 0, dy: 0 }; OLAY.on('aydinlat', gr => { if (gr === o.grup) o.cisim.aktif = true; }); },
+  guncelle(o, dt) { o.acik = lerp(o.acik, o.cisim.aktif ? 1 : 0, 1 - Math.exp(-dt * 3)); },
+  ciz(o, tm) { if (o.acik < 0.02) return; g.globalAlpha = o.acik; g.fillStyle = '#3fbfa0'; g.beginPath(); g.ellipse(o.x, o.y - 3, 34 * o.acik, 8, 0, 0, 6.283); g.fill(); g.globalAlpha = 1; },
+});

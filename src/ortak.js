@@ -1,10 +1,10 @@
-/* Feza ve Pırıl: Işık Ormanı – kısa deneme (atmosfer, Feza, Pırıl, animasyonlar, müzik).
-   Tek dosya, Canvas 2D, kütüphane yok; file:// ile de çalışır. ?sessiz → ses yok. */
+/* ortak.js – herkesin kullandığı yardımcılar, palet, olay yolu (OLAY), nesne türleri (TUR), oyuncu/ejderha durumları.
+   Sözleşme: src/SPEC.md. Klasik script: üst düzey adlar bütün dosyalarla ortak. ?sessiz → ses yok. */
 'use strict';
 const Q = new URLSearchParams(location.search);
 const SESSIZ = Q.has('sessiz');
 const cv = document.getElementById('c'), g = cv.getContext('2d');
-const T = 40, ROWS = 16, VH = 560;
+const T = 40, VH = 560;   // ROWS/COLS/grid bolum.js'te
 let W = 0, H = 0, DPR = 1, S = 1, VW = 800;
 
 // ── yardımcılar ──
@@ -25,23 +25,6 @@ const PAL = {
 let light = 0, lightTarget = 0;   // 0..1 dünyanın aydınlığı
 const C = (k, al = 1) => mixc(PAL[k][0], PAL[k][1], light, al);
 
-// ── bölüm (kısa deneme yolu) ──
-const COLS = 86;
-const grid = Array.from({ length: ROWS }, () => new Uint8Array(COLS));   // 0 boş, 1 zemin, 2 üstten geçilen
-const ground = (a, b, h) => { for (let x = a; x <= b; x++) for (let y = ROWS - h; y < ROWS; y++) grid[y][x] = 1; };
-const plat = (a, b, y) => { for (let x = a; x <= b; x++) grid[y][x] = 2; };
-ground(0, 16, 3); ground(17, 22, 4); ground(23, 27, 5);
-plat(29, 30, 9); plat(32, 33, 8);
-ground(34, 46, 4); plat(37, 38, 10); plat(40, 43, 7);
-ground(47, 55, 3); plat(57, 58, 11);
-ground(61, 85, 3);
-const topOf = c => { for (let y = 0; y < ROWS; y++) if (grid[y][c] === 1) return y; return ROWS; };
-const cell = (tx, ty) => (tx < 0 || tx >= COLS) ? 1 : (ty < 0 || ty >= ROWS) ? 0 : grid[ty][tx];
-
-// Işık çiçekleri (açtıkça renk geri gelir) ve sondaki ağaç
-const FLOWERS = [[8, 13], [25, 11], [32.5, 8], [41.5, 7], [51, 13], [57.5, 11], [68, 13]].map(([c, r]) => ({ x: c * T + (c % 1 ? 0 : T / 2), y: r * T, open: 0, done: false }));
-const TREE = { x: 79 * T, y: 13 * T, lit: 0 };
-
 // ── parlama sprite'ları ──
 const glowCache = {};
 function glow(col) {
@@ -57,12 +40,12 @@ function glow(col) {
 const dglow = (col, x, y, r, a = 1) => { g.globalAlpha = a; g.drawImage(glow(col), x - r, y - r, r * 2, r * 2); g.globalAlpha = 1; };
 
 // ── Feza ──
-const P = { x: 3 * T, y: 13 * T, vx: 0, vy: 0, f: 1, ground: true, coyote: 0, buf: 0, dj: true, run: 0, land: 0,
-  blink: 2, blinkT: 0, hairV: 0, hairY: 0, idle: 0, safeX: 3 * T, safeY: 13 * T, fade: 0, air: 0, jumpT: 0, lean: 0 };
+const P = { x: 0, y: 0, vx: 0, vy: 0, f: 1, ground: true, coyote: 0, buf: 0, dj: true, run: 0, land: 0,
+  blink: 2, blinkT: 0, hairV: 0, hairY: 0, idle: 0, safeX: 0, safeY: 0, fade: 0, air: 0, jumpT: 0, lean: 0 };
 const PW = 11, PH = 60;
 
 // ── Pırıl ──
-const D = { x: 2 * T, y: 11 * T, vx: 0, vy: 0, f: 1, t: 0, spin: 0, mode: 'follow', modeT: 0, blink: 3, blinkT: 0, look: 0 };
+const D = { x: 0, y: 0, vx: 0, vy: 0, f: 1, t: 0, spin: 0, mode: 'follow', modeT: 0, blink: 3, blinkT: 0, look: 0 };
 
 // ── parçacıklar ──
 const parts = [];
@@ -71,3 +54,24 @@ function burst(x, y, n, cols, spd = 120, life = 1.2, size = 10) {
   for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, s = spd * (0.3 + Math.random()); parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 20, life, max: life, col: cols[i % cols.length], size: size * (0.5 + Math.random()) }); }
 }
 
+
+// ── olay yolu: OLAY.on(ad, fn) / OLAY.emit(ad, veri) ──
+const OLAY = (() => {
+  const L = {};
+  return {
+    on(ad, fn) { (L[ad] || (L[ad] = [])).push(fn); },
+    emit(ad, v) { const a = L[ad]; if (a) for (const fn of a.slice()) { try { fn(v); } catch (e) { console.error('[OLAY ' + ad + ']', e); } } },
+  };
+})();
+
+// ── nesne türleri: her modül kendi türlerini kaydeder (bkz. SPEC.md) ──
+const TUR = (() => {
+  const H = {};
+  return {
+    kaydet(tip, h) { H[tip] = Object.assign(H[tip] || {}, h); },
+    al(tip) { return H[tip] || null; },
+  };
+})();
+const NESNELER = [];   // bolum.js doldurur: {tip, x, y, ...}
+let DURUM = 'baslik';  // 'baslik' | 'giris' | 'oyun' | 'final' | 'son'
+let now = 0;           // saniye (oyun.js her karede günceller)

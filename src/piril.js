@@ -633,3 +633,6 @@ function drawDragon(tm) {
   }
   x.globalAlpha = 1;
 }
+
+// ── Işık nefesi (yer tutucu): Feza karanlık bir yere yaklaşınca Pırıl ışık üfler → o gruptaki nesneler belirir ──
+TUR.kaydet('karanlik', { dokun(o) { burst(o.x + 80, o.y - 60, 40, ['#d9b8ff', '#bff4ff', '#ffffff'], 200, 1.4, 9); setTimeout(() => OLAY.emit('aydinlat', o.grup), 700); } });
