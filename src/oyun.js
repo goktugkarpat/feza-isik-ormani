@@ -60,7 +60,8 @@ cv.addEventListener('pointermove', e => { const t = omYuva(e.pointerId); if (t) 
 cv.addEventListener('pointerup', omBirak); cv.addEventListener('pointercancel', omBirak);
 cv.addEventListener('lostpointercapture', omBirak);
 cv.addEventListener('contextmenu', e => e.preventDefault());
-function omHepsiniBirak() { for (const t of OM_PARMAK) t.aktif = false; for (const k in keys) keys[k] = false; }
+function omHepsiniBirak() { for (const t of OM_PARMAK) t.aktif = false; for (const k in keys) keys[k] = false; omYon = 0; }
+OLAY.on('durum', d => { if (d !== 'oyun') for (const t of OM_PARMAK) t.aktif = false; });
 addEventListener('blur', omHepsiniBirak);
 document.addEventListener('visibilitychange', () => { if (document.hidden) omHepsiniBirak(); omSonT = -1; });
 addEventListener('keydown', e => {
@@ -95,10 +96,11 @@ function readInput() {
   if (a) { moved = true; GIRDI.hareket = true; }
 }
 function begin() {
-  if (started) return; started = true; startT = now; AU.start();
+  if (started) return; started = true; startT = now;
+  if (typeof AU !== 'undefined' && AU && typeof AU.start === 'function') { try { AU.start(); } catch (e) { omHata('AU.start', e); } }
   DURUM = 'giris'; OLAY.emit('durum', DURUM);
-  if (Q.has('atla') || typeof SAHNE === 'undefined' || !SAHNE.giris) oyunaBasla();
-  else SAHNE.giris(oyunaBasla);
+  if (Q.has('atla') || typeof SAHNE === 'undefined' || !SAHNE || typeof SAHNE.giris !== 'function') oyunaBasla();
+  else { try { SAHNE.giris(oyunaBasla); } catch (e) { omHata('SAHNE.giris', e); oyunaBasla(); } }
 }
 function oyunaBasla() { if (DURUM === 'oyun') return; DURUM = 'oyun'; OLAY.emit('durum', DURUM); stepCam(0, true); }
 
@@ -127,7 +129,7 @@ function omKatiVar(x, y) {
 function inis(y, siddet) {
   P.air = 0;
   if (siddet > 300) {
-    P.land = clamp(siddet / 900, 0.3, 1); AU.sfx('land', P.land); OLAY.emit('inis', { x: P.x, y, siddet });
+    P.land = clamp(siddet / 900, 0.3, 1); omSfx('land', P.land); OLAY.emit('inis', { x: P.x, y, siddet });
     burst(P.x, y, siddet > 700 ? 12 : 7, ['#e8dcff', '#bff4ff'], 50 + siddet * 0.05, 0.7, 6);
   }
 }
@@ -137,13 +139,13 @@ function omCismeIn(o, top, vy, was) {
   P.y = top;
   if (c.tip === 'ziplat') {   // tutarlı yükseklik: gelen hızdan bağımsız, düğme bırakılsa da kesilmez
     P.vy = -(c.guc || 1050); P.ground = false; P.dj = true; P.jumpT = 0; P.bounce = true; P.coyote = 0; P.air = 0;
-    OLAY.emit('ziplatti', o); if (h && h.ustune) h.ustune(o, vy);
+    OLAY.emit('ziplatti', o); if (h && typeof h.ustune === 'function') { try { h.ustune(o, vy); } catch (e) { omHata(o.tip + '.ustune', e); } }
     return false;
   }
   if (!was) inis(top, vy);
   P.vy = 0; P.ground = true; ustundeki = o; omSonUst = o; omStandY = top; omStandX = o.x;
-  if (!was && h && h.ustune) {
-    h.ustune(o, vy);
+  if (!was && h && typeof h.ustune === 'function') {
+    try { h.ustune(o, vy); } catch (e) { omHata(o.tip + '.ustune', e); }
     if (P.vy < 0) { P.ground = false; ustundeki = null; P.bounce = true; P.jumpT = 0; P.coyote = 0; P.dj = true; return false; }   // ezince sekti
   }
   return true;
@@ -265,13 +267,28 @@ function omGuvenliYer() {
     P.safeX = P.x; P.safeY = P.y; omSafeO = null;
   }
 }
+// Ayakların altında 'mesafe' içinde basılacak zemin / cisim var mı (düşerken)
+function omYereYakin(mesafe) {
+  const y0 = P.y, y1 = P.y + mesafe;
+  const tx0 = Math.floor((P.x - PW) / T), tx1 = Math.floor((P.x + PW - 0.01) / T);
+  for (let ty = Math.floor(y0 / T); ty <= Math.floor(y1 / T); ty++) {
+    if (ty * T < y0 - 0.5) continue;
+    for (let tx = tx0; tx <= tx1; tx++) { const c = cell(tx, ty); if (c === 1 || c === 2) return true; }
+  }
+  for (const o of CISIMLER) {
+    const c = o.cisim; if (!c.aktif) continue;
+    const top = o.y - c.h;
+    if (top >= y0 - 0.5 && top <= y1 && P.x + PW > o.x - c.w / 2 && P.x - PW < o.x + c.w / 2) return true;
+  }
+  return false;
+}
 function omDusus(suda) {
   P.fade = 1.2; P.respawned = false; P.vx *= 0.3;
   if (suda) {
     const sy = BOLUM.gol.su;
-    AU.sfx('splash'); burst(P.x, sy - 4, 26, ['#bfe6ff', '#ffffff', '#d9c8ff'], 170, 0.9, 7);
+    omSfx('splash'); burst(P.x, sy - 4, 26, ['#bfe6ff', '#ffffff', '#d9c8ff'], 170, 0.9, 7);
     ripples.push({ x: P.x, y: sy, r: 0, life: 0.9, small: true }); ripples.push({ x: P.x, y: sy, r: -14, life: 1.1, small: true });
-  } else { AU.sfx('splash'); burst(P.x, ROWS * T - 60, 24, ['#bfe6ff', '#ffffff'], 160, 0.9, 7); }
+  } else { omSfx('splash'); burst(P.x, ROWS * T - 60, 24, ['#bfe6ff', '#ffffff'], 160, 0.9, 7); }
   OLAY.emit('dustu', P);
 }
 function stepPlayer(dt) {
@@ -283,7 +300,7 @@ function stepPlayer(dt) {
       if (omSafeO && omSafeO.cisim && omSafeO.cisim.aktif) { P.x = omSafeO.x + omSafeOff; P.y = omSafeO.y - omSafeO.cisim.h; }
       else { P.x = P.safeX; P.y = P.safeY; }
       P.vx = P.vy = 0; P.ground = true; P.bounce = false; ustundeki = null; omSonUst = null; omIsinla();
-      dragonCarry(); burst(P.x, P.y - 30, 30, ['#c9a2ff', '#ffd6f2', '#ffffff'], 140, 1.2, 9); AU.sfx('dbl'); OLAY.emit('kurtarildi', P);
+      omCagir('dragonCarry', typeof dragonCarry === 'function' ? dragonCarry : null); burst(P.x, P.y - 30, 30, ['#c9a2ff', '#ffd6f2', '#ffffff'], 140, 1.2, 9); omSfx('dbl'); OLAY.emit('kurtarildi', P);
     }
     return;
   }
@@ -302,9 +319,9 @@ function stepPlayer(dt) {
   if (P.buf > 0) {
     if (P.coyote > 0) {
       P.vy = -OM.ZIPLA; P.coyote = 0; P.buf = 0; P.ground = false; P.jumpT = 0; P.bounce = false; ustundeki = null; omSonUst = null;
-      AU.sfx('jump'); burst(P.x, P.y, 6, ['#ffffff', '#e0d0ff'], 60, 0.5, 5); OLAY.emit('ziplama', P);
-    } else if (P.dj && P.vy > -OM.CIFT * 0.85) {
-      P.vy = -OM.CIFT; P.dj = false; P.buf = 0; P.jumpT = 0; P.flip = 1; P.bounce = false; dragonPush(); OLAY.emit('ciftZiplama', P);
+      omSfx('jump'); burst(P.x, P.y, 6, ['#ffffff', '#e0d0ff'], 60, 0.5, 5); OLAY.emit('ziplama', P);
+    } else if (P.dj && P.vy > -OM.CIFT * 0.85 && !(P.vy > 0 && omYereYakin(P.vy * 0.1 + 4))) {   // yere çok yakınsa tampon: yerden zıplasın
+      P.vy = -OM.CIFT; P.dj = false; P.buf = 0; P.jumpT = 0; P.flip = 1; P.bounce = false; omCagir('dragonPush', typeof dragonPush === 'function' ? dragonPush : null); OLAY.emit('ciftZiplama', P);
     }
   }
   P.buf -= dt;
@@ -351,9 +368,20 @@ function omTasi() {
 
 // ════════════════════ nesneler: kurulum, dokunma, güncelleme, çizim ════════════════════
 const SAYAC = { cicek: 0, cicekTop: 0, tohum: 0, tohumTop: 0, pofuduk: 0, pofudukTop: 0 };
+// ── hata kalkanı: bir modüldeki hata yalnız kendi aşamasını atlar; kare ve oyun sürer ──
+const omHataT = {};   // aşama → son kayıt zamanı (aynı hata en çok 5 sn'de bir yazılır)
+function omTemizle() { try { g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; } catch (_) { /* yoksay */ } }
+function omHata(ad, e) {
+  const t = performance.now(), s = omHataT[ad];
+  if (s === undefined || t - s > 5000) { omHataT[ad] = t; console.error('[oyun › ' + ad + ']', e); }
+  omTemizle();
+}
+function omSfx(k, v) { if (typeof AU !== 'undefined' && AU && typeof AU.sfx === 'function') { try { AU.sfx(k, v); } catch (e) { omHata('AU.sfx', e); } } }
+function omCagir(ad, fn, a, b, c) { if (typeof fn !== 'function') return; try { fn(a, b, c); } catch (e) { omHata(ad, e); } }
 function nesneleriKur() {
   for (const o of NESNELER) {
-    const h = TUR.al(o.tip); if (h && h.kur) h.kur(o);
+    const h = TUR.al(o.tip);
+    if (h && typeof h.kur === 'function') { try { h.kur(o); } catch (e) { omHata(o.tip + '.kur', e); } }
     if (o.cisim) CISIMLER.push(o);
   }
   SAYAC.cicekTop = NESNELER.filter(o => o.tip === 'cicek').length;
@@ -363,13 +391,13 @@ function nesneleriKur() {
 function nesneleriGuncelle(dt) {
   for (const o of NESNELER) {
     const h = TUR.al(o.tip);
-    if (h && h.guncelle) h.guncelle(o, dt);
+    if (h && typeof h.guncelle === 'function') { try { h.guncelle(o, dt); } catch (e) { omHata(o.tip + '.guncelle', e); } }
     if (o.cisim && CISIMLER.indexOf(o) < 0) CISIMLER.push(o);   // sonradan cisim kazanan nesne
     if (o.r && !o.dokundu && DURUM === 'oyun' && P.fade <= 0) {
       const dx = o.x - P.x, dy = (o.y - (o.ry || 0)) - (P.y - PH / 2);
       if (Math.abs(dx) < o.r && Math.abs(dy) < Math.max(o.r, 50)) {
         o.dokundu = true;
-        if (h && h.dokun) h.dokun(o);
+        if (h && typeof h.dokun === 'function') { try { h.dokun(o); } catch (e) { omHata(o.tip + '.dokun', e); } }
         OLAY.emit('dokun:' + o.tip, o);
       }
     }
@@ -377,19 +405,19 @@ function nesneleriGuncelle(dt) {
 }
 function nesneleriCiz(tm, katman) {   // katman: 'ciz' (Feza'nın arkası) | 'cizOn' (önü); dünya dönüşümü kurulu
   for (const o of NESNELER) {
-    const h = TUR.al(o.tip); if (!h || !h[katman]) continue;
+    const h = TUR.al(o.tip); if (!h || typeof h[katman] !== 'function') continue;
     if (o.x < cam.x - 500 || o.x > cam.x + VW + 500) continue;
-    h[katman](o, tm);
+    try { h[katman](o, tm); } catch (e) { omHata(o.tip + '.' + katman, e); g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S); }
   }
 }
 // Varsayılan küçük davranışlar (modüller kendi TUR.kaydet'leriyle genişletir)
-TUR.kaydet('konusma', { dokun(o) { if (typeof SES !== 'undefined') SES.soyle(o.anahtar); } });
+TUR.kaydet('konusma', { dokun(o) { if (o.anahtar && typeof SES !== 'undefined' && SES.soyle) SES.soyle(o.anahtar); } });
 TUR.kaydet('cicek', { dokun(o) { if (o.done) return; o.done = true; bloom(o); } });
-TUR.kaydet('tohum', { dokun(o) { o.done = true; SAYAC.tohum++; burst(o.x, o.y - 20, 20, ['#ffe9b8', '#ffffff'], 140, 1.2, 7); AU.sfx('bloom'); OLAY.emit('tohum', o); } });
+TUR.kaydet('tohum', { dokun(o) { o.done = true; SAYAC.tohum++; burst(o.x, o.y - 20, 20, ['#ffe9b8', '#ffffff'], 140, 1.2, 7); omSfx('bloom'); OLAY.emit('tohum', o); } });
 TUR.kaydet('agac', { dokun(o) {
   if (TREE.done) return;
   if (NESNELER.some(n => n.tip === 'buyukPofuduk' && !n.uyandi)) { o.dokundu = false; return; }
-  TREE.done = true; lightTarget = 1; ripples.push({ x: o.x, y: o.y - 160, r: 0, life: 3 }); dragonHappy(o); AU.sfx('bloom', 1); OLAY.emit('agac', o);
+  TREE.done = true; lightTarget = 1; ripples.push({ x: o.x, y: o.y - 160, r: 0, life: 3 }); omCagir('dragonHappy', typeof dragonHappy === 'function' ? dragonHappy : null, o); omSfx('bloom', 1); OLAY.emit('agac', o);
   setTimeout(finaleGec, 2600);
 } });
 function bloom(fl) {
@@ -397,7 +425,7 @@ function bloom(fl) {
   lightTarget = Math.min(0.9, lightTarget + 0.85 / Math.max(1, SAYAC.cicekTop));
   ripples.push({ x: fl.x, y: fl.y - 14, r: 0, life: 2.2 });
   burst(fl.x, fl.y - 16, 26, ['#9ff0ff', '#ffe9b8', '#c9b2ff'], 170, 1.6, 7);
-  dragonHappy(fl); AU.sfx('bloom'); OLAY.emit('cicek', fl);
+  omCagir('dragonHappy', typeof dragonHappy === 'function' ? dragonHappy : null, fl); omSfx('bloom'); OLAY.emit('cicek', fl);
 }
 OLAY.on('uyandi', () => { SAYAC.pofuduk++; });
 // Sıradaki ana hedef (Pırıl yol gösterirken kullanır): açılmamış çiçek, yolu kapatan uyuyan Pofuduk, karanlık nokta,
@@ -425,7 +453,7 @@ function finaleGec() {
   if (DURUM !== 'oyun') return;
   DURUM = 'final'; OLAY.emit('durum', DURUM);
   const bitir = () => { DURUM = 'son'; OLAY.emit('durum', DURUM); };
-  if (typeof SAHNE !== 'undefined' && SAHNE.final) SAHNE.final(bitir); else bitir();
+  if (typeof SAHNE !== 'undefined' && SAHNE && typeof SAHNE.final === 'function') { try { SAHNE.final(bitir); } catch (e) { omHata('SAHNE.final', e); bitir(); } } else bitir();
 }
 // ── kayboldu: Feza ~8 sn hedefe yaklaşmazsa (ya da epey geri giderse ~5 sn) → Pırıl yol göstersin ──
 const omKayip = { hedef: null, en: 0, t: 0 };
@@ -471,7 +499,10 @@ function omKameraIpucu(px) {
 // Ölçek tek yerde: S ve VW kamera yakınlığından hesaplanır (resize de bunu çağırır)
 function omOlcek() { S = H / VH * cam.zoom; VW = W / S; }
 function stepCam(dt, snap) {
-  const px = P.rx !== undefined ? P.rx : P.x, py = P.ry !== undefined ? P.ry : P.y;
+  const px = P.rx !== undefined ? P.rx : P.x;
+  let py = P.ry !== undefined ? P.ry : P.y;
+  // suya düştü / Pırıl onu yakalamak üzere: kamera aşağı dalmasın, son görünen yerde beklesin
+  if (P.fade > 0 && py > ROWS * T - 20 && !snap && omC.sonPy !== undefined) py = omC.sonPy; else omC.sonPy = py;
   omKameraIpucu(px);
   if (snap || !(dt > 0)) { omZ.z = omZ.hz; omZ.v = 0; omZ.yo = omZ.hy; omZ.yv = 0; }
   else {
@@ -538,10 +569,15 @@ function stepCam(dt, snap) {
 }
 OLAY.on('ziplatti', o => { if (o && o.tip === 'buyukPofuduk') { omC.sars = 1; omC.sarsT = 0; } });
 
+// Pırıl'ın ortam ışığı: onun ARKASINDA (drawDragon'dan önce) çizilir, yoksa onu pembeye boyar
+function omPirilHale() {
+  g.globalCompositeOperation = 'lighter';
+  dglow('#b88aff', D.x, D.y, 150, 0.24);
+  dglow('#ffe0ff', D.x, D.y, 40, 0.11);
+  g.globalCompositeOperation = 'source-over';
+}
 function drawFx(tm, dt) {
   g.globalCompositeOperation = 'lighter';
-  dglow('#b88aff', D.x, D.y, 150, 0.32);
-  dglow('#ffe0ff', D.x, D.y, 40, 0.15);
   for (let i = parts.length - 1; i >= 0; i--) {
     const p = parts[i]; p.life -= dt;
     if (p.life <= 0) { parts[i] = parts[parts.length - 1]; parts.pop(); continue; }   // sırası önemsiz: kaydırmadan sil
@@ -588,7 +624,7 @@ function frame(ms) {
   if (DURUM === 'oyun' || DURUM === 'baslik') {
     omAcc += dt;
     let n = 0;
-    while (omAcc >= OM.STEP && n < 16) { omOncX = P.x; omOncY = P.y; stepPlayer(OM.STEP); omAcc -= OM.STEP; n++; }
+    while (omAcc >= OM.STEP && n < 16) { omOncX = P.x; omOncY = P.y; try { stepPlayer(OM.STEP); } catch (e) { omHata('stepPlayer', e); } omAcc -= OM.STEP; n++; }
     if (n >= 16) omAcc = 0;
   } else { omAcc = 0; omOncX = P.x; omOncY = P.y; }
   // çizim konumu: iki fizik adımı arasında yumuşatma (ışınlanmada yumuşatma yok)
@@ -597,32 +633,39 @@ function frame(ms) {
   if (Math.abs(P.x - omOncX) > 80 || Math.abs(P.y - omOncY) > 80) { omOncX = P.x; omOncY = P.y; }
   omRX = omOncX + (P.x - omOncX) * al; omRY = omOncY + (P.y - omOncY) * al;
   P.x = P.rx = omRX; P.y = P.ry = omRY;
-  nesneleriGuncelle(dt);
+  omCagir('nesneleriGuncelle', nesneleriGuncelle, dt);
   omTasi(); P.rx = P.x; P.ry = P.y;
-  omKayipKontrol(dt);
-  fezaUpdate(dt); stepDragon(dt); stepCam(dt);
+  omCagir('kayip', omKayipKontrol, dt);
+  omCagir('fezaUpdate', typeof fezaUpdate === 'function' ? fezaUpdate : null, dt);
+  omCagir('stepDragon', typeof stepDragon === 'function' ? stepDragon : null, dt);
+  omCagir('stepCam', stepCam, dt);
   light = lerp(light, lightTarget, 1 - Math.exp(-dt * 0.9));
-  const sahneTam = typeof SAHNE !== 'undefined' && SAHNE.tamEkran && SAHNE.tamEkran();
+  let sahneTam = false;
+  if (typeof SAHNE !== 'undefined' && SAHNE && typeof SAHNE.tamEkran === 'function') { try { sahneTam = !!SAHNE.tamEkran(); } catch (e) { omHata('SAHNE.tamEkran', e); } }
   if (!sahneTam) {
-    drawBackground(t);
-    drawMotes(t, 0, 0.75);
-    drawWorld(t);
+    omCagir('drawBackground', typeof drawBackground === 'function' ? drawBackground : null, t);
+    omCagir('drawMotes1', typeof drawMotes === 'function' ? drawMotes : null, t, 0, 0.75);
+    omCagir('drawWorld', typeof drawWorld === 'function' ? drawWorld : null, t);
     g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S);
     nesneleriCiz(t, 'ciz');
     g.setTransform(1, 0, 0, 1, 0, 0);
-    drawFeza(t);
+    omCagir('drawFeza', typeof drawFeza === 'function' ? drawFeza : null, t);
+    g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S); g.globalAlpha = 1;
+    omCagir('pirilHale', omPirilHale);
     g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S);
-    drawDragon(t);
+    omCagir('drawDragon', typeof drawDragon === 'function' ? drawDragon : null, t);
+    g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S);
     nesneleriCiz(t, 'cizOn');
-    drawFx(t, dt);
-    drawPetals(t);
-    drawMotes(t, 0.75, 2);
-    drawForeground(t);
-    drawVignette();
+    g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S);
+    omCagir('drawFx', drawFx, t, dt);
+    omCagir('drawPetals', typeof drawPetals === 'function' ? drawPetals : null, t);
+    omCagir('drawMotes2', typeof drawMotes === 'function' ? drawMotes : null, t, 0.75, 2);
+    omCagir('drawForeground', typeof drawForeground === 'function' ? drawForeground : null, t);
+    omCagir('drawVignette', typeof drawVignette === 'function' ? drawVignette : null);
   }
-  g.setTransform(1, 0, 0, 1, 0, 0);
-  if (typeof SAHNE !== 'undefined' && SAHNE.ciz) SAHNE.ciz(t, dt);
-  if (typeof ARAYUZ !== 'undefined' && ARAYUZ.ciz) ARAYUZ.ciz(t, dt);
+  omTemizle();
+  if (typeof SAHNE !== 'undefined' && SAHNE && typeof SAHNE.ciz === 'function') { try { SAHNE.ciz(t, dt); } catch (e) { omHata('SAHNE.ciz', e); } omTemizle(); }
+  if (typeof ARAYUZ !== 'undefined' && ARAYUZ && typeof ARAYUZ.ciz === 'function') { try { ARAYUZ.ciz(t, dt); } catch (e) { omHata('ARAYUZ.ciz', e); } omTemizle(); }
   // gerçek fizik konumuna dön (kare içinde başka bir modül Feza'yı taşıdıysa onu koru)
   if (P.x === omRX) P.x = omSimX; else omOncX = P.x;
   if (P.y === omRY) P.y = omSimY; else omOncY = P.y;

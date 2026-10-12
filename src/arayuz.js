@@ -109,7 +109,7 @@ const ARAYUZ = (() => {
     const yaz = (x, renk) => {
       x.textAlign = 'center'; x.textBaseline = 'alphabetic';
       x.font = `400 ${fs}px ${FONT_SERIF}`;
-      if (renk) { const gr = x.createLinearGradient(0, pad * 0.4, 0, pad + fs * 0.2); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.55, '#f1e6ff'); gr.addColorStop(1, '#d6c0ff'); x.fillStyle = gr; }
+      if (renk) { const gr = x.createLinearGradient(0, pad * 0.4, 0, pad + fs * 0.2); gr.addColorStop(0, '#fbf6ff'); gr.addColorStop(0.5, '#e6d6ff'); gr.addColorStop(1, '#bfa0f4'); x.fillStyle = gr; }
       x.fillText('Feza ve Pırıl', w / 2, pad + fs * 0.2);
       x.font = `italic 400 ${fs2}px ${FONT_SERIF}`;
       if (renk) { const gr = x.createLinearGradient(0, pad + fs * 0.5, 0, pad + fs * 1.05); gr.addColorStop(0, '#fff6dc'); gr.addColorStop(1, '#bff4ff'); x.fillStyle = gr; }
@@ -140,6 +140,32 @@ const ARAYUZ = (() => {
     }
     return C.logo = { metin, glow, h, fs, yer };
   }
+  // ışık süpürmesi: yazının yalnız dar bir şeridi küçük bir tuvale kopyalanır, eğik ışık ile boyanır, eklenerek çizilir
+  let bant = null;
+  function parlamaCiz(L, t, y, a) {
+    const per = 6.5, sure = 2.6, u = ((t - 1.0) % per + per) % per / sure;
+    if (t < 1.0 || u >= 1 || a < 0.05) return;
+    const fs = L.fs, bw = Math.ceil(fs * 1.6), h = L.metin.height, w = L.metin.width;
+    if (!bant || bant.width !== bw || bant.height !== h) bant = tuval(bw, h);
+    const bx = bant.getContext('2d');
+    const x0 = w / 2 - fs * 3.6, x1 = w / 2 + fs * 3.6, cx = lerp(x0, x1, uiEase(u)), sx = Math.round(cx - bw / 2);
+    bx.globalCompositeOperation = 'copy'; bx.drawImage(L.metin, sx, 0, bw, h, 0, 0, bw, h);
+    bx.globalCompositeOperation = 'source-in';
+    const gr = bx.createLinearGradient(0, h, bw, 0);
+    gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.42, 'rgba(255,250,235,0.0)'); gr.addColorStop(0.5, 'rgba(255,250,235,0.95)');
+    gr.addColorStop(0.58, 'rgba(255,250,235,0.0)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    bx.fillStyle = gr; bx.fillRect(0, 0, bw, h);
+    bx.globalCompositeOperation = 'source-over';
+    g.globalCompositeOperation = 'lighter'; g.globalAlpha = a * Math.sin(u * Math.PI) * 0.9;
+    g.drawImage(bant, sx, y);
+    // aynı şerit ışıma katmanından da geçer (harflerin çevresi kısa bir an parlar) + şeridin ucunda bir parıltı
+    bx.globalCompositeOperation = 'copy'; bx.drawImage(L.glow, sx, 0, bw, h, 0, 0, bw, h);
+    bx.globalCompositeOperation = 'source-in'; bx.fillStyle = gr; bx.fillRect(0, 0, bw, h); bx.globalCompositeOperation = 'source-over';
+    g.globalAlpha = a * Math.sin(u * Math.PI) * 0.7; g.drawImage(bant, sx, y);
+    g.globalAlpha = 1;
+    parilti(cx + fs * 0.25, y + fs * 0.35, fs * 0.38 * Math.sin(u * Math.PI), a * Math.sin(u * Math.PI));
+    g.globalCompositeOperation = 'source-over';
+  }
   const motes = [];
   function baslikCiz(tm, a, dt) {
     const L = logo(), y0 = H * 0.13;
@@ -154,18 +180,21 @@ const ARAYUZ = (() => {
       const yy = ((m.y - tm * m.v) % 1 + 1) % 1, xx = m.x + Math.sin(tm * 0.35 + m.h) * 0.025, tw = 0.5 + 0.5 * Math.sin(tm * 1.4 + m.h * 2);
       dglow(m.c, xx * W, yy * H, H * 0.012 * m.s * (1 + tw * 0.4), a * (0.18 + 0.35 * tw) * Math.min(1, yy * 4));
     }
-    // logo: nefes alan ışıma + keskin yazı
-    const nefes = 0.72 + 0.22 * Math.sin(tm * 1.3);
-    g.globalAlpha = a * nefes; g.drawImage(L.glow, 0, y0);
+    // logo: nefes alan ışıma + keskin yazı. Oyun başlayınca yazı hafifçe yükselip ışığa karışarak söner.
+    const cik = DURUM === 'baslik' ? 0 : 1 - a;
+    const nefes = 0.72 + 0.22 * Math.sin(tm * 1.3) + cik * 0.6;
+    const dy = Math.sin(tm * 0.8) * H * 0.004 - uiEase(cik) * H * 0.025;
+    g.globalAlpha = Math.min(1, a * nefes); g.drawImage(L.glow, 0, y0 + dy * 0.6);
     g.globalCompositeOperation = 'source-over';
-    // hafif süzülme
-    const dy = Math.sin(tm * 0.8) * H * 0.004;
     g.globalAlpha = a; g.drawImage(L.metin, 0, y0 + dy); g.globalAlpha = 1;
+    // yavaş ışık süpürmesi harflerin üstünden geçer (her ~6 sn'de bir)
+    parlamaCiz(L, tm - uiBaslikT0, y0 + dy, a);
     g.globalCompositeOperation = 'lighter';
     for (let i = 0; i < L.yer.length; i++) {
       const [px, py, ph] = L.yer[i], u = ((tm * 0.33 + ph / 6.28) % 1);
-      const v = u < 0.18 ? Math.sin(u / 0.18 * Math.PI) : 0;
-      parilti(px, y0 + dy + py, L.fs * 0.32 * v, a * v);
+      let v = u < 0.18 ? Math.sin(u / 0.18 * Math.PI) : 0;
+      if (cik > 0) v = Math.max(v, Math.sin(clamp(cik * 1.4 - i * 0.05, 0, 1) * Math.PI));   // çıkışta harfler ışıl ışıl
+      parilti(px, y0 + dy + py - cik * H * 0.03 * (i % 3), L.fs * 0.32 * v, Math.min(1, (a + cik) * v));
     }
     g.globalCompositeOperation = 'source-over';
     // "dokun" eli: aşağıda ortada, nazikçe dokunuyor
@@ -496,6 +525,25 @@ const ARAYUZ = (() => {
     for (const [qx, qy] of [[0.05, 0.08], [0.95, 0.08], [0.05, 0.92], [0.95, 0.92]]) { yildiz4(x, pad + w * qx, pad + h * qy, h * 0.025, 0.3); x.fill(); }
     return C[key] = { c, pad };
   }
+  function sonYerlesim(satir) {
+    const n = satir.length, enCok = Math.max(...satir.map(s => s[2]), 1);
+    const kw = Math.min(W * 0.9, H * 1.3), boy = Math.min(H * 0.11, kw * 0.9 / Math.max(5, enCok) / 1.08), ara = boy * 1.08;
+    const bh = H * 0.1, dy = boy * 1.22, R = Math.min(H * 0.08, W * 0.075);
+    const kh = bh + n * dy + boy * 1.1 + R * 0.9, ky = Math.max(H * 0.04, (H - kh - R * 1.3) / 2);
+    return { n, kw, boy, ara, bh, dy, R, kh, ky };
+  }
+  // bitiş ekranının pahalı parçalarını sabah sahnesi sürerken parça parça önceden hazırla (açılırken takılma olmasın)
+  function sonOnHazirla() {
+    const satir = [['cicek', 0, SAYAC.cicekTop], ['pofuduk', 0, SAYAC.pofudukTop]];
+    if (SAYAC.tohumTop) satir.push(['tohum', 0, SAYAC.tohumTop]);
+    const L = sonYerlesim(satir);
+    const isler = [() => sonKart(L.kw, L.kh), () => baslikKucuk(), () => tekrarSprite(L.R), () => parlakSprite(), () => elSprite(),
+      () => { simge('cicek', true); simge('cicek', false); }, () => { simge('pofuduk', true); simge('pofuduk', false); }, () => { simge('tohum', true); simge('tohum', false); }];
+    let i = 0;
+    const adim = () => { if (i >= isler.length || DURUM === 'son') return; kontrol(); try { isler[i++](); } catch (e) {} setTimeout(adim, 120); };
+    adim();
+  }
+  OLAY.on('sahneAn', v => { if (v && v.ad === 'sabah') setTimeout(sonOnHazirla, 1800); });
   function sonCiz(tm, dt) {
     if (!son) sonKur();
     const u = now - son.t0;
@@ -503,10 +551,7 @@ const ARAYUZ = (() => {
     // odanın üstüne çok hafif sıcak örtü
     g.fillStyle = `rgba(70,35,45,${0.22 * a})`; g.fillRect(0, 0, W, H);
     // yerleşim
-    const n = son.satir.length, enCok = Math.max(...son.satir.map(s => s[2]), 1);
-    const kw = Math.min(W * 0.9, H * 1.3), boy = Math.min(H * 0.11, kw * 0.9 / Math.max(5, enCok) / 1.08), ara = boy * 1.08;
-    const bh = H * 0.1, dy = boy * 1.22, R = Math.min(H * 0.08, W * 0.075);
-    const kh = bh + n * dy + boy * 1.1 + R * 0.9, kx = W / 2 - kw / 2, ky = Math.max(H * 0.04, (H - kh - R * 1.3) / 2);
+    const { n, kw, boy, ara, bh, dy, R, kh, ky } = sonYerlesim(son.satir);
     const kart = sonKart(kw, kh), kgir = uiBack(uiSeg(u, 0.1, 0.8));
     g.save(); g.globalAlpha = a; g.translate(W / 2, ky + kh / 2); g.scale(0.92 + 0.08 * kgir, 0.92 + 0.08 * kgir);
     g.drawImage(kart.c, -kw / 2 - kart.pad, -kh / 2 - kart.pad); g.restore(); g.globalAlpha = 1;
@@ -578,7 +623,7 @@ const ARAYUZ = (() => {
     if (DURUM !== durumOnce) { durumOnce = DURUM; }
     // başlık (oyun başlayınca yumuşakça söner)
     if (DURUM === 'baslik') { if (!uiBaslikBasladi) { uiBaslikBasladi = true; uiBaslikT0 = tm; } uiBaslikA = Math.min(1, uiBaslikA + dt * 2); }
-    else uiBaslikA = Math.max(0, uiBaslikA - dt * 1.6);
+    else uiBaslikA = Math.max(0, uiBaslikA - dt * 1.1);
     // her parça ayrı korunur: birinde hata olursa diğerleri (özellikle zıplama düğmesi) yine çizilir
     const dene = (ad, fn) => { try { fn(); } catch (e) { if (!uiHata[ad]) { uiHata[ad] = 1; console.warn('[arayuz] ' + ad, e); } g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; } };
     if (uiBaslikA > 0.005) dene('baslik', () => baslikCiz(tm, uiEase(uiBaslikA), dt));
@@ -592,5 +637,5 @@ const ARAYUZ = (() => {
     if (DURUM === 'son') dene('son', () => sonCiz(tm, dt));
     dene('altyazi', altyaziCiz);
   }
-  return { ciz, altyazi };
+  return { ciz, altyazi, get _tekrar() { return tekrarYer; } };
 })();

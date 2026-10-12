@@ -6,7 +6,9 @@
    Animasyonlar: yürüyüş↔koşu (hıza göre adım), olaylarla: ziplatti (yıldız pozu, önden; Büyük Pofuduk'ta takla),
    uyandi (mutlu sekme), cicek/tohum (uzanır, sonra önden kollar havada sevinir), carpti (iter), kurtarildi (Pırıl'ın
    patisine Peter Pan gibi tutunur), uçurum kenarında "eyvah", hareketli cisimde denge, Büyük Pofuduk/ağaca hayranlık,
-   uzun beklemede el sallama / esneme / gerinme / oturma / uyuklama.
+   uzun beklemede el sallama / esneme / gerinme / oturma / uyuklama; uçurum kenarında bir süre durunca kenara oturup
+   ayaklarını boşlukta sallar; fırlatıldıktan sonra yere inince önden "ta-da!"; iterken gözler > <.
+   OLAY 'adim' {x, y, hiz, inis?}: her ayak basışında (ses için).
    Dışa açık: P.a_elX, P.a_elY (ön elin dünya konumu; Pırıl taşırken tutar), P.a_state, fezaCizPoz (ara sahneler, en altta).
    Çizim konumu P.rx/P.ry varsa onu kullanır. */
 'use strict';
@@ -669,7 +671,7 @@ function fezaUpdate(dt) {
   P.a_balKick = Math.max(0, P.a_balKick - dt / 1.1);
   P.a_cheerT += dt;
   const cheer = P.a_cheerT < 1.9 && P.a_cheerO;
-  if (P.a_tadaT < 1.1 && (!gr || sp > 60 || cheer)) P.a_tadaT = 9;   // koşmaya devam ederse ta-da yok
+  if (P.a_tadaT < 1.1 && (!gr || (sp > 60 && (P.a_tadaT > 0.14 || (typeof axis !== 'undefined' && axis !== 0))) || cheer)) P.a_tadaT = 9;   // koşmaya devam ederse ta-da yok (inişteki kısa kayma sayılmaz)   // koşmaya devam ederse ta-da yok
   const tada = P.a_tadaT < 1.1;
   if (gr && sp > 110 && Math.sign(P.vx) !== P.f) { if (P.a_skid <= 0) { P.a_skidDir = Math.sign(P.vx); P.a_skid = 0.12; } }
   else P.a_skid = gr ? P.a_skid - dt : 0;
@@ -854,11 +856,11 @@ function fezaUpdate(dt) {
     // arka kol neşeyle açık, bacaklar sırayla tekmeler; yere yaklaşınca Pırıl bırakır, ayaklar yere uzanır
     T.air = 1; kmin = kmax = 22;
     const dn = smooth(clamp((cu - 0.62) / 0.3, 0, 1)), sw2 = Math.sin(t * 5.2 + 1.7);
-    T.arm = lerp(1.45, 1, dn); T.la1 = lerp(2.05, 0.4, dn); T.la2 = lerp(0.04, 0.4, dn); T.hOpen = 0;
+    T.arm = lerp(1.6, 1, dn); T.la1 = lerp(2.62, 0.4, dn);   // el başın önünde-üstünde: Pırıl yüzünü örtmesin T.la2 = lerp(0.04, 0.4, dn); T.hOpen = 0;
     T.ba1 = lerp(-1.05 + 0.25 * Math.sin(t * 4.4), -0.1, dn); T.ba2 = lerp(0.5, 0.35, dn); T.shr = 0.6 * (1 - dn);
     T.lt1 = lerp(0.05 + 0.32 * sw, 0.06, dn); T.lt2 = lerp(-0.35 - 0.45 * Math.max(0, -sw), -0.05, dn);
     T.bt1 = lerp(-0.35 + 0.25 * sw2, -0.05, dn); T.bt2 = lerp(-0.4 - 0.45 * Math.max(0, -sw2), -0.08, dn);
-    T.lean = lerp(-0.2 + 0.04 * Math.sin(t * 3.1), 0.02, dn); T.head = lerp(-0.28, 0.05, dn);
+    T.lean = lerp(-0.32 + 0.04 * Math.sin(t * 3.1), 0.02, dn); T.head = lerp(-0.28, 0.05, dn);
     T.gx = 1; T.gy = lerp(-0.6, 0.6, dn); T.mSmile = 1; T.mOpen = lerp(0.6, 0.3, dn); T.brow = 0.5; T.happy = cu > 0.15 && cu < 0.55 ? 1 : 0;
   } else if (st === 'launch') {   // minder / Büyük Pofuduk fırlattı: sevinçli yıldız pozu, sonra toparlanma
     const el = (1 - P.a_launch) * (P.a_launchBig ? 1.05 : 0.8), star = P.a_launchBig ? 0.42 : 0.32;
@@ -941,12 +943,12 @@ function fezaUpdate(dt) {
   }
   // fırlatıldıktan sonra yere inince: önden "ta-da!" (kollar iki yana-yukarı, parmak ucunda)
   if (tada && (st === 'idle' || st === 'edge' || st === 'run')) {
-    const tt = P.a_tadaT, up = smooth(clamp((tt - 0.12) / 0.2, 0, 1)) * smooth(clamp((1.08 - tt) / 0.26, 0, 1));
-    if (P.a_turnU >= 1 && tt > 0.06 && tt < 0.92) { P.a_front = true; P.a_ikSrc = FZ_TADA_IK; }
+    const tt = P.a_tadaT, up = smooth(clamp((tt - 0.12) / 0.2, 0, 1)) * smooth(clamp((1.0 - tt) / 0.26, 0, 1));
+    if (P.a_turnU >= 1 && tt > 0.06 && tt < 0.98) { P.a_front = true; P.a_ikSrc = FZ_TADA_IK; }
     const wg = Math.sin(tt * 16) * 0.5 * up;
-    FZ_TADA_IK[0][0] = -lerp(6.6, 13.6, up) - wg; FZ_TADA_IK[1][0] = lerp(6.6, 13.6, up) + wg;
-    FZ_TADA_IK[0][1] = FZ_TADA_IK[1][1] = lerp(1.6, -21.5, up); T.arm = lerp(1, 1.12, up);
-    T.la1 = 1.9; T.la2 = 0.4; T.ba1 = 1.8; T.ba2 = 0.4; T.hOpen = 1; T.shr = 0.6 * up;
+    FZ_TADA_IK[0][0] = -lerp(6.6, 16.0, up) - wg; FZ_TADA_IK[1][0] = lerp(6.6, 16.0, up) + wg;
+    FZ_TADA_IK[0][1] = FZ_TADA_IK[1][1] = lerp(1.6, -21.0, up); T.arm = lerp(1, 1.18, up);
+    T.la1 = lerp(T.la1, 1.9, up); T.la2 = lerp(T.la2, 0.4, up); T.ba1 = lerp(T.ba1, 1.8, up); T.ba2 = lerp(T.ba2, 0.4, up); T.hOpen = 1; T.shr = 0.6 * up;
     T.happy = up > 0.25 ? 1 : 0; T.mOpen = 0.9 * up; T.mSmile = 1; T.mRound = 0; T.brow = 0.5 * up; T.head = -0.06 * up;
     T.bob = -1.6 * up; T.sy = 1 + 0.03 * up; T.sx = 1 - 0.02 * up; T.lt1 = lerp(T.lt1, 0.04, up); T.bt1 = lerp(T.bt1, -0.04, up); T.lt2 = lerp(T.lt2, -0.02, up); T.bt2 = lerp(T.bt2, -0.02, up);
     kmin = kmax = 18;
@@ -961,7 +963,7 @@ function fezaUpdate(dt) {
     T.mRound = lerp(T.mRound, 0.6, P.a_balKick); T.mOpen = lerp(T.mOpen, 0.45, P.a_balKick); T.brow = lerp(T.brow, 0.7, P.a_balKick);
   }
   // yumuşak geçiş (üstel yaklaşım); durum değişiminden sonra hız artar
-  const k = st === 'flip' ? 30 : lerp(kmin, kmax, clamp(P.a_sw / 0.3, 0, 1)), m = 1 - Math.exp(-k * dt), cur = P.a_pose;
+  const k = st === 'flip' ? lerp(16, 30, clamp(P.a_sw / 0.12, 0, 1)) : lerp(kmin, kmax, clamp(P.a_sw / 0.3, 0, 1)), m = 1 - Math.exp(-k * dt), cur = P.a_pose;
   if (P.a_turnU < 0.5) { T.gx = -1; T.gy = 0; }   // dönüşte önce gözler yeni yöne bakar
   for (const key of FZ_KEYS) cur[key] += (T[key] - cur[key]) * m;
   // göz kırpma (bazen çift)
@@ -990,7 +992,7 @@ function fezaUpdate(dt) {
   // kalça yüksekliği: yerdeyken en alttaki ayak tam yere bassın
   const fy = (a1, a2) => FZ_TH * Math.cos(a1) + FZ_SH * Math.cos(a1 + a2) + FZ_FT;
   const hipG = -Math.max(fy(R.lt1, R.lt2), fy(R.bt1, R.bt2));
-  P.a_ledgeW += (((st === 'sit' && P.a_ledge && P.a_sit > 0.35) ? 1 : 0) - P.a_ledgeW) * (1 - Math.exp(-dt * 7));
+  P.a_ledgeW += (((st === 'sit' && P.a_ledge && P.a_sit > 0.35) ? 1 : 0) - P.a_ledgeW) * (1 - Math.exp(-dt * 5));
   const hip = lerp(lerp(hipG, FZ_AIRHIP, R.air) + R.bob, -2.4, P.a_ledgeW);
   // popo kenarın tam üstüne gelsin (kalça yerel x ≈ hx)
   const lox = P.a_ledge && P.a_edgeX !== undefined ? clamp(P.a_edgeX - P.a_ledge * 2.5 - P.x - sd * FZ_SC * R.hx, -16, 16) : 0;

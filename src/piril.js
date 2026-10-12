@@ -5,7 +5,7 @@
    Diğer modüller için dışa açık durum: D.tasiyor (Feza'yı taşıyor), D.pence {x,y} (pençelerin dünya konumu),
    D.mode, OLAY 'nefes' {asama:'basla'|'al'|'ver'|'bitti'}. */
 'use strict';
-const DR_TAIL_N = 9, DR_TAIL_LEN = 4.2;
+const DR_TAIL_N = 7, DR_TAIL_LEN = 3.5;   // peluştaki gibi orta boy, incelerek yassı küreğe biten kuyruk
 // renkler: Feza'nın gerçek peluşu (lila gövde, limon yeşili karın/kulak, koyu yeşil ibik, yeşil gözler)
 const DR_COL = { pur: '#a87ee0', purL: '#c9a9f3', purD: '#7c55bb', line: '#4a2c80', lime: '#bde43a', limeL: '#d9f27e', limeD: '#93bd28',
   crest: '#2f8a2c', crestL: '#55ad44', crestD: '#1f5c1c', eye: '#1c1228' };
@@ -613,15 +613,14 @@ function stepDragon(dt) {
     if (Math.abs(D.vx) > 110) { if (Math.sign(D.vx) !== D.ft) D.ft = Math.sign(D.vx); }
     else if (Math.abs(D.vx) < 50) { const rel = P.x - D.x; if (rel * D.ft < -26) D.ft = -D.ft; }
   }
-  if (D.tt < 0 && D.ft !== D.face) D.tt = 0;
+  // dönüş (saydam karışım yok → hayalet kare yok): yan → (ezilerek) 3/4 önden → tam önden → öbür 3/4 → yan
+  if (D.tt < 0 && D.ft !== D.face) { D.tt = 0; D.face0 = D.face; }
   if (D.tt >= 0) {
-    D.tt += dt / 0.19;
+    D.tt += dt / 0.3;
     if (D.tt >= 0.5 && D.face !== D.ft) D.face = D.ft;
     if (D.tt >= 1) D.tt = -1;
   }
-  const tu = D.tt;
-  D.fw = tu < 0 ? 0 : tu < 0.2 ? smooth(tu / 0.2) : tu > 0.8 ? smooth((1 - tu) / 0.2) : 1;
-  D.fs = D.face * (1 - D.fw);
+  drTurnPose(D.tt, D.face0, D.face);
   D.f = D.face;
 
   // eğim: küçük, yerel uzayda (burun yukarı = yükseliş); asla ters dönmez
@@ -673,7 +672,7 @@ function stepDragon(dt) {
   const sxx = D.fs, ct = Math.cos(D.tilt), st = Math.sin(D.tilt);
   for (let i = 1; i < DR_TAIL_N; i++) {
     const u = i / (DR_TAIL_N - 1);
-    const ang = Math.PI - 0.75 + u * 1.7 + Math.sin(D.t * 3.2 - u * 3.2) * 0.32 * (0.4 + u) + D.glide * 0.3 + D.grip * 0.9;
+    const ang = Math.PI - 0.75 + u * 1.7 + Math.sin(D.t * 3.2 - u * 3.2) * 0.32 * (0.4 + u) + D.glide * 0.3 + D.grip * 1.5;
     const dlx = Math.cos(ang), dly = Math.sin(ang);
     const dwx = sxx * (dlx * ct - dly * st), dwy = dlx * st + dly * ct;
     const p = D.tail[i];
@@ -720,6 +719,19 @@ function stepDragon(dt) {
   for (let i = D.iz.length - 1; i >= 0; i--) { D.iz[i].life -= dt; if (D.iz[i].life <= 0) D.iz.splice(i, 1); }
   for (let i = D.pulse.length - 1; i >= 0; i--) { const q = D.pulse[i]; q.t += dt; if (q.t > q.life) D.pulse.splice(i, 1); }
 }
+const DR_TA = 0.14, DR_TB = 0.86, DR_YAW = 0.78;
+function drTurnPose(tu, f0, f1) {   // tu<0: dönmüyor. D.fw (0 yan / 1 önden), D.yaw (önden bakışta baş yönü), D.tsq (yatay ezilme), D.fs
+  if (tu < 0) { D.fw = 0; D.yaw = 0; D.tsq = 1; D.fs = D.face; return; }
+  const su = smooth(tu);
+  D.fs = tu < 0.5 ? f0 * Math.cos(Math.PI * su) : -f1 * Math.cos(Math.PI * su);
+  if (tu < DR_TA) { D.fw = 0; D.yaw = 0; D.tsq = 1 - 0.22 * smooth(tu / DR_TA); }
+  else if (tu >= DR_TB) { D.fw = 0; D.yaw = 0; D.tsq = 0.78 + 0.22 * smooth((tu - DR_TB) / (1 - DR_TB)); }
+  else {
+    D.fw = 1;
+    D.yaw = tu < 0.5 ? f0 * DR_YAW * (1 - smooth((tu - DR_TA) / (0.5 - DR_TA))) : f1 * DR_YAW * smooth((tu - 0.5) / (DR_TB - 0.5));
+    D.tsq = 0.9 + 0.1 * Math.sin(Math.PI * (tu - DR_TA) / (DR_TB - DR_TA));
+  }
+}
 function drFx(x, y, type) {
   const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.2, s = 40 + Math.random() * 60;
   D.fx.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1.1, max: 1.1, type, r: (Math.random() - 0.5) * 0.6, vr: (Math.random() - 0.5) * 2,
@@ -762,16 +774,19 @@ function drawTail(x, tm) {
   for (let i = 0; i < n; i++) {
     const a = tl[Math.max(0, i - 1)], b = tl[Math.min(n - 1, i + 1)];
     let nx = -(b.y - a.y), ny = b.x - a.x; const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
-    const r = lerp(6.4, 2.5, Math.pow(i / (n - 1), 0.85));
+    const r = lerp(5.4, 1.9, Math.pow(i / (n - 1), 0.8));
     L.push([tl[i].x + nx * r, tl[i].y + ny * r]); R.push([tl[i].x - nx * r, tl[i].y - ny * r]);
   }
   // koyu yeşil taraklı dikenler (kuyruğun üst kenarı; yarısı kuyruğun arkasında kalır)
   DR_TSP.length = 0;
-  for (let i = 1; i < n - 1; i += 2) {
-    const a = tl[i - 1], b = tl[i + 1]; let nx = -(b.y - a.y), ny = b.x - a.x; const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
+  for (let j = 0; j < 2 * (n - 2); j++) {   // kuyruğun üstünde sık, küçülen taraklar (uca yakın biter)
+    const i = 0.5 + j * 0.5, i0 = Math.floor(i), fr = i - i0;
+    const a = tl[Math.max(0, i0 - 1)], b = tl[Math.min(n - 1, i0 + 1)];
+    let nx = -(b.y - a.y), ny = b.x - a.x; const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
     if (ny > 0) { nx = -nx; ny = -ny; }
-    const r = lerp(6.4, 2.5, i / (n - 1));
-    DR_TSP.push(tl[i].x + nx * r * 0.8, tl[i].y + ny * r * 0.8, lerp(2.5, 1.3, i / (n - 1)));
+    const u = i / (n - 1), r = lerp(5.4, 1.9, Math.pow(u, 0.8));
+    const px = lerp(tl[i0].x, tl[Math.min(n - 1, i0 + 1)].x, fr), py = lerp(tl[i0].y, tl[Math.min(n - 1, i0 + 1)].y, fr);
+    DR_TSP.push(px + nx * r * 0.82, py + ny * r * 0.82, lerp(2.1, 1.0, u));
   }
   drBlobs(x, DR_TSP, C.crest, C.crestD, 1.3);
   const pts = L.concat(R.reverse());
@@ -785,18 +800,20 @@ function drawTail(x, tm) {
   // kürek biçimli yumuşak uç (rüyada ışık kaynağı)
   const p = tl[n - 1], q = tl[n - 2];
   let dx = p.x - q.x, dy = p.y - q.y; const dl = Math.hypot(dx, dy) || 1; dx /= dl; dy /= dl;
-  x.save(); x.translate(p.x, p.y); x.rotate(Math.atan2(dy, dx)); x.scale(0.85, 0.85);
-  x.beginPath(); x.moveTo(-1.5, -2.4);
-  x.quadraticCurveTo(2, -6.4, 5.6, -4.6); x.quadraticCurveTo(9.6, -2.6, 9.8, 0);
-  x.quadraticCurveTo(9.6, 2.6, 5.6, 4.6); x.quadraticCurveTo(2, 6.4, -1.5, 2.4); x.closePath();
-  x.fillStyle = C.purL; x.fill(); x.strokeStyle = C.line; x.lineWidth = 0.8; x.stroke();
+  x.save(); x.translate(p.x, p.y); x.rotate(Math.atan2(dy, dx));
+  x.beginPath(); x.moveTo(-1, -1.4);   // yassı, ucu yuvarlak kürek (yaprak/maça gibi)
+  x.bezierCurveTo(0.4, -4.2, 3.4, -4.7, 5.2, -3.2); x.bezierCurveTo(6.8, -1.9, 8.2, -0.6, 8.2, 0.2);
+  x.bezierCurveTo(8.2, 1, 6.8, 2.3, 5.2, 3.4); x.bezierCurveTo(3.4, 4.8, 0.4, 4.3, -1, 1.4); x.closePath();
+  const sg = x.createLinearGradient(0, -5, 0, 5); sg.addColorStop(0, C.purL); sg.addColorStop(1, C.pur);
+  x.fillStyle = sg; x.fill(); x.strokeStyle = C.line; x.lineWidth = 0.8; x.stroke();
+  x.strokeStyle = 'rgba(90,60,150,0.35)'; x.lineWidth = 0.5; x.beginPath(); x.moveTo(0.6, 0); x.quadraticCurveTo(3.6, 0.3, 5.8, 0); x.stroke();
   x.restore();
-  if (D.glowA > 0.01) {
+  if (D.glowA > 0.01) {   // rüyada kuyruk ucu yumuşakça parlar (beyaz top gibi değil, lila ışık)
     const fl = 0.85 + 0.15 * Math.sin(tm * 9) + 0.06 * Math.sin(tm * 23);
-    const gx = p.x + dx * 5, gy = p.y + dy * 5;
+    const gx = p.x + dx * 3.5, gy = p.y + dy * 3.5;
     x.globalCompositeOperation = 'lighter';
-    drGlow(x, '#c7a2ff', gx, gy, 26 * fl, 0.5 * D.glowA);
-    drGlow(x, '#e9ffd0', gx, gy, 9 * fl, 0.55 * D.glowA);
+    drGlow(x, '#b892ff', gx, gy, 20 * fl, 0.32 * D.glowA);
+    drGlow(x, '#f3e6ff', gx, gy, 6 * fl, 0.22 * D.glowA);
     x.globalCompositeOperation = 'source-over';
   }
 }
@@ -958,33 +975,42 @@ function drEar(x, rot, s) {   // yeşil yüzgeç kulak (arkası taraklı); yerel
   x.fillStyle = gr; x.fill(); x.strokeStyle = 'rgba(80,110,20,0.8)'; x.lineWidth = 0.6; x.stroke();
   x.restore();
 }
-function drFront(x, tm) {   // önden görünüş (dönüş anında ve ara sahnelerde)
+function drFront(x, tm, yaw) {   // önden görünüş (dönüşte yaw ile 3/4'e döner; ara sahnelerde tam önden)
   const C = DR_COL, pose = D.pose, lg = D.glide * 2, pl = D.plush;
-  for (const sd of [1, -1]) { x.save(); x.scale(sd, 1); x.translate(-3, 1); x.rotate(-0.12); drawWing(x, false, tm); x.restore(); }
+  const yw = yaw || 0, ya = Math.abs(yw), ys = yw >= 0 ? 1 : -1, YA = yw * 0.95;   // YA: başın dönüş açısı (radyan)
+  const sph = (a0, r) => r * Math.sin(a0 + YA);                                     // küre üstündeki noktanın yatay yeri
+  const bsh = yw * 2.4;                                                             // gövde ayrıntılarının kayması
+  for (const sd of [1, -1]) { x.save(); x.scale(sd, 1); x.translate(-3 - sd * yw * 2, 1); x.rotate(-0.12); drawWing(x, sd === ys && ya > 0.3, tm); x.restore(); }
   const arm = (sd) => {   // kısa tombul kollar
-    const shx = sd * 7, shy = -0.8;
-    let px = sd * lerp(10.6, 10, pose), py = lerp(3.6, -14, pose);
+    const shx = sd * 7 + bsh * 0.6, shy = -0.8;
+    let px = sd * lerp(10.4, 10, pose) + bsh, py = lerp(3.4, -14, pose);
     px = lerp(px, sd * 10.8, pl * (1 - pose)); py = lerp(py, 6.6, pl * (1 - pose));
-    x.strokeStyle = C.line; x.lineWidth = 5.6; x.lineCap = 'round';
+    x.strokeStyle = C.line; x.lineWidth = 6.4; x.lineCap = 'round';
     x.beginPath(); x.moveTo(shx, shy); x.lineTo(px, py); x.stroke();
-    x.strokeStyle = C.pur; x.lineWidth = 4.4; x.stroke();
-    x.fillStyle = C.purL; x.beginPath(); x.arc(px, py, 1.6, 0, 6.283); x.fill();
+    x.strokeStyle = C.pur; x.lineWidth = 5.2; x.stroke();
+    x.fillStyle = C.purL; x.beginPath(); x.arc(px, py, 1.8, 0, 6.283); x.fill();
   };
   if (pose > 0.3) { arm(-1); arm(1); }
-  for (const sd of [-1, 1]) {   // tombul bacaklar (peluşta öne açık oturur)
-    x.save(); x.translate(sd * lerp(5.6, 6.8, pl), lerp(10.6 - lg * 0.5, 11.4, pl)); x.rotate(sd * 0.45 * pl);
-    x.fillStyle = C.pur; x.beginPath(); x.ellipse(0, 0, 4.6, 4.6, 0, 0, 6.283); x.fill();
+  for (const sd of [-1, 1]) {   // tombul bacaklar, iri ayaklar (peluşta öne açık oturur)
+    x.save(); x.translate(sd * lerp(5.8, 6.8, pl) + bsh * 0.5, lerp(10.8 - lg * 0.5, 11.4, pl)); x.rotate(sd * 0.45 * pl);
+    x.fillStyle = C.pur; x.beginPath(); x.ellipse(0, 0, 4.8, 4.8, 0, 0, 6.283); x.fill();
     x.strokeStyle = C.line; x.lineWidth = 0.8; x.stroke();
-    x.translate(sd * 0.4, lerp(3.6 - lg * 0.5, 3.4, pl));
-    x.fillStyle = C.purL; x.beginPath(); x.ellipse(0, 0, 4, lerp(2.4, 2.8, pl), 0, 0, 6.283); x.fill(); x.stroke();
+    x.translate(sd * 0.4 + yw * 1.2, lerp(3.8 - lg * 0.5, 3.6, pl));
+    x.fillStyle = C.purL; x.beginPath(); x.ellipse(0, 0, 4.9, lerp(2.8, 3.1, pl), 0, 0, 6.283); x.fill(); x.stroke();
     x.restore();
   }
-  // gövde: armut biçimli, önde baştan kasığa limon yeşili çizgili karın
+  // gövde: armut biçimli (aşağısı geniş), önde çeneden kasığa limon yeşili çizgili karın
+  const bodyP = () => {
+    x.beginPath(); x.moveTo(0, -7.2);
+    x.bezierCurveTo(5.6, -7.2, 8, -2.4, 9.4, 3.2); x.bezierCurveTo(11, 9.6, 8.4, 15, 0, 15);
+    x.bezierCurveTo(-8.4, 15, -11, 9.6, -9.4, 3.2); x.bezierCurveTo(-8, -2.4, -5.6, -7.2, 0, -7.2); x.closePath();
+  };
   const bg = x.createRadialGradient(-2, -1, 1, 0, 4, 14);
   bg.addColorStop(0, C.purL); bg.addColorStop(0.6, C.pur); bg.addColorStop(1, C.purD);
-  x.fillStyle = bg; x.beginPath(); x.ellipse(0, 4, 9.8, 10.6, 0, 0, 6.283); x.fill();
-  x.strokeStyle = C.line; x.lineWidth = 0.8; x.stroke();
-  drBelly(x, 0, 4.2, 5.6, 9.8, 0, pl);
+  bodyP(); x.fillStyle = bg; x.fill(); x.strokeStyle = C.line; x.lineWidth = 0.8; x.stroke();
+  x.save(); bodyP(); x.clip();
+  drBelly(x, bsh, 3.4, 5.8 * (1 - 0.18 * ya), 10.8, 0, pl);
+  x.restore();
   if (pl > 0.05) {   // peluş etiketi
     x.save(); x.globalAlpha = pl; x.translate(9.4, 9); x.rotate(0.35);
     x.fillStyle = '#fffaf4'; x.fillRect(-1.6, 0, 3.2, 4.6); x.strokeStyle = 'rgba(120,100,90,0.6)'; x.lineWidth = 0.4; x.strokeRect(-1.6, 0, 3.2, 4.6);
@@ -994,33 +1020,53 @@ function drFront(x, tm) {   // önden görünüş (dönüş anında ve ara sahne
   if (pose <= 0.3) { arm(-1); arm(1); }
   // kafa: büyük, yuvarlak
   x.save(); x.translate(0, -9); x.rotate(D.headTilt * 0.3 * D.face + D.headRoll); x.translate(0, 9);
-  // tepede tek koyu yeşil ibik dilimi (önden kenarı görünür)
-  x.save(); x.translate(0.6, -22.4); x.rotate(0.12);
-  x.fillStyle = C.crest; x.strokeStyle = C.crestD; x.lineWidth = 0.9;
-  x.beginPath(); x.ellipse(0, -2.6, 3.1, 5.6, 0, 0, 6.283); x.fill(); x.stroke();
-  x.fillStyle = C.crestL; x.beginPath(); x.ellipse(-0.8, -4.4, 0.9, 2.4, -0.2, 0, 6.283); x.fill();
-  x.restore();
+  // ibik: yandaki yelpazenin aynısı; önden ince dalgalı dil, dönerken genişleyip başın arkasına kayar
+  x.save(); x.translate(-ys * 3.4 * ya, 0.6); x.translate(0, -23); x.scale(ys * lerp(0.34, 0.8, ya), lerp(0.96, 1, ya)); x.translate(-1.2, 23);
+  drCrest(x, tm, 0.6); x.restore();
   const ef = (pl > 0.5 ? 0 : Math.sin(tm * 3.1) * 0.08) + (D.expr === 'happy' ? Math.sin(tm * 14) * 0.12 : 0) - 0.3 * pl - D.yawn * 0.2;
-  for (const sd of [-1, 1]) { x.save(); x.scale(sd, 1); x.translate(-11, -8.4); drEar(x, -1.55 - ef, 0.85); x.restore(); }
+  const ear = (sd, top) => {   // sd=1: soldaki kulak. Dönüşte yakın kulak başın üstüne gelir, uzak kulak arkaya kaçar
+    const near = ya > 0.01 && sd === ys;
+    if (top !== (near && ya > 0.32)) return;
+    x.save(); x.scale(sd, 1);
+    x.translate(lerp(-11, near ? -5.5 : -8.5, ya), lerp(-8.4, -10.8, ya));
+    drEar(x, lerp(-1.55, near ? -0.8 : -1.9, ya) - ef, near ? lerp(0.85, 0.7, ya) : 0.85);
+    x.restore();
+  };
+  ear(-1, false); ear(1, false);
   const hg = x.createRadialGradient(-3, -17, 1, 0, -11, 15);
   hg.addColorStop(0, C.purL); hg.addColorStop(0.6, C.pur); hg.addColorStop(1, C.purD);
-  x.fillStyle = hg; x.beginPath(); x.ellipse(0, -12, 12.6, 11.4, 0, 0, 6.283); x.fill();
-  x.save(); x.beginPath(); x.ellipse(0, -12, 12.6, 11.4, 0, 0, 6.283); x.clip();
-  // limon yeşili çene (karına bağlanır)
-  x.fillStyle = C.lime; x.beginPath(); x.moveTo(-4.2, -4.4); x.quadraticCurveTo(0, -3.4, 4.2, -4.4); x.lineTo(5, 2); x.lineTo(-5, 2); x.closePath(); x.fill();
-  x.strokeStyle = 'rgba(110,150,20,0.45)'; x.lineWidth = 0.45; x.beginPath(); x.moveTo(-4, -2.4); x.lineTo(4, -2.4); x.moveTo(-4.4, -0.9); x.lineTo(4.4, -0.9); x.stroke();
+  const mx = sph(0, 12.6) * 0.9, snx = mx + ys * 2.6 * ya;   // ağız/burun ortası; 3/4'te burun çıkıntısı
+  const headP = () => { x.beginPath(); x.ellipse(0, -12, 12.6, 11.4, 0, 0, 6.283); if (ya > 0.05) { x.moveTo(snx + 5.4, -6.6); x.ellipse(snx, -6.6, 5.4, 4.2, 0, 0, 6.283); } };
+  headP(); x.fillStyle = hg; x.fill('nonzero');
+  x.save(); headP(); x.clip();
+  // limon yeşili çene (karına bağlanır; ağızdan aşağı)
+  x.fillStyle = C.lime; x.beginPath(); x.moveTo(mx - 4.6, -4.2); x.quadraticCurveTo(mx, -3, mx + 4.6, -4.2); x.lineTo(mx + 5.2, 2); x.lineTo(mx - 5.2, 2); x.closePath(); x.fill();
+  x.strokeStyle = 'rgba(110,150,20,0.45)'; x.lineWidth = 0.45; x.beginPath(); x.moveTo(mx - 4, -2.3); x.lineTo(mx + 4, -2.3); x.moveTo(mx - 4.6, -0.8); x.lineTo(mx + 4.6, -0.8); x.stroke();
   x.restore();
-  x.strokeStyle = C.line; x.lineWidth = 0.85; x.beginPath(); x.ellipse(0, -12, 12.6, 11.4, 0, 0, 6.283); x.stroke();
+  // dış çizgi: kafa + (3/4'te) burun çıkıntısının dış kenarı
+  x.strokeStyle = C.line; x.lineWidth = 0.85;
+  x.beginPath(); x.ellipse(0, -12, 12.6, 11.4, 0, 0, 6.283); x.stroke();
+  if (ya > 0.05) {
+    x.save(); x.beginPath(); x.rect(-40, -40, 80, 80); x.ellipse(0, -12, 12.6, 11.4, 0, 0, 6.283); x.clip('evenodd');
+    x.beginPath(); x.ellipse(snx, -6.6, 5.4, 4.2, 0, 0, 6.283); x.stroke(); x.restore();
+    x.save(); x.beginPath(); x.ellipse(snx, -6.6, 5.4, 4.2, 0, 0, 6.283); x.clip();   // burnun altında kafa çizgisi görünmesin
+    x.fillStyle = hg; x.beginPath(); x.ellipse(snx, -6.6, 5.6, 4.4, 0, 0, 6.283); x.fill();
+    x.fillStyle = C.lime; x.beginPath(); x.moveTo(mx - 4.6, -4.2); x.quadraticCurveTo(mx, -3, mx + 4.6, -4.2); x.lineTo(mx + 5.2, 2); x.lineTo(mx - 5.2, 2); x.closePath(); x.fill();
+    x.restore();
+  }
   x.strokeStyle = 'rgba(255,245,255,0.4)'; x.lineWidth = 1.2; x.beginPath(); x.ellipse(0, -12, 11.2, 10, 0, -2.5, -0.7); x.stroke();
   // küçük yuvarlak burun
-  const sg = x.createRadialGradient(0, -6.8, 0.5, 0, -6.2, 4.6);
+  const sg = x.createRadialGradient(mx, -6.8, 0.5, mx, -6.2, 4.6);
   sg.addColorStop(0, 'rgba(232,212,255,0.95)'); sg.addColorStop(0.7, 'rgba(214,186,248,0.6)'); sg.addColorStop(1, 'rgba(214,186,248,0)');
-  x.fillStyle = sg; x.beginPath(); x.ellipse(0, -6.2, 4.8, 3.6, 0, 0, 6.283); x.fill();
-  x.strokeStyle = 'rgba(78,47,138,0.3)'; x.lineWidth = 0.5; x.beginPath(); x.moveTo(-3.4, -8.6); x.quadraticCurveTo(-4.4, -6.2, -3.8, -4.4); x.moveTo(3.4, -8.6); x.quadraticCurveTo(4.4, -6.2, 3.8, -4.4); x.stroke();
+  x.fillStyle = sg; x.beginPath(); x.ellipse(mx, -6.2, 4.8, 3.6, 0, 0, 6.283); x.fill();
+  x.strokeStyle = 'rgba(78,47,138,0.3)'; x.lineWidth = 0.5; x.beginPath();
+  if (!(ys > 0 && ya > 0.4)) { x.moveTo(mx - 3.4, -8.6); x.quadraticCurveTo(mx - 4.4, -6.2, mx - 3.8, -4.4); }
+  if (!(ys < 0 && ya > 0.4)) { x.moveTo(mx + 3.4, -8.6); x.quadraticCurveTo(mx + 4.4, -6.2, mx + 3.8, -4.4); }
+  x.stroke();
   if (D.puff > 0.02) {   // şişkin yanaklar
     const pr = D.puff;
     for (const sd of [-1, 1]) {
-      const cx = sd * (8 + 1.8 * pr), rx = 2.8 + 2.6 * pr, ry = 2.4 + 2.1 * pr;
+      const cx = sph(sd * 0.72, 8 + 1.8 * pr), rx = 2.8 + 2.6 * pr, ry = 2.4 + 2.1 * pr;
       x.fillStyle = C.pur; x.beginPath(); x.ellipse(cx, -6, rx, ry, 0, 0, 6.283); x.fill();
       x.strokeStyle = C.line; x.lineWidth = 0.8; x.beginPath();
       if (sd > 0) x.ellipse(cx, -6, rx, ry, 0, -1.3, 1.9); else x.ellipse(cx, -6, rx, ry, 0, 1.25, 4.45); x.stroke();
@@ -1028,15 +1074,53 @@ function drFront(x, tm) {   // önden görünüş (dönüş anında ve ara sahne
   }
   const blush = (D.expr === 'normal' && pl < 0.5 ? 0.3 : 0.5) + D.puff * 0.2;
   x.fillStyle = 'rgba(255,120,190,' + Math.min(0.8, blush) + ')';
-  const bx = 8.4 + 1.8 * D.puff, bw = 2.2 + D.puff;
-  x.beginPath(); x.ellipse(-bx, -6.2, bw, 1.3 + D.puff * 0.5, 0, 0, 6.283); x.ellipse(bx, -6.2, bw, 1.3 + D.puff * 0.5, 0, 0, 6.283); x.fill();
+  x.beginPath();
+  for (const sd of [-1, 1]) {
+    const a0 = sd * 0.72 + YA; if (Math.cos(a0) < 0.15) continue;
+    const bx = sph(sd * 0.72, 11.6 + 1.8 * D.puff), bw = (2.2 + D.puff) * Math.cos(a0) / 0.75;
+    x.moveTo(bx + bw, -6.2); x.ellipse(bx, -6.2, bw, 1.3 + D.puff * 0.5, 0, 0, 6.283);
+  }
+  x.fill();
   const blink = D.blinkT < 0 ? Math.max(0.08, Math.abs(D.blinkT + 0.07) / 0.07) : 1;
-  drFrontEye(x, -6.6, -13.2, 4.8, 6, -1, blink, drEyeKind(false));
-  drFrontEye(x, 6.6, -13.2, 4.8, 6, 1, blink, drEyeKind(true));
-  drMouthDraw(x, 0, -3.6, 3, true);
+  x.save(); x.beginPath(); x.ellipse(0, -12, 12.9, 11.7, 0, 0, 6.283); x.clip();
+  for (const sd of [-1, 1]) {   // gözler küre üstünde: dönüşte uzak göz incelir, yakın göz biraz büyür
+    const a0 = sd * 0.56 + YA, sc = clamp(Math.cos(a0) / Math.cos(0.56), 0.2, 1.15);
+    x.save(); x.translate(sph(sd * 0.56, 12.2), 0); x.scale(sc, 1);
+    drFrontEye(x, 0, -13.2, 4.8, 6, sd, blink, drEyeKind(sd > 0));
+    x.restore();
+  }
+  x.restore();
+  ear(-1, true); ear(1, true);
+  drMouthDraw(x, mx, -3.6, 3 * (1 - 0.25 * ya), true);
   x.restore();
 }
-const drCanv = [];
+// büyük koyu yeşil yelpaze ibik: başın tepesinden arkasına uzanan üç yuvarlak taraklı dilim + ensede küçük dilim.
+// Yandan görünüş yerel koordinatı (baş tepesi ≈ (6.6,-23.4), ense ≈ (-5,-9)). Önden: yatayda sıkıştırılınca ince dalgalı dil olur.
+function drCrestPath(x) {
+  x.beginPath(); x.moveTo(10.2, -21);
+  x.quadraticCurveTo(12.4, -27.8, 8, -30.2); x.quadraticCurveTo(5, -31.4, 2.6, -29.4);        // ön dilim → sığ çentik
+  x.quadraticCurveTo(0.2, -32.4, -4.6, -31); x.quadraticCurveTo(-8.2, -29.8, -9.2, -26.8);    // orta dilim
+  x.quadraticCurveTo(-13.6, -26, -14.2, -21.6); x.quadraticCurveTo(-14.4, -18.4, -11.2, -17); // arka dilim
+  x.quadraticCurveTo(-13.4, -13, -10.8, -10.2); x.quadraticCurveTo(-8.6, -7.6, -4.6, -7.4);   // ensede küçük dilim
+  x.lineTo(-1, -13); x.lineTo(6, -19.5); x.closePath();
+}
+function drCrest(x, tm, w) {   // w: dalgalanma ağırlığı
+  const C = DR_COL;
+  const sway = (Math.sin(D.ph - 1.4) * 0.035 * (1 - D.glide) + Math.sin(tm * 1.9) * 0.02) * w * (1 - D.plush);
+  x.save(); x.translate(-2, -17); x.rotate(sway - D.tilt * 0.08); x.translate(2, 17);
+  drCrestPath(x);
+  const cg = x.createLinearGradient(-4, -34, 2, -16); cg.addColorStop(0, C.crestL); cg.addColorStop(0.42, C.crest); cg.addColorStop(1, C.crestD);
+  x.fillStyle = cg; x.fill(); x.strokeStyle = C.crestD; x.lineWidth = 0.9; x.lineJoin = 'round'; x.stroke();
+  // dilimler arası dikiş/kıvrım çizgileri ve yumuşak parlaklık (peluş kumaş)
+  x.strokeStyle = 'rgba(16,60,16,0.55)'; x.lineWidth = 0.7; x.lineCap = 'round';
+  x.beginPath(); x.moveTo(2.6, -29.4); x.quadraticCurveTo(3, -26.4, 3.6, -23.6);
+  x.moveTo(-9.2, -26.8); x.quadraticCurveTo(-7, -23.6, -5.2, -21);
+  x.moveTo(-11.2, -17); x.quadraticCurveTo(-8.8, -15.4, -6.8, -14.4); x.stroke();
+  x.strokeStyle = 'rgba(160,230,120,0.45)'; x.lineWidth = 0.8;
+  x.beginPath(); x.moveTo(10, -27.4); x.quadraticCurveTo(8.6, -29.6, 6.2, -29.8); x.moveTo(-1.2, -31.2); x.quadraticCurveTo(-3.8, -31.4, -5.8, -30.4);
+  x.moveTo(-11.8, -24.4); x.quadraticCurveTo(-13.2, -23.2, -13.4, -21.4); x.stroke();
+  x.restore();
+}
 function drSide(x, tm) {   // yandan görünüş (sağa bakan yerel uzay)
   const C = DR_COL, pose = D.pose, grip = D.grip, bk = D.beckon;
 
@@ -1078,15 +1162,7 @@ function drSide(x, tm) {   // yandan görünüş (sağa bakan yerel uzay)
 
   // ── kafa ──
   x.save(); x.translate(4.5, -9); x.rotate(D.headTilt + D.headRoll); x.translate(-4.5, 9);
-  // koyu yeşil, üç yuvarlak taraklı yelpaze ibik
-  x.beginPath(); x.moveTo(7.6, -19.2);
-  x.quadraticCurveTo(9.8, -25.8, 6.2, -27.2); x.quadraticCurveTo(3.6, -27.9, 2.8, -25);
-  x.quadraticCurveTo(2.4, -30.6, -1.4, -29.8); x.quadraticCurveTo(-4.6, -29.1, -4.3, -25.4);
-  x.quadraticCurveTo(-7.2, -27.8, -9.2, -25); x.quadraticCurveTo(-10.9, -22.2, -8.6, -18.8);
-  x.lineTo(-3, -16.5); x.lineTo(4, -17.5); x.closePath();
-  const cg = x.createLinearGradient(0, -30, 0, -18); cg.addColorStop(0, C.crestL); cg.addColorStop(0.45, C.crest); cg.addColorStop(1, C.crestD);
-  x.fillStyle = cg; x.fill(); x.strokeStyle = C.crestD; x.lineWidth = 0.9; x.stroke();
-  x.strokeStyle = 'rgba(20,70,20,0.5)'; x.lineWidth = 0.6; x.beginPath(); x.moveTo(2.8, -25); x.lineTo(2, -21); x.moveTo(-4.3, -25.4); x.lineTo(-4, -21); x.stroke();
+  drCrest(x, tm, 1);
   const headPath = () => {
     x.beginPath(); x.moveTo(-5, -11);
     x.bezierCurveTo(-5.2, -18.8, 0, -23.4, 6.6, -23.4);
@@ -1153,29 +1229,12 @@ function drSide(x, tm) {   // yandan görünüş (sağa bakan yerel uzay)
 function drBody(x, tm, front) {
   if (D.glowA > 0.01) { x.globalCompositeOperation = 'lighter'; drGlow(x, '#a678ff', D.x, D.y + D.bob - 4, 44, 0.12 * D.glowA); x.globalCompositeOperation = 'source-over'; }
   drawTail(x, tm);
-  const fw = front === undefined ? D.fw : front ? 1 : 0;
-  const sw = 1 + 0.15 * D.puff, sh = 1 + 0.12 * D.puff;
-  const drawAt = (ctx, ox, oy, fr) => {
-    ctx.save(); ctx.translate(ox, oy + D.bob);
-    if (fr) { ctx.rotate(D.tilt * 0.4 * D.face); ctx.scale(sw, sh); drFront(ctx, tm); }
-    else { ctx.scale(D.face * (1 - 0.12 * fw), 1); ctx.rotate(D.tilt); ctx.scale(sw, sh); drSide(ctx, tm); }
-    ctx.restore();
-  };
-  if (fw <= 0.001) drawAt(x, D.x, D.y, false);
-  else if (fw >= 0.999) drawAt(x, D.x, D.y, true);
-  else {   // kısa geçiş: iki poz ayrı tuvallerde çizilip karıştırılır
-    const R = 56, px = Math.ceil(R * 2 * S);
-    for (let k = 0; k < 2; k++) {
-      let oc = drCanv[k]; if (!oc) oc = drCanv[k] = document.createElement('canvas');
-      if (oc.width !== px) { oc.width = oc.height = px; }
-      const c2 = oc.getContext('2d'); c2.setTransform(1, 0, 0, 1, 0, 0); c2.clearRect(0, 0, px, px);
-      c2.setTransform(S, 0, 0, S, R * S, R * S);
-      drawAt(c2, 0, 0, k === 1);
-      x.globalAlpha = k === 0 ? Math.min(1, 2 * (1 - fw)) : Math.min(1, 2.5 * fw);
-      x.drawImage(oc, D.x - R, D.y - R, R * 2, R * 2);
-    }
-    x.globalAlpha = 1;
-  }
+  const fr = front === undefined ? D.fw > 0.5 : front;
+  const sw = 1 + 0.15 * D.puff, sh = 1 + 0.12 * D.puff, sq = front === undefined ? (D.tsq || 1) : 1;
+  x.save(); x.translate(D.x, D.y + D.bob);
+  if (fr) { x.rotate(D.tilt * 0.4 * D.face); x.scale(sw * sq, sh); drFront(x, tm, front === undefined ? (D.yaw || 0) : 0); }
+  else { x.scale(D.face * sq, 1); x.rotate(D.tilt); x.scale(sw, sh); drSide(x, tm); }
+  x.restore();
 }
 
 function drawDragon(tm) {
@@ -1249,7 +1308,7 @@ function drawDragon(tm) {
 // poz: 'pelus' (Feza'nın kolunda gevşek, uyuyan peluş) · 'uyaniyor' (u: 0→1 gözler açılır, gerinir, ışık başlar;
 // u verilmezse 0.6) · 'ucus' (uçuyor) · 'goz_kirp' (peluş gibi, bir gözü kırpık). x,y = gövde ortası. Oyundaki duruma dokunmaz.
 const DR_POZ_KEYS = ['x', 'y', 'bob', 'tilt', 'face', 'fs', 'fw', 'ph', 'glide', 'pose', 'expr', 'blinkT', 'lookX', 'lookY', 'headTilt',
-  'headRoll', 'wingA', 'puff', 'blowM', 'mouth', 'yawn', 'stretch', 'fold', 'grip', 'plush', 'glowA', 'eyeOv', 'eyeOvR', 'lid', 'beckon', 'tail', 'hop', 'mk', 'ma'];
+  'headRoll', 'yaw', 'tsq', 'wingA', 'puff', 'blowM', 'mouth', 'yawn', 'stretch', 'fold', 'grip', 'plush', 'glowA', 'eyeOv', 'eyeOvR', 'lid', 'beckon', 'tail', 'hop', 'mk', 'ma'];
 const drPozSave = {};
 let drPozTail = null;
 function drPozTailCurl(curl, wave, tm) {   // önden pozlar: kuyruk sağ yandan çıkıp kıvrılır
@@ -1264,7 +1323,7 @@ function pirilCizPoz(ctx, x, y, olcek, poz, tm, u) {
   dragonInit();
   for (const k of DR_POZ_KEYS) drPozSave[k] = D[k];
   if (!drPozTail) { drPozTail = []; for (let i = 0; i < DR_TAIL_N; i++) drPozTail.push({ x: 0, y: 0 }); }
-  D.x = 0; D.y = 0; D.bob = 0; D.tilt = 0; D.fw = 0; D.face = D.fs = 1; D.hop = 0; D.glide = 0;
+  D.x = 0; D.y = 0; D.bob = 0; D.tilt = 0; D.fw = 0; D.yaw = 0; D.tsq = 1; D.face = D.fs = 1; D.hop = 0; D.glide = 0;
   D.puff = 0; D.blowM = 0; D.mouth = 0; D.yawn = 0; D.stretch = 0; D.fold = 0; D.wingA = 1; D.grip = 0; D.pose = 0; D.plush = 0; D.glowA = 1;
   D.eyeOv = null; D.eyeOvR = null; D.headRoll = 0; D.headTilt = 0; D.lookX = 0; D.lookY = 0.25; D.expr = 'normal'; D.lid = 1; D.beckon = 0;
   D.blinkT = 1; D.tail = drPozTail;

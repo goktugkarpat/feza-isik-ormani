@@ -43,7 +43,6 @@ const BL_DAL = [
   [75, 78, 16],                                   // göle inmeden küçük bir dal
   [146, 156, 12],                                 // minderin tam üstündeki yüksek dal
   [196, 199, 14], [202, 205, 12], [208, 212, 10], [215, 219, 9], [222, 226, 10], [229, 232, 12], [235, 238, 14], // saklı yol
-  [253, 256, 15],                                 // açıklığa girişte oyunluk dal
   [273, 278, 14],                                 // Büyük Pofuduk'un solundaki dal (ikinci çiçek)
 ];
 for (const [a, b, r] of BL_DAL) plat(a, b, r);
