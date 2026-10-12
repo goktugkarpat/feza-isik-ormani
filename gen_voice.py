@@ -7,7 +7,8 @@ Run:    python3 gen_voice.py            only new/changed lines are recorded; the
 
 Voice: tr-TR-EmelNeural (natural Turkish female). Key prefix chooses the delivery:
   a_  narrator – slower, slightly lower, tender bedtime-story tone
-  p_  Pırıl    – same voice, higher pitch, a bit faster: a cute little dragon
+  p_  Pırıl    – same voice, a little higher (+25 Hz) and a bit faster: a sweet little dragon, not a chipmunk.
+               (edge-tts shifts the formants together with the pitch: measured +15 % at +25 Hz, +26 % at +38 Hz.)
 Output: sesler.js  →  window.VOICE_MP3 = {key: base64 mp3}  and  window.VOICE_DUR = {key: seconds}.
 """
 import asyncio
@@ -44,9 +45,12 @@ _use_host(1)
 VOICE = "tr-TR-EmelNeural"
 STYLE = {            # prefix → (rate, pitch, volume)
     "a_": ("-18%", "-3Hz", "+0%"),
-    "p_": ("+6%", "+38Hz", "+0%"),
+    "p_": ("+6%", "+25Hz", "+0%"),   # +25 Hz: F0 ≈ 250 Hz, formants +15 % (a young girl); +38 Hz moved formants +26 % (chipmunk-ish)
 }
 DEFAULT = ("-5%", "+2Hz", "+0%")
+# Pırıl's "how to play" lines are said a touch slower than her happy chatter: Feza learns the controls from them.
+TEACH = {"p_merhaba", "p_zipla", "p_ciftzipla", "p_minder", "p_buyuk", "p_uyuyor", "p_sakli"}
+TEACH_RATE = "-2%"
 
 # How words should *sound* (subtitles keep the normal spelling). Regex → spoken form.
 # Avoid short capitalised words the engine may read as abbreviations ("Aa" was read as "Anadolu Ajansı").
@@ -81,7 +85,7 @@ TRIM = ("silenceremove=stop_periods=-1:stop_threshold=-40dB:stop_duration=0.1:st
 def style(key):
     for pre, st in STYLE.items():
         if key.startswith(pre):
-            return st
+            return (TEACH_RATE,) + st[1:] if key in TEACH else st
     return DEFAULT
 
 

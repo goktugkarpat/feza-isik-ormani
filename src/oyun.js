@@ -4,6 +4,33 @@
    yumuşatılmış çizim konumunu gösterir, kare sonunda gerçek fizik konumuna geri döner. P.rx/P.ry = çizim konumu. */
 'use strict';
 
+// ════════════════════════════ hata kalkanı ════════════════════════════
+// Başka bir modüldeki hata kareyi yarıda kesmesin: her aşama kendi try/catch'inde çalışır. Her aşamanın ilk hatası
+// yığınıyla yazılır, sonra en çok 5 sn'de bir (sayaçla). Hatadan sonra tuval durumu (dönüşüm, saydamlık, karışım, kırpma)
+// temizlenir ki karenin geri kalanı düzgün çizilsin. Hatasız karede maliyet yok denecek kadar az.
+const omHataK = { say: 0, a: {} };
+function omHataBildir(ad, e) {
+  const k = omHataK.a[ad] || (omHataK.a[ad] = { n: 0, t: -1e9, son: 0 });
+  k.n++; omHataK.say++; k.son = performance.now() / 1000;
+  if (k.son - k.t > 5) { k.t = k.son; console.error('[oyun:' + ad + (k.n > 1 ? ' ×' + k.n : '') + ']', e); }
+}
+const OM_BOS_CIZGI = [];
+function omTuvalDuzelt(dunya) {
+  for (let i = 0; i < 16; i++) g.restore();   // modül save() edip atmadan hata verdiyse yığını boşalt (kırpma kalmasın); boş yığında etkisiz
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  g.shadowBlur = 0; g.lineDashOffset = 0; if (g.setLineDash) g.setLineDash(OM_BOS_CIZGI);
+  try { if (g.filter && g.filter !== 'none') g.filter = 'none'; } catch (_) { /* yoksay */ }
+  if (dunya) g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S);
+}
+function omHata(ad, e) { omHataBildir(ad, e); omTuvalDuzelt(false); }
+function omTemizle() { g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }   // hatasız yol: ucuz
+// fn(a, b, c) güvenli çağrı; fn yoksa sessizce geçer (modül dosyası hiç yüklenemediyse de). Döner: başarılı mı
+function omCagir(ad, fn, a, b, c, dunya) {
+  if (typeof fn !== 'function') return false;
+  try { fn(a, b, c); return true; } catch (e) { omHataBildir(ad, e); omTuvalDuzelt(dunya); return false; }
+}
+function omSfx(ad, v) { if (typeof AU !== 'undefined' && AU && typeof AU.sfx === 'function') { try { AU.sfx(ad, v); } catch (e) { omHataBildir('AU.sfx', e); } } }
+
 // ════════════════════════════ giriş ════════════════════════════
 // iPad: sol altta zıplama düğmesi (sol el); ekranın başka yerine basılı tutmak → Feza parmağın tarafına yürür.
 // Parmak Feza'ya yakınsa yavaş yürür, uzaksa koşar; tam üstündeyse durur (titreme olmasın diye histerezis).
@@ -63,7 +90,16 @@ cv.addEventListener('contextmenu', e => e.preventDefault());
 function omHepsiniBirak() { for (const t of OM_PARMAK) t.aktif = false; for (const k in keys) keys[k] = false; omYon = 0; }
 OLAY.on('durum', d => { if (d !== 'oyun') for (const t of OM_PARMAK) t.aktif = false; });
 addEventListener('blur', omHepsiniBirak);
-document.addEventListener('visibilitychange', () => { if (document.hidden) omHepsiniBirak(); omSonT = -1; });
+// Duraklatma: sekme/uygulama gizlenince parmaklar bırakılır, benzetim durur (frame'de raw=0); geri gelince ilk kare 1/60 sn
+// sayılır → zaman sıçraması yok. pageshow: iPad'de geri-ileri önbelleğinden dönüş.
+function omDuraklat() { omHepsiniBirak(); omSonT = -1; omAcc = 0; jumpPressed = false; }
+document.addEventListener('visibilitychange', omDuraklat);
+addEventListener('pagehide', omDuraklat); addEventListener('pageshow', omDuraklat);
+// Ses kilidi: iPad'de dokunuşla ses açma "pointerdown"da değil parmak kalkınca (touchend/pointerup) geçerli sayılır.
+// İlk dokunuşta begin() AU.start()'ı çağırır; parmak kalkınca da bir kez daha çağrılır (AU.start tekrar çağrılınca bir şey yapmaz,
+// muzik.js kendi touchend dinleyicisiyle bağlamı sürdürür).
+function omSesAc() { if (started && typeof AU !== 'undefined' && AU && typeof AU.start === 'function') { try { AU.start(); } catch (e) { omHataBildir('AU.start', e); } } }
+cv.addEventListener('pointerup', omSesAc); cv.addEventListener('touchend', omSesAc, { passive: true });
 addEventListener('keydown', e => {
   if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault();
   if (DURUM === 'baslik') { begin(); return; }
@@ -291,6 +327,35 @@ function omDusus(suda) {
   } else { omSfx('splash'); burst(P.x, ROWS * T - 60, 24, ['#bfe6ff', '#ffffff'], 160, 0.9, 7); }
   OLAY.emit('dustu', P);
 }
+// Havada minik yardım: düşerken bir kenara (zemin, dal, nilüfer, cisim) az farkla yetişemeyecekse ve o yöne basıyorsa,
+// yatay hızına hafifçe ekleyip kenara kondur. En çok ~24 birim (yarım kare) açık, en çok +150 birim/sn fark; gözle seçilmez.
+const OM_YARDIM = { ACIK: 24, FARK: 150 };
+function omHavaYardim(s) {
+  const lead = P.x + s * PW;
+  let istek = 0;
+  const dene = (kenar, top) => {   // kenar: platformun Feza'ya bakan x'i, top: üst y
+    const acik = (kenar - lead) * s, dy = top - P.y;
+    if (acik <= 0 || acik > OM_YARDIM.ACIK || dy < 0 || dy > 70) return;
+    const gd = OM.YERCEKIM * OM.DUSUS, tt = (Math.sqrt(P.vy * P.vy + 2 * gd * dy) - P.vy) / gd + 0.01;   // üst kenara iniş süresi
+    const vIst = Math.max(0, acik - OM.PAY + 4) / tt;                       // iniş zaten ~PAY birim kenar affı veriyor
+    if (vIst - P.vx * s > OM_YARDIM.FARK || vIst > OM.KOS * 1.5) return;   // çok uzak: yardım yok (doğal düşüş)
+    if (omKatiVar(kenar + s * (PW + 2), top)) return;                     // konacağı yerde duvar var
+    if (vIst > istek) istek = vIst;
+  };
+  const c0 = Math.floor(lead / T), c1 = Math.floor((lead + s * OM_YARDIM.ACIK) / T);
+  const r0 = Math.floor((P.y - 1) / T) + 1, r1 = Math.floor((P.y + 70) / T);
+  for (let tx = c0; s > 0 ? tx <= c1 : tx >= c1; tx += s) for (let ty = Math.max(r0, 0); ty <= r1 && ty < ROWS; ty++) {
+    const c = cell(tx, ty);
+    if ((c === 1 || c === 2) && cell(tx, ty - 1) !== 1) { dene(s > 0 ? tx * T : (tx + 1) * T, ty * T); break; }
+  }
+  for (const o of CISIMLER) {
+    const c = o.cisim; if (!c.aktif || c.tip === 'ziplat') continue;
+    dene(s > 0 ? o.x - c.w / 2 : o.x + c.w / 2, o.y - c.h);
+  }
+  if (istek > 0 && P.vx * s < istek) { omHavaYardim.n++; return s * Math.min(istek - P.vx * s, OM_YARDIM.FARK); }   // yalnız bu adımın ek kayması
+  return 0;
+}
+omHavaYardim.n = 0;
 function stepPlayer(dt) {
   if (P.fade > 0) {   // suya/boşluğa düştü: Pırıl geri taşır
     P.fade -= dt;
@@ -332,7 +397,8 @@ function stepPlayer(dt) {
   else if (!tutuyor) grav *= OM.BIRAK;
   if (Math.abs(P.vy) < 110 && !P.ground && (tutuyor || P.vy > 0)) grav *= OM.TEPE;
   P.vy = Math.min(P.vy + grav * dt, OM.MAXDUS);
-  moveX(P.vx * dt); moveY(P.vy * dt);
+  const ek = (!P.ground && P.vy > 40 && P.air > 0.08 && Math.abs(axis) > 0.3) ? omHavaYardim(Math.sign(axis)) : 0;
+  moveX((P.vx + ek) * dt); moveY(P.vy * dt);
   P.jumpT += dt; if (!P.ground) P.air += dt;
   omGuvenliYer();
   const gol = BOLUM.gol;
@@ -368,16 +434,6 @@ function omTasi() {
 
 // ════════════════════ nesneler: kurulum, dokunma, güncelleme, çizim ════════════════════
 const SAYAC = { cicek: 0, cicekTop: 0, tohum: 0, tohumTop: 0, pofuduk: 0, pofudukTop: 0 };
-// ── hata kalkanı: bir modüldeki hata yalnız kendi aşamasını atlar; kare ve oyun sürer ──
-const omHataT = {};   // aşama → son kayıt zamanı (aynı hata en çok 5 sn'de bir yazılır)
-function omTemizle() { try { g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; } catch (_) { /* yoksay */ } }
-function omHata(ad, e) {
-  const t = performance.now(), s = omHataT[ad];
-  if (s === undefined || t - s > 5000) { omHataT[ad] = t; console.error('[oyun › ' + ad + ']', e); }
-  omTemizle();
-}
-function omSfx(k, v) { if (typeof AU !== 'undefined' && AU && typeof AU.sfx === 'function') { try { AU.sfx(k, v); } catch (e) { omHata('AU.sfx', e); } } }
-function omCagir(ad, fn, a, b, c) { if (typeof fn !== 'function') return; try { fn(a, b, c); } catch (e) { omHata(ad, e); } }
 function nesneleriKur() {
   for (const o of NESNELER) {
     const h = TUR.al(o.tip);
@@ -418,7 +474,7 @@ TUR.kaydet('agac', { dokun(o) {
   if (TREE.done) return;
   if (NESNELER.some(n => n.tip === 'buyukPofuduk' && !n.uyandi)) { o.dokundu = false; return; }
   TREE.done = true; lightTarget = 1; ripples.push({ x: o.x, y: o.y - 160, r: 0, life: 3 }); omCagir('dragonHappy', typeof dragonHappy === 'function' ? dragonHappy : null, o); omSfx('bloom', 1); OLAY.emit('agac', o);
-  setTimeout(finaleGec, 2600);
+  omZamanla(2.6, finaleGec);   // oyun saatiyle: sekme gizliyken beklesin
 } });
 function bloom(fl) {
   SAYAC.cicek++;
@@ -486,7 +542,11 @@ function omBolgeAgirlik(x0, x1, x, pay) {   // bölgenin içinde 1, kenarlarınd
 }
 let omBuyuk = null;
 // Bölgeye göre yakınlaştırma (BOLUM.kamera: {x0,x1,zoom,yOfs}); kenarlarda yumuşak geçiş
-const omZ = { z: 1, v: 0, yo: 0, yv: 0 };
+// Temel yakınlık: düz zeminde görünen dünya yüksekliği = VH / OM_TABAN_ZOOM. Bölge yakınlıkları (göl, açıklık...) bunun ÜSTÜNE
+// çarpan olarak uygulanır. feza.js Feza'yı 1,4 kat büyüttüğü için (FZ_SC) 1'de Feza zaten ekranın ≈%14'ü (≈78 birim / 560);
+// daha yakın (ör. VH/480) olunca ≈%16 olur ve ileriyi görme azalır. Tek ayar yeri burası.
+const OM_TABAN_ZOOM = 1;
+const omZ = { z: OM_TABAN_ZOOM, v: 0, yo: 0, yv: 0 };
 function omKameraIpucu(px) {
   let z = 1, yo = 0, wb = 0;
   const L = BOLUM.kamera;
@@ -494,7 +554,7 @@ function omKameraIpucu(px) {
     const w = omBolgeAgirlik(k.x0, k.x1, px, 3 * T);
     if (w > wb) { wb = w; z = 1 + ((k.zoom || 1) - 1) * w; yo = (k.yOfs || 0) * w; }
   }
-  omZ.hz = z; omZ.hy = yo;
+  omZ.hz = z * OM_TABAN_ZOOM; omZ.hy = yo;
 }
 // Ölçek tek yerde: S ve VW kamera yakınlığından hesaplanır (resize de bunu çağırır)
 function omOlcek() { S = H / VH * cam.zoom; VW = W / S; }
@@ -613,12 +673,30 @@ let omAcc = 0, omOncX = P.x, omOncY = P.y, omSimX = P.x, omSimY = P.y, omRX = P.
 function omIsinla() { omOncX = P.x; omOncY = P.y; }
 P.rx = P.x; P.ry = P.y; P.air = 0; P.bounce = false;
 stepCam(0, true);
+// Oyun saati: duvar saati değil, kare kare biriken (en çok 0,1 sn) süre → sekme gizlenip dönünce zaman sıçramaz;
+// `now` ve çizimlere giden `t` bu saattir. Oyun içi gecikmeler de (omZamanla) bu saatle işler, duraklamada bekler.
+let omOyunT = -1, omSahneHataT = 0;
+const omZamanlar = [];
+function omZamanla(sn, fn) { omZamanlar.push({ t: (omOyunT < 0 ? now : omOyunT) + sn, fn }); }
+// Feza'nın çizimi (feza.js) hata verirse / yüklenemediyse: kaybolmasın, sade bir yedek siluet çizilir (dünya dönüşümünde)
+function omYedekFeza() {
+  if (P.fade > 0 && !P.respawned) return;
+  const x = P.rx !== undefined ? P.rx : P.x, y = P.ry !== undefined ? P.ry : P.y, f = P.f || 1;
+  g.fillStyle = '#5b6fd6'; g.beginPath(); g.ellipse(x, y - 22, 12, 20, 0, 0, 6.283); g.fill();          // pijama
+  g.fillStyle = '#f3c9a8'; g.beginPath(); g.arc(x + f * 2, y - 50, 13, 0, 6.283); g.fill();           // yüz
+  g.fillStyle = '#3a2618'; g.beginPath(); g.arc(x - f * 2, y - 55, 13, 3.3, 6.1); g.fill();            // saç
+  g.fillStyle = '#20140c'; g.beginPath(); g.arc(x + f * 7, y - 50, 1.8, 0, 6.283); g.fill();          // göz
+}
 function frame(ms) {
-  const t = ms / 1000;
-  let raw = omSonT < 0 ? 1 / 60 : t - omSonT; omSonT = t;
-  if (!(raw > 0)) raw = 0; raw = Math.min(raw, 0.1);   // sekmede beklerken büyük sıçrama olmasın
-  const dt = raw * omHiz; now = t;
-  readInput();
+  const wt = ms / 1000;
+  let raw = omSonT < 0 ? 1 / 60 : wt - omSonT; omSonT = wt;
+  if (!(raw > 0) || document.hidden) raw = 0; raw = Math.min(raw, 0.1);   // sekmede beklerken büyük sıçrama olmasın
+  const dt = raw * omHiz;
+  if (omOyunT < 0) omOyunT = wt;
+  omOyunT += dt; now = omOyunT;
+  const t = omOyunT;
+  for (let i = omZamanlar.length - 1; i >= 0; i--) if (omZamanlar[i].t <= t) { const z = omZamanlar[i]; omZamanlar.splice(i, 1); omCagir('zamanla', z.fn); }
+  omCagir('readInput', readInput);
   if (DURUM !== 'oyun') { axis = 0; jumpPressed = false; }
   // fizik: 120 Hz sabit adım
   if (DURUM === 'oyun' || DURUM === 'baslik') {
@@ -634,29 +712,29 @@ function frame(ms) {
   omRX = omOncX + (P.x - omOncX) * al; omRY = omOncY + (P.y - omOncY) * al;
   P.x = P.rx = omRX; P.y = P.ry = omRY;
   omCagir('nesneleriGuncelle', nesneleriGuncelle, dt);
-  omTasi(); P.rx = P.x; P.ry = P.y;
+  omCagir('omTasi', omTasi); P.rx = P.x; P.ry = P.y;
   omCagir('kayip', omKayipKontrol, dt);
   omCagir('fezaUpdate', typeof fezaUpdate === 'function' ? fezaUpdate : null, dt);
   omCagir('stepDragon', typeof stepDragon === 'function' ? stepDragon : null, dt);
   omCagir('stepCam', stepCam, dt);
   light = lerp(light, lightTarget, 1 - Math.exp(-dt * 0.9));
-  let sahneTam = false;
-  if (typeof SAHNE !== 'undefined' && SAHNE && typeof SAHNE.tamEkran === 'function') { try { sahneTam = !!SAHNE.tamEkran(); } catch (e) { omHata('SAHNE.tamEkran', e); } }
+  let sahneTam = false, sahneOk = true;
+  const SH = typeof SAHNE !== 'undefined' && SAHNE ? SAHNE : null;
+  if (SH && typeof SH.tamEkran === 'function') { try { sahneTam = !!SH.tamEkran(); } catch (e) { omHata('SAHNE.tamEkran', e); sahneOk = false; } }
   if (!sahneTam) {
     omCagir('drawBackground', typeof drawBackground === 'function' ? drawBackground : null, t);
     omCagir('drawMotes1', typeof drawMotes === 'function' ? drawMotes : null, t, 0, 0.75);
     omCagir('drawWorld', typeof drawWorld === 'function' ? drawWorld : null, t);
     g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S);
     nesneleriCiz(t, 'ciz');
-    g.setTransform(1, 0, 0, 1, 0, 0);
-    omCagir('drawFeza', typeof drawFeza === 'function' ? drawFeza : null, t);
-    g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S); g.globalAlpha = 1;
-    omCagir('pirilHale', omPirilHale);
-    g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S);
-    omCagir('drawDragon', typeof drawDragon === 'function' ? drawDragon : null, t);
-    g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S);
+    omTemizle();
+    if (!omCagir('drawFeza', typeof drawFeza === 'function' ? drawFeza : null, t)) { g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S); omCagir('yedekFeza', omYedekFeza, 0, 0, 0, true); }
+    g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+    omCagir('pirilHale', omPirilHale, 0, 0, 0, true);
+    omCagir('drawDragon', typeof drawDragon === 'function' ? drawDragon : null, t, 0, 0, true);
+    g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
     nesneleriCiz(t, 'cizOn');
-    g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S);
+    g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
     omCagir('drawFx', drawFx, t, dt);
     omCagir('drawPetals', typeof drawPetals === 'function' ? drawPetals : null, t);
     omCagir('drawMotes2', typeof drawMotes === 'function' ? drawMotes : null, t, 0.75, 2);
@@ -664,20 +742,26 @@ function frame(ms) {
     omCagir('drawVignette', typeof drawVignette === 'function' ? drawVignette : null);
   }
   omTemizle();
-  if (typeof SAHNE !== 'undefined' && SAHNE && typeof SAHNE.ciz === 'function') { try { SAHNE.ciz(t, dt); } catch (e) { omHata('SAHNE.ciz', e); } omTemizle(); }
+  if (SH && typeof SH.ciz === 'function') { try { SH.ciz(t, dt); } catch (e) { omHata('SAHNE.ciz', e); sahneOk = false; } omTemizle(); }
   if (typeof ARAYUZ !== 'undefined' && ARAYUZ && typeof ARAYUZ.ciz === 'function') { try { ARAYUZ.ciz(t, dt); } catch (e) { omHata('ARAYUZ.ciz', e); } omTemizle(); }
+  // sahne sürekli hata veriyorsa (≈2,5 sn) oyun orada takılı kalmasın: girişte oyuna, finalde son ekrana geç
+  omSahneHataT = sahneOk ? 0 : omSahneHataT + raw;
+  if (omSahneHataT > 2.5) {
+    omSahneHataT = 0;
+    if (DURUM === 'giris') oyunaBasla();
+    else if (DURUM === 'final') { DURUM = 'son'; OLAY.emit('durum', DURUM); }
+  }
   // gerçek fizik konumuna dön (kare içinde başka bir modül Feza'yı taşıdıysa onu koru)
   if (P.x === omRX) P.x = omSimX; else omOncX = P.x;
   if (P.y === omRY) P.y = omSimY; else omOncY = P.y;
 }
 function omDongu(ms) {
+  requestAnimationFrame(omDongu);   // önce sıradaki kare: ne olursa olsun döngü durmaz
   try { frame(ms); }
-  catch (e) {   // bir modüldeki hata oyunu dondurmasın; P'yi gerçek konumuna döndür
+  catch (e) {   // (aşamalar zaten korumalı; bu son emniyet) P'yi gerçek konumuna döndür
     if (P.x === omRX) P.x = omSimX; if (P.y === omRY) P.y = omSimY;
-    g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
-    if (!omDongu.hata || now - omDongu.hata > 2) { omDongu.hata = now; console.error(e); }
+    omHata('frame', e);
   }
-  requestAnimationFrame(omDongu);
 }
 requestAnimationFrame(omDongu);
 window.OYUN = { P, D, NESNELER, FLOWERS, TREE, cam, SAYAC, GIRDI, CISIMLER, OM, get durum() { return DURUM; }, get light() { return light; }, set light(v) { light = lightTarget = v; },

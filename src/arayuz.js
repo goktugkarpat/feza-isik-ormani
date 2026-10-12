@@ -537,13 +537,14 @@ const ARAYUZ = (() => {
     const satir = [['cicek', 0, SAYAC.cicekTop], ['pofuduk', 0, SAYAC.pofudukTop]];
     if (SAYAC.tohumTop) satir.push(['tohum', 0, SAYAC.tohumTop]);
     const L = sonYerlesim(satir);
-    const isler = [() => sonKart(L.kw, L.kh), () => baslikKucuk(), () => tekrarSprite(L.R), () => parlakSprite(), () => elSprite(),
+    const isler = [() => uiIsit.push(sonKart(L.kw, L.kh).c), () => uiIsit.push(baslikKucuk()), () => uiIsit.push(tekrarSprite(L.R).c), () => parlakSprite(), () => elSprite(),
       () => { simge('cicek', true); simge('cicek', false); }, () => { simge('pofuduk', true); simge('pofuduk', false); }, () => { simge('tohum', true); simge('tohum', false); }];
     let i = 0;
     const adim = () => { if (i >= isler.length || DURUM === 'son') return; kontrol(); try { isler[i++](); } catch (e) {} setTimeout(adim, 120); };
     adim();
   }
   OLAY.on('sahneAn', v => { if (v && v.ad === 'sabah') setTimeout(sonOnHazirla, 1800); });
+  const uiIsit = [];   // ekran kartına bir kez minicik çizilip ısıtılacak tuvaller
   function sonCiz(tm, dt) {
     if (!son) sonKur();
     const u = now - son.t0;
@@ -635,6 +636,7 @@ const ARAYUZ = (() => {
     dene('ipucuCiz', () => ipucuCiz(tm));
     dene('bildirim', () => bildirimCiz(tm));
     if (DURUM === 'son') dene('son', () => sonCiz(tm, dt));
+    else if (uiIsit.length) { const c = uiIsit.pop(); g.globalAlpha = 0.004; g.drawImage(c, 0, 0, 2, 2); g.globalAlpha = 1; }
     dene('altyazi', altyaziCiz);
   }
   return { ciz, altyazi, get _tekrar() { return tekrarYer; } };

@@ -70,7 +70,7 @@ const sh = {
 
 // ── ölçüler & dönüşümler ──
 function shOlc() {
-  if (sh.bw !== W || sh.bh !== H) { sh.oda = sh.odaSabah = sh.orman = null; sh.bw = W; sh.bh = H; }
+  if (sh.bw !== W || sh.bh !== H) { sh.oda = sh.odaSabah = sh.orman = sh.onPlan = null; sh.bw = W; sh.bh = H; }
   sh.k0 = H / 100; sh.wu = 100 * W / H;
 }
 const shPX = x => W / 2 + x * sh.k0;           // oda birimi → piksel (zoom yok)
@@ -482,10 +482,17 @@ function shYatakArka(p, b, f, tm) {
   }
   // yastık → yumuşak yosun yastığı
   const yx = Y.x0 + 6.6, yy = Y.ust - 2.4;
-  g.fillStyle = shMix(p.pillow, '#2a7d68', b);
-  g.beginPath(); g.ellipse(yx, yy, 7, 3.1, -0.05, 0, 6.283); g.fill();
-  g.fillStyle = shMix(p.pillowHi, '#4fb592', b, 0.6 - 0.25 * b);
-  g.beginPath(); g.ellipse(yx - 1, yy - 1.1, 4.8, 1.3, -0.05, 0, 6.283); g.fill();
+  // yastık → yamaca kaynaşan yumuşak yosun tümseği
+  const bb = shEase(b), yyy = yy + 1.6 * bb;
+  g.fillStyle = shMix(p.pillow, '#2c8069', b);
+  g.beginPath(); g.ellipse(yx + 0.6 * bb, yyy, 7 + 1.2 * bb, 3.1 + 2.2 * bb, -0.05 - 0.12 * bb, 0, 6.283); g.fill();
+  g.fillStyle = shMix(p.pillowHi, '#4fb592', b, 0.6 - 0.3 * b);
+  g.beginPath(); g.ellipse(yx - 1, yyy - 1.3 - 0.8 * bb, 4.8, 1.3, -0.05, 0, 6.283); g.fill();
+  if (bb > 0.05) {   // yosun saçakları
+    g.strokeStyle = '#3d9c7e'; g.lineWidth = 0.38; g.lineCap = 'round'; g.globalAlpha = bb; g.beginPath();
+    for (let i = 0; i < 9; i++) { const ax = yx - 6.5 + i * 1.5, ay = yyy - Math.sqrt(Math.max(0, 1 - Math.pow((ax - yx) / 8, 2))) * (3.1 + 2.2 * bb) + 0.4; g.moveTo(ax, ay); g.quadraticCurveTo(ax + 0.2, ay - 0.6, ax + ((i % 3) - 1) * 0.4, ay - 1.1 - (i % 2) * 0.4); }
+    g.stroke(); g.globalAlpha = 1;
+  }
 }
 function shBattaniye(p, b, tm, nefes, otur = 0) {
   shOdaT();
@@ -844,6 +851,52 @@ function shPirilYer(t, P, tm) {
   const x1 = lerp(hav.x, kulak.x, in2), y1 = lerp(hav.y, kulak.y, in2) - Math.sin(in2 * Math.PI) * 3;
   return { x: lerp(x1, yan.x, ks), y: lerp(y1, yan.y, ks) - Math.sin(ks * Math.PI) * 2.5, kucak: false, poz: 'ucus', f: in2 > 0.35 ? -1 : 1, pat: 0 };
 }
+// ay ışığı huzmeleri (ormanda, yavaşça nefes alır) – oda biriminde
+function shOrmanHuzme(a, tm) {
+  if (a <= 0.01) return;
+  shOdaT(); g.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 5; i++) {
+    const ax = SH_AY.x - 4 + i * 2, aci = 1.95 + i * 0.13 + Math.sin(tm * 0.17 + i * 1.7) * 0.03, L = 110, w = 2.2 + (i % 3) * 1.6;
+    const ex = ax + Math.cos(aci) * L, ey = SH_AY.y + Math.sin(aci) * L, nx = -Math.sin(aci) * w, ny = Math.cos(aci) * w;
+    const al = a * (0.05 + 0.035 * Math.sin(tm * 0.5 + i * 2.1));
+    const gr = g.createLinearGradient(ax, SH_AY.y, ex, ey);
+    gr.addColorStop(0, `rgba(170,215,255,${al})`); gr.addColorStop(0.6, `rgba(150,200,255,${al * 0.5})`); gr.addColorStop(1, 'rgba(150,200,255,0)');
+    g.fillStyle = gr; g.beginPath(); g.moveTo(ax, SH_AY.y); g.lineTo(ex + nx * 3, ey + ny * 3); g.lineTo(ex - nx * 3, ey - ny * 3); g.closePath(); g.fill();
+  }
+  g.globalCompositeOperation = 'source-over';
+}
+// ön plan: köşelerde koyu yaprak siluetleri (kameradan daha hızlı kayar → derinlik)
+function shOnPlanCiz() {
+  const c = shTuval(), x = c.getContext('2d'), k = H / 100;
+  x.setTransform(k, 0, 0, k, W / 2, 0);
+  const R = sh.wu / 2;
+  const yaprak = (bx, by, L, aci, gen) => {
+    x.save(); x.translate(bx, by); x.rotate(aci);
+    x.beginPath(); x.moveTo(0, 0); x.quadraticCurveTo(L * 0.5, -gen, L, 0); x.quadraticCurveTo(L * 0.5, gen, 0, 0); x.fill();
+    x.restore();
+  };
+  const r = rng(17);
+  for (const [cx, yon] of [[-R, 1], [R, -1]]) {
+    x.fillStyle = '#02050d';
+    x.beginPath(); x.ellipse(cx, 104, 26, 13, 0, 0, 6.283); x.fill();
+    for (let i = 0; i < 14; i++) {
+      const aci = -Math.PI / 2 + yon * (0.25 + r() * 1.15), L = 9 + r() * 13;
+      yaprak(cx + yon * (r() * 14), 98 + r() * 4, L, aci, 1.6 + r() * 2.2);
+    }
+    // yaprak uçlarında ince camgöbeği kenar (oyundaki ışıkla uyumlu)
+    x.strokeStyle = 'rgba(127,232,255,0.18)'; x.lineWidth = 0.25;
+    x.beginPath(); x.ellipse(cx, 104, 26, 13, 0, Math.PI * 1.1, Math.PI * 1.9); x.stroke();
+  }
+  return c;
+}
+function shOnPlan(a) {
+  if (a <= 0.01) return;
+  if (!sh.onPlan) sh.onPlan = shOnPlanCiz();
+  const z = sh.zoom, zf = 1 + (z - 1) * 1.35, ox = (sh.tx - sh.fx * z) * 1.35, oy = (sh.ty - sh.fy * z) * 1.35;
+  g.setTransform(zf, 0, 0, zf, ox + (W - W * zf) * 0.5 * 0, oy);
+  g.globalAlpha = a; g.drawImage(sh.onPlan, 0, 0); g.globalAlpha = 1;
+  g.setTransform(1, 0, 0, 1, 0, 0);
+}
 function shGirisCiz(tm, dt) {
   const t = sh.t, P = sh.plan;
   if (!sh.tam) {
@@ -886,8 +939,9 @@ function shGirisCiz(tm, dt) {
       g.globalCompositeOperation = 'source-over';
     }
   }
-  // 3) ay ışığı huzmesi (oda eridikçe söner)
+  // 3) ay ışığı huzmesi (oda eridikçe söner); ormanda aydan inen yumuşak ışık huzmeleri
   shHuzme(true, 1 - halka, tm);
+  shOrmanHuzme(halka, tm);
   // gece lambası Feza uyuyunca kısılır; oda biraz kararır (Pırıl'ın ışığı öne çıksın)
   const kis = sh.atla >= 0 ? 1 : shEase(shSeg(t, P.uyudu - 0.5, P.uyudu + 2.6));
   if (kis > 0 && halka < 1) { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = `rgba(5,6,22,${0.26 * kis * (1 - halka)})`; g.fillRect(0, 0, W, H); }
@@ -931,6 +985,7 @@ function shGirisCiz(tm, dt) {
     g.globalCompositeOperation = 'source-over';
   }
   shZerreAkit(dt, tm);
+  shOnPlan(shEase(shSeg(m, 0.45, 1)));
   // Zzz
   shZzz(t, tm, P);
   // ateş böcekleri gibi süzülen ışık zerreleri (erirken çoğalır)
@@ -1036,7 +1091,8 @@ function shFinalGuncelle(dt) {
   if (!sh.cin && t >= P.kirp) { sh.cin = 1; if (typeof AU !== 'undefined' && AU.sfx) try { AU.sfx('bloom', 0); } catch (e) {} }
   sh.tam = t >= P.dolu;
   const yk = shEase(shSeg(t, P.yak, P.kirp + 0.2)), fx = shPX(shKucak.x), fy = shPY(shKucak.y - 2);
-  shKamera(fx, fy, 1.04 + 0.36 * yk + 0.012 * shSeg(t, P.oda, P.son), lerp(fx, W * 0.5, yk), lerp(fy, H * 0.5, yk));
+  // sabah: yatak çerçevenin ortasına yakın, sonra peluş Pırıl'a yavaşça yaklaşılır
+  shKamera(fx, fy, 1.14 + 0.3 * yk + 0.015 * shSeg(t, P.oda, P.son), lerp(W * 0.4, W * 0.5, yk), lerp(fy, H * 0.5, yk));
   if (t >= P.son && sh.bitti) { shAn('son'); const f = sh.bitti; sh.bitti = null; sh.sonGorunum = true; f(); }
 }
 // sabah odası sahnesi (bitiş ekranının arkasında da kullanılır)
@@ -1067,8 +1123,11 @@ function shSabahCiz(tm, t, P) {
 }
 // kutlama sırasında oyun dünyasının üstüne yavaş bir kamera hareketi: çizilmiş kareyi kopyalayıp büyüterek geri çizer
 let shKopya = null;
-function shFinalKamera(t, P) {
-  const z = 1 + 0.11 * shEase(shSeg(t, 0.2, P.dolu + 0.5));
+function shFinalKamera(t, P, dt) {
+  // cihaz zorlanıyorsa (kareler uzun) bu süsü yumuşakça bırak: ekran kopyası tam ekran iki çizim demek
+  sh.kareOrt = lerp(sh.kareOrt || 1 / 60, dt || 1 / 60, 0.05);
+  if (sh.kareOrt > 1 / 42) sh.kamYavas = Math.min(1, (sh.kamYavas || 0) + (dt || 0) * 0.5);
+  const z = 1 + 0.11 * shEase(shSeg(t, 0.2, P.dolu + 0.5)) * (1 - (sh.kamYavas || 0));
   if (z <= 1.0005) return { z: 1, ax: 0, ay: 0, py: 0 };
   if (!shKopya || shKopya.width !== W || shKopya.height !== H) { shKopya = shTuval(); }
   const kx = shKopya.getContext('2d');
@@ -1092,17 +1151,20 @@ function shFinalCiz(tm, dt) {
   const t = sh.t, P = sh.plan;
   g.setTransform(1, 0, 0, 1, 0, 0);
   if (!sh.tam) {
-    const K = shFinalKamera(t, P);
+    // ekran tamamen ışıkla dolduysa: dünyayı büyütüp ışıkları çizmeye gerek yok (en ağır an)
+    const tamDolu = t >= P.isik && shEase(shSeg(shEase(shSeg(t, P.isik, P.dolu)), 0.55, 1)) >= 0.999;
+    const K = tamDolu ? sh.sonK || { z: 1, ax: 0, ay: 0, py: 0 } : (sh.sonK = shFinalKamera(t, P, dt));
     const ek = (x, y) => K.z === 1 ? [x, y] : [K.ax + (x - K.ax) * K.z, K.ay + (y - K.ay) * K.z + K.py];
     // kutlama: aydınlık ormanın üstünde yükselen altın zerreler + ağaçtan yayılan ışık
     const a = shEase(shSeg(t, 0, 1.5));
-    shAltinZerre(tm, a);
+    if (!tamDolu) shAltinZerre(tm, a);
     if (t >= P.isik) {
       const u = shEase(shSeg(t, P.isik, P.dolu));
       let tx = W / 2, ty = H * 0.4;
       if (typeof TREE !== 'undefined' && TREE && typeof cam !== 'undefined') { [tx, ty] = ek((TREE.x - cam.x) * S, (TREE.y - 200 - cam.y) * S); tx = clamp(tx, W * 0.15, W * 0.85); ty = clamp(ty, H * 0.15, H * 0.7); }
       // önce eklemeli ışık (parlar, bulanıklaştırmaz), sonra krem-altın beyazlık ekranı doldurur
       const D2 = Math.hypot(W, H);
+      if (!tamDolu) {
       g.globalCompositeOperation = 'lighter';
       dglow('#ffd890', tx, ty, D2 * (0.3 + 1.1 * u), Math.min(1, u * 2));
       dglow('#ffe2a0', tx, ty, D2 * (0.2 + 0.7 * u), Math.min(1, u * 2));
@@ -1115,6 +1177,7 @@ function shFinalCiz(tm, dt) {
         g.fillStyle = gr; g.beginPath(); g.moveTo(tx, ty); g.lineTo(tx + Math.cos(aci - w) * L, ty + Math.sin(aci - w) * L); g.lineTo(tx + Math.cos(aci + w) * L, ty + Math.sin(aci + w) * L); g.closePath(); g.fill();
       }
       g.globalCompositeOperation = 'source-over';
+      }
       const v = shEase(shSeg(u, 0.55, 1));
       if (v > 0) {
         const gr = g.createRadialGradient(tx, ty, 0, tx, ty, D2 * (0.2 + 1.2 * v));
@@ -1161,9 +1224,9 @@ OLAY.on('boyut', () => { sh.bw = -1; });
 // başlık ekranındayken oda ve orman fonunu önceden hazırla ve bir kez boyat (dokununca takılma olmasın)
 setTimeout(function shIsit() {
   if (DURUM !== 'baslik' || sh.mod) return;
-  shOlc(); if (!sh.oda) sh.oda = shOdaCiz(SH_GECE); if (!sh.orman) sh.orman = shOrmanCiz();
+  shOlc(); if (!sh.oda) sh.oda = shOdaCiz(SH_GECE); if (!sh.orman) sh.orman = shOrmanCiz(); if (!sh.onPlan) sh.onPlan = shOnPlanCiz();
   const c = document.createElement('canvas'); c.width = c.height = 2; const x = c.getContext('2d');
-  x.drawImage(sh.oda, 0, 0, 2, 2); x.drawImage(sh.orman, 0, 0, 2, 2);
+  x.drawImage(sh.oda, 0, 0, 2, 2); x.drawImage(sh.orman, 0, 0, 2, 2); x.drawImage(sh.onPlan, 0, 0, 2, 2);
 }, 1200);
 
 const SAHNE = {
@@ -1175,11 +1238,12 @@ const SAHNE = {
     // pahalı önbellekler başlık ekranında hazırlandı (yoksa şimdi)
     if (!sh.oda) sh.oda = shOdaCiz(SH_GECE);
     if (!sh.orman) sh.orman = shOrmanCiz();
+    if (!sh.onPlan) sh.onPlan = shOnPlanCiz();
   },
   final(bitince) {
-    shOlc(); sh.mod = 'final'; sh.t = 0; sh.bitti = bitince; sh.sesler = {}; sh.tam = false; sh.cin = 0; sh.anlar = {}; sh.parca.length = 0;
+    shOlc(); sh.mod = 'final'; sh.t = 0; sh.bitti = bitince; sh.sesler = {}; sh.tam = false; sh.cin = 0; sh.anlar = {}; sh.parca.length = 0; sh.kareOrt = 1 / 60; sh.kamYavas = 0; sh.sonK = null;
     sh.plan = shFinalPlan(); shKamera(W / 2, H / 2, 1, W / 2, H / 2);
-    sh.oda = sh.orman = null;   // gece önbelleklerini bırak (bellek)
+    sh.oda = sh.orman = sh.onPlan = null;   // gece önbelleklerini bırak (bellek)
     setTimeout(() => {
       if (!sh.odaSabah) { shOlc(); sh.odaSabah = shOdaCiz(SH_SABAH); }
       const c = document.createElement('canvas'); c.width = c.height = 2; c.getContext('2d').drawImage(sh.odaSabah, 0, 0, 2, 2);   // bir kez boyat

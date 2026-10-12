@@ -34,7 +34,7 @@ const BL_ZEMIN = [
   [200, 201, 6], [202, 203, 5], [204, 214, 4], [215, 219, 5], [220, 238, 4], [239, 242, 5],
   // 6. Açıklık (243–299): sakin düzlük, küçük tümsek; Büyük Pofuduk ağaç tepesinin dibindeki yuvasında (1 kare çukur:
   //    uyurken başından çift zıplamayla tepeye çıkılamasın); tepe 8 kare yüksek (7 kare olunca uyurken çıkılabiliyor – bot sınadı), yalnız onun zıplatmasıyla çıkılır
-  [243, 252, 4], [253, 256, 5], [257, 269, 4], [267, 270, 5], [271, 275, 6], [276, 280, 4], [281, 286, 3], [287, 299, 12],
+  [243, 252, 4], [253, 256, 5], [257, 269, 4], [267, 270, 5], [271, 275, 6], [276, 280, 4], [281, 287, 3], [288, 299, 12],
 ];
 for (const [a, b, h] of BL_ZEMIN) ground(a, b, h);
 // ── Dallar (üstten geçilir): [ilk, son, satır] ──
@@ -43,7 +43,7 @@ const BL_DAL = [
   [75, 78, 16],                                   // göle inmeden küçük bir dal
   [146, 156, 12],                                 // minderin tam üstündeki yüksek dal
   [196, 199, 14], [202, 205, 12], [208, 212, 10], [215, 219, 9], [222, 226, 10], [229, 232, 12], [235, 238, 14], // saklı yol
-  [273, 278, 14],                                 // Büyük Pofuduk'un solundaki dal (ikinci çiçek)
+  [272, 276, 14],                                 // Büyük Pofuduk'un solundaki dal (ikinci çiçek)
 ];
 for (const [a, b, r] of BL_DAL) plat(a, b, r);
 
@@ -110,7 +110,7 @@ nesne('pofuduk', 247, yuzey(247), { tur: 'yol' });
 nesne('cicek', 254.5, yuzey(254), { r: 34 });                  // açıklığa girerken tümsekte küçük bir ödül
 nesne('konusma', 261, yuzey(261), { anahtar: 'p_buyuk', r: 80 });
 nesne('cicek', 264.5, yuzey(264), { r: 34, buyukIcin: true });     // yerde
-nesne('cicek', 276, blDal(14), { r: 34, buyukIcin: true });      // tümsekten dala
+nesne('cicek', 274, blDal(14), { r: 34, buyukIcin: true });       // tümsekten dala
 nesne('cicek', 280.5, yuzey(280), { r: 34, buyukIcin: true });   // Büyük Pofuduk'un burnunun dibinde
 nesne('buyukPofuduk', 284, yuzey(284), {});                     // yuvasında; ağacın tepesine çıkan yolu kapatır
 nesne('konusma', 289, yuzey(289), { anahtar: 'p_agac', r: 70 });

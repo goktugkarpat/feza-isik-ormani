@@ -7,11 +7,11 @@
 'use strict';
 const DR_TAIL_N = 7, DR_TAIL_LEN = 3.5;   // peluştaki gibi orta boy, incelerek yassı küreğe biten kuyruk
 // renkler: Feza'nın gerçek peluşu (lila gövde, limon yeşili karın/kulak, koyu yeşil ibik, yeşil gözler)
-const DR_COL = { pur: '#a87ee0', purL: '#c9a9f3', purD: '#7c55bb', line: '#4a2c80', lime: '#bde43a', limeL: '#d9f27e', limeD: '#93bd28',
+const DR_COL = { pur: '#b28ae6', purL: '#d2b6f7', purD: '#8660c4', line: '#52338c', lime: '#bde43a', limeL: '#d9f27e', limeD: '#93bd28',
   crest: '#2f8a2c', crestL: '#55ad44', crestD: '#1f5c1c', eye: '#1c1228' };
 const DR_NEFES = ['#fff6d6', '#d9f6ff', '#e8d6ff', '#ffffff', '#ffd6f2', '#bff4ff'];
 const DR_IZ = ['#fff2a8', '#ffe0f6', '#e2ccff', '#ffffff'];
-const DR_PAW = [-8, 16];  // taşırken Feza'nın elini tutan arka ayağın yerel konumu (kuş gibi)
+const DR_PAW = [-9, 17];  // taşırken Feza'nın elini tutan arka ayağın yerel konumu: gövde elin ÜSTÜNDE ve elin Feza'nın başından UZAK tarafında (yüzünü/saçını kapatmaz)
 const DR_HOLD = 0.12;    // taşırken P.fade bu değerde tutulur: fizik durur, Feza tam görünür (feza.js: fade<0.22 → opak)
 
 function dragonInit() {
@@ -56,11 +56,13 @@ function drResetTail() {
   for (let i = 0; i < D.tail.length; i++) { D.tail[i].x = r.x - D.ft * i * DR_TAIL_LEN; D.tail[i].y = r.y + i * 1.5; }
 }
 function drHandOff() {   // Feza'nın tutunduğu elin ayağa göre yeri (feza.js P.a_elX/elY verir; yoksa tahmin)
-  if (!D.hOff) D.hOff = { x: P.f * 12, y: -74 };
+  // öğrenilen ofset Feza'nın baktığı yöne göre saklanır (fwd); dönerse el de doğru yana geçer
+  if (!D.hOff) D.hOff = { x: P.f * 12, y: -74, fwd: 12 };
   if (P.a_elX !== undefined && P.rx !== undefined && P.fade > 0 && P.respawned) {
-    const hx = P.a_elX - P.rx, hy = P.a_elY - P.ry;
-    if (Math.abs(hx) < 40 && hy < -30 && hy > -110) { D.hOff.x = lerp(D.hOff.x, hx, 0.35); D.hOff.y = lerp(D.hOff.y, hy, 0.35); }
+    const hx = (P.a_elX - P.rx) * (P.f || 1), hy = P.a_elY - P.ry;
+    if (Math.abs(hx) < 40 && hy < -30 && hy > -110) { D.hOff.fwd = lerp(D.hOff.fwd, hx, 0.35); D.hOff.y = lerp(D.hOff.y, hy, 0.35); }
   }
+  D.hOff.x = D.hOff.fwd * (P.f || 1);
   return D.hOff;
 }
 function drSparkle(x, y, n, spd) { burst(x, y, n, ['#d9b8ff', '#ffd6f2', '#ffffff'], spd, 0.8, 7); }
@@ -241,12 +243,44 @@ function drCarryStart(tx, ty) {   // Feza'yı bulunduğu yerden (tx,ty)'ye taş�
   drMode('tasi'); D.tasiyor = true; D.grabbed = true; D.wasFall = false;
   D.pA = { x: P.x, y: P.y }; D.pE = { x: tx, y: ty };
   D.cpx = P.x; D.cpy = P.y;
-  const dist = Math.hypot(D.pE.x - D.pA.x, D.pE.y - D.pA.y);
-  D.pC = { x: lerp(D.pA.x, D.pE.x, 0.5), y: Math.min(D.pA.y, D.pE.y) - 80 - Math.abs(D.pE.x - D.pA.x) * 0.12 };
-  D.tDur = clamp(1.0 + dist / 560, 1.3, 2.6);
+  drPlanRoute(1.0, 560, 1.3, 2.8);
   D.tDir = Math.abs(D.pE.x - D.pA.x) > 20 ? Math.sign(D.pE.x - D.pA.x) : P.f;
-  drSparkle(P.x, P.y - 40, 12, 90);
+  drSparkle(D.pence.x, D.pence.y, 12, 90);   // parıltı elle patinin buluştuğu yerde (yüzünde değil)
   drSfx('dbl');
+}
+// taşıma rotası: kübik eğri (önce yukarı, üstten geç, sonra in). Yol üstünde yüksek bir duvar/kütük/katı cisim varsa
+// tepe noktası engeli aşana dek yükselir; böylece Feza (ve üstündeki Pırıl) hiçbir şeyin içinden geçmez.
+const DR_RP = { x: 0, y: 0 };
+function drRouteAt(e, top) {
+  const a = D.pA, b = D.pE, c1x = lerp(a.x, b.x, 0.18), c2x = lerp(a.x, b.x, 0.82), m = 1 - e;
+  DR_RP.x = m * m * m * a.x + 3 * m * m * e * c1x + 3 * m * e * e * c2x + e * e * e * b.x;
+  DR_RP.y = m * m * m * a.y + 3 * m * m * e * Math.min(top, a.y) + 3 * m * e * e * Math.min(top, b.y) + e * e * e * b.y;
+  return DR_RP;
+}
+function drRoute(e) { return drRouteAt(e, D.pTop); }
+function drBlocked(px, py) {   // Feza'nın gövdesi (+ elinden tutan Pırıl) bu noktada katı bir şeye değer mi
+  if (typeof cell !== 'function') return false;
+  const c0 = Math.floor((px - 13) / T), c1 = Math.floor((px + 13) / T), r0 = Math.floor((py - 112) / T), r1 = Math.floor((py - 6) / T);
+  for (let c = c0; c <= c1; c++) for (let r = Math.max(0, r0); r <= r1; r++) if (cell(c, r) === 1) return true;
+  if (typeof CISIMLER !== 'undefined') for (const o of CISIMLER) {
+    const k = o.cisim; if (!k || !k.aktif || k.tip === 'ustten') continue;
+    if (Math.abs(o.x - px) < k.w / 2 + 13 && py - 6 > o.y - k.h && py - 112 < o.y) return true;
+  }
+  return false;
+}
+function drPlanRoute(t0, sp, tmin, tmax) {
+  const a = D.pA, b = D.pE, dx = Math.abs(b.x - a.x);
+  let top = Math.min(a.y, b.y) - 70 - dx * 0.09, ok = false;
+  for (let k = 0; k < 14 && !ok; k++) {
+    ok = true;
+    for (let i = 3; i <= 37; i++) { const q = drRouteAt(i / 40, top); if (drBlocked(q.x, q.y)) { ok = false; break; } }
+    if (!ok) top -= 34;
+  }
+  top = Math.max(top, 40);   // ekranın/dünyanın tepesinden çıkmasın
+  D.pTop = top;
+  let len = 0, px = a.x, py = a.y;
+  for (let i = 1; i <= 20; i++) { const q = drRouteAt(i / 20, top); len += Math.hypot(q.x - px, q.y - py); px = q.x; py = q.y; }
+  D.tDur = clamp(t0 + len / sp, tmin, tmax);
 }
 function drEncourage() { if (D.t - D.kurtarT > 25) { D.kurtarT = D.t; drSay('p_kurtar'); } else { D.praiseT = -99; drPraise(); } }
 
@@ -286,8 +320,11 @@ function drBreathParticles(dt, rate, mo, ang) {
   const n = Math.floor(rate * dt + Math.random());
   for (let i = 0; i < n; i++) {
     const a = ang + (Math.random() - 0.5) * 0.42, s = 330 + Math.random() * 260, k = Math.random() < 0.12 ? 2 : 0;
-    const l = 0.9 + Math.random() * 0.7;
+    const l = 1.1 + Math.random() * 0.8;
+    // her ışık zerresi bir nilüfere doğru süzülür: ışığın gidip nilüferlere "kondu"ğu görülür (havada bulut kalmaz)
+    const tg = D.nfL && D.nfL.length && Math.random() < 0.75 ? D.nfL[(Math.random() * D.nfL.length) | 0] : null;
     D.nf.push({ k, x: mo.x + Math.cos(a) * 3, y: mo.y + Math.sin(a) * 3, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: l, max: l,
+      tx: tg ? tg.x + (Math.random() - 0.5) * 22 : 0, ty: tg ? tg.y - 4 : 0, tg: !!tg, age: 0,
       size: k ? 3 + Math.random() * 2.5 : 7 + Math.random() * 10, col: DR_NEFES[(Math.random() * DR_NEFES.length) | 0] });
   }
 }
@@ -422,9 +459,7 @@ function stepDragon(dt) {
         D.grabbed = true; D.modeT = 0;
         const ho = drHandOff();
         D.pA = { x: D.pence.x - ho.x, y: D.pence.y - ho.y }; D.pE = { x: D.safeX, y: D.safeY };
-        const dist = Math.hypot(D.pE.x - D.pA.x, D.pE.y - D.pA.y);
-        D.pC = { x: lerp(D.pA.x, D.pE.x, 0.55), y: Math.min(D.pA.y, D.pE.y) - 90 - Math.abs(D.pE.x - D.pA.x) * 0.12 };
-        D.tDur = clamp(0.95 + dist / 620, 1.25, 2.4);
+        drPlanRoute(0.95, 620, 1.25, 2.6);
         D.tDir = Math.abs(D.pE.x - D.pA.x) > 20 ? Math.sign(D.pE.x - D.pA.x) : P.f;
         burst(D.x, ROWS * T - 30, 22, ['#bfe6ff', '#ffffff', '#d9b8ff'], 170, 0.9, 7);
         ripples.push({ x: D.x, y: ROWS * T - 30, r: 0, life: 0.8, small: true });
@@ -433,8 +468,7 @@ function stepDragon(dt) {
     }
     if (D.grabbed) {
       const u = clamp(D.modeT / D.tDur, 0, 1), e = smooth(u);
-      D.cpx = (1 - e) * (1 - e) * D.pA.x + 2 * e * (1 - e) * D.pC.x + e * e * D.pE.x;
-      D.cpy = (1 - e) * (1 - e) * D.pA.y + 2 * e * (1 - e) * D.pC.y + e * e * D.pE.y;
+      const rp = drRoute(e); D.cpx = rp.x; D.cpy = rp.y;
       const ho = drHandOff(), pw = drLocal(DR_PAW[0], DR_PAW[1]);   // arka ayak Feza'nın elinde
       const nx = D.cpx + ho.x - (pw.x - D.x), ny = D.cpy + ho.y - (pw.y - D.y);
       D.vx = (nx - D.x) / dt; D.vy = (ny - D.y) / dt; D.x = nx; D.y = ny; direct = true;
@@ -459,6 +493,8 @@ function stepDragon(dt) {
     tx = P.x + ho.x - (pl.x - D.x); ty = P.y + ho.y - (pl.y - D.y);
     k = 70; damp = 13; flapW = 6;
     D.ft = Math.sign(D.yt.x - P.x) || P.f; D.faceHold = 0.15;
+    P.f = D.ft;   // Feza gideceği yöne döner: tutulan el o yanda, Pırıl'ın gövdesi başından uzakta kalır
+    if ((D.x - P.x) * D.ft < 10) ty = Math.min(ty, P.y - 128);   // öbür yandaysa başının üstünden yüksekten geçsin
     P.kilit = Math.max(P.kilit || 0, 0.3);
     if ((Math.hypot(D.x - tx, D.y - ty) < 8 && D.modeT > 0.3) || D.modeT > 1.3) {
       if (P.ground) drCarryStart(D.yt.x, D.yt.y); else drMode('follow');
@@ -591,6 +627,12 @@ function stepDragon(dt) {
     const sp = Math.hypot(D.vx, D.vy); if (sp > 1400) { D.vx *= 1400 / sp; D.vy *= 1400 / sp; }
     D.x += D.vx * dt; D.y += D.vy * dt;
   }
+  // Feza'nın yüzünü asla kapatmasın: başının üstündeki bölgeye inerse yumuşakça yukarı itilir
+  // (itme hamlesi, taşıma, dalış ve zıplama turu kendi yollarını bilir)
+  if (P.fade <= 0 && D.mode !== 'push' && D.mode !== 'tasi' && D.mode !== 'yardim' && D.mode !== 'dalis' && D.mode !== 'yay') {
+    const hx = Math.abs(D.x - P.x), minY = P.y - 104 + clamp((hx - 20) / 22, 0, 1) * 70;
+    if (D.y > minY && D.y < P.y + 10) { D.y = lerp(D.y, minY, 1 - Math.exp(-dt * 14)); if (D.vy > 0) D.vy *= Math.exp(-dt * 10); }
+  }
 
   // esneme (Feza boş durunca): ağız ağır ağır açılır, gözler kapanır, kanatlar gerinir
   if (D.yawnT >= 0) {
@@ -685,7 +727,12 @@ function stepDragon(dt) {
 
   // ışık izi ve parıltılar
   const spd = Math.hypot(D.vx, D.vy);
-  if (spd > 380 || D.mode === 'push') D.trail.push({ x: D.x, y: D.y + D.bob, life: 0.28 });
+  // hız izi: taşırken/elinden tutarken yok; Feza'nın başına ve saçına değen noktalar da eklenmez
+  if (spd > 380 || D.mode === 'push') {
+    if (D.mode !== 'tasi' && D.mode !== 'yardim' && !(D.x > P.x - 34 && D.x < P.x + 34 && D.y > P.y - 96 && D.y < P.y - 20)) {
+      D.trail.push({ x: D.x, y: D.y + D.bob, life: 0.28, cut: !!D.trailCut }); D.trailCut = false;
+    } else D.trailCut = true;
+  } else D.trailCut = true;
   for (let i = D.trail.length - 1; i >= 0; i--) { D.trail[i].life -= dt; if (D.trail[i].life <= 0) D.trail.splice(i, 1); }
   if (D.mode === 'push' && D.modeT < D.dashT && Math.random() < dt * 60) parts.push({ x: D.x + (Math.random() - 0.5) * 10, y: D.y + (Math.random() - 0.5) * 10, vx: -D.vx * 0.08, vy: -D.vy * 0.08, life: 0.6, max: 0.6, col: Math.random() < 0.5 ? '#e2c8ff' : '#ffffff', size: 6 });
   const tip = D.tail[DR_TAIL_N - 1];
@@ -705,6 +752,12 @@ function stepDragon(dt) {
         continue;
       }
       if (p.life <= 0) { D.nf.splice(i, 1); continue; }
+      p.age += dt;
+      if (p.tg && p.age > 0.22) {   // nilüfere doğru yumuşak çekim; varınca orada söner
+        const w = Math.min(1, (p.age - 0.22) * 2.2), ax = (p.tx - p.x) * 9 - p.vx * 3.2, ay = (p.ty - p.y) * 9 - p.vy * 3.2;
+        p.vx += ax * w * dt; p.vy += ay * w * dt;
+        if (Math.abs(p.tx - p.x) + Math.abs(p.ty - p.y) < 10) p.life = Math.min(p.life, 0.18);
+      }
       p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= dr; p.vy = p.vy * dr + 70 * dt;
     }
   }
@@ -1107,7 +1160,7 @@ function drCrestPath(x) {
 function drCrest(x, tm, w) {   // w: dalgalanma ağırlığı
   const C = DR_COL;
   const sway = (Math.sin(D.ph - 1.4) * 0.035 * (1 - D.glide) + Math.sin(tm * 1.9) * 0.02) * w * (1 - D.plush);
-  x.save(); x.translate(-2, -17); x.rotate(sway - D.tilt * 0.08); x.translate(2, 17);
+  x.save(); x.translate(-2, -17); x.rotate(sway - D.tilt * 0.08); x.scale(0.9, 0.9); x.translate(2, 17);
   drCrestPath(x);
   const cg = x.createLinearGradient(-4, -34, 2, -16); cg.addColorStop(0, C.crestL); cg.addColorStop(0.42, C.crest); cg.addColorStop(1, C.crestD);
   x.fillStyle = cg; x.fill(); x.strokeStyle = C.crestD; x.lineWidth = 0.9; x.lineJoin = 'round'; x.stroke();
@@ -1127,35 +1180,41 @@ function drSide(x, tm) {   // yandan görünüş (sağa bakan yerel uzay)
   drawWing(x, true, tm);
   // uzak bacak
   x.fillStyle = C.purD;
-  x.beginPath(); x.ellipse(3, 9.6 - D.glide * 1.5, 4.2, 4, 0, 0, 6.283); x.fill();
-  x.beginPath(); x.ellipse(6, 13.2 - D.glide * 2, 3.6, 2.2, 0, 0, 6.283); x.fill();
+  x.beginPath(); x.ellipse(3, 9.6 - D.glide * 1.5, 4.4, 4.2, 0, 0, 6.283); x.fill();
+  x.beginPath(); x.ellipse(6.4, 13.6 - D.glide * 2, 4.6, 2.6, 0, 0, 6.283); x.fill();
   // kısa tombul kollar: itmede yukarı, taşırken öne, "gel" derken el sallar
   const arm = (far) => {
     const shx = far ? 6.4 : 4.6, shy = far ? -1.6 : -0.6;
     let px = lerp(far ? 10.8 : 9.2, far ? 11.5 : 9.5, pose), py = lerp(far ? 2.6 : 3.8, far ? -13 : -14, pose);
     px = lerp(px, far ? 12.6 : 11.8, grip); py = lerp(py, far ? 5.2 : 6.2, grip);
     if (!far && bk > 0.01) { const w = Math.sin(tm * 9); px = lerp(px, 11.5 + w * 1.8, bk); py = lerp(py, -8 - w * 2.6, bk); }
-    x.strokeStyle = C.line; x.lineWidth = 5.4; x.lineCap = 'round';
+    x.strokeStyle = C.line; x.lineWidth = 6.2; x.lineCap = 'round';
     x.beginPath(); x.moveTo(shx, shy); x.lineTo(px, py); x.stroke();
-    x.strokeStyle = far ? C.purD : C.pur; x.lineWidth = 4.2; x.stroke();
-    x.fillStyle = far ? C.pur : C.purL; x.beginPath(); x.arc(px, py, 1.5, 0, 6.283); x.fill();
+    x.strokeStyle = far ? C.purD : C.pur; x.lineWidth = 5; x.stroke();
+    x.fillStyle = far ? C.pur : C.purL; x.beginPath(); x.arc(px, py, 1.7, 0, 6.283); x.fill();
   };
   if (pose > 0.3) { arm(true); arm(false); } else arm(true);
   // sırt dikenleri, gövde, karın
   drBlobs(x, DR_SPINE_S, C.crest, C.crestD, 1.3);
   const bg = x.createRadialGradient(0, -2, 1, -1, 4, 14);
   bg.addColorStop(0, C.purL); bg.addColorStop(0.6, C.pur); bg.addColorStop(1, C.purD);
-  x.fillStyle = bg; x.beginPath(); x.ellipse(-0.5, 4, 9.6, 10.4, -0.1, 0, 6.283); x.fill();
+  const bodyP = () => {   // armut gövde: boyun ince, karın/kalça tombul
+    x.beginPath(); x.moveTo(-4.8, -6.4);
+    x.bezierCurveTo(-8.6, -3, -11.4, 5, -10, 10.4); x.bezierCurveTo(-8.8, 14.6, -3.4, 15.4, 0.4, 15.2);
+    x.bezierCurveTo(5.4, 15, 9.8, 12.2, 9.8, 6.6); x.bezierCurveTo(9.8, 1, 7.6, -4.4, 4.6, -6.6);
+    x.bezierCurveTo(1.6, -8.6, -2.6, -8.4, -4.8, -6.4); x.closePath();
+  };
+  x.fillStyle = bg; bodyP(); x.fill();
   x.strokeStyle = C.line; x.lineWidth = 0.8; x.stroke();
-  x.save(); x.beginPath(); x.ellipse(-0.5, 4, 9.6, 10.4, -0.1, 0, 6.283); x.clip();
-  drBelly(x, 7.4, 3.4, 5.4, 11.6, -0.12, D.plush);
+  x.save(); bodyP(); x.clip();
+  drBelly(x, 7.2, 3.6, 5.6, 12.4, -0.14, D.plush);
   x.restore();
   // yakın bacak (taşırken arka ayakla Feza'nın elini tutar)
   const lg = D.glide * 2;
-  x.fillStyle = C.pur; x.beginPath(); x.ellipse(-2.8 - grip * 2.6, 9 - lg * 0.5 + grip * 2, 5.4, 5.2, -0.3 - grip * 0.5, 0, 6.283); x.fill();
+  x.fillStyle = C.pur; x.beginPath(); x.ellipse(-2.8 - grip * 2.8, 9 - lg * 0.5 + grip * 2.2, 5.4, 5.2, -0.3 - grip * 0.5, 0, 6.283); x.fill();
   x.strokeStyle = C.line; x.lineWidth = 0.8; x.stroke();
   const fx = lerp(0.2, DR_PAW[0] + 0.6, grip), fy = lerp(13.4 - lg, DR_PAW[1] - 0.8, grip);
-  x.fillStyle = C.purL; x.beginPath(); x.ellipse(fx, fy, 4.4, 2.6 + grip * 0.3, 0.05 + grip * 1.1, 0, 6.283); x.fill(); x.stroke();
+  x.fillStyle = C.purL; x.beginPath(); x.ellipse(fx + 0.6 * (1 - grip), fy + 0.4 * (1 - grip), 5.4, 3 + grip * 0.2, 0.05 + grip * 1.1, 0, 6.283); x.fill(); x.stroke();
   if (pose <= 0.3) arm(false);
 
   drawWing(x, false, tm);
@@ -1262,6 +1321,7 @@ function drawDragon(tm) {
     x.save(); x.globalCompositeOperation = 'lighter'; x.lineCap = 'round';
     for (let i = 1; i < D.trail.length; i++) {
       const a = D.trail[i - 1], b = D.trail[i], al = Math.min(a.life, b.life) / 0.28;
+      if (b.cut) continue;
       x.strokeStyle = `rgba(200,160,255,${0.35 * al})`; x.lineWidth = 16 * al;
       x.beginPath(); x.moveTo(a.x, a.y); x.lineTo(b.x, b.y); x.stroke();
       x.strokeStyle = `rgba(255,235,255,${0.6 * al})`; x.lineWidth = 4 * al; x.stroke();
