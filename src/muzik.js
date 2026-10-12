@@ -13,6 +13,12 @@
    "şenlik"e döner (akor her ölçüde, neşeli tuba "ım-pa"). Feza'nın peşindeki uyanık Pofuduklar (geçit) için
    zıplayan bir "bup" motifi: kaç Pofuduk varsa o kadar dolu, Feza durunca kısılır; finalde dans ederler.
    Adımlar feza.js'in 'adim' {x,y,hiz,inis} olayıyla, yüzeye göre: yosun / dal (ızgara 2) / nilüfer (sulu) / Pofuduk.
+   Besteler (PARCA / TEMA / FINAL_MEL): iki motif her şeyi taşır – Feza'nın sallanan "üç–iki–bir"i ve Pırıl'ın altılı
+   sıçrayışı (A–F#'–E'–D'). Başlık/giriş: "Feza ve Pırıl" ana teması (3/4 müzik kutusu, ilk dokunuşta yumuşakça başlar);
+   Pırıl uyanınca onun teması (çelesta). Her bölgenin A/B temaları motiflerden; döngüler A → B → A çelesta → B seyrek.
+   Pırıl ışık üflerken, Feza'yı kurtarırken ve sabah göz kırparken motifi o anki akora oturtulup alıntılanır.
+   Büyük Pofuduk uyanınca şenlik polkası (ım-pa tuba); finalde dans, sonra doruk: Pırıl'ın teması tüm orkestrayla,
+   sabah olunca tema kaldığı yerden müzik kutusunda sürer.
    Zamanlama: 2.4 sn'lik ölçüler önceden planlanır (look-ahead), ses sayısı sınırlı, her nota zarflı (çıt yok),
    son katta limiter. ?sessiz → hiç ses yok.
 
@@ -228,6 +234,7 @@ const AU = (() => {
   // ───────────────────────── çalgılar ─────────────────────────
   // müzik kutusu / çan: temel + çabuk sönen üst kısmi sesler
   function zil(f, t, vol, dec, pan, hedef, gecikme) {
+    if (test && test.log && oncelikli) test.log.push(['z', +t.toFixed(2), Math.round(69 + 12 * Math.log2(f / 440)), progAd]);
     const h2var = f * 4.2 < 14000 && vol > 0.012;
     if (!yerVar(h2var ? 3 : 2, t, t + dec, false, 1)) return;
     ek(t + dec * 0.36); if (h2var) ek(t + dec * 0.14);
@@ -240,6 +247,7 @@ const AU = (() => {
   }
   // yumuşak piyano / çelesta: üçgen + oktav, kararan süzgeç
   function tus(n, t, vol, dec, pan, parlak, hedef) {
+    if (test && test.log && oncelikli) test.log.push(['c', +t.toFixed(2), n, progAd]);
     if (!yerVar(2, t, t + dec, false, 1)) return;
     ek(t + dec * 0.5);
     const f = NOTE(n);
@@ -1210,7 +1218,7 @@ const AU = (() => {
   // çevrimdışı deneme (OfflineAudioContext): AU._dene(ctx, sure, senaryo(t) → {durum, bolge, light, uyku}, olaylar)
   let sonTestMod = null, solo = null;
   function dene(ctx, sure, senaryo, olaylar, ayar) {
-    test = { t: 0 }; solo = ayar && ayar.solo || null;
+    test = { t: 0, log: ayar && ayar.log ? [] : null }; solo = ayar && ayar.solo || null;
     kur(ctx);
     okuFn = () => senaryo(test.t);
     olaylar = (olaylar || []).slice().sort((a, b) => a[0] - b[0]);
@@ -1239,6 +1247,6 @@ const AU = (() => {
     akor: () => (ac ? akorAt(zaman()).pad.slice() : [50, 54, 57, 61, 64]),
     get bolge() { return bolge; }, get mod() { return mod; },
     get _tepe() { return { tepe: yukTepe, dusen: yukDus }; }, _yuzey: e => yuzeyBul(e || null),   // deneme: aynı anda en çok geçici ses (ölçüm)
-    _dene: dene, _tema: () => ({ PARCA, TEMA, FINAL_MEL, PROG, AK }),
+    _dene: dene, _tema: () => ({ PARCA, TEMA, FINAL_MEL, PROG, AK }), _log: () => test && test.log,
   };
 })();

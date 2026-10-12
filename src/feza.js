@@ -342,28 +342,31 @@ function fzLocks(x, D, tm, hx, hy, k, mode) {
 // saç kütlesi (tutamların altında); yollar tutamlarla aynı yönde (birleşik kırpma delik açmasın)
 function fzMass(x, front, bx, by) {
   if (front) {
-    x.moveTo(8.9, -2.8); x.quadraticCurveTo(10.5, -7.6, 8.4, -11.4 + by * 0.6);
+    // yanlar kulağın üstünü örter (fotoğraftaki gibi), kulak memesi görünür
+    x.moveTo(9.5, 0.2); x.quadraticCurveTo(10.8, -7.6, 8.4, -11.4 + by * 0.6);
     x.quadraticCurveTo(5.6 + bx, -14.5 + by * 0.5, 1.0, -14.5 + by * 0.5); x.quadraticCurveTo(-3.6 + bx, -14.5 + by * 0.5, -7.4, -11.8 + by * 0.6);
-    x.quadraticCurveTo(-10.5, -7.8, -8.9, -2.8); x.lineTo(-7.8, -3.4);
-    x.quadraticCurveTo(-7.5, -6.6, -4.0, -8.4); x.quadraticCurveTo(0, -9.4, 4.0, -8.4); x.quadraticCurveTo(7.5, -6.6, 7.8, -3.4);
+    x.quadraticCurveTo(-10.8, -7.8, -9.5, 0.2); x.quadraticCurveTo(-8.6, 0.2, -8.0, -0.6);
+    x.quadraticCurveTo(-7.8, -6.2, -4.0, -8.4); x.quadraticCurveTo(0, -9.4, 4.0, -8.4); x.quadraticCurveTo(7.8, -6.2, 8.0, -0.6); x.quadraticCurveTo(8.6, 0.2, 9.5, 0.2);
   } else {
     x.moveTo(8.2, -6.4); x.quadraticCurveTo(9.4, -10.6 + by, 5.4, -12.4 + by);
     x.quadraticCurveTo(1.2 + bx, -14.0 + by, -3.4, -12.9 + by); x.quadraticCurveTo(-8.2 + bx, -12.0 + by, -9.8, -6.8);
-    x.quadraticCurveTo(-10.8, -2.0, -9.0, 1.8); x.quadraticCurveTo(-8.3, 3.5, -6.9, 3.7); x.lineTo(-5.2, 2.4);
-    x.quadraticCurveTo(-4.4, -0.6, -2.4, -1.0); x.quadraticCurveTo(-1.4, -3.8, 0.8, -5.2);
+    // ense: kulağın arkasından boyuna doğru uzun (kısa "mullet"), kulağın üstünü örter
+    x.quadraticCurveTo(-11.0, -1.0, -9.3, 2.6); x.quadraticCurveTo(-8.0, 4.6, -6.2, 4.4); x.lineTo(-5.0, 3.6);
+    x.quadraticCurveTo(-4.7, 1.8, -4.1, 0.8); x.quadraticCurveTo(-2.4, -0.3, -0.4, 0.4); x.quadraticCurveTo(0.2, -2.6, 0.8, -5.2);
   }
   x.closePath();
 }
 // yan görünüş (sağa bakar)
 const FZ_HS_NAPE = [
-  [-6.4, -4.0, -9.0, -1.0, -7.9, 2.0, -8.6, 3.6, 2.1, 1.05, 1, 0.8], [-4.8, -3.4, -6.8, -0.6, -5.4, 2.0, -6.6, 4.2, 2.0, 1.0, 0, 0.7]];
+  [-7.0, -3.0, -10.0, 0.6, -9.2, 5.4, -11.3, 5.5, 1.9, 0.7, 1, 0.9], [-5.6, -0.6, -7.6, 2.6, -7.0, 7.0, -9.1, 6.8, 1.8, 0.7, 0, 0.8],
+  [-4.8, 1.0, -5.6, 3.8, -4.8, 6.6, -6.5, 6.7, 1.3, 0.6, 1, 0.7]];
 const FZ_HS = [
   [-5.0, -11.2, -7.6, -12.2, -9.8, -9.8, -10.0, -6.6, 2.4, 1.15, 2, 0.6],
-  [-7.0, -8.0, -10.6, -5.2, -9.2, -1.4, -9.2, 1.4, 2.4, 1.15, 1, 0.7],
-  [-4.2, -9.6, -8.2, -6.0, -6.4, -2.2, -7.6, 2.0, 2.4, 1.1, 2, 0.6],
+  [-7.0, -8.0, -10.8, -4.6, -9.8, 0.4, -10.8, 3.0, 2.3, 0.9, 1, 0.75],
+  [-4.2, -9.6, -8.2, -5.6, -6.6, -0.4, -8.2, 2.6, 2.3, 0.95, 2, 0.65],
   [-4.5, -11.8, -2.0, -14.8, 2.6, -14.6, 6.0, -12.6, 2.4, 1.2, 3, 0.45],
-  [-1.6, -11.0, -4.4, -7.4, -1.6, -4.6, -3.2, -0.6, 2.6, 1.2, 3, 0.5],
-  [0.8, -10.4, -0.8, -7.4, 1.4, -5.0, -0.6, -2.0, 1.7, 0.9, 2, 0.4]];
+  [-1.6, -11.0, -4.4, -7.0, -2.0, -3.8, -4.3, 0.2, 2.5, 1.05, 3, 0.5],
+  [0.8, -10.4, -0.8, -7.2, 1.2, -4.2, -0.9, 0.0, 1.7, 0.9, 2, 0.4]];
 const FZ_HS_FR = [
   [0.0, -12.8, 1.2, -9.6, -0.6, -7.6, 1.4, -5.4, 2.4, 1.1, 2, 0.55],
   [2.2, -13.2, 4.0, -10.2, 2.4, -8.0, 4.2, -5.0, 2.5, 1.15, 3, 0.6],
@@ -372,11 +375,11 @@ const FZ_HS_FR = [
   [3.2, -12.9, 4.4, -10.2, 3.4, -8.2, 5.4, -6.4, 1.0, 0.6, 3, 0.6]];
 // önden görünüş (kakül sağdan ayrılıp sola taranmış)
 const FZ_HF_NAPE = [
-  [-7.0, -3.4, -9.2, -1.8, -8.8, 0.0, -10.4, 0.9, 1.15, 0.6, 1, 0.6], [7.0, -3.4, 9.2, -1.8, 8.8, 0.0, 10.4, 0.9, 1.15, 0.6, 1, 0.6]];
+  [-7.4, -4.0, -10.0, -1.0, -9.6, 2.4, -11.8, 2.6, 1.3, 0.6, 1, 0.75], [7.4, -4.0, 10.0, -1.0, 9.6, 2.4, 11.8, 2.6, 1.3, 0.6, 1, 0.75]];
 const FZ_HF = [
   [0.6, -13.6, 2.4, -15.2, 4.8, -15.1, 6.6, -13.4, 2.1, 1.5, 3, 0.2],
-  [-6.4, -11.0, -9.8, -8.6, -8.4, -4.8, -10.6, -2.4, 1.85, 0.75, 2, 0.6], [6.4, -11.0, 9.8, -8.6, 8.4, -4.8, 10.6, -2.4, 1.85, 0.75, 2, 0.6],
-  [-4.4, -12.2, -8.2, -9.2, -6.4, -6.0, -7.8, -2.8, 2.2, 1.0, 3, 0.5], [5.0, -12.2, 8.4, -9.2, 6.8, -6.0, 8.0, -3.0, 2.0, 0.95, 2, 0.5],
+  [-6.4, -11.0, -10.0, -8.4, -9.0, -3.0, -11.6, -1.4, 1.8, 0.7, 2, 0.65], [6.4, -11.0, 10.0, -8.4, 9.0, -3.0, 11.6, -1.4, 1.8, 0.7, 2, 0.65],
+  [-4.4, -12.2, -8.4, -9.0, -6.8, -4.8, -8.8, -1.6, 2.2, 1.0, 3, 0.5], [5.0, -12.2, 8.6, -9.0, 7.2, -4.8, 9.0, -1.8, 2.0, 0.95, 2, 0.5],
   [2.8, -12.6, -0.6, -15.0, -4.6, -14.6, -7.6, -11.6, 2.6, 1.25, 3, 0.45], [4.2, -12.6, 6.8, -14.2, 8.6, -12.6, 9.1, -9.4, 2.5, 1.2, 3, 0.45]];
 const FZ_HF_FR = [
   [1.4, -13.4, -3.0, -12.6, -6.8, -10.0, -7.0, -5.8, 2.5, 1.15, 2, 0.6],
@@ -388,31 +391,39 @@ const FZ_HF_FR = [
   [2.8, -13.4, 0.8, -11.0, -2.4, -9.2, -2.2, -6.2, 0.9, 0.55, 3, 0.6]];
 // ── dönüşte saç: tutamlar yandan görünüşteki yerlerinden önden görünüşteki yerlerine kayar (çizim değişmez, saç döner).
 // Her yuva bir yan tutamı ile bir ön tutamı eşler (en yakın komşu; eşi kalmayan tutamlara da yuva açılır).
+// Önden görünüş EKRANA göre sabittir (kakül hep aynı yana taranmış): yön değişip tuval aynalanınca (dönüşün ortası)
+// önden tutamlar da aynalanmış veriden okunur, böylece kakül hiçbir karede yer değiştirmez. Yuva eşleştirmesi iki
+// durum için ayrı ayrı (normal / aynalı önden düzen) yapılır.
 const FZ_HSA = FZ_HS_NAPE.concat(FZ_HS, FZ_HS_FR), FZ_HFA = FZ_HF_NAPE.concat(FZ_HF, FZ_HF_FR);
 const FZ_SN = FZ_HS_NAPE.length, FZ_FN = FZ_HF_NAPE.length;
-const FZ_SLOT = (() => {
+const fzMirL = l => { const m = l.slice(); m[0] = -m[0]; m[2] = -m[2]; m[4] = -m[4]; m[6] = -m[6]; return m; };
+const FZ_HFM = [[FZ_HF_NAPE, FZ_HF, FZ_HF_FR], [FZ_HF_NAPE.map(fzMirL), FZ_HF.map(fzMirL), FZ_HF_FR.map(fzMirL)]];
+function fzSlots(HFA) {
   const d = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]) + Math.hypot(a[4] - b[4], a[5] - b[5]) + Math.hypot(a[6] - b[6], a[7] - b[7]);
   const near = (l, L) => { let bi = 0, bd = 1e9; L.forEach((m, j) => { const q = d(l, m); if (q < bd) { bd = q; bi = j; } }); return bi; };
   const sl = [], usedS = new Set();
-  FZ_HFA.forEach((f, j) => { const i = near(f, FZ_HSA); sl.push([i, j]); usedS.add(i); });
-  FZ_HSA.forEach((sv, i) => { if (!usedS.has(i)) sl.push([i, near(sv, FZ_HFA)]); });
-  return sl.map(([i, j], n) => ({ i, j, ph: n * 1.9 + 0.7, l: new Array(13).fill(0) }));
-})();
-// çizim sıraları: yanda (ense yuvaları kütlenin arkasında), önden (ense yuvaları başın arkasında)
-const FZ_SO = FZ_SLOT.slice().sort((a, b) => a.i - b.i || a.j - b.j), FZ_FO = FZ_SLOT.slice().sort((a, b) => a.j - b.j || a.i - b.i);
-const FZ_SB = [FZ_SO.filter(q => q.i < FZ_SN).map(q => q.l), FZ_SO.filter(q => q.i >= FZ_SN).map(q => q.l)];
-const FZ_FB = [FZ_FO.filter(q => q.j < FZ_FN).map(q => q.l), FZ_FO.filter(q => q.j >= FZ_FN).map(q => q.l)];
+  HFA.forEach((f, j) => { const i = near(f, FZ_HSA); sl.push([i, j]); usedS.add(i); });
+  FZ_HSA.forEach((sv, i) => { if (!usedS.has(i)) sl.push([i, near(sv, HFA)]); });
+  const S = sl.map(([i, j], n) => ({ i, j, ph: n * 1.9 + 0.7, l: new Array(13).fill(0) }));
+  // çizim sıraları: yanda (ense yuvaları kütlenin arkasında), önden (ense yuvaları başın arkasında)
+  const SO = S.slice().sort((a, b) => a.i - b.i || a.j - b.j), FO = S.slice().sort((a, b) => a.j - b.j || a.i - b.i);
+  return { HFA, sl: S, SB: [SO.filter(q => q.i < FZ_SN).map(q => q.l), SO.filter(q => q.i >= FZ_SN).map(q => q.l)],
+    FB: [FO.filter(q => q.j < FZ_FN).map(q => q.l), FO.filter(q => q.j >= FZ_FN).map(q => q.l)] };
+}
+const FZ_HV = [fzSlots(FZ_HFA), fzSlots(FZ_HFA.map(fzMirL))];
 const FZ_NONE = [];
-function fzHairMix(w) {   // w: 0 yan … 1 önden
-  for (const q of FZ_SLOT) {
-    const a = FZ_HSA[q.i], b = FZ_HFA[q.j], l = q.l;
+let fzFS = 1;   // tuvalin yatay işareti (sola bakarken -1); önden düzen buna göre aynalanır
+function fzHairMix(w, V) {   // w: 0 yan … 1 önden
+  for (const q of V.sl) {
+    const a = FZ_HSA[q.i], b = V.HFA[q.j], l = q.l;
     for (let k = 0; k < 12; k++) l[k] = a[k] + (b[k] - a[k]) * w;
     l[10] = Math.round(l[10]); l[12] = q.ph;
   }
 }
+function fzMassF(x, bx, by) { x.save(); x.scale(fzFS, 1); fzMass(x, true, bx * fzFS, by); x.restore(); }   // önden kütle (ekrana göre sabit)
 // kırpılmış gölgelendirme: alt taraf koyu, tepe sıcak, kafanın eğrisini izleyen yumuşak parlak bant
 function fzHairShade(x, front, tm, hx, hy, bx, by, A, B) {
-  x.save(); x.beginPath(); fzMass(x, front, bx, by); fzLocks(x, A, tm, hx, hy, 2, 1); fzLocks(x, B, tm, hx, hy, 3, 1); x.clip();
+  x.save(); x.beginPath(); if (front) fzMassF(x, bx, by); else fzMass(x, false, bx, by); fzLocks(x, A, tm, hx, hy, 2, 1); fzLocks(x, B, tm, hx, hy, 3, 1); x.clip();
   // parlak halka: kafanın eğrisini izleyen, kenarları yumuşak bant (tutam kenarlarında kırılır)
   const cx = front ? 0.4 : 0.2, cy = -1.4 + hy * 0.15, r = front ? 10.2 : 10.0;
   const rg = x.createRadialGradient(cx, cy, r - 2.6, cx, cy, r + 1.6);
@@ -428,15 +439,15 @@ function fzHairShade(x, front, tm, hx, hy, bx, by, A, B) {
 function fzHair(x, tm) {
   const w = fzQ.a_hw || 0, hx = fzQ.a_hx * (1 - 0.5 * w), hy = fzQ.a_hy, bx = hx * 0.25, by = hy * 0.3;
   let A = FZ_HS, B = FZ_HS_FR, N = FZ_HS_NAPE;
-  if (w > 0.001) { fzHairMix(w); N = FZ_SB[0]; A = FZ_SB[1]; B = FZ_NONE; }
+  if (w > 0.001) { const V = FZ_HV[fzFS < 0 ? 1 : 0]; fzHairMix(w, V); N = V.SB[0]; A = V.SB[1]; B = FZ_NONE; }
   fzLocks(x, N, tm, hx, hy, 0, 0);
   const mg = x.createLinearGradient(0, -14, 0, 5);
   mg.addColorStop(0, FZ.hair[3]); mg.addColorStop(0.45, FZ.hair[2]); mg.addColorStop(1, FZ.hair[1]);
   x.fillStyle = mg; x.beginPath(); fzMass(x, false, bx, by); x.fill();
-  if (w > 0.001) { x.globalAlpha = w * w; x.beginPath(); fzMass(x, true, bx, by); x.fill(); }
+  if (w > 0.001) { x.globalAlpha = w * w; x.beginPath(); fzMassF(x, bx, by); x.fill(); }
   x.globalAlpha = 1;
   fzLocks(x, A, tm, hx, hy, 2, 0); fzLocks(x, B, tm, hx, hy, 3, 0);
-  fzHairShade(x, w > 0.5, tm, hx, hy, bx, by, A, B);
+  fzHairShade(x, false, tm, hx, hy, bx, by, A, B);
   // birkaç ince uçuşan tel
   x.strokeStyle = 'rgba(135,92,58,0.75)'; x.lineWidth = 0.22;
   x.beginPath(); x.moveTo(-3.4, -13.8); x.quadraticCurveTo(-4.4, -16.4 + hy * 0.4, -6.8 + hx * 0.5, -16.2 + hy * 0.5);
@@ -444,23 +455,24 @@ function fzHair(x, tm) {
 }
 function fzHairFront(x, tm, back) {
   const w = fzQ.a_hw === undefined ? 1 : fzQ.a_hw, hx = fzQ.a_hx * (1 - 0.5 * w), hy = fzQ.a_hy, H = FZ.hair, bx = hx * 0.25, by = hy * 0.3;
-  let A = FZ_HF, B = FZ_HF_FR, N = FZ_HF_NAPE;
-  if (w < 0.999) { fzHairMix(w); N = FZ_FB[0]; A = FZ_FB[1]; B = FZ_NONE; }
+  const HM = FZ_HFM[fzFS < 0 ? 1 : 0];
+  let A = HM[1], B = HM[2], N = HM[0];
+  if (w < 0.999) { const V = FZ_HV[fzFS < 0 ? 1 : 0]; fzHairMix(w, V); N = V.FB[0]; A = V.FB[1]; B = FZ_NONE; }
   if (back) {   // başın arkasında kalan saç ve kısa, yumuşak ense uçları
     x.fillStyle = H[1]; x.beginPath();
-    x.moveTo(8.8, 0.2); x.quadraticCurveTo(10.6, -6.0, 7.4, -11.8); x.quadraticCurveTo(0, -16.0, -7.4, -11.8);
-    x.quadraticCurveTo(-10.6, -6.0, -8.8, 0.2); x.quadraticCurveTo(0, 2.2, 8.8, 0.2); x.closePath(); x.fill();
+    x.moveTo(9.2, 1.4); x.quadraticCurveTo(10.9, -6.0, 7.4, -11.8); x.quadraticCurveTo(0, -16.0, -7.4, -11.8);
+    x.quadraticCurveTo(-10.9, -6.0, -9.2, 1.4); x.quadraticCurveTo(0, 3.0, 9.2, 1.4); x.closePath(); x.fill();
     fzLocks(x, N, tm, hx, hy, 0, 0);
     return;
   }
   const mg = x.createLinearGradient(0, -15, 0, 0);
   mg.addColorStop(0, H[3]); mg.addColorStop(0.5, H[2]); mg.addColorStop(1, H[1]);
-  x.fillStyle = mg; x.beginPath(); fzMass(x, true, bx, by); x.fill();
+  x.fillStyle = mg; x.beginPath(); fzMassF(x, bx, by); x.fill();
   fzLocks(x, A, tm, hx, hy, 2, 0); fzLocks(x, B, tm, hx, hy, 3, 0);
-  fzHairShade(x, w > 0.5, tm, hx, hy, bx, by, A, B);
+  fzHairShade(x, true, tm, hx, hy, bx, by, A, B);
   x.strokeStyle = 'rgba(135,92,58,0.75)'; x.lineWidth = 0.22;
-  x.beginPath(); x.moveTo(1.6, -14.8); x.quadraticCurveTo(0.8, -17.2 + hy * 0.4, -1.8 + hx * 0.5, -17.0 + hy * 0.5);
-  x.moveTo(-9.6, -7.0); x.quadraticCurveTo(-11.8, -6.0, -11.8 + hx * 0.6, -3.4 + hy * 0.5); x.stroke();
+  const fs = fzFS; x.beginPath(); x.moveTo(1.6 * fs, -14.8); x.quadraticCurveTo(0.8 * fs, -17.2 + hy * 0.4, -1.8 * fs + hx * 0.5, -17.0 + hy * 0.5);
+  x.moveTo(-9.6 * fs, -7.0); x.quadraticCurveTo(-11.8 * fs, -6.0, -11.8 * fs + hx * 0.6, -3.4 + hy * 0.5); x.stroke();
 }
 function fzHead(x, R, tm) {
   // kafa ve yüz şekli: kafatası + yanak + çene
@@ -543,7 +555,7 @@ function fzHeadFront(x, R, tm) {
   fzEye(x, 3.2, -0.4, 1.6, 2.15, R, false, -1, 1);
   x.fillStyle = 'rgba(200,120,95,0.5)'; x.beginPath(); x.ellipse(0, 2.9, 0.85, 0.38, 0, 0, 6.2832); x.fill();
   x.fillStyle = 'rgba(255,245,236,0.85)'; x.beginPath(); x.arc(0.1, 1.9, 0.4, 0, 6.2832); x.fill();
-  x.save(); x.translate(-4.6, 0.3); fzMouth(x, R, true); x.restore();
+  x.save(); x.scale(fzFS, 1); x.translate(-4.6, 0.3); fzMouth(x, R, true); x.restore();
   fzHairFront(x, tm, false);
   fzBrow(x, -4.8, -3.5, -1.8, -3.8, R, false); fzBrow(x, 4.8, -3.5, 1.8, -3.8, R, false);
 }
@@ -566,7 +578,7 @@ function fzDrawFront(x, tm) {
   x.save(); x.translate(0, hip);
   x.fillStyle = FZ.pj; x.beginPath(); x.roundRect(-6.0, -1.0, 12.0, 4.6, 2.0); x.fill();
   x.strokeStyle = FZ.pjLine; x.lineWidth = 0.4; x.beginPath(); x.moveTo(0, 1.0); x.lineTo(0, 3.6); x.stroke();
-  fzPlane(x, -3.2, 2.0, 0.65, FZ.sky, 0.2); x.fillStyle = FZ.star; fzStar(x, 3.2, 2.2, 0.45);
+  x.save(); x.scale(fzFS, 1); fzPlane(x, -3.2, 2.0, 0.65, FZ.sky, 0.2); x.fillStyle = FZ.star; fzStar(x, 3.2, 2.2, 0.45); x.restore();
   // boyun gövdenin arkasında (yakanın altında ten görünmesin)
   fzTaper(x, 0, -11.4 + by, 0, -14.6 + by, 2.4, 2.3, FZ.skinS);
   // gövde
@@ -578,7 +590,7 @@ function fzDrawFront(x, tm) {
   x.quadraticCurveTo(7.0, -5, 6.1, hb - fl * 2); x.quadraticCurveTo(0, hb + 1.1, -6.1, hb); x.closePath();
   x.fillStyle = FZ.pj; x.fill();
   x.save(); x.clip();
-  x.save(); x.translate(0.4, 1.8); x.scale(1.1, 0.92); fzPrint(x); x.restore();
+  x.save(); x.scale(fzFS, 1); x.translate(0.4, 1.8); x.scale(1.1, 0.92); fzPrint(x); x.restore();
   const sg = x.createLinearGradient(-7, 0, 7, 0);
   sg.addColorStop(0, 'rgba(70,58,110,0.3)'); sg.addColorStop(0.3, 'rgba(70,58,110,0)'); sg.addColorStop(0.7, 'rgba(70,58,110,0)'); sg.addColorStop(1, 'rgba(70,58,110,0.3)');
   x.fillStyle = sg; x.fillRect(-8, -15, 16, 19);
@@ -626,6 +638,23 @@ function fzRim(lx, ly, d, col, al) {
   fzX.globalAlpha = 1; fzX.globalCompositeOperation = 'source-over';
 }
 
+// bölgenin ışık rengi (dunya.js'in bölge ağırlıklarından): [ay kenarı, zemin yansıması]
+const FZ_AMB = { patika: [[150, 225, 255], [90, 150, 220]], pofuduk: [[255, 190, 235], [210, 120, 190]], gol: [[130, 190, 255], [70, 120, 240]],
+  dallar: [[140, 255, 225], [60, 190, 170]], sakli: [[205, 170, 255], [150, 100, 235]], aciklik: [[255, 225, 160], [235, 170, 90]] };
+const fzAmbS = ['', ''];
+const FZ_HALE = [[0, 1], [0.22, 0.55], [0.5, 0.16], [1, 0]], FZ_HALE_K = 0.24 * 0.85;   // ortak.js glow() profili × hale gücü
+function fzAmb() {
+  const w = typeof DNR !== 'undefined' && DNR ? DNR : null;
+  for (let j = 0; j < 2; j++) {
+    let r = 0, gg = 0, b = 0, t = 0;
+    if (w) for (const k in FZ_AMB) { const q = w[k] || 0; if (q > 0) { const c = FZ_AMB[k][j]; r += c[0] * q; gg += c[1] * q; b += c[2] * q; t += q; } }
+    if (t < 0.01) { const c = FZ_AMB.patika[j]; r = c[0]; gg = c[1]; b = c[2]; t = 1; }
+    const L = j ? 0 : light * 0.35;   // gün ağarınca ay kenarı beyazlaşır
+    fzAmbS[j] = `rgb(${Math.round(lerp(r / t, 255, L))},${Math.round(lerp(gg / t, 250, L))},${Math.round(lerp(b / t, 235, L))})`;
+  }
+  return fzAmbS;
+}
+
 function drawFeza(tm) {
   if (P.fade > 0 && !P.respawned) return;
   if (!P.a_R) fezaInit();
@@ -642,24 +671,44 @@ function drawFeza(tm) {
   x.setTransform(S, 0, 0, S, SZ / 2 * S, OY * S);
   x.scale(fsc * R.sx * FZ_SC, R.sy * FZ_SC);
   if (P.a_spin) { x.translate(0, -30); x.rotate(P.a_spin); x.translate(0, 30); }
-  if (front) fzDrawFront(x, tm); else fzDraw(x, tm);
+  fzFS = P.a_side < 0 ? -1 : 1;
+  try { if (front) fzDrawFront(x, tm); else fzDraw(x, tm); } finally { fzFS = 1; }
   // çizim yeri: (varsa) ara değerli fizik konumu + animasyon kayması (Pırıl taşırken havada)
   const bx = (P.rx ?? P.x) + P.a_ox, by = (P.ry ?? P.y) + P.a_oy;
-  // ışıklandırma: ortam rengi (aşağıdan mavi) + Pırıl'ın mor ışığı
+  if (window.fzDbgHook) window.fzDbgHook(fzC, (bx - cam.x - SZ / 2) * S, (by - cam.y - OY) * S);   // yalnız test (renk ölçümü)
+  // ışıklandırma: renk tonu değil, değer. Saç kestane, ten sıcak kalsın; sahnenin rengi yalnız ince kenar ışıklarında.
+  // 1) ayaklara doğru koyulaşan, nötre yakın gölge (gece mavisi saçı/teni mora çevirmesin)
   x.setTransform(1, 0, 0, 1, 0, 0);
   x.globalCompositeOperation = 'source-atop';
-  const lg = x.createLinearGradient(0, need * 0.1, 0, need);
-  lg.addColorStop(0, 'rgba(20,40,90,0.12)'); lg.addColorStop(1, C('l3', 0.55 - light * 0.2));
+  const lg = x.createLinearGradient(0, need * 0.1, 0, need), nt = 1 - light;
+  lg.addColorStop(0, `rgba(34,18,12,${(0.06 + 0.06 * nt).toFixed(3)})`); lg.addColorStop(0.55, `rgba(22,16,24,${(0.12 + 0.1 * nt).toFixed(3)})`);
+  lg.addColorStop(1, `rgba(14,16,32,${(0.3 + 0.14 * nt).toFixed(3)})`);
   x.fillStyle = lg; x.fillRect(0, 0, px, px);
-  const dx = (D.x - bx) * S + SZ / 2 * S, dy = (D.y - by) * S + OY * S;
-  const rg = x.createRadialGradient(dx, dy, 0, dx, dy, need * 0.9);
-  rg.addColorStop(0, `rgba(200,150,255,${(0.2 * (1 - 0.5 * (P.a_tasW || 0))).toFixed(3)})`); rg.addColorStop(1, 'rgba(200,150,255,0)');
-  x.fillStyle = rg; x.fillRect(0, 0, px, px);
+  // 2) Pırıl'ın halesi (oyun.js omPirilHale: '#b88aff' r150 ×0.24 ve '#ffe0ff' r40 ×0.11, 'lighter') Feza'nın üstüne
+  //    mor ışık EKLER; saç ve ten mora döner. Aynı haleyi burada önceden ÇIKARIRIZ ('difference' = çıkarma, taban ≥ ek
+  //    olduğundan), ekleme sonrası renk doğal kalır. Pırıl'ın ışığından yalnız küçük leylak kenar ışığı (3) kalır.
+  const dx = (D.x - bx) * S + SZ / 2 * S, dy = (D.y - by) * S + OY * S, pd = Math.hypot(D.x - bx, D.y - (by - 30));
+  if (pd < 190) {
+    fzRX.globalCompositeOperation = 'copy'; fzRX.drawImage(fzC, 0, 0); fzRX.globalCompositeOperation = 'source-over';
+    x.globalCompositeOperation = 'difference';
+    const k = FZ_HALE_K;
+    let rg = x.createRadialGradient(dx, dy, 0, dx, dy, 150 * S);
+    for (const [u, f] of FZ_HALE) rg.addColorStop(u, `rgb(${Math.round(184 * f * k)},${Math.round(138 * f * k)},${Math.round(255 * f * k)})`);
+    x.fillStyle = rg; x.fillRect(0, 0, px, px);
+    if (pd < 60) {
+      rg = x.createRadialGradient(dx, dy, 0, dx, dy, 40 * S);
+      for (const [u, f] of FZ_HALE) rg.addColorStop(u, `rgb(${Math.round(255 * f * k * 0.46)},${Math.round(224 * f * k * 0.46)},${Math.round(255 * f * k * 0.46)})`);
+      x.fillStyle = rg; x.fillRect(0, 0, px, px);
+    }
+    x.globalCompositeOperation = 'destination-in'; x.drawImage(fzR, 0, 0);
+  }
   x.globalCompositeOperation = 'source-over';
-  // kenar ışıkları: sağ üstteki ay + Pırıl
-  fzRim(0.72, -0.69, 0.75 * S, C('rim'), 0.75 - light * 0.25);
+  // 3) kenar ışıkları: sağ üstteki ay (bölgenin rengiyle), aşağıdan zeminin yansıması, Pırıl'ın küçük leylak kenarı
+  const amb = fzAmb();
+  fzRim(0.72, -0.69, 0.75 * S, amb[0], 0.7 - light * 0.25);
+  fzRim(-0.25, 0.97, 0.6 * S, amb[1], 0.4);
   const ddx = D.x - bx, ddy = D.y - (by - 38), dd = Math.hypot(ddx, ddy) || 1;
-  fzRim(ddx / dd, ddy / dd, 0.75 * S, '#d2a6ff', 0.6 * clamp(1.2 - dd / 220, 0, 1));
+  fzRim(ddx / dd, ddy / dd, 0.7 * S, '#e2b8ff', 0.5 * clamp(1.2 - dd / 220, 0, 1));
   // Pırıl taşırken: sıcak bir kenar ışığı ve hafif sıcak dolgu (karanlık boşlukta solgun görünmesin, net okunsun)
   const tw = P.a_tasW || 0;
   if (tw > 0.02) {
