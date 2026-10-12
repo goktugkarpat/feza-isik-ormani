@@ -1,71 +1,114 @@
 /* bolum.js – "Işık Ormanı: Uykucu Pofuduklar" bölümünün yerleşimi (zemin ızgarası + nesneler).
-   Sözleşme: src/SPEC.md › "Bölüm". Bu dosya yalnız VERİ üretir; davranış/çizim ilgili modüllerdedir.
-   Izgara: 0 boş · 1 zemin (katı) · 2 üstten geçilen dal/adacık. Satır 0 en üst. Bir kare T=40 birim. */
+   Sözleşme: src/SPEC.md. Bu dosya yalnız VERİ üretir; davranış/çizim ilgili modüllerdedir.
+   Izgara: 0 boş · 1 zemin (katı) · 2 üstten geçilen dal. Satır 0 en üst. Bir kare T=40 birim.
+   Zemin her sütunda "yükseklik" olarak verilir (alttan kaç kare dolu); ana yol h=4 (yüzey satırı 18, y=720).
+   Fizik payları (SPEC): tek zıplama ≈121 birim (3 kare) yükseğe, ≈157 birim (≈4 kare) ileriye;
+   çift zıplama ≈217 birim (5,4 kare); minder 1080 → ≈265; Büyük Pofuduk 1500 → ≈510.
+   Tasarım kuralları: tek zıplamalık boşluklar ≤ 2 kare, basamaklar ≤ 2 kare; tek çift-zıplama yeri (4 kare);
+   düşülebilen tek yer göl (Pırıl geri taşır). */
 'use strict';
-const ROWS = 22, COLS = 250;
+const ROWS = 22, COLS = 336;
 const grid = Array.from({ length: ROWS }, () => new Uint8Array(COLS));
 const ground = (a, b, h) => { for (let x = a; x <= b; x++) for (let y = ROWS - h; y < ROWS; y++) grid[y][x] = 1; };
 const plat = (a, b, row) => { for (let x = a; x <= b; x++) grid[row][x] = 2; };
 const topOf = c => { for (let y = 0; y < ROWS; y++) if (grid[y][c] === 1) return y; return ROWS; };
 const cell = (tx, ty) => (tx < 0 || tx >= COLS) ? 1 : (ty < 0 || ty >= ROWS) ? 0 : grid[ty][tx];
-const yuzey = c => topOf(c) * T;                         // c sütununun zemin üstü (dünya y)
-const nx = c => c * T + T / 2;                            // sütun ortası (dünya x)
+const yuzey = c => topOf(Math.floor(c)) * T;              // c sütununun zemin üstü (dünya y)
+const nx = c => c * T + T / 2;                             // sütun ortası (dünya x)
 function nesne(tip, c, y, o = {}) { const n = Object.assign({ tip, x: nx(c), y, id: tip + NESNELER.length }, o); NESNELER.push(n); return n; }
+const blDal = row => row * T;                              // dalın üstü (dünya y)
 
-// ── 1. Uyanış Patikası (0–40): yürü, zıpla, ilk çiçek ──
-ground(0, 22, 4); ground(23, 29, 5); ground(30, 41, 4);
-plat(14, 16, 15);
-// ── 2. İlk Pofuduk (42–72) ──
-ground(42, 74, 4);
-// ── 3. Karanlık Göl (75–104): Pırıl ışık nefesi → nilüferler ──
-ground(75, 78, 4); ground(101, 112, 4);
-// ── 4. Yüksek Dallar (113–158): zıplatan Pofuduk, çift zıplama ──
-ground(113, 160, 4);
-plat(121, 127, 13); plat(131, 137, 10); plat(141, 146, 13);
-// ── 5. Saklı Yol (dallarda, isteğe bağlı) ──
-plat(148, 156, 9); plat(160, 168, 8); plat(172, 180, 10);
-ground(161, 200, 4);
-// ── 6. Açıklık: Büyük Pofuduk ve Işık Ağacı (200–249) ──
-ground(201, 249, 4);
-plat(209, 213, 14);
+// ── Zemin profili: [ilk sütun, son sütun, yükseklik] ──
+const BL_ZEMIN = [
+  // 1. Uyanış Patikası (0–46): düz, güvenli; minik basamaklarla küçük bir tepe
+  [0, 1, 9], [2, 2, 7], [3, 16, 4], [17, 21, 5], [22, 25, 6], [26, 29, 7], [30, 32, 6], [33, 35, 5], [36, 46, 4],
+  // 2. İlk Pofuduk (47–86): set, Pofuduk'un uyuduğu çukur, çiçekli basamak, göle iniş
+  [47, 49, 5], [50, 57, 6], [58, 65, 4], [66, 73, 5], [74, 79, 4], [80, 84, 3],
+  // 3. Karanlık Göl (85–140): kıyı (h2), su 100–126, ortada adacık, karşı kıyı
+  [85, 99, 2], [112, 115, 2], [127, 132, 2], [133, 135, 3], [136, 140, 4],
+  // 4. Yüksek Dallar (141–203): minder, yüksek dal, çift zıplama sırtı, çukur + basamak Pofuduk
+  [141, 158, 4], [159, 166, 5], [167, 176, 9], [177, 178, 8], [179, 180, 7], [181, 182, 6], [183, 189, 4], [190, 199, 7],
+  // 5. Saklı Yol (200–252): ana yol aşağıda, saklı yol dallarda
+  [200, 201, 6], [202, 203, 5], [204, 214, 4], [215, 219, 5], [220, 238, 4], [239, 242, 5], [243, 252, 4],
+  // 6. Açıklık (253–335): sakin düzlük, küçük tümsek, Büyük Pofuduk, ağacın tepesi
+  [253, 270, 4], [271, 275, 5], [276, 305, 4], [306, 307, 5], [308, 311, 6], [312, 322, 4], [323, 335, 12],
+];
+for (const [a, b, h] of BL_ZEMIN) ground(a, b, h);
+// ── Dallar (üstten geçilir): [ilk, son, satır] ──
+const BL_DAL = [
+  [39, 42, 16],                                   // patikada ilk dal (2 kare): "dallara çıkılabilir"
+  [146, 156, 12],                                 // minderin tam üstündeki yüksek dal
+  [196, 199, 13], [202, 205, 11], [208, 212, 9], [215, 219, 9], [223, 227, 10], [231, 234, 12], [238, 240, 14], // saklı yol
+  [309, 314, 14],                                 // açıklıkta Büyük Pofuduk'un solundaki dal
+];
+for (const [a, b, r] of BL_DAL) plat(a, b, r);
 
+const BL_SU = ROWS * T - 26;   // göl yüzeyi (dunya.js suyu buraya çizer)
 const BOLUM = {
   ad: 'Işık Ormanı: Uykucu Pofuduklar',
-  baslangic: { x: nx(4), y: yuzey(4) },
-  bolgeler: [   // dunya.js / muzik.js bölgeye göre süsleme ve ezgi seçer
-    { ad: 'patika', x0: 0, x1: 42 * T }, { ad: 'pofuduk', x0: 42 * T, x1: 75 * T }, { ad: 'gol', x0: 75 * T, x1: 113 * T },
-    { ad: 'dallar', x0: 113 * T, x1: 161 * T }, { ad: 'sakli', x0: 147 * T, x1: 182 * T, ust: 11 * T }, { ad: 'aciklik', x0: 200 * T, x1: COLS * T },
+  baslangic: { x: nx(5), y: yuzey(5) },
+  // dunya.js / muzik.js bölgeye göre süsleme ve ezgi seçer (dünya x aralıkları; bitişik ve sıralı)
+  bolgeler: [
+    { ad: 'patika', x0: 0, x1: 47 * T },
+    { ad: 'pofuduk', x0: 47 * T, x1: 85 * T },
+    { ad: 'gol', x0: 85 * T, x1: 141 * T },
+    { ad: 'dallar', x0: 141 * T, x1: 200 * T },
+    { ad: 'sakli', x0: 200 * T, x1: 253 * T, ust: 15 * T },   // ust: bu y'nin üstü saklı yol (dallar)
+    { ad: 'aciklik', x0: 253 * T, x1: COLS * T },
   ],
-  gol: { x0: 79 * T, x1: 101 * T, su: (ROWS - 2) * T },   // su yüzeyi (yansımalar)
+  gol: { x0: 100 * T, x1: 127 * T, su: BL_SU, ada: { x0: 112 * T, x1: 116 * T } },   // su yüzeyi (yansımalar), adacık
+  // Kamera ipuçları (oyun.js isterse kullanır): zoom < 1 → daha geniş görüş; yOfs < 0 → kamera biraz yukarı bakar.
+  kamera: [
+    { x0: 0, x1: 20 * T, zoom: 1.06 },                         // başlangıç: biraz yakın, sıcak
+    { x0: 88 * T, x1: 132 * T, zoom: 0.84, yOfs: 30 },         // göl: geniş, suyu ve yansımaları göster
+    { x0: 143 * T, x1: 162 * T, zoom: 0.9, yOfs: -60 },        // minder + yüksek dal
+    { x0: 165 * T, x1: 177 * T, zoom: 0.94, yOfs: -30 },       // çift zıplama sırtı
+    { x0: 195 * T, x1: 245 * T, zoom: 0.86, yOfs: -70 },       // saklı yol yukarıda
+    { x0: 296 * T, x1: COLS * T, zoom: 0.78, yOfs: -90 },      // açıklık: Büyük Pofuduk + yüksekte ağaç birlikte
+  ],
 };
 P.x = P.safeX = BOLUM.baslangic.x; P.y = P.safeY = BOLUM.baslangic.y;
 D.x = P.x - 40; D.y = P.y - 100;
 
-// Ana hedefler: ışık çiçekleri (sırayla), Büyük Pofuduk, ağaç
-nesne('konusma', 6, yuzey(6), { anahtar: 'p_merhaba', r: 60 });
-nesne('cicek', 19, yuzey(19), { r: 34 });
-nesne('konusma', 15, 15 * T, { anahtar: 'p_zipla', r: 90 });
-nesne('cicek', 36, yuzey(36), { r: 34 });
-nesne('konusma', 47, yuzey(47), { anahtar: 'p_uyuyor', r: 120 });
-nesne('pofuduk', 52, yuzey(52), { tur: 'yol' });
-nesne('cicek', 66, yuzey(66), { r: 34 });
-nesne('karanlik', 77, yuzey(77), { grup: 'gol', r: 70 });
-for (const c of [81, 85, 89, 93, 97]) nesne('nilufer', c, BOLUM.gol.su - 6, { grup: 'gol' });
-nesne('cicek', 106, yuzey(106), { r: 34 });
-nesne('pofuduk', 118, yuzey(118), { tur: 'minder' });
-nesne('cicek', 124, 13 * T, { r: 34 });
-nesne('konusma', 128, 13 * T, { anahtar: 'p_ciftzipla', r: 60 });
-nesne('cicek', 134, 10 * T, { r: 34 });
-nesne('pofuduk', 143, 13 * T, { tur: 'yol' });
-nesne('tohum', 152, 9 * T, { r: 30 }); nesne('tohum', 164, 8 * T, { r: 30 }); nesne('tohum', 176, 10 * T, { r: 30 });
-nesne('pofuduk', 170, yuzey(170), { tur: 'basamak' });
-nesne('cicek', 186, yuzey(186), { r: 34 });
-nesne('konusma', 203, yuzey(203), { anahtar: 'p_buyuk', r: 120 });
-nesne('cicek', 206, yuzey(206), { r: 34, buyukIcin: true });
-nesne('cicek', 211, 14 * T, { r: 34, buyukIcin: true });
-nesne('cicek', 217, yuzey(217), { r: 34, buyukIcin: true });
-nesne('buyukPofuduk', 225, yuzey(225), {});
-nesne('agac', 238, yuzey(238), { r: 90 });
+// ── Nesneler (soldan sağa) ──
+// 1. Uyanış Patikası
+nesne('konusma', 6.5, yuzey(6), { anahtar: 'p_merhaba', r: 70 });
+nesne('cicek', 12, yuzey(12), { r: 34 });                       // ilk çiçek: başlangıçtan görünür, 7 kare ötede
+nesne('konusma', 15, yuzey(15), { anahtar: 'p_zipla', r: 50 });  // minik basamağın hemen önü
+nesne('cicek', 27.5, yuzey(27), { r: 34 });                     // tepenin üstü
+// 2. İlk Pofuduk
+nesne('konusma', 52, yuzey(52), { anahtar: 'p_uyuyor', r: 90 });
+nesne('pofuduk', 62, yuzey(62), { tur: 'yol' });                // setten atlayan Feza tam üstüne düşer
+nesne('cicek', 69.5, yuzey(69), { r: 34 });
+// 3. Karanlık Göl
+nesne('konusma', 92, yuzey(92), { anahtar: 'p_karanlik', r: 80 });
+nesne('karanlik', 97, yuzey(97), { grup: 'gol', r: 70 });
+for (const c of [101.5, 105, 108.5, 117.5, 121, 124.5]) nesne('nilufer', c, BL_SU + 2, { grup: 'gol' });
+nesne('cicek', 113.5, yuzey(113), { r: 34 });                   // adacık
+nesne('pofuduk', 130, yuzey(130), { tur: 'yol' });              // karşı kıyıda uyuyan ikinci Pofuduk
+// 4. Yüksek Dallar
+nesne('konusma', 142, yuzey(142), { anahtar: 'p_minder', r: 80 });
+nesne('pofuduk', 147, yuzey(147), { tur: 'minder' });           // dal tam üstünde (dallar alttan geçilir)
+nesne('cicek', 153, blDal(12), { r: 34 });
+nesne('konusma', 163, yuzey(163), { anahtar: 'p_ciftzipla', r: 60 });
+nesne('cicek', 172, yuzey(172), { r: 34 });                     // çift zıplamayla çıkılan sırt
+nesne('pofuduk', 188.8, yuzey(188), { tur: 'basamak' });        // çukurdan çıkış: uyanınca basamak olur
+// 5. Saklı Yol (dallar: üç tohum) + ana yol (aşağıda)
+nesne('konusma', 194, yuzey(194), { anahtar: 'p_sakli', r: 70 });
+nesne('tohum', 203.5, blDal(11), { r: 30 });                    // girişte görünen ilk tohum
+nesne('tohum', 217, blDal(9), { r: 30 });
+nesne('tohum', 232.5, blDal(12), { r: 30 });
+nesne('cicek', 217, yuzey(217), { r: 34 });                     // ana yolda, küçük tümseğin üstü
+nesne('pofuduk', 229, yuzey(229), { tur: 'yol' });
+// 6. Açıklık
+nesne('pofuduk', 262, yuzey(262), { tur: 'yol' });
+nesne('konusma', 300, yuzey(300), { anahtar: 'p_buyuk', r: 80 });
+nesne('cicek', 304, yuzey(304), { r: 34, buyukIcin: true });     // yerde
+nesne('cicek', 312, blDal(14), { r: 34, buyukIcin: true });      // tümsekten dala
+nesne('cicek', 316.5, yuzey(316), { r: 34, buyukIcin: true });   // Büyük Pofuduk'un burnunun dibinde
+nesne('buyukPofuduk', 320.3, yuzey(320), {});                   // ağacın tepesine çıkan yolu kapatır
+nesne('konusma', 325, yuzey(325), { anahtar: 'p_agac', r: 70 });
+nesne('agac', 330, yuzey(330), { r: 90 });
 
 // Eski adlar (dunya.js uyumluluğu)
 const FLOWERS = NESNELER.filter(n => n.tip === 'cicek');

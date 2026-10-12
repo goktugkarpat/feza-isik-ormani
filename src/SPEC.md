@@ -94,3 +94,7 @@ feza.js exposes `fezaCizPoz(ctx, x, y, olcek, poz, tm)` and piril.js `pirilCizPo
 at screen/any transform (feet/centre at x,y) in a named pose, for sahne.js. Feza poses: `uyku` (lying asleep on his side, hugging),
 `uyanis` (sitting up, rubbing eyes, smiling), `sevinc`, `ayakta`. Pırıl poses: `pelus` (limp sleeping plush in his arms),
 `uyaniyor` (eyes opening, glow starting), `ucus`, `goz_kirp` (wink). sahne.js must guard with `typeof fezaCizPoz === 'function'`.
+
+## Feza cannot read (he is 5)
+Nothing may depend on text. Instructions come from Pırıl's voice and visual cues (animated hand hints, glowing trails, pulses).
+Subtitles are hidden unless `?altyazi` is in the URL. End screen and buttons use icons, not words.
