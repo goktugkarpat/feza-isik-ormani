@@ -53,7 +53,7 @@ const BL_DAL = [
   [206, 216, 12],                                 // minderin tam üstündeki yüksek dal
   [297, 305, 12], [307, 311, 10],                 // dal merdiveni: minderle 12. satıra (çiçek), oradan zıplayıp 10. satıra → sete iniş
   [318, 321, 14], [324, 327, 12], [330, 334, 10], [337, 341, 9], [344, 348, 10], [351, 354, 12], [357, 360, 14], // saklı yol
-  [422, 426, 14],                                 // Büyük Pofuduk'un solundaki dal (ikinci çiçek)
+  [424, 428, 14],                                 // Büyük Pofuduk'un solundaki dal (ikinci çiçek)
 ];
 for (const [a, b, r] of BL_DAL) plat(a, b, r);
 

@@ -304,7 +304,7 @@ function drPlanRoute(t0, sp, tmin, tmax) {
 // takılınca yardım (düşmeden): "Gel, sana yardım edeyim!" (p_yardim). Kayıt yoksa sessiz yardım (övgü de yok).
 function drEncourage() {
   const L = typeof SES !== 'undefined' && SES && SES.LINES;
-  if (L && L.p_yardim && D.t - (D.yardimT || -99) > 25) { D.yardimT = D.t; drSay('p_yardim'); }
+  if (L && (L.p_yardim || L.p_yardim1) && D.t - (D.yardimT || -99) > 25) { D.yardimT = D.t; drSay('p_yardim'); }
 }
 
 // ── ışık nefesi: Feza karanlık yere gelince Pırıl derin nefes alıp gölün üstüne ışık üfler ──
