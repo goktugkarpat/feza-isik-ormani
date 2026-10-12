@@ -69,9 +69,90 @@ const AU = (() => {
     aciklik: { cb: 4, ak: ['G7', 'D9', 'Em9', 'Asus'] },
     // Büyük Pofuduk uyandıktan sonra açıklık: aynı tonda, akor her ölçüde değişen, zıplayan bir şenlik
     senlik: { cb: 1, ak: ['D', 'G', 'Em9', 'A6', 'D', 'Bm9', 'G9s', 'Asus'] },
-    final: { cb: 1, ak: ['D', 'ACs', 'Bm9', 'G7', 'DFs', 'Em9', 'G7', 'Asus', 'D', 'D', 'D'], bitis: 'ninni' },
-    ninni: { cb: 1, ak: ['D', 'GD', 'D', 'A', 'Bm', 'G', 'A', 'D', 'D', 'GD', 'D', 'A', 'Bm', 'Em', 'A', 'D'] },
+    // final: 0–7 şenlik dansı (ım-pa) · 8–15 doruk: Pırıl'ın teması, tüm orkestra · 16–17 çözülme → ninni
+    final: { cb: 1, ak: ['D', 'G', 'Em9', 'A6', 'D', 'Bm9', 'G9s', 'Asus', 'D', 'Bm9', 'G7', 'A', 'D', 'Bm9', 'G7', 'A', 'D', 'D'], bitis: 'ninni' },
+    ninni: { cb: 1, ak: null },   // akorlar çalınan parçanın ölçülerinden gelir (PARCA.ana / PARCA.piril)
   };
+
+  // ───────────────────────── bestelenmiş temalar ─────────────────────────
+  // Yazım: "A5:2 F#6:3 E6:1 | ..." – nota:uzunluk (adım), r = sus, | = ölçü. 4/4 ölçüde 8 sekizlik (0.3 sn),
+  // 3/4 ölçüde 6 adım (0.4 sn); ikisi de 2.4 sn. Bütün tema iki motiften doğar:
+  //   Feza motifi: üç–iki–bir, sallanan (F#–E–D)     Pırıl motifi: beşliden altılı sıçrama ve iniş (A–F#'–E'–D')
+  const notaNo = s => { const m = /^([A-G])(#|b)?(\d)$/.exec(s); return 12 * (+m[3] + 1) + { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0); };
+  function yaz(metin) {   // → ölçüler: [[adım, nota, uzunluk], ...]
+    return metin.split('|').map(o => { let a = 0; const r = []; for (const p of o.trim().split(/\s+/)) { const [n, u] = p.split(':'); if (n !== 'r') r.push([a, notaNo(n), +u]); a += +u; } return r; });
+  }
+  function parca(akorlar, metin) { const m = yaz(metin); return akorlar.split(' ').map((ak, i) => ({ ak, m: m[i] || [] })); }
+  const PARCA = {
+    // "Feza ve Pırıl" ana teması (3/4, müzik kutusu): Feza'nın sallanan motifi, Pırıl'ın sıçrayan cevabı
+    ana: parca('D GD D A Bm G A D D GD D A Bm Em A D',
+      'F#5:3 E5:1 D5:2 | G5:2 B5:2 A5:2 | F#5:3 E5:1 D5:2 | C#5:2 E5:4 | A5:2 F#6:3 E6:1 | B5:3 A5:1 G5:2 | A5:2 B5:2 C#6:2 | D6:6 |' +
+      'F#5:3 E5:1 D5:2 | G5:2 B5:2 E6:2 | D6:2 A5:2 F#5:2 | E5:4 C#5:2 | A5:2 F#6:3 E6:1 | D6:3 B5:1 G5:2 | A5:2 C#6:2 E6:2 | D6:6'),
+    // Pırıl'ın teması (3/4, çelesta): şefkatli, umutlu – altılı sıçrama, inen ezgi, ikinci yarıda yükselen doruk
+    piril: parca('D Bm G A D Bm G A D',
+      'A5:2 F#6:3 E6:1 | D6:3 C#6:1 B5:2 | G5:2 E6:3 D6:1 | E6:2 D6:1 C#6:3 | A5:2 F#6:3 E6:1 | D6:3 C#6:1 B5:2 | B5:2 D6:2 G6:2 | F#6:2 E6:1 C#6:3 | D6:6'),
+  };
+  // Pırıl motifinin baş kısmı (alıntılar: ışık nefesi, kurtarma, göz kırpma)
+  const PIRIL_BAS = [[0, 81, 2], [2, 90, 3], [5, 88, 1], [6, 86, 3]];
+  // Bölge temaları (4/4): A ve B; döngüler A → B → A (çelesta) → B (seyrek, nefes alan) diye değişir
+  const TEMA = {
+    patika: {   // D9 ×4 · Bm9 ×4 · G7 ×4 · Asus ×4 – ana temanın yürüyen hâli
+      A: yaz('F#6:3 E6:1 D6:4 | r:2 A5:2 B5:2 C#6:2 | D6:3 E6:1 F#6:2 A6:2 | E6:6 r:2 | A5:2 F#6:3 E6:1 D6:2 | C#6:4 B5:4 | r:2 F#5:2 B5:2 D6:2 | C#6:6 r:2 |' +
+        'B5:3 A5:1 G5:4 | r:2 D6:2 E6:2 F#6:2 | G6:3 F#6:1 E6:2 D6:2 | B5:6 r:2 | A5:2 E6:3 D6:1 B5:2 | A5:4 r:4 | B5:2 D6:2 E6:2 F#6:2 | E6:6 r:2'),
+      B: yaz('A5:2 F#6:3 E6:1 D6:2 | E6:2 F#6:2 A5:4 | B5:2 C#6:2 D6:2 E6:2 | F#6:6 r:2 | F#6:3 E6:1 D6:4 | r:2 B5:2 C#6:2 D6:2 | E6:3 D6:1 C#6:2 B5:2 | B5:6 r:2 |' +
+        'D6:2 B6:3 A6:1 G6:2 | F#6:4 D6:4 | E6:3 D6:1 B5:2 G5:2 | A5:6 r:2 | E6:3 D6:1 B5:2 A5:2 | B5:4 r:4 | A5:2 B5:2 D6:2 E6:2 | D6:6 r:2'),
+    },
+    pofuduk: {  // D9 D9 G7 G7 Em9 Em9 A6 A6 – zıplayan, kesik
+      A: yaz('D6:1 r:1 F#6:1 r:1 A6:2 F#6:2 | E6:1 F#6:1 E6:1 D6:1 B5:2 A5:2 | B5:1 r:1 D6:1 r:1 G6:2 F#6:2 | E6:1 F#6:1 E6:1 D6:1 B5:4 |' +
+        'G5:1 r:1 B5:1 r:1 E6:2 D6:2 | B5:1 D6:1 B5:1 G5:1 F#5:4 | A5:1 r:1 C#6:1 r:1 E6:2 F#6:2 | E6:2 C#6:2 B5:2 r:2'),
+      B: yaz('A5:2 F#6:2 E6:1 D6:1 E6:2 | F#6:4 r:2 A5:2 | B5:2 G6:2 F#6:1 E6:1 D6:2 | E6:4 r:2 D6:1 E6:1 |' +
+        'F#6:2 E6:2 D6:2 B5:2 | G5:2 B5:2 E6:4 | C#6:2 E6:2 A6:2 F#6:2 | E6:1 F#6:1 E6:1 C#6:1 B5:2 r:2'),
+    },
+    gol: {      // G9s ×4 · D9 ×4 · F#m7 ×4 · Bm11 ×4 – geniş, boşluklu, yansıyan
+      A: yaz('A5:4 F#6:4 | r:2 D6:4 C#6:2 | B5:8 | r:8 | F#6:4 E6:2 D6:2 | A5:6 r:2 | r:4 B5:2 C#6:2 | D6:8 |' +
+        'C#6:4 A6:4 | r:2 F#6:4 E6:2 | C#6:8 | r:8 | B5:4 F#6:4 | E6:4 D6:4 | r:2 A5:2 B5:2 D6:2 | F#6:8'),
+      B: yaz('D6:2 B5:2 A5:4 | G5:2 A5:2 B5:4 | r:2 C#6:2 D6:4 | r:8 | A5:2 F#6:3 E6:1 D6:2 | C#6:4 r:4 | B5:2 C#6:2 D6:2 E6:2 | F#6:8 |' +
+        'E6:2 C#6:2 A5:4 | B5:4 C#6:4 | r:2 F#6:4 E6:2 | C#6:8 | D6:4 B5:4 | A5:2 B5:2 D6:4 | E6:2 F#6:2 A6:4 | F#6:8'),
+    },
+    dallar: {   // Bm9 Bm9 G7 G7 D9 D9 A A – tırmanan, canlı
+      A: yaz('B5:1 C#6:1 D6:2 F#6:2 D6:2 | E6:1 D6:1 C#6:2 B5:4 | B5:1 D6:1 E6:2 G6:2 E6:2 | F#6:1 E6:1 D6:2 B5:4 |' +
+        'A5:2 F#6:3 E6:1 D6:2 | C#6:2 D6:2 E6:2 F#6:2 | A6:3 F#6:1 E6:2 C#6:2 | B5:2 C#6:2 E6:4'),
+      B: yaz('F#6:3 E6:1 D6:2 B5:2 | C#6:2 D6:2 E6:4 | D6:3 B5:1 G5:2 B5:2 | D6:2 E6:2 F#6:4 |' +
+        'A6:3 F#6:1 E6:2 D6:2 | E6:2 F#6:2 A6:4 | B6:2 A6:2 F#6:2 E6:2 | C#6:6 r:2'),
+    },
+    sakli: {    // Em9 ×4 · C ×4 · Bm11 ×4 · F#sus ×4 – gizemli, alçak, yavaş
+      A: yaz('B5:4 G5:4 | F#5:2 G5:2 B5:4 | E6:6 r:2 | r:8 | D6:4 B5:4 | G5:2 F#5:2 E5:4 | r:2 B5:2 D6:4 | E6:8 |' +
+        'D6:4 F#5:4 | A5:2 B5:2 D6:4 | E6:6 r:2 | r:8 | F#5:4 B5:4 | C#6:4 E6:4 | F#6:6 r:2 | r:8'),
+      B: yaz('B5:2 G6:3 F#6:1 E6:2 | D6:4 B5:4 | r:2 G5:2 B5:2 D6:2 | E6:8 | E6:2 B5:2 G5:4 | F#5:4 G5:4 | B5:8 | r:8 |' +
+        'F#5:2 D6:3 B5:1 A5:2 | B5:8 | r:2 D6:2 E6:2 F#6:2 | E6:8 | C#6:4 B5:4 | F#5:8 | r:4 E6:4 | r:8'),
+    },
+    aciklik: {  // G7 ×4 · D9 ×4 · Em9 ×4 · Asus ×4 – bekleyiş, ağacın önü
+      A: yaz('B5:3 A5:1 G5:4 | r:2 D6:2 B5:4 | A5:4 B5:2 D6:2 | E6:8 | F#6:3 E6:1 D6:4 | r:2 A5:2 B5:2 C#6:2 | D6:6 r:2 | r:8 |' +
+        'G5:2 B5:2 E6:4 | D6:3 B5:1 G5:4 | F#5:4 G5:4 | B5:8 | A5:2 E6:3 D6:1 B5:2 | A5:8 | r:2 B5:2 D6:2 E6:2 | E6:6 r:2'),
+      B: yaz('D6:2 B6:3 A6:1 G6:2 | F#6:4 D6:4 | E6:2 D6:2 B5:4 | r:8 | A5:2 F#6:3 E6:1 D6:2 | C#6:4 B5:2 A5:2 | B5:4 C#6:4 | D6:6 r:2 |' +
+        'B5:2 G6:3 F#6:1 E6:2 | D6:4 B5:4 | G5:2 B5:2 D6:2 E6:2 | F#6:8 | E6:3 D6:1 B5:2 A5:2 | B5:8 | A5:2 B5:2 D6:2 E6:2 | E6:8'),
+    },
+    senlik: {   // D G Em9 A6 D Bm9 G9s Asus – Büyük Pofuduk uyandı: akılda kalan, oynak bir polka (tuba ım-pa)
+      A: yaz('F#6:1 E6:1 D6:1 r:1 A5:1 r:1 D6:2 | B5:1 A5:1 G5:1 r:1 D6:1 r:1 B5:2 | E6:1 F#6:1 G6:1 r:1 E6:1 r:1 B5:2 | C#6:1 B5:1 A5:1 r:1 E6:2 r:2 |' +
+        'F#6:1 E6:1 D6:1 r:1 A5:1 r:1 D6:2 | D6:1 C#6:1 B5:1 r:1 F#6:1 r:1 D6:2 | B5:1 C#6:1 D6:1 F#6:1 A6:2 G6:2 | A6:1 r:1 E6:1 r:1 A5:2 r:2'),
+      B: yaz('A5:1 r:1 F#6:2 E6:1 D6:1 E6:2 | D6:1 r:1 B5:2 D6:2 G6:2 | F#6:1 E6:1 D6:1 B5:1 E6:2 B5:2 | C#6:2 E6:2 A6:2 r:2 |' +
+        'A5:1 r:1 F#6:2 E6:1 D6:1 E6:2 | F#6:1 r:1 D6:2 F#6:2 B6:2 | A6:1 G6:1 F#6:1 D6:1 B5:2 C#6:2 | B5:1 D6:1 E6:2 D6:2 r:2'),
+    },
+  };
+  // final: 0–7 şenliğin B kısmı (dans), 8–15 Pırıl'ın teması (4/4, geniş), 16 çözülme
+  const FINAL_MEL = TEMA.senlik.B.concat(yaz(
+    'A5:2 F#6:5 E6:1 | D6:5 C#6:1 B5:2 | G5:2 E6:5 D6:1 | E6:3 D6:1 C#6:4 | A5:2 F#6:5 E6:1 | D6:5 C#6:1 B5:2 | B5:2 D6:2 G6:4 | F#6:3 E6:1 C#6:4 | D6:8 | r:8'));
+  // diyatonik kaydırma: bir motifi o anki akora en iyi oturan basamağa taşır (alıntılar hep uyumlu)
+  const SKALA = []; for (let m = 36; m <= 110; m++) if ([1, 2, 4, 6, 7, 9, 11].includes(m % 12)) SKALA.push(m);
+  function diyatonik(n, s) { let i = SKALA.indexOf(n); if (i < 0) { i = 0; while (i < SKALA.length - 1 && SKALA[i] < n) i++; } return SKALA[cl(i + s, 0, SKALA.length - 1)]; }
+  function uyarla(notalar, ak) {
+    let enIyi = 0, enP = -1;
+    for (const s of [0, -2, 2, -1, 1, 3, -3]) {
+      let p = 0; for (const [, n, u] of notalar) if (ak.mel.includes(diyatonik(n, s) % 12)) p += u >= 2 ? 2 : 1;
+      if (p > enP) { enP = p; enIyi = s; }
+    }
+    return notalar.map(([a, n, u]) => [a, diyatonik(n, enIyi), u]);
+  }
   // katman karışımları (bölge/mod) – ışıkla ayrıca ölçeklenir
   const KARISIM = {
     patika: { zil: 1, pad: 1, tus: 0.55, arp: 0.5, tel: 0.45, koro: 0.15, bas: 0.7, tuba: 0, hop: 1, rev: 0.75, dly: 0.5 },

@@ -554,8 +554,20 @@ function omKameraIpucu(px) {
     const w = omBolgeAgirlik(k.x0, k.x1, px, 3 * T);
     if (w > wb) { wb = w; z = 1 + ((k.zoom || 1) - 1) * w; yo = (k.yOfs || 0) * w; }
   }
+  // Açıklık: Işık Ağacı yakındayken taç ortası (ağacın ~300 birim üstü) ile Feza'nın bastığı zemin birlikte sığsın.
+  // Gerekirse biraz daha uzaklaş (en çok 0,72'ye); zıplarken değişmesin diye son basılan zemine (tabanY) göre.
+  omZ.agacW = 0;
+  if (typeof TREE !== 'undefined' && TREE && !TREE.done) {
+    const w = clamp(1 - (Math.abs(TREE.x - px) - 14 * T) / (6 * T), 0, 1);
+    if (w > 0) {
+      const gerek = (omC.tabanY - (TREE.y - OM_AGAC_TAC)) / 0.86;   // görünmesi gereken dünya yüksekliği
+      const zf = clamp(VH / Math.max(gerek, 1) / OM_TABAN_ZOOM, 0.72, 2);
+      z = Math.min(z, lerp(z, zf, w)); omZ.agacW = w;
+    }
+  }
   omZ.hz = z * OM_TABAN_ZOOM; omZ.hy = yo;
 }
+const OM_AGAC_TAC = 300;
 // Ölçek tek yerde: S ve VW kamera yakınlığından hesaplanır (resize de bunu çağırır)
 function omOlcek() { S = H / VH * cam.zoom; VW = W / S; }
 function stepCam(dt, snap) {
@@ -605,6 +617,7 @@ function stepCam(dt, snap) {
   let ty = omC.tabanY - VHg * 0.76 + omZ.yo, st = P.ground ? 0.42 : 0.5;
   if (py - ty < ust) { ty = py - ust; st = 0.2; }
   if (py - ty > alt) { ty = py - alt; st = 0.14; }
+  if (omZ.agacW > 0 && TREE) ty = Math.min(ty, lerp(ty, Math.max(TREE.y - OM_AGAC_TAC - 40, omC.tabanY - VHg * 0.86), omZ.agacW));   // ağacın tacı görünsün
   ty = clamp(ty, -40, yMax);
   if (snap) { omC.x = tx; omC.y = ty; omC.vx = omC.vy = 0; }
   else if (dt > 0) {

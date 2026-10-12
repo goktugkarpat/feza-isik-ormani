@@ -28,6 +28,7 @@ const FZ_KEYS = ['lean', 'hx', 'bob', 'lt1', 'lt2', 'bt1', 'bt2', 'la1', 'la2', 
 const FZ_REST = { lean: 0.03, hx: 0, bob: 0, lt1: 0.04, lt2: -0.08, bt1: -0.04, bt2: -0.06, la1: 0.12, la2: 0.35,
   ba1: -0.1, ba2: 0.35, shr: 0, head: 0, gx: 0.5, gy: 0.05, lid: 1, happy: 0, sq: 0, brow: 0, mSmile: 0.7, mOpen: 0, mRound: 0,
   sx: 1, sy: 1, air: 0, breath: 0, hOpen: 0, arm: 1, spr: 0 };
+const FZ_VMAX = { la1: 18, la2: 20, ba1: 18, ba2: 20, lt1: 22, lt2: 22, bt1: 22, bt2: 22, lean: 6, head: 7 };   // rad/sn
 const fzC = document.createElement('canvas'), fzX = fzC.getContext('2d');
 const fzR = document.createElement('canvas'), fzRX = fzR.getContext('2d');
 const FZ_T = {};
@@ -594,8 +595,10 @@ function drawFeza(tm) {
   if (P.fade > 0 && !P.respawned) return;
   if (!P.a_R) fezaInit();
   fzQ = P;
-  const SZ = 124, OY = SZ - 26, px = Math.ceil(SZ * S), x = fzX, R = P.a_R;
-  if (fzC.width !== px) { fzC.width = fzC.height = px; fzR.width = fzR.height = px; }
+  const SZ = 124, OY = SZ - 26, need = Math.ceil(SZ * S), x = fzX, R = P.a_R;
+  // kamera yakınlaşırken S her karede biraz değişir: tuvali yalnızca yetmezse ya da çok büyük kalırsa yeniden ayır (32 px adımlarla, %15 pay)
+  if (fzC.width < need || fzC.width > need * 1.3) { const n = Math.ceil(need * 1.15 / 32) * 32; fzC.width = fzC.height = n; fzR.width = fzR.height = n; }
+  const px = fzC.width;
   x.setTransform(1, 0, 0, 1, 0, 0); x.globalCompositeOperation = 'source-over'; x.globalAlpha = 1; x.clearRect(0, 0, px, px);
   // dönüş: yan -> önden -> yeni yan. Genişlik hiç 0.92'nin altına inmez; ayna çevirme önden görünüşteyken olur.
   const u = P.a_turnU < 1 ? P.a_turnU : P.a_fu > 0 ? P.a_fu : 1, front = u > 0.3 && u < 0.72;
@@ -609,18 +612,26 @@ function drawFeza(tm) {
   // ışıklandırma: ortam rengi (aşağıdan mavi) + Pırıl'ın mor ışığı
   x.setTransform(1, 0, 0, 1, 0, 0);
   x.globalCompositeOperation = 'source-atop';
-  const lg = x.createLinearGradient(0, px * 0.1, 0, px);
+  const lg = x.createLinearGradient(0, need * 0.1, 0, need);
   lg.addColorStop(0, 'rgba(20,40,90,0.12)'); lg.addColorStop(1, C('l3', 0.55 - light * 0.2));
   x.fillStyle = lg; x.fillRect(0, 0, px, px);
-  const dx = (D.x - bx) * S + px / 2, dy = (D.y - by) * S + OY * S;
-  const rg = x.createRadialGradient(dx, dy, 0, dx, dy, px * 0.9);
-  rg.addColorStop(0, 'rgba(200,150,255,0.35)'); rg.addColorStop(1, 'rgba(200,150,255,0)');
+  const dx = (D.x - bx) * S + SZ / 2 * S, dy = (D.y - by) * S + OY * S;
+  const rg = x.createRadialGradient(dx, dy, 0, dx, dy, need * 0.9);
+  rg.addColorStop(0, `rgba(200,150,255,${(0.35 * (1 - 0.6 * (P.a_tasW || 0))).toFixed(3)})`); rg.addColorStop(1, 'rgba(200,150,255,0)');
   x.fillStyle = rg; x.fillRect(0, 0, px, px);
   x.globalCompositeOperation = 'source-over';
   // kenar ışıkları: sağ üstteki ay + Pırıl
   fzRim(0.72, -0.69, 0.75 * S, C('rim'), 0.75 - light * 0.25);
   const ddx = D.x - bx, ddy = D.y - (by - 38), dd = Math.hypot(ddx, ddy) || 1;
   fzRim(ddx / dd, ddy / dd, 0.75 * S, '#d2a6ff', 0.6 * clamp(1.2 - dd / 220, 0, 1));
+  // Pırıl taşırken: sıcak bir kenar ışığı ve hafif sıcak dolgu (karanlık boşlukta solgun görünmesin, net okunsun)
+  const tw = P.a_tasW || 0;
+  if (tw > 0.02) {
+    x.globalCompositeOperation = 'source-atop'; x.globalAlpha = 0.2 * tw; x.fillStyle = '#ffd2a0'; x.fillRect(0, 0, px, px);
+    x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
+    fzRim(-0.35, -0.94, 0.85 * S, '#ffc77a', 0.85 * tw);
+    fzRim(0.9, 0.42, 0.6 * S, '#ffb26b', 0.45 * tw);
+  }
   let a = 1; if (P.fade > 0) a = 1 - clamp((P.fade - 0.22) / 0.38, 0, 1);
   g.globalAlpha = a;
   g.drawImage(fzC, (bx - cam.x - SZ / 2) * S, (by - cam.y - OY) * S);
@@ -1017,6 +1028,8 @@ function fezaUpdate(dt) {
   for (const key of FZ_KEYS) {
     const x0 = cur[key] - T[key], c = (V[key] + om * x0) * dt;
     cur[key] = T[key] + (x0 + c) * ee; V[key] = (V[key] - om * c) * ee;
+    const vm = FZ_VMAX[key];   // uzuvlar en çok ~0.37 rad/kare döner (60 Hz): uzak pozlara geçişte bile kol "ışınlanmaz"
+    if (vm && Math.abs(V[key]) > vm) { const v2 = Math.sign(V[key]) * vm; cur[key] -= (V[key] - v2) * dt * 0.5; V[key] = v2; }
   }
   // göz kırpma (bazen çift)
   P.a_blink -= dt;
@@ -1025,7 +1038,9 @@ function fezaUpdate(dt) {
   // çizim pozu = yumuşak poz + iniş çökmesi + kalkış uzaması + çarpma
   const R = Object.assign(P.a_R, cur), lt = P.a_landT;
   // kalkış uzaması iki karede yükselir (tek karede bacak düzelip kalça sıçramasın), sonra söner
-  const cr = gr ? P.a_landP * (lt < 0.05 ? lt / 0.05 : Math.exp(-(lt - 0.05) * 7.5)) : 0, tk = P.a_take > 0.8 ? smooth((1 - P.a_take) / 0.2) : P.a_take / 0.8;
+  // iniş çökmesi: u² e^(2-2u) (0.12 sn'de en dipte, tepe noktası ve dönüş yumuşak); kalkış uzaması: 6.75 p (1-p)² (sonu yumuşak)
+  const lu = lt / 0.12, tp = 1 - P.a_take;
+  const cr = gr ? P.a_landP * lu * lu * Math.exp(2 - 2 * lu) : 0, tk = P.a_take > 0 ? 6.75 * tp * (1 - tp) * (1 - tp) : 0;
   R.lt1 += 0.8 * cr; R.lt2 -= 1.5 * cr; R.bt1 += 0.6 * cr; R.bt2 -= 1.4 * cr; R.lean += 0.25 * cr; R.head += 0.12 * cr;
   R.la1 += 0.5 * cr; R.ba1 += 0.4 * cr; R.sx += 0.1 * cr; R.sy -= 0.08 * cr; R.lid *= 1 - 0.3 * cr;
   R.sy += 0.08 * tk; R.sx -= 0.06 * tk; R.lt1 -= 0.6 * tk * R.lt1; R.lt2 *= 1 - 0.7 * tk;
@@ -1054,6 +1069,7 @@ function fezaUpdate(dt) {
     const cu = carry ? clamp(P.a_carryT / FZ_CARRY, 0, 1) : 1, dk = 1 - Math.exp(-dt * 12);
     P.a_oy += (-50 * (1 - cu) * (1 - cu) - P.a_oy) * dk; P.a_ox += (Math.sin(t * 3.1) * 2.5 * (1 - cu) + lox * P.a_ledgeW - P.a_ox) * dk;
   }
+  P.a_tasW = (P.a_tasW || 0) + (((typeof D !== 'undefined' && D.tasiyor) || carry ? 1 : 0) - (P.a_tasW || 0)) * (1 - Math.exp(-dt * 5));
   P.a_tutun += ((carry ? 1 : 0) - P.a_tutun) * (1 - Math.exp(-dt * 20));
   {   // ön elin dünya konumu (Pırıl taşırken bu ele tutunur)
     const cl = Math.cos(R.lean), sl = Math.sin(R.lean), sx0 = 1.2, sy0 = -11.4;
