@@ -31,7 +31,15 @@ const FZ_REST = { lean: 0.03, hx: 0, bob: 0, lt1: 0.04, lt2: -0.08, bt1: -0.04, 
 const FZ_VMAX = { la1: 18, la2: 20, ba1: 18, ba2: 20, lt1: 22, lt2: 22, bt1: 22, bt2: 22, lean: 6, head: 7 };   // rad/sn
 const fzC = document.createElement('canvas'), fzX = fzC.getContext('2d');
 const fzR = document.createElement('canvas'), fzRX = fzR.getContext('2d');
-const FZ_T = {};
+// poz nesneleri hep aynı biçimde (sabit alanlar, ondalık değerler): kare başına sözlük/kutu ayırma olmasın.
+// Yaylar düz Float64Array'lerde çalışır (FZ_KEYS sırası); nesnelere adıyla tek tek kopyalanır.
+function fzPose() { return { lean: 0.5, hx: 0.5, bob: 0.5, lt1: 0.5, lt2: 0.5, bt1: 0.5, bt2: 0.5, la1: 0.5, la2: 0.5, ba1: 0.5, ba2: 0.5, shr: 0.5, head: 0.5, gx: 0.5, gy: 0.5, lid: 0.5, happy: 0.5, sq: 0.5, brow: 0.5, mSmile: 0.5, mOpen: 0.5, mRound: 0.5, sx: 0.5, sy: 0.5, air: 0.5, breath: 0.5, hOpen: 0.5, arm: 0.5, spr: 0.5 }; }
+function fzPack(o, a) { a[0] = o.lean; a[1] = o.hx; a[2] = o.bob; a[3] = o.lt1; a[4] = o.lt2; a[5] = o.bt1; a[6] = o.bt2; a[7] = o.la1; a[8] = o.la2; a[9] = o.ba1; a[10] = o.ba2; a[11] = o.shr; a[12] = o.head; a[13] = o.gx; a[14] = o.gy; a[15] = o.lid; a[16] = o.happy; a[17] = o.sq; a[18] = o.brow; a[19] = o.mSmile; a[20] = o.mOpen; a[21] = o.mRound; a[22] = o.sx; a[23] = o.sy; a[24] = o.air; a[25] = o.breath; a[26] = o.hOpen; a[27] = o.arm; a[28] = o.spr; }
+function fzUnpack(a, o) { o.lean = a[0]; o.hx = a[1]; o.bob = a[2]; o.lt1 = a[3]; o.lt2 = a[4]; o.bt1 = a[5]; o.bt2 = a[6]; o.la1 = a[7]; o.la2 = a[8]; o.ba1 = a[9]; o.ba2 = a[10]; o.shr = a[11]; o.head = a[12]; o.gx = a[13]; o.gy = a[14]; o.lid = a[15]; o.happy = a[16]; o.sq = a[17]; o.brow = a[18]; o.mSmile = a[19]; o.mOpen = a[20]; o.mRound = a[21]; o.sx = a[22]; o.sy = a[23]; o.air = a[24]; o.breath = a[25]; o.hOpen = a[26]; o.arm = a[27]; o.spr = a[28]; }
+const FZ_N = FZ_KEYS.length, FZ_I_AIR = FZ_KEYS.indexOf('air'), FZ_I_GX = FZ_KEYS.indexOf('gx');
+const FZ_RESTA = new Float64Array(FZ_N), FZ_VMAXA = new Float64Array(FZ_N), FZ_TA = new Float64Array(FZ_N);
+for (let i = 0; i < FZ_N; i++) { FZ_RESTA[i] = FZ_REST[FZ_KEYS[i]]; FZ_VMAXA[i] = FZ_VMAX[FZ_KEYS[i]] || 0; }
+const FZ_T = fzPose();
 // çizim fonksiyonlarının okuduğu durum: oyunda P, ara sahnelerde fzCS (oyundaki sprite durumuna dokunmadan)
 let fzQ = P;
 // büyük çizim katsayısı: ara sahne yakın çekimlerinde (birim başına ≥ 12 piksel) 1, oyun boyunda 0. İnce çizgiler,
@@ -810,8 +818,31 @@ const FZ_TADA_IK = [[-6.6, 1.6, 1], [6.6, 1.6, 1]];          // fırlatmadan son
 const FZ_IKB = [[-6.6, 1.6, 0], [6.6, 1.6, 0]];              // o karede çizilen (karışmış) el hedefleri
 const FZ_SEQ = [[4, 'wave'], [9.5, 'yawn'], [15, 'stretch'], [20.5, 'sit'], [26, 'look'], [31, 'wave']];   // uzun beklemede sırayla
 const FZ_ACT = { wave: 2.8, yawn: 2.7, stretch: 2.5, look: 2.2, nod: 3.2 };
+// ── final kutlaması: ağaç yandıktan sonra ağacın önünde sevinç döngüsü ──
+// önce ağaca hayranlıkla bakar (~1,5 sn), sonra önden kollar havada zıplar; müziğin ölçü başında dansa başlar.
+// Ölçüler (2,4 sn, Pofuduk'larla aynı vuruş): 0 dans (sek · sek · el çırp (önden) · önden geçerek dönüp öbür gruba),
+// 1 Pırıl'a el sallama (yakındaysa), 2 düşen yaprağa uzanıp yakalama, 3 kollar havada. Fizik konumu hiç değişmez.
+const FZ_FIN_IK = [[-6.6, 1.6, 1], [6.6, 1.6, 1]], FZ_FIN_G = new Float64Array(4), FZ_FIN_V = new Float64Array(4);
+const FZ_FIN_SEQ = [0, 1, 2, 0, 3, 0], FZ_BAR = 2.4, FZ_BEAT = 0.6, FZ_PET = new Float64Array(2);
+function fzFinal() {
+  return (typeof DURUM !== 'undefined' && DURUM === 'final') || (typeof TREE !== 'undefined' && !!TREE && !!TREE.done && DURUM === 'oyun');
+}
+function fzPetal(i, out) {   // dunya.js drawPetals'teki i. yaprağın dünya konumu (aynı formül; yaprak ekranda kayar)
+  if (typeof DN_PETALS === 'undefined' || !DN_PETALS[i] || typeof VW === 'undefined') return false;
+  const p = DN_PETALS[i], tm = now, w = VW + 200;
+  const x = ((p.x + tm * 14 * p.sp + Math.sin(tm * p.sp + p.ph) * 40 - cam.x * 1.1) % w + w) % w - 100;
+  const hv = H / S + 200, y = ((p.y + tm * 22 * p.sp - cam.y) % hv + hv) % hv - 80;
+  out[0] = x + cam.x; out[1] = y + cam.y; return true;
+}
+function fzPetOk(out) { const dx = out[0] - P.x, dy = out[1] - (P.y - 110); return dx > -130 && dx < 130 && dy > -120 && dy < 55; }
+function fzFinPetal(out, bt) {   // uzanılacak yaprak: seçilen gerçek yaprak; çerçeveden çıkarsa hayali, süzülen bir yaprak
+  if (P.a_finPet >= 0 && fzPetal(P.a_finPet, out) && fzPetOk(out)) return;
+  P.a_finPet = -1;
+  out[0] = P.x + P.a_finDir * 48 + 8 * Math.sin(P.a_t * 1.3); out[1] = P.y - 118 + 40 * (bt / FZ_BAR);
+}
 function fezaInit() {
-  P.a_pose = Object.assign({}, FZ_REST); P.a_pv = {}; for (const k of FZ_KEYS) P.a_pv[k] = 0; P.a_R = Object.assign({}, FZ_REST);
+  // bütün P.a_* alanları burada bir kez, sabit sırayla kurulur (sonradan alan eklenmesin: P'nin biçimi kare kare değişmesin)
+  P.a_pose = new Float64Array(FZ_RESTA); P.a_pv = new Float64Array(FZ_N); P.a_R = fzPose(); fzUnpack(FZ_RESTA, P.a_R);
   P.a_t = 0; P.a_face = P.f; P.a_side = P.f; P.a_turnU = 1; P.a_turnTo = P.f; P.a_turnDur = 0.16; P.a_front = false; P.a_fu = 0; P.a_state = 'idle'; P.a_sw = 1; P.a_wasG = P.ground; P.a_prevVy = 0;
   P.a_landT = 9; P.a_landP = 0; P.a_take = 0; P.a_skid = 0; P.a_skidDir = 1; P.a_idle = 0; P.a_waveDir = 1;
   P.a_lookT = 1.2; P.a_look = 0; P.a_blink = 2.5; P.a_lidM = 1; P.a_spin = 0;
@@ -821,6 +852,12 @@ function fezaInit() {
   P.a_act = ''; P.a_actT = 0; P.a_seq = 0; P.a_nextAct = FZ_SEQ[0][0]; P.a_sit = 0; P.a_edgeT = 0; P.a_edge = 0;
   P.a_bal = 0; P.a_balKick = 0; P.a_awe = 0; P.a_big = null;
   P.a_tadaT = 9; P.a_fromL = false; P.a_ledge = 0; P.a_ledgeW = 0; P.a_ledgeOx = 0; P.a_stepN = 0;
+  P.a_takeP = 1; P.a_getup = 0; P.a_edgeX = 0; P.a_hipV = 0; P.a_tasW = 0; P.a_ikW = 0; P.a_ikSrc = null; P.a_ikLast = null;
+  P.a_hw = 0; P.ik = null;
+  // final kutlaması
+  P.a_finT = 0; P.a_finClk = 0; P.a_finBar0 = -1; P.a_finBar = -1; P.a_finKind = 0; P.a_finDir = 1; P.a_finHand = 1; P.a_finPet = -1;
+  for (let i = 0; i < 4; i++) { FZ_FIN_G[i] = FZ_FIN_V[i] = 0; }
+  FZ_FIN_IK[0][0] = -6.6; FZ_FIN_IK[0][1] = 1.6; FZ_FIN_IK[1][0] = 6.6; FZ_FIN_IK[1][1] = 1.6;
 }
 
 // ── oyun olayları → animasyon ──
@@ -843,17 +880,22 @@ function fzEdge() {    // ayakta dururken uçurum kenarı: + sağda, - solda (0.
   if (typeof cell !== 'function' || (typeof ustundeki !== 'undefined' && ustundeki)) return 0;
   const ty = Math.round(P.y / T);
   if (Math.abs(P.y - ty * T) > 1) return 0;
-  const zemin = (cx, r) => { const c = cell(cx, r); return c === 1 || c === 2; };
   const cx = Math.floor(P.x / T);
   for (let s = 1; s >= -1; s -= 2) {
     const nx = cx + s;
-    if (zemin(nx, ty) || zemin(nx, ty - 1) || zemin(nx, ty + 1)) continue;   // zemin devam ediyor / duvar / küçük basamak
+    if (fzZemin(nx, ty) || fzZemin(nx, ty - 1) || fzZemin(nx, ty + 1)) continue;   // zemin devam ediyor / duvar / küçük basamak
     const ex = s > 0 ? (cx + 1) * T : cx * T, dist = (ex - P.x) * s; P.a_edgeX = ex;           // kenara uzaklık (eksi = kenarın ötesinde)
     const k = clamp((13 - dist) / 10, 0, 1);
     if (k > 0) return s * k;
   }
   return 0;
 }
+function fzZemin(cx, r) { const c = cell(cx, r); return c === 1 || c === 2; }
+function fzFy(a1, a2) { return FZ_TH * Math.cos(a1) + FZ_SH * Math.cos(a1 + a2) + FZ_FT; }
+// ayak sesi olayı: tek nesne, her basışta yeniden doldurulur (dinleyici (muzik.js) yalnız o anda okur)
+const FZ_ADIM = { x: 0, y: 0, hiz: 0, inis: false };
+function fzAdim(sp, inis) { FZ_ADIM.x = P.x; FZ_ADIM.y = P.y; FZ_ADIM.hiz = sp; FZ_ADIM.inis = inis; OLAY.emit('adim', FZ_ADIM); }
+const FZ_RAND_ACT = ['wave', 'yawn', 'stretch', 'nod', 'look'];
 function fzBig() {     // hayranlıkla bakılacak büyük şeyler
   if (P.a_big) return P.a_big;
   P.a_big = [];
@@ -878,8 +920,8 @@ function fezaUpdate(dt) {
     P.a_landT = 0; P.a_landP = P.a_wasCarry ? 0.34 : clamp(P.a_prevVy / 850, 0.18, 0.88) * (1 - 0.22 * clamp((sp - 120) / 130, 0, 1));   // koşarak inişte daha az çöker
     if (fzMover()) P.a_balKick = 1;
     if (P.a_fromL) { P.a_tadaT = 0; P.a_fromL = false; }
-    if (!P.a_wasCarry) { P.a_pose.air = Math.min(P.a_pose.air, 0.15); P.a_pv.air = Math.min(P.a_pv.air, 0); }   // ayak yere değince kalça hemen yere göre (iniş yumuşak ama gecikmesiz)
-    if (!P.a_wasCarry) OLAY.emit('adim', { x: P.x, y: P.y, hiz: sp, inis: true });   // parmak ucuyla yumuşak iniş
+    if (!P.a_wasCarry) { P.a_pose[FZ_I_AIR] = Math.min(P.a_pose[FZ_I_AIR], 0.15); P.a_pv[FZ_I_AIR] = Math.min(P.a_pv[FZ_I_AIR], 0); }   // ayak yere değince kalça hemen yere göre (iniş yumuşak ama gecikmesiz)
+    if (!P.a_wasCarry) fzAdim(sp, true);   // parmak ucuyla yumuşak iniş
   }
   if (!gr && P.a_wasG && vy < -300 && P.a_launch <= 0 && P.a_stomp <= 0) { P.a_take = 1; P.a_takeP = clamp(-vy / 730, 0.5, 1.25); }   // ne kadar hızlı kalkarsa o kadar uzar
   P.a_wasG = gr; P.a_prevVy = vy; P.a_wasCarry = carry;
@@ -892,23 +934,66 @@ function fezaUpdate(dt) {
   P.a_cheerT += dt;
   const cheer = P.a_cheerT < 1.9 && P.a_cheerO;
   if (P.a_tadaT < 1.1 && (!gr || (sp > 60 && (P.a_tadaT > 0.14 || (typeof axis !== 'undefined' && axis !== 0))) || cheer)) P.a_tadaT = 9;   // koşmaya devam ederse ta-da yok (inişteki kısa kayma sayılmaz)   // koşmaya devam ederse ta-da yok
+  if (P.a_tadaT < 1.1 && fzFinal()) P.a_tadaT = 9;   // finalde "ta-da" yok: önce ağaca hayranlık
   const tada = P.a_tadaT < 1.1;
+  // final kutlaması: bu karede ne yapılacak (fk: 1 hayranlık, 2 kollar havada, 3 dans, 4 el sallama, 5 yaprağa uzanma)
+  const fin = gr && sp < 5 && fzFinal();
+  let fk = 0, fb = 0, fbu = 0, fbt = 0, fFt = 0, fFront = false;
+  if (fin) {
+    P.a_finT += dt; P.a_finClk += dt;
+    const pf = typeof pfFinal !== 'undefined' && pfFinal ? pfFinal : null;
+    if (pf && typeof pf.t === 'number') {   // Pofuduk'ların (müziğin) ölçüsüne otur: dans başlayana dek tam, sonra küçük düzeltmeler
+      let d = (pf.t - (pf.faz || 0) - P.a_finClk) % FZ_BAR;
+      if (d > FZ_BAR / 2) d -= FZ_BAR; else if (d < -FZ_BAR / 2) d += FZ_BAR;
+      P.a_finClk += P.a_finBar0 < 0 ? d : clamp(d, -0.01, 0.01);
+    }
+    const ct = P.a_finT, clk = P.a_finClk, bar = Math.floor(clk / FZ_BAR);
+    if (P.a_finBar0 < 0 && ct >= 2.3) P.a_finBar0 = bar + 1;
+    fbt = clk - bar * FZ_BAR; fb = Math.min(3, Math.floor(fbt / FZ_BEAT)); fbu = fbt / FZ_BEAT - fb;
+    if (ct < 1.5) fk = 1;
+    else if (P.a_finBar0 < 0 || bar < P.a_finBar0) fk = 2;
+    else {
+      if (bar !== P.a_finBar) {   // yeni ölçü: ne yapılacak, hangi yöne
+        P.a_finBar = bar;
+        let kd = FZ_FIN_SEQ[(bar - P.a_finBar0) % FZ_FIN_SEQ.length];
+        const pdx = D.x - P.x, pdy = D.y - (P.y - 60);
+        if (kd === 1 && pdx * pdx + pdy * pdy > 240 * 240) kd = 0;   // Pırıl uzaktaysa dans
+        P.a_finKind = kd; P.a_finDir = P.a_turnU < 1 ? P.a_turnTo : P.a_side;
+        if (kd === 1) P.a_finHand = pdx * P.a_finDir >= 0 ? 1 : 0;
+        if (kd === 2) {   // en yakın düşen yaprak (başının üstünde, önünde)
+          P.a_finPet = -1; let best = 1e9;
+          for (let i = 0; i < 13; i++) if (fzPetal(i, FZ_PET) && fzPetOk(FZ_PET)) {
+            const dx = FZ_PET[0] - P.x, dy = FZ_PET[1] - (P.y - 110), d2 = dx * dx + dy * dy;
+            if (d2 < best) { best = d2; P.a_finPet = i; }
+          }
+          fzFinPetal(FZ_PET, 0);
+          if (Math.abs(FZ_PET[0] - P.x) > 10) P.a_finDir = FZ_PET[0] > P.x ? 1 : -1;
+        }
+      }
+      const kd = P.a_finKind;
+      fk = kd === 0 ? 3 : kd === 1 ? 4 : kd === 2 ? 5 : 2;
+    }
+    if (fk === 1) { if (typeof TREE !== 'undefined' && TREE && Math.abs(TREE.x - P.x) > 14) fFt = TREE.x > P.x ? 1 : -1; }
+    else if (fk === 2 || fk === 4) fFront = true;
+    else if (fk === 3) { if (fb === 2) fFront = true; else fFt = fb === 3 ? -P.a_finDir : P.a_finDir; }
+    else if (fk === 5) fFt = P.a_finDir;
+  }
   if (gr && sp > 110 && Math.sign(P.vx) !== P.f) { if (P.a_skid <= 0) { P.a_skidDir = Math.sign(P.vx); P.a_skid = 0.12; } }
   else P.a_skid = gr ? P.a_skid - dt : 0;
   // bekleme: el sallama, esneme, gerinme, oturma...
   const mover = gr && fzMover();
   const still = gr && sp < 5 && !P.flip && P.a_push <= 0;
   P.a_idle = still ? P.a_idle + dt : 0;
-  const edge = still && !mover ? fzEdge() : 0;
+  const edge = still && !mover && !fin ? fzEdge() : 0;
   P.a_edgeT = edge ? P.a_edgeT + dt : 0;
   if (edge) P.a_edge = edge;
   const oops = edge && ((P.a_edgeT - 0.25) % 8) > 0 && ((P.a_edgeT - 0.25) % 8) < 1.9;
-  P.a_getup = Math.max(0, (P.a_getup || 0) - dt);
-  if (!still) { if (P.a_sit > 0.5) P.a_getup = 0.5; P.a_act = ''; P.a_seq = 0; P.a_nextAct = FZ_SEQ[0][0]; P.a_sit = 0; P.a_ledge = 0; }
+  P.a_getup = Math.max(0, P.a_getup - dt);
+  if (!still || fin) { if (P.a_sit > 0.5) P.a_getup = 0.5; P.a_act = ''; P.a_seq = 0; P.a_nextAct = FZ_SEQ[0][0]; P.a_sit = 0; P.a_ledge = 0; }
   else if (!P.a_act && !cheer && !oops && !tada && P.a_idle >= P.a_nextAct) {
     let a;
     if (P.a_seq < FZ_SEQ.length) { a = FZ_SEQ[P.a_seq++][1]; P.a_nextAct = P.a_seq < FZ_SEQ.length ? FZ_SEQ[P.a_seq][0] : P.a_idle + 7; }
-    else { a = ['wave', 'yawn', 'stretch', 'nod', 'look'][Math.floor(Math.random() * 5)]; P.a_nextAct = P.a_idle + 6 + Math.random() * 4; }
+    else { a = FZ_RAND_ACT[Math.floor(Math.random() * 5)]; P.a_nextAct = P.a_idle + 6 + Math.random() * 4; }
     if (edge && !P.a_sit && a !== 'wave') a = 'sit';              // uçurum kenarında bir süre: kenara oturup ayaklarını sallar
     if (P.a_ledge && (a === 'stretch' || a === 'yawn')) a = 'nod';  // kenarda otururken önden poz yok
     if (a === 'sit' && P.a_sit) a = 'look';
@@ -921,7 +1006,11 @@ function fezaUpdate(dt) {
   const act = still ? P.a_act : '';
   // yön: dönüşte genişlik sıfırdan geçerek yumuşak çevrilir
   let ft = P.f;
-  if (P.a_skid > 0) ft = P.a_skidDir;
+  if (fin) {   // finalde yön kutlamadan; önden görünüşten öbür yana geçiş = önden geçen küçük bir dönüş (yeniden yandan başlamaz)
+    ft = fFt || (P.a_turnU < 1 ? P.a_turnTo : P.a_side);
+    if (ft !== P.a_side && P.a_turnU >= 1 && P.a_fu > 0) { P.a_turnU = P.a_fu <= 0.5 ? P.a_fu : 1 - P.a_fu; P.a_turnTo = ft; P.a_turnDur = 0.24; P.a_fu = 0; }
+  }
+  else if (P.a_skid > 0) ft = P.a_skidDir;
   else if (P.a_ledge && P.a_sit > 0) ft = P.a_ledge;
   else if (act === 'wave') ft = P.a_waveDir;
   else if (still && cheer && Math.abs(P.a_cheerO.x - P.x) > 14) ft = P.a_cheerDir;
@@ -930,7 +1019,7 @@ function fezaUpdate(dt) {
   if (P.a_turnU < 1) {
     P.a_turnU = Math.min(1, P.a_turnU + dt / P.a_turnDur);
     if (P.a_turnU >= 0.5 && P.a_side !== P.a_turnTo) {   // ayna çevirme (önden görünüşün içinde, görünmez)
-      P.a_side = P.a_turnTo; P.a_pose.gx = -P.a_pose.gx; P.a_pv.gx = -P.a_pv.gx; P.a_hx = -P.a_hx; P.a_hvx = -P.a_hvx;
+      P.a_side = P.a_turnTo; P.a_pose[FZ_I_GX] = -P.a_pose[FZ_I_GX]; P.a_pv[FZ_I_GX] = -P.a_pv[FZ_I_GX]; P.a_hx = -P.a_hx; P.a_hvx = -P.a_hvx;
     }
   }
   P.a_face = P.a_side;
@@ -947,7 +1036,7 @@ function fezaUpdate(dt) {
   if (gr) P.a_ph += dt * 6.2832 * sp / lerp(64, 122, clamp((r - 0.45) / 0.55, 0, 1));
   {   // ayak basışı: bacak en önden geri dönmeye başlarken (her yarım döngüde bir ayak)
     const n = Math.floor((P.a_ph - 1.75) / Math.PI);
-    if (n !== P.a_stepN) { P.a_stepN = n; if (gr && sp > 5 && P.a_skid <= 0) OLAY.emit('adim', { x: P.x, y: P.y, hiz: sp }); }
+    if (n !== P.a_stepN) { P.a_stepN = n; if (gr && sp > 5 && P.a_skid <= 0) fzAdim(sp, false); }
   }
   // durum
   let st;
@@ -962,7 +1051,7 @@ function fezaUpdate(dt) {
   else st = 'idle';
   if (st !== P.a_state) { P.a_state = st; P.a_sw = 0; }
   P.a_sw += dt;
-  const T = Object.assign(FZ_T, FZ_REST);
+  const T = FZ_T; fzUnpack(FZ_RESTA, T);
   P.a_front = false; P.a_ikSrc = null;
   let kmax = 32, kmin = 10;
   const b = Math.sin(t * 2.4), s = Math.sin(t * 0.8);
@@ -1126,7 +1215,9 @@ function fezaUpdate(dt) {
   // büyük şeylere hayranlıkla bakma (Büyük Pofuduk, Işık Ağacı)
   let aw = 0, agx = 0, agy = 0;
   if (gr && (st === 'idle' || st === 'run' || st === 'sit')) {
-    for (const o of fzBig()) {
+    const big = fzBig();
+    for (let bi = 0; bi < big.length; bi++) {
+      const o = big[bi];
       const tree = o.tip === 'agac', range = tree ? 470 : 330, d = Math.abs(o.x - P.x);
       if (d > range) continue;
       const w = smooth(clamp((range - d) / (range * 0.45), 0, 1));
@@ -1136,7 +1227,7 @@ function fezaUpdate(dt) {
       }
     }
   }
-  P.a_awe += (aw * (act || cheer ? 0 : 1) - P.a_awe) * (1 - Math.exp(-dt * 2.5));
+  P.a_awe += (aw * (act || cheer || fin ? 0 : 1) - P.a_awe) * (1 - Math.exp(-dt * 2.5));
   if (P.a_awe > 0.01) {
     const w = P.a_awe;
     T.gx = lerp(T.gx, agx, w); T.gy = lerp(T.gy, agy, w); T.head = lerp(T.head, agy * 0.45 * Math.max(0, agx * 0.5 + 0.5), w); T.lean -= 0.06 * w * Math.max(0, -agy);
@@ -1174,10 +1265,85 @@ function fezaUpdate(dt) {
     T.bob = -1.6 * up; T.sy = 1 + 0.03 * up; T.sx = 1 - 0.02 * up; T.lt1 = lerp(T.lt1, 0.04, up); T.bt1 = lerp(T.bt1, -0.04, up); T.lt2 = lerp(T.lt2, -0.02, up); T.bt2 = lerp(T.bt2, -0.02, up);
     kmin = kmax = 18;
   }
+  // final kutlaması (yerde, durmuşken). Önden pozlarda eller yaylı hedeflere gider (FZ_FIN_IK).
+  let g0x = -6.6, g0y = 1.6, g1x = 6.6, g1y = 1.6;
+  if (fk && st === 'idle') {
+    const hop = Math.sin(Math.PI * clamp((fbu - 0.08) / 0.62, 0, 1));   // vuruş başına bir sekme: yumuşak kalkış ve iniş
+    T.sq = 0; T.lid = 1; T.mRound = 0; T.mSmile = 1; T.breath = 0; T.spr = 0;
+    FZ_FIN_IK[0][2] = FZ_FIN_IK[1][2] = 1;
+    if (fk === 1) {   // ağaca hayranlık: gözler ve baş tepeye, ağız "o", eller hafifçe öne açılır; sonunda kocaman gülümser
+      const tr = typeof TREE !== 'undefined' && TREE, tx = tr ? (TREE.x - P.x) * sd : 40, ty = tr ? (TREE.y - 300) - (P.y - 55) : -250;
+      const L = Math.hypot(tx, ty) || 1, agx = clamp(tx / L * 1.4, -1, 1), agy = clamp(ty / L * 2, -1, 0.2), sm = smooth(clamp((P.a_finT - 1.05) / 0.4, 0, 1));
+      kmin = kmax = 11;
+      T.gx = agx; T.gy = agy; T.head = agy * 0.45 * Math.max(0.4, agx * 0.5 + 0.5); T.lean = 0.01 - 0.07 * Math.max(0, -agy);
+      T.mRound = 0.85 * (1 - sm); T.mOpen = lerp(0.55, 0.7, sm); T.mSmile = lerp(0.35, 1, sm); T.brow = lerp(0.85, 0.5, sm); T.lid = lerp(1.12, 1, sm);
+      T.la1 = 0.6 + 0.08 * Math.sin(t * 2.2); T.la2 = 0.55; T.ba1 = 0.35; T.ba2 = 0.5; T.hOpen = 0.7; T.shr = 0.25;
+    } else if (fk === 2) {   // kollar havada, vuruşta zıplar (önden)
+      const wv = Math.sin(t * 14);
+      kmin = kmax = 28;
+      g0x = -12.4 - wv * 0.8; g1x = 12.4 - wv * 0.8; g0y = g1y = -25.5 + Math.abs(wv) * 0.8;
+      T.arm = 1.15; T.la1 = 1.9 + 0.1 * wv; T.la2 = 0.45; T.ba1 = 1.9 - 0.12 * wv; T.ba2 = 0.35; T.hOpen = 1; T.shr = 0.7;
+      T.happy = 1; T.mOpen = 0.9; T.brow = 0.5; T.head = -0.1; T.lean = -0.04;
+      T.bob = -4.5 * hop; T.lt1 = 0.05 + 0.4 * hop; T.lt2 = -0.1 - 0.7 * hop; T.bt1 = 0.3 * hop; T.bt2 = -0.1 - 0.6 * hop;
+    } else if (fk === 3) {   // dans
+      kmin = kmax = 24;
+      if (fb < 2) {          // sek, sek: Pofuduk'lara dönük, yumruklar sırayla, gözler gülüyor
+        const cr = (1 - hop) * 0.6, sh = fb ? -1 : 1;
+        T.bob = -3.2 * hop; T.hx = 0.6 * sh * hop;
+        T.lt1 = 0.12 + 0.25 * hop + 0.3 * cr; T.lt2 = -0.2 - 0.45 * hop - 0.55 * cr; T.bt1 = 0.02 + 0.2 * hop + 0.25 * cr; T.bt2 = -0.2 - 0.4 * hop - 0.5 * cr;
+        T.la1 = 0.9 + (sh > 0 ? 0.9 : 0.25) * hop; T.la2 = 1.4 - 0.4 * hop; T.ba1 = 0.7 + (sh > 0 ? 0.25 : 0.8) * hop; T.ba2 = 1.3; T.hOpen = 0;
+        T.lean = 0.03 + 0.06 * hop; T.head = 0.04 - 0.08 * hop; T.gx = 1; T.gy = 0.45; T.happy = 1; T.mOpen = 0.6; T.brow = 0.35;
+      } else if (fb === 2) { // önden iki kez el çırpar
+        const s2 = Math.abs(Math.sin(fbu * 6.2832));
+        kmin = kmax = 28;
+        g0x = -(0.9 + 5.2 * s2); g1x = 0.9 + 5.2 * s2; g0y = g1y = -7.6 - 1.6 * s2;
+        T.la1 = 1.3; T.la2 = 1.4; T.ba1 = 1.3; T.ba2 = 1.4; T.hOpen = 1;
+        T.bob = -1.2 * s2; T.lt1 = 0.1 + 0.15 * (1 - s2); T.lt2 = -0.2 - 0.3 * (1 - s2); T.bt1 = 0.1 + 0.15 * (1 - s2); T.bt2 = -0.2 - 0.3 * (1 - s2);
+        T.happy = 1; T.mOpen = 0.8; T.brow = 0.45; T.head = -0.05; T.gx = 0; T.gy = 0.2;
+      } else {               // önden geçerek öbür yana dönüş, kollar açık, küçük zıplama
+        kmin = kmax = 26;
+        T.bob = -5.5 * hop; T.lt1 = 0.1 + 0.5 * hop; T.lt2 = -0.15 - 0.95 * hop; T.bt1 = 0.05 + 0.3 * hop; T.bt2 = -0.15 - 0.85 * hop;
+        T.la1 = 1.75; T.la2 = 0.3; T.ba1 = -1.35; T.ba2 = 0.3; T.hOpen = 1; T.shr = 0.4; T.arm = 1.08;
+        T.happy = 1; T.mOpen = 0.9; T.brow = 0.5; T.head = -0.08; T.lean = -0.03; T.gx = 0.8; T.gy = 0.2;
+      }
+    } else if (fk === 4) {   // önden, yukarıda dans eden Pırıl'a el sallar; gözleriyle onu izler
+      kmin = kmax = 20;
+      if (P.a_finHand) { g1x = 12.0 + 2.8 * Math.sin(t * 11); g1y = -30.0 + 0.8 * Math.cos(t * 22); g0x = -7.0; g0y = 0.6 - 0.8 * hop; FZ_FIN_IK[0][2] = 0; }
+      else { g0x = -12.0 - 2.8 * Math.sin(t * 11); g0y = -30.0 + 0.8 * Math.cos(t * 22); g1x = 7.0; g1y = 0.6 - 0.8 * hop; FZ_FIN_IK[1][2] = 0; }
+      T.arm = 1.1; T.la1 = 2.4; T.la2 = 0.6 + 0.3 * Math.sin(t * 11); T.hOpen = 1; T.ba1 = 0.15; T.shr = 0.35;
+      T.gx = clamp((D.x - P.x) * sd / 50, -1, 1); T.gy = clamp((D.y - (P.y - 58)) / 45, -1, 1); T.head = -0.14;
+      T.mOpen = 0.65; T.brow = 0.45; T.bob = -1.5 * hop; T.lt1 = 0.08 + 0.12 * (1 - hop); T.lt2 = -0.12 - 0.25 * (1 - hop); T.bt1 = 0.08 + 0.12 * (1 - hop); T.bt2 = -0.12 - 0.25 * (1 - hop);
+    } else {                 // düşen yaprağa uzanır (parmak ucunda, sonra küçük zıplama), sonunda yakalayıp göğsüne bastırır
+      fzFinPetal(FZ_PET, fbt);
+      const ox = (FZ_PET[0] - P.x) * sd, oy = FZ_PET[1] - (P.y - 44), ey = FZ_PET[1] - (P.y - 58);
+      kmin = kmax = 18;
+      if (fb < 3) {
+        const ang = clamp(Math.atan2(ox, oy), 0.5, 2.45), jp = fb === 2 ? hop : 0;
+        T.la1 = ang; T.la2 = 0.08; T.hOpen = 1; T.arm = 1.12; T.ba1 = ang - 0.5; T.ba2 = 0.25; T.shr = 0.45;
+        T.bob = -1.8 - 4.5 * jp; T.sy = 1.03; T.sx = 0.985; T.lean = -0.06;
+        T.lt1 = 0.05 + 0.3 * jp; T.lt2 = -0.03 - 0.6 * jp; T.bt1 = -0.05 + 0.2 * jp; T.bt2 = -0.03 - 0.5 * jp;
+        T.gx = clamp(ox / 35, -1, 1); T.gy = clamp(ey / 35, -1, 1); T.head = clamp(ey / 160, -0.32, 0.05);
+        T.mRound = 0.55; T.mOpen = 0.5; T.mSmile = 0.6; T.brow = 0.65; T.lid = 1.1;
+      } else {
+        T.la1 = 1.05; T.la2 = 1.75; T.ba1 = 0.95; T.ba2 = 1.7; T.hOpen = 0; T.shr = 0.3;
+        T.bob = -2.5 * hop; T.lt1 = 0.05 + 0.25 * hop; T.lt2 = -0.1 - 0.45 * hop; T.bt1 = 0.15 * hop; T.bt2 = -0.1 - 0.4 * hop;
+        T.happy = 1; T.mOpen = 0.7; T.brow = 0.4; T.head = 0.08; T.gx = 0.5; T.gy = 0.6;
+      }
+    }
+    if (fFront && P.a_turnU >= 1) { P.a_front = true; P.a_ikSrc = FZ_FIN_IK; }
+  }
+  if (fin) {   // önden el hedefleri: kritik sönümlü yay (çırpma, el sallama, kollar havada arasında sıçrama olmaz)
+    FZ_FIN_G[0] = g0x; FZ_FIN_G[1] = g0y; FZ_FIN_G[2] = g1x; FZ_FIN_G[3] = g1y;
+    const om = 34, ee = Math.exp(-om * dt);
+    for (let i = 0; i < 4; i++) {
+      const a = FZ_FIN_IK[i >> 1], j = i & 1, x0 = a[j] - FZ_FIN_G[i], c = (FZ_FIN_V[i] + om * x0) * dt;
+      a[j] = FZ_FIN_G[i] + (x0 + c) * ee; FZ_FIN_V[i] = (FZ_FIN_V[i] - om * c) * ee;
+    }
+  }
   // hareketli cismin üstünde denge
   P.a_bal += ((mover ? 1 : 0) - P.a_bal) * (1 - Math.exp(-dt * 6));
   const bal = Math.max(P.a_bal * 0.6, P.a_balKick);
-  if (bal > 0.01 && (st === 'idle' || st === 'run' || st === 'sit') && !cheer && !act) {
+  if (bal > 0.01 && (st === 'idle' || st === 'run' || st === 'sit') && !cheer && !act && !fk) {
     const bw = Math.sin(t * 7.5) * P.a_balKick;
     T.la1 = lerp(T.la1, 1.45 + 0.6 * bw, bal); T.la2 = lerp(T.la2, 0.25, bal); T.ba1 = lerp(T.ba1, -1.15 - 0.6 * bw, bal); T.ba2 = lerp(T.ba2, 0.3, bal); T.hOpen = Math.max(T.hOpen, bal);
     if (st !== 'sit') { T.lt2 -= 0.3 * bal; T.bt2 -= 0.3 * bal; T.lean += 0.08 * bw + 0.04 * Math.sin(t * 2.6) * bal; }
@@ -1188,19 +1354,20 @@ function fezaUpdate(dt) {
   if (P.a_turnU < 0.5) { T.gx = -1; T.gy = 0; }   // dönüşte önce gözler yeni yöne bakar
   // kritik sönümlü yay (tam çözüm): hareket yavaş başlar, yavaş biter — durum değişiminde hız sıçraması (pop) olmaz.
   // om = 1.7k: eski üstel yaklaşımla aynı sürede %90'a varır, en yüksek hızı ~%40 daha düşük.
-  const om = 1.7 * k, ee = Math.exp(-om * dt), V = P.a_pv;
-  for (const key of FZ_KEYS) {
-    const x0 = cur[key] - T[key], c = (V[key] + om * x0) * dt;
-    cur[key] = T[key] + (x0 + c) * ee; V[key] = (V[key] - om * c) * ee;
-    const vm = FZ_VMAX[key];   // uzuvlar en çok ~0.37 rad/kare döner (60 Hz): uzak pozlara geçişte bile kol "ışınlanmaz"
-    if (vm && Math.abs(V[key]) > vm) { const v2 = Math.sign(V[key]) * vm; cur[key] -= (V[key] - v2) * dt * 0.5; V[key] = v2; }
+  const om = 1.7 * k, ee = Math.exp(-om * dt), V = P.a_pv, TA = FZ_TA;
+  fzPack(T, TA);
+  for (let i = 0; i < FZ_N; i++) {
+    const x0 = cur[i] - TA[i], c = (V[i] + om * x0) * dt;
+    cur[i] = TA[i] + (x0 + c) * ee; V[i] = (V[i] - om * c) * ee;
+    const vm = FZ_VMAXA[i];   // uzuvlar en çok ~0.37 rad/kare döner (60 Hz): uzak pozlara geçişte bile kol "ışınlanmaz"
+    if (vm > 0 && Math.abs(V[i]) > vm) { const v2 = V[i] > 0 ? vm : -vm; cur[i] -= (V[i] - v2) * dt * 0.5; V[i] = v2; }
   }
   // göz kırpma (bazen çift)
   P.a_blink -= dt;
   if (P.a_blink < -0.13) P.a_blink = Math.random() < 0.2 ? 0.22 : 1.8 + Math.random() * 3;
   P.a_lidM += ((P.a_blink < 0 ? 0 : 1) - P.a_lidM) * (1 - Math.exp(-dt * 45));
   // çizim pozu = yumuşak poz + iniş çökmesi + kalkış uzaması + çarpma
-  const R = Object.assign(P.a_R, cur), lt = P.a_landT;
+  const R = P.a_R, lt = P.a_landT; fzUnpack(cur, R);
   // kalkış uzaması iki karede yükselir (tek karede bacak düzelip kalça sıçramasın), sonra söner
   // iniş çökmesi fiziğe bağlı: kalça yere düşüş hızıyla değer ve hemen yavaşlamaya başlar. c(t) = p·A·(e^(-t/τ2) − e^(-t/τ1)):
   // ilk karede en hızlı çöker (dünyadaki kalça hızı düşüşten kesintisiz devam eder, sonra tekdüze yavaşlar; net iniş),
@@ -1208,7 +1375,7 @@ function fezaUpdate(dt) {
   // Kalkış uzaması: 6.75 p (1-p)², kalkış hızıyla ölçekli (sonu yumuşak).
   const t1 = lerp(0.042, 0.032, P.a_landP), t2 = 0.13, tpk = Math.log(t2 / t1) * t1 * t2 / (t2 - t1);
   const lA = 1 / (Math.exp(-tpk / t2) - Math.exp(-tpk / t1)), tp = Math.pow(1 - P.a_take, 1.3);
-  const cr = gr ? P.a_landP * lA * (Math.exp(-lt / t2) - Math.exp(-lt / t1)) : 0, tk = P.a_take > 0 ? 6.75 * tp * (1 - tp) * (1 - tp) * (P.a_takeP || 1) : 0;
+  const cr = gr ? P.a_landP * lA * (Math.exp(-lt / t2) - Math.exp(-lt / t1)) : 0, tk = P.a_take > 0 ? 6.75 * tp * (1 - tp) * (1 - tp) * P.a_takeP : 0;
   R.lt1 += 0.8 * cr; R.lt2 -= 1.5 * cr; R.bt1 += 0.6 * cr; R.bt2 -= 1.4 * cr; R.lean += 0.25 * cr; R.head += 0.12 * cr;
   R.la1 += 0.5 * cr; R.ba1 += 0.4 * cr; R.sx += 0.1 * cr; R.sy -= 0.08 * cr; R.lid *= 1 - 0.3 * cr;
   R.sy += 0.08 * tk; R.sx -= 0.06 * tk; R.lt1 -= 0.6 * tk * R.lt1; R.lt2 *= 1 - 0.7 * tk;
@@ -1225,19 +1392,18 @@ function fezaUpdate(dt) {
   }
   P.a_spin = spin;
   // kalça yüksekliği: yerdeyken en alttaki ayak tam yere bassın
-  const fy = (a1, a2) => FZ_TH * Math.cos(a1) + FZ_SH * Math.cos(a1 + a2) + FZ_FT;
-  const hipG = -Math.max(fy(R.lt1, R.lt2), fy(R.bt1, R.bt2));
+  const hipG = -Math.max(fzFy(R.lt1, R.lt2), fzFy(R.bt1, R.bt2));
   P.a_ledgeW += (((st === 'sit' && P.a_ledge && P.a_sit > 0.35) ? 1 : 0) - P.a_ledgeW) * (1 - Math.exp(-dt * 5));
   const hip = lerp(lerp(hipG, FZ_AIRHIP, R.air) + R.bob, -2.4, P.a_ledgeW);
   // popo kenarın tam üstüne gelsin (kalça yerel x ≈ hx)
-  const lox = P.a_ledge && P.a_edgeX !== undefined ? clamp(P.a_edgeX - P.a_ledge * 2.5 - P.x - sd * FZ_SC * R.hx, -16, 16) : 0;
+  const lox = P.a_ledge ? clamp(P.a_edgeX - P.a_ledge * 2.5 - P.x - sd * FZ_SC * R.hx, -16, 16) : 0;
   P.a_hipV = (hip - P.a_hipY) / dt; P.a_hipY = hip;
   // taşınırken çizim kayması: yukarıdan sallanarak yavaşça iner (Pırıl P.a_elX/elY'deki ellere tutunabilir)
   {   // hedefe yumuşak yaklaşım: piril.js taşıma bitince süreyi ileri atlatsa da sıçrama olmaz
     const cu = carry ? clamp(P.a_carryT / FZ_CARRY, 0, 1) : 1, dk = 1 - Math.exp(-dt * 12);
     P.a_oy += (-50 * (1 - cu) * (1 - cu) - P.a_oy) * dk; P.a_ox += (Math.sin(t * 3.1) * 2.5 * (1 - cu) + lox * P.a_ledgeW - P.a_ox) * dk;
   }
-  P.a_tasW = (P.a_tasW || 0) + (((typeof D !== 'undefined' && D.tasiyor) || carry ? 1 : 0) - (P.a_tasW || 0)) * (1 - Math.exp(-dt * 5));
+  P.a_tasW += (((typeof D !== 'undefined' && D.tasiyor) || carry ? 1 : 0) - P.a_tasW) * (1 - Math.exp(-dt * 5));
   P.a_tutun += ((carry ? 1 : 0) - P.a_tutun) * (1 - Math.exp(-dt * 20));
   {   // ön elin dünya konumu (Pırıl taşırken bu ele tutunur)
     const cl = Math.cos(R.lean), sl = Math.sin(R.lean), sx0 = 1.2, sy0 = -11.4;
@@ -1259,7 +1425,7 @@ function fezaUpdate(dt) {
   P.a_hx = clamp(P.a_hx, -3.5, 3.5); P.a_hy = clamp(P.a_hy, -3.5, lim + 0.5);
   // önden pozlarda eller hedefe, önden görünüş belirdikten sonra yumuşakça gider (sıçrama olmasın)
   if (P.a_ikSrc) P.a_ikLast = P.a_ikSrc;
-  P.a_ikW = (P.a_ikW || 0) + (((P.a_ikSrc && P.a_fu >= 0.3) ? 1 : 0) - (P.a_ikW || 0)) * (1 - Math.exp(-dt * 20));
+  P.a_ikW += (((P.a_ikSrc && P.a_fu >= 0.3) ? 1 : 0) - P.a_ikW) * (1 - Math.exp(-dt * 20));
   if (P.a_ikLast && (P.a_fu > 0 || P.a_ikW > 0.02)) {
     const w = P.a_ikW, src = P.a_ikLast;
     for (let i = 0; i < 2; i++) { const sd2 = i ? 1 : -1; FZ_IKB[i][0] = lerp(sd2 * 6.6, src[i][0], w); FZ_IKB[i][1] = lerp(1.6, src[i][1], w); FZ_IKB[i][2] = w > 0.5 ? src[i][2] : 0; }
