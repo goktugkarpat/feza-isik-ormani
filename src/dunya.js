@@ -130,7 +130,12 @@ const DN_CREF = clamp(DN_GY - VH * 0.62, DN_CAM0, DN_CAM1);       // yerde durur
 const DN_DY0 = DN_CAM0 - DN_CREF, DN_DY1 = DN_CAM1 - DN_CREF;
 const dnDY = () => cam.y - DN_CREF;                              // <0: yukarı tırmanırken
 const DN_FYK = 0.75;                                             // dikey paralaks yatayınkinden biraz zayıf
-const DN_GOL = BOLUM.gol || null;
+// göller: BOLUM.gollar (birden çok havuz) ya da yalnız BOLUM.gol; ana göl her zaman listede. DN_GOL = o an çizilen göl (dnUseLake)
+const DN_GOLS = (() => { const a = (Array.isArray(BOLUM.gollar) ? BOLUM.gollar : []).filter(G => G && G.x1 > G.x0 && G.su != null);
+  if (BOLUM.gol && !a.some(G => G === BOLUM.gol || (Math.abs(G.x0 - BOLUM.gol.x0) < 1 && Math.abs(G.x1 - BOLUM.gol.x1) < 1))) a.push(BOLUM.gol);
+  return a.sort((p, q) => p.x0 - q.x0); })();
+let DN_GOL = DN_GOLS[0] || null;
+const dnInLake = (x, pad) => DN_GOLS.some(G => x > G.x0 - pad && x < G.x1 + pad);
 
 // ── bölgeler: yumuşak geçişli ağırlıklar ──
 const DN_REGS = (BOLUM.bolgeler || []).slice();
@@ -795,7 +800,7 @@ function dnLake(tm, msx) {
 
 // ── zemin geometrisi (yuvarlatılmış köşeler) – bir kez kurulur ──
 function dnGroundPath() {
-  const p = new Path2D(), G = BOLUM.gol;
+  const p = new Path2D();
   let c = 0;
   while (c < COLS) {
     if (topOf(c) >= ROWS) { c++; continue; }
@@ -806,7 +811,7 @@ function dnGroundPath() {
     for (let i = 1; i < P2.length - 1; i++) {
       const [x0, y0] = P2[i - 1], [x1, y1] = P2[i], [x2, y2] = P2[i + 1];
       if ((x0 === x1 && x1 === x2) || (y0 === y1 && y1 === y2)) continue;
-      p.arcTo(x1, y1, x2, y2, G && x1 >= G.x0 - T && x1 <= G.x1 + T ? 22 : 14);
+      p.arcTo(x1, y1, x2, y2, dnInLake(x1, T + 1) ? 22 : 14);
     }
     p.lineTo(P2[P2.length - 1][0], P2[P2.length - 1][1]); p.closePath();
   }
@@ -874,8 +879,8 @@ function dnWillowClump(front, back, cx, cy, r, R) {
 }
 // göl kıyısında suya eğilen iki yaşlı söğüt (dünya derinliğinde): göğü çerçeveler, sarkan ışıklı sarmaşık perdeleri suya uzanır
 const DN_WILLOWS = [];
-if (DN_GOL) {
-  const G = DN_GOL, mk = (bx, sd, seed, H0) => {
+for (const [gi, G] of DN_GOLS.entries()) {
+  const mk = (bx, sd, seed, H0) => {
     const R = rng(seed), base = dnTopY(bx), parts = [], vines = [], crown = new Path2D(), crownB = new Path2D(), lim = [];
     const tx = bx + sd * 150, ty = base - H0;   // gövde ucu suya doğru eğik
     const trunkP = [bx, base + 30, bx + sd * 10, base - H0 * 0.45, bx + sd * 40, base - H0 * 0.85, tx, ty];
@@ -896,18 +901,23 @@ if (DN_GOL) {
     }
     return { x: bx, sd, base, parts, vines, crown, crownB, x0: Math.min(bx, tx) - 450, x1: Math.max(bx, tx) + 450, ph: R() * 6 };
   };
-  const lb = G.x0 - 3.5 * T, rb = G.x1 + 4.5 * T;
-  if (topOf(Math.floor(lb / T)) < ROWS) DN_WILLOWS.push(mk(lb, 1, 4711, 360));
-  if (topOf(Math.floor(rb / T)) < ROWS) DN_WILLOWS.push(mk(rb, -1, 9077, 330));
+  const lb = G.x0 - 3.5 * T, rb = G.x1 + 4.5 * T, sm = G.x1 - G.x0 < 14 * T ? 0.8 : 1;   // küçük havuzda söğütler de biraz küçük
+  if (topOf(Math.floor(lb / T)) < ROWS && !DN_WILLOWS.some(w => Math.abs(w.x - lb) < 300)) DN_WILLOWS.push(mk(lb, 1, 4711 + gi * 131, 360 * sm));
+  if (topOf(Math.floor(rb / T)) < ROWS && !DN_WILLOWS.some(w => Math.abs(w.x - rb) < 300)) DN_WILLOWS.push(mk(rb, -1, 9077 + gi * 131, 330 * sm));
 }
 function dnDrawWillows(tm, vx0, vx1, bio) {
   for (const w of DN_WILLOWS) {
     if (w.x1 < vx0 || w.x0 > vx1) continue;
-    g.save(); g.translate(1.5, -1.5); g.fillStyle = dc('rim', 0.22); g.fill(w.crownB); g.restore();
-    g.fillStyle = dc('mid', 0.92); g.fill(w.crownB);   // arka yaprak katmanı (daha açık, sisli)
-    g.save(); g.translate(2.2 * -w.sd, -1); g.fillStyle = dc('rim', 0.4); for (const q of w.parts) g.fill(q); g.fill(w.crown); g.restore();
+    // hafif rüzgâr: bütün ağaç tabandan eğilir (kayma dönüşümü, ucuz); taç biraz daha fazla ve gecikmeli salınır
+    const wk = Math.sin(tm * 0.45 + w.ph) * 0.006 + Math.sin(tm * 1.05 + w.ph * 2) * 0.0022, ck = wk * 0.7 + Math.sin(tm * 0.45 + w.ph - 0.6) * 0.004;
+    g.save(); g.transform(1, 0, wk, 1, -wk * w.base, 0);
+    const crownSway = f => { g.save(); g.transform(1, 0, ck, 1, -ck * (w.base - 200), 0); f(); g.restore(); };
+    crownSway(() => { g.save(); g.translate(1.5, -1.5); g.fillStyle = dc('rim', 0.22); g.fill(w.crownB); g.restore();
+      g.fillStyle = dc('mid', 0.92); g.fill(w.crownB); });   // arka yaprak katmanı (daha açık, sisli)
+    g.save(); g.translate(2.2 * -w.sd, -1); g.fillStyle = dc('rim', 0.4); for (const q of w.parts) g.fill(q); g.restore();
+    crownSway(() => { g.translate(2.2 * -w.sd, -1); g.fillStyle = dc('rim', 0.4); g.fill(w.crown); });
     const tg = g.createLinearGradient(0, w.base - 420, 0, w.base); tg.addColorStop(0, dc('near')); tg.addColorStop(1, dc('mid'));
-    g.fillStyle = tg; for (const q of w.parts) g.fill(q); g.fill(w.crown);
+    g.fillStyle = tg; for (const q of w.parts) g.fill(q); crownSway(() => g.fill(w.crown));
     const sway = t => Math.sin(tm * 0.7 + t) * 5 + Math.sin(tm * 1.3 + t * 2) * 2;
     for (let pass = 0; pass < 2; pass++) {   // önce arka (soluk), sonra ön sarmaşık perdesi; salınım = şeride kayma (shear) dönüşümü
       const col = pass ? dc('near') : dc('mid', 0.85); g.strokeStyle = col; g.fillStyle = col; g.lineWidth = pass ? 1.4 : 1;
@@ -917,6 +927,7 @@ function dnDrawWillows(tm, vx0, vx1, bio) {
     g.globalCompositeOperation = 'lighter';
     for (const [vx, vy, len, ph, bulb] of w.vines) if (bulb) { const sw = sway(ph), pul = 0.6 + 0.4 * Math.sin(tm * 1.5 + ph * 3); dglow(ph < 2 ? '#c9b2ff' : bio, vx + sw, vy + len + 2, 9, 0.6 * pul); dglow('#ffffff', vx + sw, vy + len + 2, 2, 0.7 * pul); }
     g.globalCompositeOperation = 'source-over';
+    g.restore();
   }
 }
 // dünya derinliğinde dev gövdeler: dal platformları bunlara bağlanır
@@ -1017,21 +1028,34 @@ const DN_FGS = (() => {
   }
   return a;
 })();
-const DN_FGSPR = { l: -1, t: [], lf: [], m: [] };
+const DN_FGSPR = { l: -1, k: 0, t: [], lf: [], m: [] };
+// yumuşak (bulanık) ön plan: önce keskin boyanır, sonra yarıya-yarıya küçültülüp yeniden ikiye-ikiye büyütülür ("dual filter")
+// → kenarlar basamaksız, düzgün yumuşak geçişli; son görüntü ekranda en fazla ~2× büyütülür (2048×1536'da piksel görünmez)
+function dnSoftBake(w, h, px, py, levels, draw) {   // px,py: birim başına piksel (keskin boyama), levels: bulanıklık basamağı
+  const cw = Math.max(4, Math.ceil(w * px)), ch = Math.max(4, Math.ceil(h * py)), pad = 1 << levels;
+  const W0 = Math.ceil(cw / pad) * pad + pad * 2, H0 = Math.ceil(ch / pad) * pad + pad * 2;   // kenarda boşluk: bulanıklık kesilmesin
+  const a = document.createElement('canvas'); a.width = W0; a.height = H0;
+  const ax = a.getContext('2d'); ax.setTransform(px, 0, 0, py, pad, pad); draw(ax);
+  let cur = a, cwid = W0, chei = H0; const st = [];
+  for (let i = 0; i < levels; i++) {
+    const n = document.createElement('canvas'); n.width = Math.max(1, cwid >> 1); n.height = Math.max(1, chei >> 1);
+    const nx2 = n.getContext('2d'); nx2.imageSmoothingEnabled = true; nx2.imageSmoothingQuality = 'high'; nx2.drawImage(cur, 0, 0, n.width, n.height);
+    st.push(cur); cur = n; cwid = n.width; chei = n.height;
+  }
+  for (let i = levels - 1; i >= 0; i--) {
+    const t = st[i], tx = t.getContext('2d'); tx.setTransform(1, 0, 0, 1, 0, 0); tx.clearRect(0, 0, t.width, t.height);
+    tx.imageSmoothingEnabled = true; tx.imageSmoothingQuality = 'high'; tx.drawImage(cur, 0, 0, t.width, t.height); cur = t;
+  }
+  cur.dnPad = [pad / px, pad / py]; cur.dnSrc = [cw + pad * 2, ch + pad * 2];   // tuvaldeki kenar boşluğu (birim)
+  return cur;
+}
 function dnFgsSprites() {
-  const lq = Math.round(light * 5) / 5;
-  if (DN_FGSPR.l === lq) return;
-  DN_FGSPR.l = lq;
+  const lq = Math.round(light * 5) / 5, k = Math.min(S, DN_TOUCH ? 2.75 : 3);
+  if (DN_FGSPR.l === lq && DN_FGSPR.k === k) return;
+  DN_FGSPR.l = lq; DN_FGSPR.k = k;
   const rim = dcAt('rim', lq, 0.85), body = '#01030a';
-  // önce 4× büyük boyanır, sonra küçük tuvale çok noktalı ortalama (yumuşak bulanıklık) ile indirilir → büyütülünce kenarlar basamaklı değil yumuşak
-  const mk = (w, h, draw) => {
-    const M = 2, Q = 3, big = document.createElement('canvas'); big.width = w * M * Q; big.height = h * M * Q;
-    const bx = big.getContext('2d'); bx.scale(M * Q, M * Q); draw(bx);
-    const c = document.createElement('canvas'); c.width = w * M; c.height = h * M; const x = c.getContext('2d');
-    const taps = [[0, 0]]; for (let i = 0; i < 8; i++) { const a = i / 8 * 6.283; taps.push([Math.cos(a) * 1.3 * M, Math.sin(a) * 1.3 * M]); } for (let i = 0; i < 10; i++) { const a = (i + 0.5) / 10 * 6.283; taps.push([Math.cos(a) * 2.6 * M, Math.sin(a) * 2.6 * M]); }
-    taps.forEach(([dx, dy], i) => { x.globalAlpha = 1 / (i + 1); x.drawImage(big, dx, dy, w * M, h * M); });   // yürüyen ortalama
-    x.globalAlpha = 1; return c;
-  };
+  // keskin boyama: ekrandaki boyutun ~yarısı (birim başına piksel), sonra 3 basamak yumuşatma
+  const mk = (w, h, draw, sx, sy) => dnSoftBake(w, h, sx * k * 0.5, sy * k * 0.5, 3, draw);
   DN_FGSPR.t = [0, 1].map(v => mk(40, 200, x => {   // gövde: hafif kıvrık, bir dal kökü; sol kenarında ışık
     const R = rng(71 + v), p = new Path2D(), L = [], Rr = [];
     for (let i = 0; i <= 20; i++) { const y = i * 10, cx = 20 + Math.sin(i * 0.3 + v * 2) * 2.5, hw = 9 + (v ? 2 : 0) + Math.pow(i / 20, 6) * 6; L.push([cx - hw, y]); Rr.push([cx + hw, y]); }
@@ -1039,7 +1063,7 @@ function dnFgsSprites() {
     x.save(); x.translate(-1.6, 0); x.fillStyle = rim; x.fill(p); x.restore();
     x.fillStyle = body; x.fill(p);
     for (let i = 0; i < 4; i++) { const yy = 20 + R() * 150; x.fillStyle = body; x.beginPath(); x.ellipse(13 + R() * 3, yy, 3, 1.4, 0, 0, 6.283); x.fill(); }
-  }));
+  }, 170 / 40 * 1.2, VH * 1.25 / 200));
   DN_FGSPR.lf = [0, 1].map(v => mk(80, 56, x => {   // yaprak kümesi (üst köşeden sarkar)
     const R = rng(91 + v), p = new Path2D();
     p.ellipse(40, 6, 34, 10, 0, 0, 6.283);
@@ -1047,14 +1071,14 @@ function dnFgsSprites() {
     for (let i = 0; i < 4; i++) { const lx = 14 + R() * 52; p.moveTo(lx, 10); p.lineTo(lx + 0.8, 10); p.lineTo(lx + (R() - 0.5) * 6, 30 + R() * 22); p.closePath(); }
     x.save(); x.translate(0, 1.4); x.fillStyle = rim; x.fill(p); x.restore();
     x.fillStyle = body; x.fill(p);
-  }));
+  }, 380 / 80 * 1.2, 380 / 80 * 1.2));
   DN_FGSPR.m = [mk(48, 72, x => {   // dev mantar sapı + şapka kenarı (pofuduk çayırı)
     const p = new Path2D(); p.moveTo(16, 72); p.bezierCurveTo(18, 50, 20, 30, 20, 16); p.lineTo(28, 16); p.bezierCurveTo(28, 30, 30, 50, 34, 72); p.closePath();
     p.moveTo(-6, 18); p.bezierCurveTo(4, -6, 44, -6, 54, 18); p.quadraticCurveTo(24, 10, -6, 18);
     x.save(); x.translate(-1.2, 0); x.fillStyle = rim; x.fill(p); x.restore();
     x.fillStyle = body; x.fill(p);
     x.globalCompositeOperation = 'lighter'; dnG(x, '#ff9ad8', 24, 18, 18, 0.35); x.globalCompositeOperation = 'source-over';
-  })];
+  }, 300 / 48, 300 / 48)];
 }
 function dnFgSilhouettes() {
   if (!DN_FGS.length) return;
@@ -1075,11 +1099,13 @@ function dnFgSilhouettes() {
       const spr = it.mush ? DN_FGSPR.m[0] : DN_FGSPR.t[it.v], w = (it.mush ? 300 : 170) * it.s * S, h = it.mush ? w * 1.5 : H * 1.25;
       a *= clamp(Math.abs(sx - fx) / (w * 0.9), 0.25, 1);   // Feza'nın önüne gelirse saydamlaşır
       g.globalAlpha = a; g.save(); g.translate(sx, it.mush ? H - h * 0.62 : -H * 0.12); g.scale(it.fl, 1);
-      g.drawImage(spr, -w / 2, 0, w, h); g.restore();
+      const qx = spr.dnPad[0] * w / 40 * (it.mush ? 40 / 48 : 1), qy = spr.dnPad[1] * h / (it.mush ? 72 : 200);
+      g.drawImage(spr, 0, 0, spr.dnSrc[0], spr.dnSrc[1], -w / 2 - qx, -qy, w + qx * 2, h + qy * 2); g.restore();
     } else {
       const spr = DN_FGSPR.lf[it.v], w = 380 * it.s * S, h = w * 0.7;
       g.globalAlpha = a; g.save(); g.translate(sx, -h * 0.3 + Math.sin(now * 0.5 + it.x) * 4 * S); g.rotate(Math.sin(now * 0.4 + it.x) * 0.02); g.scale(it.fl, 1);
-      g.drawImage(spr, -w / 2, 0, w, h); g.restore();
+      const qx = spr.dnPad[0] * w / 80, qy = spr.dnPad[1] * h / 56;
+      g.drawImage(spr, 0, 0, spr.dnSrc[0], spr.dnSrc[1], -w / 2 - qx, -qy, w + qx * 2, h + qy * 2); g.restore();
     }
   }
   g.globalAlpha = 1; g.imageSmoothingEnabled = sm; g.imageSmoothingQuality = sq;
@@ -1156,7 +1182,7 @@ const DN_HOLES = [];
 { const R = rng(43); let x = 200 + R() * 300;
   while (x < DN_LW - 100) {
     const c = Math.floor(x / T), t = topOf(c), tl = topOf(c - 2), tr = topOf(c + 2);
-    if (t < ROWS && tl === t && tr === t && DN_LH - t * T >= 110 && !(DN_GOL && x > DN_GOL.x0 - 120 && x < DN_GOL.x1 + 120)) {
+    if (t < ROWS && tl === t && tr === t && DN_LH - t * T >= 110 && !dnInLake(x, 120)) {
       const reg = DN_COLR[c], rx = 44 + R() * 34, ry = 20 + R() * 10, cy = t * T + 62 + R() * Math.min(60, DN_LH - t * T - 100);
       const p = new Path2D(), pts = [];
       for (let i = 0; i < 16; i++) { const a = i / 16 * 6.283, k = 0.85 + R() * 0.3, fl = Math.sin(a) > 0 ? 0.75 : 1; pts.push([x + Math.cos(a) * rx * k, cy + Math.sin(a) * ry * k * fl]); }
@@ -1296,7 +1322,7 @@ const DN_DECO = [], DN_GRASS = [];
 {
   const R = rng(7), FL = NESNELER.filter(n => n.tip === 'cicek' || n.tip === 'tohum' || n.tip === 'agac' || n.tip === 'buyukPofuduk');
   const nearObj = x => FL.some(f => Math.abs(f.x - x) < (f.tip === 'agac' ? 150 : f.tip === 'buyukPofuduk' ? 70 : 34));
-  const golE = DN_GOL ? [DN_GOL.x0, DN_GOL.x1] : null;
+  const golE = DN_GOLS.length ? DN_GOLS.flatMap(G => [G.x0, G.x1]) : null;
   for (let c = 0; c < COLS; c++) {
     const tops = [];
     const t = topOf(c); if (t < ROWS) tops.push([t, false]);
@@ -1307,7 +1333,7 @@ const DN_DECO = [], DN_GRASS = [];
       for (let i = 0; i < nG; i++) { const h = (5 + R() * 13) * hk; DN_GRASS.push({ x: c * T + R() * T, y: ty * T + 1, h, ph: R() * 6.28, lean: (R() - 0.5) * 0.5, tip: h > 14 && R() < 0.55, reg }); }
       const r = R(), x = c * T + 6 + R() * (T - 12), y = ty * T;
       if (nearObj(x)) continue;
-      const nearWater = golE && !pl && (Math.abs(x - golE[0]) < 160 || Math.abs(x - golE[1]) < 160);
+      const nearWater = golE && !pl && golE.some(e => Math.abs(x - e) < 160);
       if (nearWater && r < 0.5) { const n = 3 + Math.floor(R() * 4), it = []; for (let i = 0; i < n; i++) it.push([(R() - 0.5) * 22, 30 + R() * 34, R() * 6, R() < 0.5]); DN_DECO.push({ k: 'r', x, y, it }); continue; }
       const P0 = reg === 'pofuduk' ? [0.42, 0.5, 0.6, 0.72, 0.9] : reg === 'aciklik' ? [0.1, 0.18, 0.26, 0.3, 0.75] : reg === 'sakli' ? [0.16, 0.22, 0.34, 0.36, 0.8] : reg === 'dallar' ? [0.14, 0.28, 0.55, 0.55, 0.68] : [0.2, 0.32, 0.5, 0.55, 0.72];
       if (r < P0[0]) { const big = reg === 'pofuduk' && R() < 0.5, n = 2 + Math.floor(R() * (big ? 4 : 3)), it = []; for (let i = 0; i < n; i++) it.push([(R() - 0.5) * (big ? 26 : 16), (0.55 + R() * 0.7) * (big ? 1.5 : 1)]); DN_DECO.push({ k: 'm', x, y, it, ph: R() * 6, vio: reg === 'sakli' ? R() < 0.7 : R() < 0.22, pink: reg === 'pofuduk' && R() < 0.45 }); }
@@ -1319,7 +1345,7 @@ const DN_DECO = [], DN_GRASS = [];
   }
 }
 // boşluklar (göl dışındaki çukurlar): koyu sisli derinlik
-const DN_PITS = []; { let c = 0; while (c < COLS) { if (topOf(c) < ROWS) { c++; continue; } const a = c; while (c < COLS && topOf(c) >= ROWS) c++; const x0 = a * T, x1 = c * T; if (!DN_GOL || x1 <= DN_GOL.x0 || x0 >= DN_GOL.x1) DN_PITS.push([x0, x1]); } }
+const DN_PITS = []; { let c = 0; while (c < COLS) { if (topOf(c) < ROWS) { c++; continue; } const a = c; while (c < COLS && topOf(c) >= ROWS) c++; const x0 = a * T, x1 = c * T; if (!DN_GOLS.some(G => x1 > G.x0 && x0 < G.x1)) DN_PITS.push([x0, x1]); } }
 // saklı yolun ipucu: girişe uzanan ve yolu süsleyen minik ışıklar
 const DN_TRAIL = [];
 {
@@ -1341,18 +1367,19 @@ const DN_TRAIL = [];
   }
 }
 // göl dibi (havza): kıyılardan ve adacıktan yumuşakça derinleşen yatak; batık bitkiler, taşlar, ışıyan kristaller, batık kütük
-const DN_FLOOR = [], DN_SUNK = [], DN_BED = [], DN_BROCK = [], DN_WALLS = [];
-let DN_BEDP = null, DN_BEDLINE = null, DN_KUTUK = null;
-if (DN_GOL) {
-  const G = DN_GOL, R = rng(88), c0 = Math.floor(G.x0 / T), c1 = Math.ceil(G.x1 / T) - 1;
+let DN_FLOOR = [], DN_SUNK = [], DN_BED = [], DN_BROCK = [], DN_WALLS = [];
+let DN_BEDP = null, DN_BEDLINE = null, DN_KUTUK = null, DN_LSPORE = [];
+function dnBuildLake(G, gi) {
+  DN_FLOOR = []; DN_SUNK = []; DN_BED = []; DN_BROCK = []; DN_WALLS = []; DN_BEDP = null; DN_BEDLINE = null; DN_KUTUK = null;
+  const R = rng(88 + gi * 977), c0 = Math.floor(G.x0 / T), c1 = Math.ceil(G.x1 / T) - 1;
   const solid = [];   // gölün içindeki kara parçaları (adacık) – su yüzeyinin üstüne çıkan sütunlar
   for (let c = c0; c <= c1; c++) if (topOf(c) < ROWS && topOf(c) * T < G.su) { if (solid.length && solid[solid.length - 1][1] === c * T) solid[solid.length - 1][1] = (c + 1) * T; else solid.push([c * T, (c + 1) * T]); }
   // su ile karşılaşan dik duvarlar (kıyılar ve adacık): sd = suya doğru yön
   const dry = c => topOf(c) < ROWS && topOf(c) * T < G.su;
   for (let c = c0 - 1; c <= c1 + 1; c++) {
     if (!dry(c)) continue;
-    if (!dry(c + 1) && (c + 1) * T >= G.x0 && (c + 1) * T <= G.x1) DN_WALLS.push({ x: (c + 1) * T, sd: 1, top: topOf(c) * T });
-    if (!dry(c - 1) && c * T >= G.x0 && c * T <= G.x1) DN_WALLS.push({ x: c * T, sd: -1, top: topOf(c) * T });
+    if (!dry(c + 1) && (c + 1) * T >= G.x0 && (c + 1) * T <= G.x1) DN_WALLS.push({ x: (c + 1) * T, sd: 1, top: topOf(c) * T, su: G.su });
+    if (!dry(c - 1) && c * T >= G.x0 && c * T <= G.x1) DN_WALLS.push({ x: c * T, sd: -1, top: topOf(c) * T, su: G.su });
   }
   const maxD = clamp(DN_LH - G.su - 40, 40, 110), ph = R() * 6;
   const dist = x => { let d = Math.min(x - G.x0, G.x1 - x); for (const [a, b] of solid) d = Math.min(d, x < a ? a - x : x > b ? x - b : -1); return d; };
@@ -1369,15 +1396,26 @@ if (DN_GOL) {
     if (R() < 0.4) DN_SUNK.push({ k: 's', x: x + R() * 10, y: y + 1, r: 2.2 + R() * 3, ph: R() * 6, c: R() < 0.6 ? '#9ff6ff' : R() < 0.5 ? '#ffd0f0' : '#ffe2a0' });
     if (R() < 0.35) DN_BROCK.push({ x: x + R() * 12, y: y + 3, rx: 7 + R() * 16, ry: 4 + R() * 7, a: (R() - 0.5) * 0.4 });
   }
-  for (let i = 0; i < 4; i++) {   // ışıyan batık kristal kümeleri (derin yerlerde)
+  for (let i = 0, nc = clamp(Math.round((G.x1 - G.x0) / 270), 1, 4); i < nc; i++) {   // ışıyan batık kristal kümeleri (derin yerlerde)
     let x = 0, tries = 0; do { x = lerp(G.x0 + 60, G.x1 - 60, R()); } while (dist(x) < 70 && ++tries < 20);
     DN_SUNK.push({ k: 'c', x, y: at(x) + 3, s: 0.8 + R() * 0.6, ph: R() * 6, c: i % 2 ? '#c9a2ff' : '#7ff6ff' });
   }
-  { let x = 0, tries = 0; do { x = lerp(G.x0 + 120, G.x1 - 120, R()); } while (dist(x) < 110 && ++tries < 30);   // batık kütük
+  if (G.x1 - G.x0 > 420) { let x = 0, tries = 0; do { x = lerp(G.x0 + 120, G.x1 - 120, R()); } while (dist(x) < 110 && ++tries < 30);   // batık kütük
     const y = at(x), L = 90 + R() * 40; DN_KUTUK = { path: dnTaper([x - L / 2, at(x - L / 2) + 2, x - L / 6, y - 6, x + L / 6, y - 4, x + L / 2, at(x + L / 2) - 8], 13, 6, 12), x, y, L,
       br: dnTaper([x + L * 0.1, y - 8, x + L * 0.16, y - 26, x + L * 0.3, y - 34, x + L * 0.36, y - 48], 4, 1, 8) }; }
   for (const [x, y] of DN_BED) if (dist(x) > 30) DN_FLOOR.push([x, y]);
+  const R2 = rng(64 + gi * 31), sp = [], ns = clamp(Math.round((G.x1 - G.x0) / 32), 8, 34);   // göl üstünde yükselen ışıklı sporlar
+  for (let i = 0; i < ns; i++) sp.push({ x: lerp(G.x0 - 40, G.x1 + 40, R2()), h: R2(), sp: 6 + R2() * 12, ph: R2() * 6, s: 2 + R2() * 4, c: R2() });
+  return { G, FLOOR: DN_FLOOR, SUNK: DN_SUNK, BED: DN_BED, BROCK: DN_BROCK, WALLS: DN_WALLS, BEDP: DN_BEDP, BEDLINE: DN_BEDLINE, KUTUK: DN_KUTUK, LSPORE: sp };
 }
+function dnUseLake(L) {   // çizim fonksiyonları "o anki göl" globallerini okur
+  DN_GOL = L.G; DN_FLOOR = L.FLOOR; DN_SUNK = L.SUNK; DN_BED = L.BED; DN_BROCK = L.BROCK; DN_WALLS = L.WALLS;
+  DN_BEDP = L.BEDP; DN_BEDLINE = L.BEDLINE; DN_KUTUK = L.KUTUK; DN_LSPORE = L.LSPORE;
+}
+const DN_LAKES = DN_GOLS.map((G, i) => dnBuildLake(G, i));
+const DN_ALLWALLS = DN_LAKES.flatMap(L => L.WALLS);
+if (DN_LAKES.length) dnUseLake(DN_LAKES[0]);
+const dnLakeVis = (L, pad) => L.G.x1 + pad > cam.x && L.G.x0 - pad < cam.x + VW;
 // kostik ağı dokusu (döşenebilir Voronoi kenarları): su dibinde kayan ışık ağı
 const DN_CAUS = (() => {
   const N = 96, c = document.createElement('canvas'); c.width = c.height = N;
@@ -1393,19 +1431,41 @@ const DN_CAUS = (() => {
 })();
 let dnCausPat = null;
 // göl üstünde yükselen ışıklı sporlar
-const DN_LSPORE = (() => { if (!DN_GOL) return []; const R = rng(64), a = []; for (let i = 0; i < 34; i++) a.push({ x: lerp(DN_GOL.x0 - 40, DN_GOL.x1 + 40, R()), h: R(), sp: 6 + R() * 12, ph: R() * 6, s: 2 + R() * 4, c: R() }); return a; })();
 
+
+// Feza suya dokundukça halkalar: nilüfere inince büyük halka + damlacık, nilüferde / kıyıda yürürken küçük halkalar
+let dnRipT = 0;
+OLAY.on('inis', d => {
+  const x = d && d.x != null ? d.x : P.x, y = d && d.y != null ? d.y : P.y;
+  for (const G of DN_GOLS) if (x > G.x0 - 4 && x < G.x1 + 4 && Math.abs(y - G.su) < 24) {
+    if (DN_RINGS.length < 30) DN_RINGS.push({ x, y: G.su, t: now, big: (d && d.siddet || 0) > 500 });
+    dnPuff(x, G.su - 2, 5, '#bff6ff', 60, 1.4); dnRipT = now; break;
+  }
+});
+function dnRippleTick() {
+  if (!P.ground || Math.abs(P.vx) < 40 || now - dnRipT < 0.38) return;
+  for (const G of DN_GOLS) {
+    if (P.x < G.x0 - 90 || P.x > G.x1 + 90) continue;
+    if (P.x > G.x0 && P.x < G.x1 && Math.abs(P.y - G.su) < 16) {   // nilüferin üstünde yürüyor
+      DN_RINGS.push({ x: P.x + Math.sign(P.vx) * 6, y: G.su, t: now, sp: true, w: 1.6 }); dnRipT = now; return; }
+  }
+  for (const w of DN_ALLWALLS) {   // kıyıda yürürken suyun kenarında minik halkalar
+    const d = (P.x - w.x) * -w.sd;   // >0: karada, kıyıya uzaklık
+    if (d > -2 && d < 46 && Math.abs(P.y - w.top) < 10 && DN_RINGS.length < 30) { DN_RINGS.push({ x: w.x + w.sd * (30 + Math.random() * 14), y: w.su, t: now, sp: true, w: 1.3 }); dnRipT = now + 0.25; return; }
+  }
+}
 function drawWorld(tm) {
   g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S);
+  if (DURUM === 'oyun') dnRippleTick();
   g.lineCap = 'round'; g.lineJoin = 'round';
   dnTreeWarmup();
   if (dnPrevNow >= 0) dnDT = clamp(now - dnPrevNow, 0, 0.1); dnPrevNow = now;
   const vx0 = cam.x - 50, vx1 = cam.x + VW + 50, bio = DNR.sakli > 0.5 ? '#b88aff' : dq('bio');
   // göl suyu (taban; üstüne karede yansıma gelir) ve diğer çukurların sisli derinliği
-  if (DN_GOL && DN_GOL.x1 > vx0 && DN_GOL.x0 < vx1) {
-    const wy = DN_GOL.su, wg = g.createLinearGradient(0, wy, 0, wy + 140);
+  for (const LK of DN_LAKES) { const G = LK.G; if (!(G.x1 > vx0 && G.x0 < vx1)) continue;
+    const wy = G.su, wg = g.createLinearGradient(0, wy, 0, wy + 140);
     wg.addColorStop(0, dc('water')); wg.addColorStop(1, '#030816');
-    g.fillStyle = wg; g.fillRect(Math.max(vx0, DN_GOL.x0), wy, Math.min(vx1, DN_GOL.x1) - Math.max(vx0, DN_GOL.x0), cam.y + H / S + 20 - wy);
+    g.fillStyle = wg; g.fillRect(Math.max(vx0, G.x0), wy, Math.min(vx1, G.x1) - Math.max(vx0, G.x0), cam.y + H / S + 20 - wy);
   }
   g.globalCompositeOperation = 'lighter';
   for (const [a, b] of DN_PITS) if (b > vx0 && a < vx1) { dnEG(dq('haze'), (a + b) / 2, DN_LH - 20, (b - a) * 0.8, 70, 0.5); dnEG(bio, (a + b) / 2, DN_LH + 10, (b - a) * 0.6, 40, 0.25); }
@@ -1501,7 +1561,7 @@ function drawWorld(tm) {
     g.globalCompositeOperation = 'source-over';
   }
   // göl üstünde yükselen sporlar (yansımaya da girer)
-  if (DN_GOL && DN_GOL.x1 + 60 > vx0 && DN_GOL.x0 - 60 < vx1) {
+  for (const LK of DN_LAKES) { if (!(LK.G.x1 + 60 > vx0 && LK.G.x0 - 60 < vx1)) continue; dnUseLake(LK);
     g.globalCompositeOperation = 'lighter';
     const span = 260;
     for (const s of DN_LSPORE) {
@@ -1627,7 +1687,7 @@ const dnTips = [];
 let dnRz = 0, dnRzX = 0, dnRzY = 0;
 // göl kıyıları ve adacık: dik duvar yerine suya inen yumuşak, yosunlu şev; su kenarında taşlar, sarkan kökler
 function dnShoreGeo(w) {
-  const R = rng(Math.round(w.x) * 7 + (w.sd > 0 ? 1 : 0)), x = w.x, sd = w.sd, top = w.top, su = DN_GOL.su, out = 24 + R() * 8;
+  const R = rng(Math.round(w.x) * 7 + (w.sd > 0 ? 1 : 0)), x = w.x, sd = w.sd, top = w.top, su = w.su, out = 24 + R() * 8;
   const body = new Path2D();
   body.moveTo(x - sd * 12, top + 1); body.lineTo(x - sd * 2, top + 1);
   body.bezierCurveTo(x + sd * 10, top + 8, x + sd * out * 0.55, su - 20, x + sd * out, su + 2);
@@ -1640,11 +1700,10 @@ function dnShoreGeo(w) {
   return { body, edge, moss, rocks, roots };
 }
 function dnShores(tm, vx0, vx1, bio) {
-  if (!DN_WALLS.length) return;
-  for (const w of DN_WALLS) {
+  for (const w of DN_ALLWALLS) {
     if (w.x + 60 < vx0 || w.x - 60 > vx1) continue;
     const G = w.geo || (w.geo = dnShoreGeo(w));
-    const gr = g.createLinearGradient(0, w.top, 0, DN_GOL.su);
+    const gr = g.createLinearGradient(0, w.top, 0, w.su);
     gr.addColorStop(0, dnSoil(0, light)); gr.addColorStop(1, dnSoil(2, light));
     g.fillStyle = gr; g.fill(G.body);
     g.fillStyle = dc('moss'); g.fill(G.moss);
@@ -1659,7 +1718,7 @@ function dnShores(tm, vx0, vx1, bio) {
     g.strokeStyle = dc('rim', 0.35); g.lineWidth = 0.9;
     for (const [rx, ry, a, b] of G.rocks) { g.beginPath(); g.ellipse(rx, ry, a, b, 0, Math.PI * 1.15, Math.PI * 1.7); g.stroke(); }
     for (const [rx, ry, len, ph] of G.roots) if (ph < 3) dglow(bio, rx + Math.sin(tm * 1.2 + ph) * 2, ry + len + 1, 5, 0.7);
-    dnEG(dq('bio'), w.x + w.sd * 18, DN_GOL.su, 40, 5, 0.25);   // su kenarında ışık
+    dnEG(dq('bio'), w.x + w.sd * 18, w.su, 40, 5, 0.25);   // su kenarında ışık
     g.globalCompositeOperation = 'source-over';
   }
 }
@@ -1994,12 +2053,12 @@ let dnTreeG = null, dnTreeCool = null, dnTreeWarm = null, dnTreeSc = 0;
 function dnTreeGeo(o) {
   let rs = 1;   // kökler ağacın durduğu düzlüğe sığsın (uçurumdan boşluğa sarkmasın)
   if (o) { const c = Math.floor(o.x / T), t = topOf(c); let a = c, b = c; while (a > 0 && topOf(a - 1) === t) a--; while (b < COLS - 1 && topOf(b + 1) === t) b++; rs = clamp(Math.min(o.x - a * T, (b + 1) * T - o.x) / 335, 0.45, 1); }
-  const R = rng(4242), G = { parts: [], cracks: [], crown: new Path2D(), crownBack: new Path2D(), leaves: [], backLeaves: [], vines: [], ridges: [] };
+  const R = rng(4242), G = { roots: [], limbs: [], subs: [], veins: [], blossoms: [], parts: [], cracks: [], crown: new Path2D(), crownBack: new Path2D(), leaves: [], backLeaves: [], vines: [], ridges: [] };
   const jag = (pts, amt) => pts.map(([x, y], i) => [x + (i && i < pts.length - 1 ? (R() - 0.5) * amt : 0), y]);
   let ri = 0;   // kök yayılımı
   for (const [s, d, e, w] of [[-1, 210, 14, 30], [1, 240, 10, 30], [-1, 120, 6, 22], [1, 135, 4, 24], [-1, 320, 24, 18], [1, 330, 22, 18], [1, 70, -2, 16], [-1, 60, 0, 16]]) {
     const dd = d * rs, p = [s * 26, -80, s * (48 + dd * 0.12), -50, s * dd * 0.6, -16 - w * 0.2, s * dd, e];
-    G.parts.push(dnTaper(p, w + 6, 3));
+    G.parts.push(dnTaper(p, w + 6, 3)); G.roots.push(p);
     if (ri++ < 2) { const pts = []; for (let u = 0.08; u <= 0.62; u += 0.06) { const q = dnBez(p, u); pts.push([q[0], q[1] - 2]); } G.cracks.push(jag(pts, 5)); }
   }
   const cxT = t => Math.sin(t * 3.4 + 0.5) * 14 - 6, hwT = t => 46 * (1 - 0.36 * t) + 62 * Math.pow(1 - t, 6) + Math.sin(t * 17) * 2.6 + (t > 0.85 ? (t - 0.85) * 120 : 0);
@@ -2019,12 +2078,13 @@ function dnTreeGeo(o) {
     [-6, -290, -24, -370, -70, -430, -100, -505, 24], [6, -290, 34, -380, 80, -440, 120, -505, 24],
     [-24, -215, -100, -245, -200, -250, -320, -300, 20], [24, -222, 110, -250, 215, -265, 330, -310, 20], [0, -300, 4, -380, -6, -450, 6, -520, 20]];
   for (const [a, b, c, d, e, f, h, k, w] of limbs) {
-    const p = [a, b, c, d, e, f, h, k]; G.parts.push(dnTaper(p, w, 5));
+    const p = [a, b, c, d, e, f, h, k]; G.parts.push(dnTaper(p, w, 5)); G.limbs.push(p);
     const pts = []; for (let u = 0.04; u <= 0.3; u += 0.04) pts.push(dnBez(p, u)); G.cracks.push(jag(pts, 6));
     for (const u of [0.45, 0.72]) {
       const q = dnBez(p, u), sd = R() < 0.5 ? -1 : 1, l = 60 + R() * 70, an = Math.atan2(k - b, h - a) + sd * (0.5 + R() * 0.5);
       const ex = q[0] + Math.cos(an) * l, ey = q[1] + Math.sin(an) * l;
-      G.parts.push(dnTaper([q[0], q[1], q[0] + Math.cos(an) * l * 0.4, q[1] + Math.sin(an) * l * 0.4 - 10, ex - Math.cos(an) * l * 0.3, ey - 6, ex, ey], w * 0.42, 1.5));
+      const sb = [q[0], q[1], q[0] + Math.cos(an) * l * 0.4, q[1] + Math.sin(an) * l * 0.4 - 10, ex - Math.cos(an) * l * 0.3, ey - 6, ex, ey];
+      G.parts.push(dnTaper(sb, w * 0.42, 1.5)); G.subs.push([sb, u]);
       if (R() < 0.75 && q[1] > -380) G.vines.push([q[0], q[1] + 4, Math.min(60 + R() * 150, -70 - q[1]), R() * 6]);
     }
   }
@@ -2045,7 +2105,68 @@ function dnTreeGeo(o) {
   }
   for (let i = 0; i < 300; i++) { const cx = (R() * 2 - 1) * 330, [yt, yb] = env(cx), cy = lerp(yt + 20, yb, Math.pow(R(), 0.8)); G.leaves.push([cx, cy, 8 + R() * 10, 2.5 + R() * 2.5, R() * 6.283, R()]); }
   for (let i = 0; i < 90; i++) { const cx = (R() * 2 - 1) * 310, [yt] = env(cx); G.backLeaves.push([cx, yt + R() * 60, 8 + R() * 9, 2.5 + R() * 2, R() * 6.283, R()]); }
+  dnTreeVeins(G, R, cxT, hwT);
+  for (let i = 0; i < 54; i++) {   // finalde açan ışık çiçekleri (taçta, kalpten uzaklığa göre sırayla)
+    const cx = (R() * 2 - 1) * 320, [yt, yb] = env(cx), cy = lerp(yt + 25, yb - 10, Math.pow(R(), 0.9));
+    G.blossoms.push({ x: cx, y: cy, s: 0.7 + R() * 0.7, d: Math.hypot(cx + 4, cy + 150), ph: R() * 6.283, c: i % 4 === 0 ? 1 : i % 4 === 1 ? 2 : 0, rot: R() * 6.283 });
+  }
+  G.blossoms.sort((a, b) => a.y - b.y);
   return G;
+}
+// ağacın ışık damarları: kalpten çıkıp gövdeden dallara, köklere uzanan, kıvrılan, incelen ve ince damarcıklara ayrılan şeritler
+function dnTreeVeins(G, R, cxT, hwT) {
+  const hx = -4, hy = -150, V = G.veins;
+  const curve = (pts, w0, w1, lvl) => { const n = pts.length, ws = []; for (let i = 0; i < n; i++) ws.push(lerp(w0, w1, Math.pow(i / (n - 1), 0.85))); V.push({ pts, ws, lvl }); return ws; };
+  const along = (p, u0, u1, n, wig, ph, out) => {   // bezier boyunca hafif dalgalanan noktalar
+    for (let i = 0; i <= n; i++) {
+      const u = lerp(u0, u1, i / n), a = dnBez(p, Math.max(0, u - 0.01)), b = dnBez(p, Math.min(1, u + 0.01)), c = dnBez(p, u);
+      const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1, o = Math.sin(u * 11 + ph) * wig * (0.4 + 0.6 * Math.sin(u * Math.PI));
+      out.push([c[0] - dy / l * o, c[1] + dx / l * o]);
+    }
+    return out;
+  };
+  const twigs = (pts, ws, lvl) => {   // ana damardan ayrılan ince damarcıklar (bazıları bir kez daha çatallanır)
+    for (let i = 3; i < pts.length - 2; i++) {
+      if (R() > (lvl ? 0.28 : 0.5)) continue;
+      const [x0, y0] = pts[i], [x1, y1] = pts[i + 1], an = Math.atan2(y1 - y0, x1 - x0) + (R() < 0.5 ? -1 : 1) * (0.55 + R() * 0.45);
+      const L = (lvl ? 10 : 16) + R() * (lvl ? 14 : 26), bend = (R() - 0.5) * 1.2, tw = [];
+      for (let j = 0; j <= 6; j++) { const u = j / 6, aa = an + bend * u; tw.push([x0 + Math.cos(aa) * L * u, y0 + Math.sin(aa) * L * u]); }
+      const w0 = Math.max(0.5, ws[i] * 0.55);
+      curve(tw, w0, 0.15, lvl + 1);
+      if (!lvl && R() < 0.45) { const k = 3 + Math.floor(R() * 2), [bx, by] = tw[k], a2 = an + bend * k / 6 + (R() < 0.5 ? -1 : 1) * 0.7, L2 = 6 + R() * 10, t2 = [];
+        for (let j = 0; j <= 4; j++) { const u = j / 4; t2.push([bx + Math.cos(a2 + u * 0.3) * L2 * u, by + Math.sin(a2 + u * 0.3) * L2 * u]); }
+        curve(t2, w0 * 0.55, 0.12, 2); }
+    }
+  };
+  G.limbs.forEach((p, i) => {   // kalpten yukarı: gövde içinden dala (her dal ayrı damar, gövdede yan yana akar)
+    const side = clamp(p[0] / 24, -1, 1), t1 = -p[1] / 320, pts = [[hx, hy]];
+    for (let j = 1; j <= 8; j++) { const u = j / 8, t = lerp(150 / 320, t1, u), sp = hwT(t) * 0.62 * side * smooth(Math.min(1, u * 1.6)) * (0.7 + 0.3 * Math.sin(u * 5 + i));
+      pts.push([lerp(hx, p[0], u * u) * 0.3 + (cxT(t) + sp) * 0.7 + Math.sin(u * 7 + i * 2) * 4, -t * 320]); }
+    along(p, 0.04, 0.9, 14, 5, i * 1.7, pts);
+    const ws = curve(pts, 2.3, 0.6, 0); twigs(pts, ws, 0);
+  });
+  for (const [sb, u0] of G.subs) { const pts = along(sb, 0, 0.85, 8, 3, u0 * 9, []); const ws = curve(pts, 1.3, 0.3, 1); twigs(pts, ws, 1); }
+  G.roots.forEach((p, i) => {   // kalpten aşağı: köklere
+    const pts = [[hx, hy]]; for (let j = 1; j <= 5; j++) { const u = j / 5; pts.push([lerp(hx, p[0], u) + Math.sin(u * 6 + i) * 5, lerp(hy, p[1], u)]); }
+    along(p, 0.04, i < 2 ? 0.8 : 0.65, 10, 4, i * 2.3, pts);
+    const ws = curve(pts, i < 2 ? 2.1 : 1.6, 0.45, 0); twigs(pts, ws, 1);
+  });
+}
+function dnVeinPaths(G, k, lmax) {   // tüm damarlar tek yol (üst üste binen yerler iki kat parlamasın)
+  const p = new Path2D();
+  for (const v of G.veins) if (v.lvl <= lmax) p.addPath(dnPolyTaper(v.pts, v.ws.map(w => w * k + (k > 1 ? 1.2 : 0))));
+  return p;
+}
+let dnVeinC = null;   // kalpten dışa akan nabız için yalnız damarların parıltısı (yarım çözünürlük)
+function dnVeinCanvas(sc) {
+  if (dnVeinC && dnVeinC.dnSc === sc) return dnVeinC;
+  const c = dnVeinC || (dnVeinC = document.createElement('canvas')), s2 = sc * 0.5;
+  c.width = Math.ceil((DN_TB.x1 - DN_TB.x0) * s2); c.height = Math.ceil((DN_TB.y1 - DN_TB.y0) * s2);
+  const x = c.getContext('2d'); x.setTransform(s2, 0, 0, s2, -DN_TB.x0 * s2, -DN_TB.y0 * s2);
+  x.fillStyle = 'rgba(255,226,160,0.22)'; x.fill(dnVeinPaths(dnTreeG, 4.5, 1));
+  x.fillStyle = 'rgba(255,240,200,0.55)'; x.fill(dnVeinPaths(dnTreeG, 2, 2));
+  x.fillStyle = '#fffaf0'; x.fill(dnVeinPaths(dnTreeG, 0.9, 2));
+  c.dnSc = sc; return c;
 }
 function dnTreeStages(c, sc, warm) {   // ağacın boyanması 4 parçaya bölünür (boşta karelere yayılır)
   const ST = [];
@@ -2086,13 +2207,13 @@ function dnTreeStages(c, sc, warm) {   // ağacın boyanması 4 parçaya bölün
   });
   ST.push(() => {
   x.globalCompositeOperation = 'lighter';
-  const crackPass = (lw, a) => {
-    x.strokeStyle = vein; x.globalAlpha = a; x.lineWidth = lw; x.beginPath();
-    for (const pts of G.cracks) { x.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) x.lineTo(pts[i][0], pts[i][1]); }
-    x.stroke();
-  };
-  crackPass(9, warm ? 0.12 : 0.05); crackPass(3.5, warm ? 0.25 : 0.12); crackPass(1.1, warm ? 0.8 : 0.55);
-  x.globalAlpha = 1;
+  x.save(); x.clip(G.parts.reduce((q, p) => (q.addPath(p), q), new Path2D()));   // damarlar gövde ve dalların içinde kalır
+  x.fillStyle = vein;   // yumuşak hâle → parıltı → incelen öz → sıcak beyaz merkez
+  x.globalAlpha = warm ? 0.05 : 0.03; x.fill(dnVeinPaths(G, 6, 1));
+  x.globalAlpha = warm ? 0.12 : 0.07; x.fill(dnVeinPaths(G, 2.6, 2));
+  x.globalAlpha = warm ? 0.6 : 0.45; x.fill(dnVeinPaths(G, 1, 2));
+  x.fillStyle = '#ffffff'; x.globalAlpha = warm ? 0.3 : 0.15; x.fill(dnVeinPaths(G, 0.35, 0));
+  x.restore(); x.globalAlpha = 1;
   dnG(x, warm ? '#fff2cc' : '#9ff6ff', -4, -150, 64, warm ? 0.9 : 0.45);   // kalp oyuğu
   x.globalCompositeOperation = 'source-over';
   const hg = x.createRadialGradient(-4, -152, 0, -4, -150, 20);
@@ -2143,17 +2264,18 @@ function dnTreeStep(o, warm, sc) {   // boşta: tek parça
 }
 function dnTreeWarmup() {   // yaklaşırken ağaç görüntülerini boşta önceden boya (ilk görüşte takılma olmasın)
   const o = TREE; if (!o) return; const sc = Math.min(dnCS(), 2.2);
-  if (dnTreeCool && dnTreeCool.dnSc === sc && dnTreeWarm && dnTreeWarm.dnSc === sc) return;
+  if (dnTreeCool && dnTreeCool.dnSc === sc && dnTreeWarm && dnTreeWarm.dnSc === sc) { if (o.x + DN_TB.x0 < cam.x + VW + 2400) dnTreeVeinWarm(sc); return; }
   if (o.x + DN_TB.x0 > cam.x + VW + 2400 || o.x + DN_TB.x1 < cam.x - 1500) return;
   if (!dnTreeG) { dnQueue(4, 'TG', () => { dnTreeG = dnTreeG || dnTreeGeo(o); }); return; }
   if (!(dnTreeCool && dnTreeCool.dnSc === sc)) dnQueue(4, 'TC', () => dnTreeStep(o, false, sc));
   else dnQueue(5, 'TW', () => dnTreeStep(o, true, sc));
 }
+function dnTreeVeinWarm(sc) { if (dnTreeG && dnTreeWarm && dnTreeWarm.dnSc === sc && !(dnVeinC && dnVeinC.dnSc === sc)) dnQueue(5, 'TV', () => { dnVeinCanvas(sc); dnBlossomSprites(); }); }
 function dnTree(o, tm) {
   const x = o.x, y = o.y;
   const sc = Math.min(dnCS(), 2.2);
   if (x + DN_TB.x1 < cam.x - 50 || x + DN_TB.x0 > cam.x + VW + 50) return;
-  dnTreePrep(o, false, sc); dnTreePrep(o, true, sc); dnTreeSc = sc;
+  dnTreePrep(o, false, sc); dnTreePrep(o, true, sc); dnTreeSc = sc; dnTreeVeinWarm(sc);
   const e = o.litT ? now - o.litT : -1, rv = e >= 0 ? smooth(clamp(e / 2, 0, 1)) : 0;   // yanma: ışık kalpten dışa yayılır
   const Lw = Math.max(rv, smooth(clamp((o.lit - 0.4) / 0.6, 0, 1)) * (e >= 0 ? 1 : 0.35)), pul = 0.5 + 0.5 * Math.sin(tm * 1.3);
   const bx = x + DN_TB.x0, by = y + DN_TB.y0, bw = DN_TB.x1 - DN_TB.x0, bh = DN_TB.y1 - DN_TB.y0;
@@ -2175,6 +2297,18 @@ function dnTree(o, tm) {
   else if (rv >= 1) g.drawImage(dnTreeWarm, bx, by, bw, bh);
   else if (Lw > 0.001) { g.globalAlpha = Lw; g.drawImage(dnTreeWarm, bx, by, bw, bh); g.globalAlpha = 1; }   // çiçekler açtıkça hafif ısınır
   g.globalCompositeOperation = 'lighter';
+  if (dnVeinC && dnVeinC.dnSc === sc) {   // kalpten dışa yavaşça akan ışık nabzı (damarlar boyunca); halka 3 yumuşak bantla
+    const amp = 0.22 + 0.78 * Lw;
+    for (let i = 0; i < 2; i++) {
+      const ph = (tm * 0.2 + i * 0.5) % 1, r = 20 + ph * 600, fade = Math.sin(Math.min(1, ph * 1.25) * Math.PI) * amp;
+      if (fade < 0.02) continue;
+      for (const [w0, w1, a] of [[-70, -30, 0.35], [-30, 25, 1], [25, 70, 0.4]]) {
+        g.save(); g.beginPath(); g.arc(hx, hy, Math.max(1, r + w1), 0, 6.283); g.arc(hx, hy, Math.max(0, r + w0), 0, 6.283, true); g.clip();
+        g.globalAlpha = fade * a * 0.55; g.drawImage(dnVeinC, bx, by, bw, bh); g.restore();
+      }
+    }
+    g.globalAlpha = 1;
+  }
   if (rv > 0 && rv < 1) {   // yayılan ışık cephesi
     g.strokeStyle = `rgba(255,236,180,${0.5 * (1 - rv)})`; g.lineWidth = 26 * (1 - rv) + 4; g.beginPath(); g.arc(hx, hy, Rv, 0, 6.283); g.stroke();
     g.strokeStyle = `rgba(255,255,255,${0.7 * (1 - rv)})`; g.lineWidth = 3; g.stroke();
@@ -2189,6 +2323,7 @@ function dnTree(o, tm) {
     const tw = 0.5 + 0.5 * Math.sin(tm * 2 * sp + i * 1.3);
     dglow(i % 3 ? (Lw > 0.5 ? '#ffe6a8' : '#9ff6ff') : '#ffffff', px, py, 5 + R() * 9, (0.25 + tw * 0.5) * (0.5 + 0.5 * Lw));
   }
+  if (e >= 0 && dnTreeG) dnTreeBloom(x, y, e, tm);
   if (Lw > 0.01) for (let i = 0; i < 24; i++) {   // yükselen kıvılcımlar ve süzülen altın yapraklar
     const k = (tm * 0.12 + i / 24) % 1, px = x + Math.sin(i * 7.3) * 300 + Math.sin(tm * 0.5 + i) * 20, py = y - 300 - k * 300;
     dglow(i % 2 ? '#ffd890' : '#fff6e0', px, py, 6 * (1 - k) + 2, (1 - k) * k * 3 * Lw * 0.6);
@@ -2196,6 +2331,58 @@ function dnTree(o, tm) {
     dglow('#ffe6a0', qx, qy, 4, Math.sin(k2 * Math.PI) * 0.7 * Lw);
   }
   g.globalCompositeOperation = 'source-over';
+}
+// final: taçta sırayla açan ışık çiçekleri ve süzülen ışıklı taç yaprakları (karakterlerin arkasında; sakin, az sayıda)
+const DN_BLC = [['#fff6dc', '#ffd27a'], ['#ffe0f0', '#ff9ccf'], ['#e6fff8', '#7ff0d8']];
+let dnBlossomSpr = null;
+function dnBlossomSprites() {
+  if (dnBlossomSpr) return dnBlossomSpr;
+  dnBlossomSpr = DN_BLC.map(([a, b]) => {
+    const N = 96, c = document.createElement('canvas'); c.width = c.height = N; const x = c.getContext('2d'); x.translate(N / 2, N / 2);
+    for (let i = 0; i < 5; i++) {   // beş yuvarlak taç yaprak, uçta açık, dipte renkli
+      x.save(); x.rotate(i / 5 * 6.283 - Math.PI / 2);
+      const gr = x.createLinearGradient(0, 0, 0, -40); gr.addColorStop(0, b); gr.addColorStop(0.55, a); gr.addColorStop(1, '#ffffff');
+      x.fillStyle = gr; x.beginPath(); x.moveTo(0, -3); x.bezierCurveTo(-17, -12, -15, -38, 0, -40); x.bezierCurveTo(15, -38, 17, -12, 0, -3); x.fill();
+      x.strokeStyle = 'rgba(255,255,255,0.45)'; x.lineWidth = 1.4; x.beginPath(); x.moveTo(0, -8); x.quadraticCurveTo(2, -22, 0, -33); x.stroke();
+      x.restore();
+    }
+    const cg = x.createRadialGradient(0, 0, 0, 0, 0, 11); cg.addColorStop(0, '#ffffff'); cg.addColorStop(0.5, '#ffe28a'); cg.addColorStop(1, 'rgba(255,200,90,0)');
+    x.fillStyle = cg; x.beginPath(); x.arc(0, 0, 11, 0, 6.283); x.fill();
+    return c;
+  });
+  return dnBlossomSpr;
+}
+const DN_TPET = (() => { const R = rng(3131), a = []; for (let i = 0; i < 26; i++) a.push({ x0: (R() * 2 - 1) * 300, y0: R() * 110, sp: 0.05 + R() * 0.05, off: R(), ph: R() * 6.283, dr: (R() - 0.5) * 140, c: Math.floor(R() * 3), s: 0.8 + R() * 0.6 }); return a; })();
+function dnTreeBloom(x, y, e, tm) {
+  const spr = dnBlossomSprites(), M = [S, 0, 0, S, -cam.x * S, -cam.y * S];
+  g.globalCompositeOperation = 'lighter';
+  for (const b of dnTreeG.blossoms) {   // önce parıltılar (toplu, 'lighter')
+    const op = smooth(clamp((e - 0.8 - b.d / 380) / 1.4, 0, 1)); if (op <= 0) continue;
+    const bx = x + b.x, by = y + b.y, br = 0.75 + 0.25 * Math.sin(tm * 1.4 + b.ph);
+    dglow(DN_BLC[b.c][1], bx, by, 26 * b.s * op, 0.32 * op * br);
+    if (op < 1) dglow('#ffffff', bx, by, 40 * b.s, 0.7 * Math.sin(op * Math.PI));   // açılma anında küçük bir parlama
+  }
+  g.globalCompositeOperation = 'source-over';
+  for (const b of dnTreeG.blossoms) {
+    const op = smooth(clamp((e - 0.8 - b.d / 380) / 1.4, 0, 1)); if (op <= 0) continue;
+    const sz = 15 * b.s * (0.25 + 0.75 * op) * (1 + 0.06 * Math.sin(tm * 1.5 + b.ph));
+    g.translate(x + b.x, y + b.y); g.rotate(b.rot + (1 - op) * 1.4 + Math.sin(tm * 0.6 + b.ph) * 0.08); g.scale(1, 0.55 + 0.45 * op);
+    g.globalAlpha = Math.min(1, op * 1.6); g.drawImage(spr[b.c], -sz, -sz, sz * 2, sz * 2);
+    g.setTransform(M[0], M[1], M[2], M[3], M[4], M[5]);
+  }
+  g.globalAlpha = 1;
+  const ramp = smooth(clamp((e - 2.2) / 2.5, 0, 1)); if (ramp <= 0) return;
+  for (const p of DN_TPET) {   // süzülen ışıklı taç yaprakları: taçtan yere, sallanarak
+    const k = (tm * p.sp + p.off) % 1, fall = 440 - p.y0;
+    const px = x + p.x0 + p.dr * k + Math.sin(tm * 0.9 + p.ph) * 26, py = y - 440 + p.y0 + k * fall;
+    const a = ramp * smooth(clamp(k * 6, 0, 1)) * (1 - smooth(clamp((k - 0.78) / 0.22, 0, 1)));
+    if (a < 0.02) continue;
+    g.globalCompositeOperation = 'lighter'; dglow(DN_BLC[p.c][1], px, py, 11 * p.s, 0.4 * a); g.globalCompositeOperation = 'source-over';
+    g.translate(px, py); g.rotate(tm * 1.2 * (p.sp * 12) + p.ph); g.scale(1, 0.35 + 0.65 * Math.abs(Math.sin(tm * 1.7 + p.ph)));
+    g.globalAlpha = 0.9 * a; g.fillStyle = DN_BLC[p.c][0]; g.beginPath(); g.ellipse(0, 0, 4.6 * p.s, 2.4 * p.s, 0, 0, 6.283); g.fill();
+    g.setTransform(M[0], M[1], M[2], M[3], M[4], M[5]);
+  }
+  g.globalAlpha = 1;
 }
 TUR.kaydet('agac', {
   kur(o) { o.lit = 0.4; o.litT = 0; },
@@ -2306,7 +2493,7 @@ function dnWaterFx(tm) {   // dünya dönüşümünde: halkalar, gizli nilüfer 
     const r = DN_RINGS[i], e = now - r.t, life = r.big ? 2.2 : 1.3;
     if (e > life) { DN_RINGS.splice(i, 1); continue; }
     const k = e / life;
-    if (r.sp) { const rr = 4 + k * 26; g.strokeStyle = `rgba(200,250,255,${0.35 * (1 - k)})`; g.lineWidth = 1; g.beginPath(); g.ellipse(r.x, L.su + 2, rr, rr * 0.18, 0, 0, 6.283); g.stroke(); continue; }
+    if (r.sp) { const rr = 4 + k * (r.w ? 34 : 26); g.strokeStyle = `rgba(200,250,255,${(r.w ? 0.5 : 0.35) * (1 - k)})`; g.lineWidth = r.w || 1; g.beginPath(); g.ellipse(r.x, L.su + 2, rr, rr * 0.18, 0, 0, 6.283); g.stroke(); continue; }
     for (let j = 0; j < (r.big ? 3 : 2); j++) {
       const kk = k - j * 0.12; if (kk <= 0) continue;
       const rr = (r.big ? 26 : 18) + kk * (r.big ? 150 : 70);
@@ -2382,8 +2569,7 @@ function drawMotes(tm, zMin, zMax) {
 // ── karakterlerden sonra: göl yansıması + ışıltılı yapraklar (Gris dokunuşu) ──
 const DN_PETALS = (() => { const R = rng(21), a = []; for (let i = 0; i < 22; i++) a.push({ x: R() * 1400, y: R() * 700, ph: R() * 6.28, sp: 0.5 + R(), s: 0.6 + R() * 0.6, c: R() }); return a; })();
 function drawPetals(tm) {
-  dnReflect(tm);
-  dnWaterFx(tm);
+  for (const LK of DN_LAKES) if (dnLakeVis(LK, 120)) { dnUseLake(LK); dnReflect(tm); dnWaterFx(tm); }
   dnFallingLeaves(tm);
   const a0 = clamp((light - 0.25) * 2, 0, 1) * (0.7 + 0.3 * DNR.aciklik) + dnBlaze * 0.5;
   if (a0 <= 0) return;
@@ -2475,7 +2661,7 @@ function drawForeground(tm) {
   for (const it of DN_FGB) {
     const sp = DN_FG.fern[it.v], wx = ((it.x - cam.x * 1.45) % span2 + span2) % span2 - 300;
     if (wx > VW + 200) continue;
-    const gw = DN_GOL ? dnRegW(cam.x + wx, null).gol : 0;   // gölün önünü kapatma
+    const gw = DN_GOLS.length ? Math.max(dnRegW(cam.x + wx, null).gol, dnInLake(cam.x + wx, 60) ? 1 : 0) : 0;   // gölün önünü kapatma
     if (gw > 0.97) continue;
     const sw = Math.sin(tm * 0.7 + it.x) * 0.03;
     g.save(); g.translate(wx * S, (H / S + 46 + 60 * gw - Math.min(0, dy) * 0.3) * S); g.rotate(sw); g.scale(it.s * it.fl, it.s);
