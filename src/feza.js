@@ -16,7 +16,7 @@
 // ── renkler ──
 const FZ = {
   skin: '#f8d5bc', skinHi: '#fee9da', skinS: '#e6b498', skinD: '#cf9a7e', skinF: '#e7bba0',
-  hair: ['#3e2718', '#5e3d27', '#6e4a2f', '#875c3a', '#a87a52'],
+  hair: ['#33221a', '#4b3324', '#5f412d', '#77543a', '#a07a58'],
   pj: '#f8f2e5', pjS: '#ddd4c3', pjF: '#ddd3c1', pjLine: '#bdb2a0',
   brow: '#5b3a24', lash: '#26150b', lip: '#b05a48', mouth: '#6e2626', tongue: '#d4606c',
   shoe: '#f6f6f3', shoeF: '#d4d5d8', blue: '#3b7be2', blueF: '#2d5fb0', sole: '#d9dbe2', soleF: '#b4b6bf',
@@ -234,7 +234,7 @@ function fzEye(x, cx, cy, w, h, R, far, pd, out) {
   x.beginPath(); x.ellipse(cx, ec, w * 1.02, eh * 1.02, 0, Math.PI * 1.06, Math.PI * 1.96); x.stroke();
   if (out) {
     const ox = cx + out * w * 0.93, oy = ec - eh * 0.32;
-    x.lineWidth = far ? 0.4 : 0.48; x.beginPath(); x.moveTo(ox, oy); x.quadraticCurveTo(ox + out * 0.45, oy - 0.1, ox + out * 0.7, oy - 0.55); x.stroke();
+    x.lineWidth = far ? 0.36 : 0.42; x.beginPath(); x.moveTo(ox, oy); x.quadraticCurveTo(ox + out * 0.3, oy - 0.05, ox + out * 0.42, oy - 0.3); x.stroke();
   }
   if (ch > 0.02) {   // alt kapak kıvrımı
     x.strokeStyle = 'rgba(180,108,84,0.35)'; x.lineWidth = 0.22;
@@ -337,26 +337,26 @@ function fzLocks(x, D, tm, hx, hy, k, mode) {
 // saç kütlesi (tutamların altında); yollar tutamlarla aynı yönde (birleşik kırpma delik açmasın)
 function fzMass(x, front, bx, by) {
   if (front) {
-    x.moveTo(9.4, -0.6); x.quadraticCurveTo(11.2, -7.6, 8.6, -11.6 + by);
-    x.quadraticCurveTo(5.8 + bx, -15.0 + by, 1.0, -15.0 + by); x.quadraticCurveTo(-3.8 + bx, -15.0 + by, -7.6, -12.0 + by);
-    x.quadraticCurveTo(-11.2, -7.8, -9.4, -0.6); x.lineTo(-8.0, -1.6);
+    x.moveTo(9.2, -0.6); x.quadraticCurveTo(10.7, -7.6, 8.4, -11.4 + by);
+    x.quadraticCurveTo(5.6 + bx, -14.5 + by, 1.0, -14.5 + by); x.quadraticCurveTo(-3.6 + bx, -14.5 + by, -7.4, -11.8 + by);
+    x.quadraticCurveTo(-10.7, -7.8, -9.2, -0.6); x.lineTo(-8.0, -1.6);
     x.quadraticCurveTo(-7.6, -6.4, -4.0, -8.4); x.quadraticCurveTo(0, -9.4, 4.0, -8.4); x.quadraticCurveTo(7.6, -6.4, 8.0, -1.6);
   } else {
-    x.moveTo(8.2, -6.4); x.quadraticCurveTo(9.6, -10.8 + by, 5.4, -12.8 + by);
-    x.quadraticCurveTo(1.2 + bx, -14.6 + by, -3.6, -13.4 + by); x.quadraticCurveTo(-8.6 + bx, -12.4 + by, -10.2, -6.8);
-    x.quadraticCurveTo(-11.4, -2.0, -9.4, 1.8); x.quadraticCurveTo(-8.6, 3.6, -7.0, 3.8); x.lineTo(-5.2, 2.4);
+    x.moveTo(8.2, -6.4); x.quadraticCurveTo(9.4, -10.6 + by, 5.4, -12.4 + by);
+    x.quadraticCurveTo(1.2 + bx, -14.0 + by, -3.4, -12.9 + by); x.quadraticCurveTo(-8.2 + bx, -12.0 + by, -9.8, -6.8);
+    x.quadraticCurveTo(-10.8, -2.0, -9.0, 1.8); x.quadraticCurveTo(-8.3, 3.5, -6.9, 3.7); x.lineTo(-5.2, 2.4);
     x.quadraticCurveTo(-4.4, -0.6, -2.4, -1.0); x.quadraticCurveTo(-1.4, -3.8, 0.8, -5.2);
   }
   x.closePath();
 }
 // yan görünüş (sağa bakar)
 const FZ_HS_NAPE = [
-  [-6.4, -4.0, -9.4, -1.0, -8.2, 2.0, -9.0, 3.8, 2.2, 1.1, 1, 0.8], [-4.8, -3.4, -6.8, -0.6, -5.4, 2.0, -6.6, 4.2, 2.0, 1.0, 0, 0.7]];
+  [-6.4, -4.0, -9.0, -1.0, -7.9, 2.0, -8.6, 3.6, 2.1, 1.05, 1, 0.8], [-4.8, -3.4, -6.8, -0.6, -5.4, 2.0, -6.6, 4.2, 2.0, 1.0, 0, 0.7]];
 const FZ_HS = [
-  [-5.0, -11.6, -8.0, -12.6, -10.2, -10.0, -10.4, -6.6, 2.5, 1.2, 2, 0.6],
-  [-7.0, -8.0, -11.0, -5.2, -9.6, -1.4, -9.6, 1.6, 2.5, 1.2, 1, 0.7],
+  [-5.0, -11.2, -7.6, -12.2, -9.8, -9.8, -10.0, -6.6, 2.4, 1.15, 2, 0.6],
+  [-7.0, -8.0, -10.6, -5.2, -9.2, -1.4, -9.2, 1.4, 2.4, 1.15, 1, 0.7],
   [-4.2, -9.6, -8.2, -6.0, -6.4, -2.2, -7.6, 2.0, 2.4, 1.1, 2, 0.6],
-  [-4.5, -12.2, -2.0, -15.4, 2.6, -15.2, 6.0, -13.0, 2.6, 1.3, 3, 0.45],
+  [-4.5, -11.8, -2.0, -14.8, 2.6, -14.6, 6.0, -12.6, 2.4, 1.2, 3, 0.45],
   [-1.6, -11.0, -4.4, -7.4, -1.6, -4.6, -3.2, -0.6, 2.6, 1.2, 3, 0.5],
   [0.8, -10.4, -0.8, -7.4, 1.4, -5.0, -0.6, -2.0, 1.7, 0.9, 2, 0.4]];
 const FZ_HS_FR = [
@@ -364,29 +364,29 @@ const FZ_HS_FR = [
   [2.2, -13.2, 4.0, -10.2, 2.4, -8.0, 4.2, -5.0, 2.5, 1.15, 3, 0.6],
   [4.4, -12.9, 6.6, -10.4, 5.2, -8.0, 6.9, -5.2, 2.4, 1.1, 2, 0.65],
   [6.0, -12.2, 8.6, -10.6, 7.6, -8.2, 8.8, -5.8, 2.0, 1.0, 3, 0.65],
-  [3.2, -12.9, 4.4, -10.2, 3.4, -8.2, 5.4, -6.4, 1.0, 0.6, 4, 0.6]];
+  [3.2, -12.9, 4.4, -10.2, 3.4, -8.2, 5.4, -6.4, 1.0, 0.6, 3, 0.6]];
 // önden görünüş (kakül sağdan ayrılıp sola taranmış)
 const FZ_HF_NAPE = [
   [-6.8, -2.0, -9.4, 0.2, -8.4, 2.2, -9.4, 3.6, 1.5, 0.85, 1, 0.6], [6.8, -2.0, 9.4, 0.2, 8.4, 2.2, 9.4, 3.6, 1.5, 0.85, 1, 0.6]];
 const FZ_HF = [
-  [-6.4, -11.0, -10.6, -8.4, -8.0, -3.8, -10.2, -1.0, 2.6, 1.15, 2, 0.55], [6.4, -11.0, 10.6, -8.4, 8.0, -3.8, 10.2, -1.0, 2.6, 1.15, 2, 0.55],
+  [-6.4, -11.0, -10.0, -8.4, -7.8, -3.8, -9.8, -1.0, 2.5, 1.15, 2, 0.55], [6.4, -11.0, 10.0, -8.4, 7.8, -3.8, 9.8, -1.0, 2.5, 1.15, 2, 0.55],
   [-4.4, -12.2, -8.2, -9.2, -6.4, -6.0, -7.8, -2.8, 2.2, 1.0, 3, 0.5], [5.0, -12.2, 8.4, -9.2, 6.8, -6.0, 8.0, -2.8, 2.2, 1.0, 1, 0.5],
-  [2.8, -12.8, -0.6, -15.4, -4.6, -15.0, -7.8, -11.8, 2.8, 1.3, 3, 0.45], [4.2, -12.8, 6.8, -14.6, 8.8, -12.8, 9.4, -9.4, 2.6, 1.2, 3, 0.45]];
+  [2.8, -12.6, -0.6, -15.0, -4.6, -14.6, -7.6, -11.6, 2.6, 1.25, 3, 0.45], [4.2, -12.6, 6.8, -14.2, 8.6, -12.6, 9.1, -9.4, 2.5, 1.2, 3, 0.45]];
 const FZ_HF_FR = [
   [1.4, -13.4, -3.0, -12.6, -6.8, -10.0, -7.0, -5.8, 2.5, 1.15, 2, 0.6],
-  [2.4, -13.4, -0.6, -11.2, -4.4, -9.4, -3.9, -5.0, 2.7, 1.2, 3, 0.6],
-  [3.4, -13.2, 2.0, -10.8, -1.6, -8.8, -0.8, -4.9, 2.6, 1.2, 2, 0.6],
-  [4.3, -13.0, 3.8, -10.2, 1.4, -8.6, 2.4, -5.3, 2.4, 1.1, 3, 0.6],
-  [5.1, -12.8, 5.8, -10.4, 4.4, -8.2, 5.4, -5.8, 2.1, 1.0, 2, 0.6],
+  [2.4, -13.4, -0.8, -11.4, -5.0, -9.6, -4.5, -5.2, 2.7, 1.2, 3, 0.6],
+  [3.4, -13.2, 1.6, -11.0, -2.4, -9.0, -1.7, -5.0, 2.6, 1.2, 2, 0.6],
+  [4.3, -13.0, 3.4, -10.4, 0.6, -8.8, 1.3, -5.3, 2.4, 1.1, 3, 0.6],
+  [5.1, -12.8, 5.4, -10.4, 3.6, -8.4, 4.4, -5.7, 2.1, 1.0, 2, 0.6],
   [5.8, -12.6, 8.2, -11.0, 7.4, -8.0, 8.4, -5.6, 1.9, 0.95, 1, 0.55],
-  [2.8, -13.4, 0.8, -11.0, -2.4, -9.2, -2.2, -6.2, 0.9, 0.55, 4, 0.6]];
+  [2.8, -13.4, 0.8, -11.0, -2.4, -9.2, -2.2, -6.2, 0.9, 0.55, 3, 0.6]];
 // kırpılmış gölgelendirme: alt taraf koyu, tepe sıcak, kafanın eğrisini izleyen yumuşak parlak bant
 function fzHairShade(x, front, tm, hx, hy, bx, by, A, B) {
   x.save(); x.beginPath(); fzMass(x, front, bx, by); fzLocks(x, A, tm, hx, hy, 2, 1); fzLocks(x, B, tm, hx, hy, 3, 1); x.clip();
   // parlak halka: kafanın eğrisini izleyen, kenarları yumuşak bant (tutam kenarlarında kırılır)
   const cx = front ? 0.4 : 0.2, cy = -1.4 + hy * 0.15, r = front ? 10.2 : 10.0;
   const rg = x.createRadialGradient(cx, cy, r - 2.6, cx, cy, r + 1.6);
-  rg.addColorStop(0, 'rgba(240,190,130,0)'); rg.addColorStop(0.5, 'rgba(240,190,130,0.34)'); rg.addColorStop(0.62, 'rgba(250,206,150,0.38)'); rg.addColorStop(1, 'rgba(240,190,130,0)');
+  rg.addColorStop(0, 'rgba(225,175,120,0)'); rg.addColorStop(0.5, 'rgba(225,175,120,0.3)'); rg.addColorStop(0.62, 'rgba(240,196,140,0.36)'); rg.addColorStop(1, 'rgba(225,175,120,0)');
   x.fillStyle = rg; x.fillRect(-14, -18, 28, 26);
   const gr = x.createLinearGradient(0, -16, 0, 6);
   gr.addColorStop(0, 'rgba(255,200,140,0.16)'); gr.addColorStop(0.4, 'rgba(60,30,15,0)'); gr.addColorStop(1, 'rgba(35,16,8,0.5)');
@@ -412,8 +412,8 @@ function fzHairFront(x, tm, back) {
   const hx = fzQ.a_hx * 0.5, hy = fzQ.a_hy, H = FZ.hair, bx = hx * 0.25, by = hy * 0.3;
   if (back) {   // başın arkasında kalan saç ve kısa, yumuşak ense uçları
     x.fillStyle = H[1]; x.beginPath();
-    x.moveTo(9.2, 1.6); x.quadraticCurveTo(11.2, -6.0, 7.6, -12.0); x.quadraticCurveTo(0, -16.6, -7.6, -12.0);
-    x.quadraticCurveTo(-11.2, -6.0, -9.2, 1.6); x.quadraticCurveTo(0, 3.6, 9.2, 1.6); x.closePath(); x.fill();
+    x.moveTo(9.0, 1.6); x.quadraticCurveTo(10.8, -6.0, 7.4, -11.8); x.quadraticCurveTo(0, -16.0, -7.4, -11.8);
+    x.quadraticCurveTo(-10.8, -6.0, -9.0, 1.6); x.quadraticCurveTo(0, 3.6, 9.2, 1.6); x.closePath(); x.fill();
     fzLocks(x, FZ_HF_NAPE, tm, hx, hy, 0, 0);
     return;
   }
@@ -637,7 +637,7 @@ const FZ_IKB = [[-6.6, 1.6, 0], [6.6, 1.6, 0]];              // o karede çizile
 const FZ_SEQ = [[4, 'wave'], [9.5, 'yawn'], [15, 'stretch'], [20.5, 'sit'], [26, 'look'], [31, 'wave']];   // uzun beklemede sırayla
 const FZ_ACT = { wave: 2.8, yawn: 2.7, stretch: 2.5, look: 2.2, nod: 3.2 };
 function fezaInit() {
-  P.a_pose = Object.assign({}, FZ_REST); P.a_R = Object.assign({}, FZ_REST);
+  P.a_pose = Object.assign({}, FZ_REST); P.a_pv = {}; for (const k of FZ_KEYS) P.a_pv[k] = 0; P.a_R = Object.assign({}, FZ_REST);
   P.a_t = 0; P.a_face = P.f; P.a_side = P.f; P.a_turnU = 1; P.a_turnTo = P.f; P.a_turnDur = 0.16; P.a_front = false; P.a_fu = 0; P.a_state = 'idle'; P.a_sw = 1; P.a_wasG = P.ground; P.a_prevVy = 0;
   P.a_landT = 9; P.a_landP = 0; P.a_take = 0; P.a_skid = 0; P.a_skidDir = 1; P.a_idle = 0; P.a_waveDir = 1;
   P.a_lookT = 1.2; P.a_look = 0; P.a_blink = 2.5; P.a_lidM = 1; P.a_spin = 0;
@@ -755,7 +755,7 @@ function fezaUpdate(dt) {
   if (P.a_turnU < 1) {
     P.a_turnU = Math.min(1, P.a_turnU + dt / P.a_turnDur);
     if (P.a_turnU >= 0.5 && P.a_side !== P.a_turnTo) {   // ayna çevirme (önden görünüşün içinde, görünmez)
-      P.a_side = P.a_turnTo; P.a_pose.gx = -P.a_pose.gx; P.a_hx = -P.a_hx; P.a_hvx = -P.a_hvx;
+      P.a_side = P.a_turnTo; P.a_pose.gx = -P.a_pose.gx; P.a_pv.gx = -P.a_pv.gx; P.a_hx = -P.a_hx; P.a_hvx = -P.a_hvx;
     }
   }
   P.a_face = P.a_side;
@@ -901,7 +901,8 @@ function fezaUpdate(dt) {
     // arka kol neşeyle açık, bacaklar sırayla tekmeler; yere yaklaşınca Pırıl bırakır, ayaklar yere uzanır
     T.air = 1; kmin = kmax = 22;
     const dn = smooth(clamp((cu - 0.62) / 0.3, 0, 1)), sw2 = Math.sin(t * 5.2 + 1.7);
-    T.arm = lerp(1.6, 1, dn); T.la1 = lerp(2.62, 0.4, dn);   // el başın önünde-üstünde: Pırıl yüzünü örtmesin T.la2 = lerp(0.04, 0.4, dn); T.hOpen = 0;
+    T.arm = lerp(1.6, 1, dn); T.la1 = lerp(2.62, 0.4, dn);   // el başın önünde-üstünde: Pırıl yüzünü örtmesin
+    T.la2 = lerp(0.04, 0.4, dn); T.hOpen = 0;
     T.ba1 = lerp(-1.05 + 0.25 * Math.sin(t * 4.4), -0.1, dn); T.ba2 = lerp(0.5, 0.35, dn); T.shr = 0.6 * (1 - dn);
     T.lt1 = lerp(0.05 + 0.32 * sw, 0.06, dn); T.lt2 = lerp(-0.35 - 0.45 * Math.max(0, -sw), -0.05, dn);
     T.bt1 = lerp(-0.35 + 0.25 * sw2, -0.05, dn); T.bt2 = lerp(-0.4 - 0.45 * Math.max(0, -sw2), -0.08, dn);
@@ -1008,9 +1009,15 @@ function fezaUpdate(dt) {
     T.mRound = lerp(T.mRound, 0.6, P.a_balKick); T.mOpen = lerp(T.mOpen, 0.45, P.a_balKick); T.brow = lerp(T.brow, 0.7, P.a_balKick);
   }
   // yumuşak geçiş (üstel yaklaşım); durum değişiminden sonra hız artar
-  const k = st === 'flip' ? lerp(16, 30, clamp(P.a_sw / 0.12, 0, 1)) : lerp(kmin, kmax, clamp(P.a_sw / 0.3, 0, 1)), m = 1 - Math.exp(-k * dt), cur = P.a_pose;
+  const k = st === 'flip' ? lerp(16, 30, clamp(P.a_sw / 0.12, 0, 1)) : lerp(kmin, kmax, clamp(P.a_sw / 0.3, 0, 1)), cur = P.a_pose;
   if (P.a_turnU < 0.5) { T.gx = -1; T.gy = 0; }   // dönüşte önce gözler yeni yöne bakar
-  for (const key of FZ_KEYS) cur[key] += (T[key] - cur[key]) * m;
+  // kritik sönümlü yay (tam çözüm): hareket yavaş başlar, yavaş biter — durum değişiminde hız sıçraması (pop) olmaz.
+  // om = 1.7k: eski üstel yaklaşımla aynı sürede %90'a varır, en yüksek hızı ~%40 daha düşük.
+  const om = 1.7 * k, ee = Math.exp(-om * dt), V = P.a_pv;
+  for (const key of FZ_KEYS) {
+    const x0 = cur[key] - T[key], c = (V[key] + om * x0) * dt;
+    cur[key] = T[key] + (x0 + c) * ee; V[key] = (V[key] - om * c) * ee;
+  }
   // göz kırpma (bazen çift)
   P.a_blink -= dt;
   if (P.a_blink < -0.13) P.a_blink = Math.random() < 0.2 ? 0.22 : 1.8 + Math.random() * 3;
@@ -1083,6 +1090,9 @@ function fezaUpdate(dt) {
 //   'uyanis' : tm = pozun başından beri geçen saniye. 0–1.1 sn yattığı yerden doğrulur, 1.1–2.4 gözlerini ovuşturur,
 //              2.4–3.6 kollarını açıp esner/gerinir, 3.6–4.2 kollar iner ve kocaman gülümser (sonra öyle kalır).
 //              x,y = uyku ile aynı nokta (geçiş kesintisiz). Otururken bacaklar önden kısa görünür: üstüne yorgan çizin.
+//   'uykuya_dalis' : 'uyku' ile aynı yatış/sarılma; tm = başından beri saniye. Gözler açık ve ağır, 0.5–2.4 sn arası 3 yavaş
+//              göz kırpma, 1.5–2.8 sn bir büyük iç çekiş (küçük "o" ağız), ~3.05 sn'de gözler kapanır; 3 sn'den sonra 'uyku' ile aynı görünür.
+//   'bakis'  : 'uyku' ile aynı yatış/sarılma, gözler açık, yukarıdaki Pırıl'a hayranlıkla bakar (ara sıra kırpar).
 //   'sevinc' : önden, kollar havada zıplıyor (tm ile döngü). x,y = ayak tabanı (yer).
 //   'ayakta' : önden ayakta, gülümsüyor. 'ayakta_yan' : yandan (3/4) ayakta, sağa bakar. x,y = ayak tabanı.
 // Dönüş: kucak noktası {x, y} (ctx koordinatında).
@@ -1104,10 +1114,21 @@ function fezaCizPoz(ctx, x, y, olcek, poz, tm, ara) {
   Q.a_lidM = ((tm + 1.5) % 3.9) < 0.12 ? 0 : 1;
   let front = true, lie = 0, seated = false;
   const b = Math.sin(tm * 2.2); R.breath = b; R.mSmile = 0.8;
-  if (poz === 'uyku') {
+  if (poz === 'uyku' || poz === 'uykuya_dalis' || poz === 'bakis') {
     lie = 1; seated = true; R.breath = Math.sin(tm * 1.5) * 1.4;
     R.lt1 = 0.9; R.lt2 = -1.3; R.bt1 = 0.8; R.bt2 = -1.2; R.lid = 0.05; Q.a_lidM = 1;
     R.mSmile = 0.4; R.mOpen = 0.1 + 0.05 * Math.sin(tm * 1.5); R.head = 0.3;
+    if (poz === 'uykuya_dalis') {   // ağır kapaklar, 3 yavaş göz kırpma, ~3 sn'de kapanır; arada bir büyük iç çekiş (küçük "o" ağız)
+      let lid = lerp(0.8, 0.45, clamp(tm / 2.6, 0, 1));
+      for (let k = 0; k < 3; k++) { const u = (tm - 0.5 - k * 0.75) / 0.42; if (u > 0 && u < 1) lid = lerp(lid, 0.05, Math.sin(u * Math.PI)); }
+      if (tm > 2.6) lid = lerp(lid, 0.05, smooth(clamp((tm - 2.6) / 0.45, 0, 1)));
+      R.lid = lid; R.gy = 0.35 * (1 - lid); R.gx = 0.1; R.brow = 0.15 * (1 - clamp(tm / 3, 0, 1));
+      const s = clamp((tm - 1.5) / 1.3, 0, 1), sg = Math.sin(s * Math.PI);   // iç çekiş: 1.5–2.8 sn
+      R.breath += 2.4 * sg; R.mRound = sg > 0.35 ? 1 : 0; R.mOpen = lerp(R.mOpen, 0.42, sg > 0.35 ? sg : 0); R.mSmile = lerp(0.4, 0.15, sg);
+    } else if (poz === 'bakis') {   // gözler açık, yukarıdaki parlayan Pırıl'a hayranlıkla bakar (yatarken ekranda yukarı = yerel +x)
+      R.lid = 1.08; Q.a_lidM = ((tm + 0.7) % 3.4) < 0.13 ? 0 : 1; R.gx = 1; R.gy = -0.1;
+      R.mRound = 0.55; R.mOpen = 0.45 + 0.06 * Math.sin(tm * 1.3); R.mSmile = 0.6; R.brow = 0.6; R.head = 0.15;
+    }
     Q.ik = [[2.0, -7.5 + 0.2 * R.breath, 0], [-2.2, -6.2 + 0.2 * R.breath, 0]];
     Q.a_hx = -2.5;
   } else if (poz === 'uyanis') {

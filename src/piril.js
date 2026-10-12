@@ -5,7 +5,7 @@
    Diğer modüller için dışa açık durum: D.tasiyor (Feza'yı taşıyor), D.pence {x,y} (pençelerin dünya konumu),
    D.mode, OLAY 'nefes' {asama:'basla'|'al'|'ver'|'bitti'}. */
 'use strict';
-const DR_TAIL_N = 7, DR_TAIL_LEN = 3.5;   // peluştaki gibi orta boy, incelerek yassı küreğe biten kuyruk
+const DR_TAIL_N = 7, DR_TAIL_LEN = 3.2;   // peluştaki gibi orta boy, incelerek yassı küreğe biten kuyruk
 // renkler: Feza'nın gerçek peluşu (lila gövde, limon yeşili karın/kulak, koyu yeşil ibik, yeşil gözler)
 const DR_COL = { pur: '#b28ae6', purL: '#d2b6f7', purD: '#8660c4', line: '#52338c', lime: '#bde43a', limeL: '#d9f27e', limeD: '#93bd28',
   crest: '#2f8a2c', crestL: '#55ad44', crestD: '#1f5c1c', eye: '#1c1228' };
@@ -576,7 +576,7 @@ function stepDragon(dt) {
     }
     if (D.yp < 2) {   // noktalı ışık izi (birkaç saniye kalır)
       D.izT -= dt;
-      if (D.izT <= 0) { D.izT = 0.04; D.iz.push({ x: D.x - D.fs * 6 + (Math.random() - 0.5) * 4, y: D.y + 4 + (Math.random() - 0.5) * 4, life: 4.2, max: 4.2, ph: Math.random() * 6.283, col: DR_IZ[D.iz.length % 4] }); }
+      if (D.izT <= 0 && !(Math.abs(D.x - P.x) < 34 && D.y > P.y - 96 && D.y < P.y - 20)) { D.izT = 0.04; D.iz.push({ x: D.x - D.fs * 6 + (Math.random() - 0.5) * 4, y: D.y + 4 + (Math.random() - 0.5) * 4, life: 4.2, max: 4.2, ph: Math.random() * 6.283, col: DR_IZ[D.iz.length % 4] }); }
     }
   } else if (D.mode === 'oyna') {      // uyanık Pofuduğun çevresinde oyuncu bir tur
     const o = D.po, big = o.tip === 'buyukPofuduk', r = big ? 105 : 44, cy = o.y - (big ? 95 : 30);
@@ -714,7 +714,7 @@ function stepDragon(dt) {
   const sxx = D.fs, ct = Math.cos(D.tilt), st = Math.sin(D.tilt);
   for (let i = 1; i < DR_TAIL_N; i++) {
     const u = i / (DR_TAIL_N - 1);
-    const ang = Math.PI - 0.75 + u * 1.7 + Math.sin(D.t * 3.2 - u * 3.2) * 0.32 * (0.4 + u) + D.glide * 0.3 + D.grip * 1.5;
+    const ang = Math.PI - 0.95 + u * 2.15 + Math.sin(D.t * 3.2 - u * 3.2) * 0.32 * (0.4 + u) + D.glide * 0.3 + D.grip * 1.5;
     const dlx = Math.cos(ang), dly = Math.sin(ang);
     const dwx = sxx * (dlx * ct - dly * st), dwy = dlx * st + dly * ct;
     const p = D.tail[i];
@@ -827,7 +827,7 @@ function drawTail(x, tm) {
   for (let i = 0; i < n; i++) {
     const a = tl[Math.max(0, i - 1)], b = tl[Math.min(n - 1, i + 1)];
     let nx = -(b.y - a.y), ny = b.x - a.x; const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
-    const r = lerp(5.4, 1.9, Math.pow(i / (n - 1), 0.8));
+    const r = lerp(6, 2.3, Math.pow(i / (n - 1), 0.75));
     L.push([tl[i].x + nx * r, tl[i].y + ny * r]); R.push([tl[i].x - nx * r, tl[i].y - ny * r]);
   }
   // koyu yeşil taraklı dikenler (kuyruğun üst kenarı; yarısı kuyruğun arkasında kalır)
@@ -837,7 +837,7 @@ function drawTail(x, tm) {
     const a = tl[Math.max(0, i0 - 1)], b = tl[Math.min(n - 1, i0 + 1)];
     let nx = -(b.y - a.y), ny = b.x - a.x; const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
     if (ny > 0) { nx = -nx; ny = -ny; }
-    const u = i / (n - 1), r = lerp(5.4, 1.9, Math.pow(u, 0.8));
+    const u = i / (n - 1), r = lerp(6, 2.3, Math.pow(u, 0.75));
     const px = lerp(tl[i0].x, tl[Math.min(n - 1, i0 + 1)].x, fr), py = lerp(tl[i0].y, tl[Math.min(n - 1, i0 + 1)].y, fr);
     DR_TSP.push(px + nx * r * 0.82, py + ny * r * 0.82, lerp(2.1, 1.0, u));
   }

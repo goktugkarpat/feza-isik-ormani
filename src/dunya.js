@@ -181,7 +181,12 @@ function dnPaintSky() {
     x.fillStyle = rg; x.save(); x.translate(cx, cy); x.scale(1.6, 0.8); x.translate(-cx, -cy);
     x.beginPath(); x.arc(cx, cy, rad, 0, 6.283); x.fill(); x.restore();
   }
+  // Gris kâğıt dokusu (bir kez, boyarken): 3× büyütülünce yumuşak lif lekeleri gibi durur
+  if (!dnSkyGrain) dnSkyGrain = x.createPattern(DN_GRAIN, 'repeat');
+  x.globalAlpha = 0.22; x.globalCompositeOperation = 'overlay'; x.fillStyle = dnSkyGrain; x.fillRect(0, 0, w, h);
+  x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
 }
+let dnSkyGrain = null;
 const DN_STARS = (() => { const R = rng(808), a = []; for (let i = 0; i < 120; i++) a.push({ x: R(), y: Math.pow(R(), 1.5) * 0.55, s: 0.5 + Math.pow(R(), 3) * 2.2, ph: R() * 6.28, sp: 0.6 + R() * 1.8, c: R() }); return a; })();
 // ay: yumuşak disk + hafif lekeler (önbellekli)
 let dnMoonC = null;
@@ -712,11 +717,16 @@ function drawBackground(tm) {
 // Gris dokunuşu: açılan her çiçeğin çevresinde orman yavaşça rengini geri alır ve öyle kalır ('color' karışımı: parlaklık aynı,
 // ton ve doygunluk çiçeğin bölgesine göre altın-şeftali / pembe / yeşil-turkuaz / mor; yayılarak büyür)
 const DN_BLOOMHUE = { patika: ['#ffb060', '#7fe0a0'], pofuduk: ['#ff7ac8', '#ffc070'], gol: ['#40e0c0', '#a0a0ff'], dallar: ['#90e070', '#ffc060'], sakli: ['#c080ff', '#ff90d0'], aciklik: ['#ffc050', '#ff8890'] };
+function dnHueOf(f) {   // çiçeğin bölge rengi (her zaman geçerli bir [a, b] çifti döner)
+  const h = f.dnHue;
+  if (h && h[0] && h[1]) return h;
+  return f.dnHue = DN_BLOOMHUE[dnRegCol(f.x)] || DN_BLOOMHUE.patika;
+}
 function dnColourBloom() {
   let any = false;
   for (const f of DN_FLW) {
     if (!f.done || !(f.bt >= 0)) continue;
-    const hue = f.dnHue || (f.dnHue = DN_BLOOMHUE[dnRegCol(f.x)] || DN_BLOOMHUE.patika);
+    const hue = dnHueOf(f);
     const e = now - f.bt, grow = smooth(clamp(e / 7, 0, 1)), r = (220 + 560 * grow) * S, x = (f.x - cam.x) * S, y = (f.y - 120 - cam.y) * S;
     if (x < -r || x > W + r) continue;
     const a = smooth(clamp(e / 2.5, 0, 1)) * (1 - dnBlaze * 0.6);
@@ -726,7 +736,7 @@ function dnColourBloom() {
   if (any) {
     g.globalCompositeOperation = 'lighter';   // biraz sıcak ışık da kalır
     for (const f of DN_FLW) { if (!f.done || !(f.bt >= 0)) continue; const e = now - f.bt, x = (f.x - cam.x) * S, y = (f.y - 60 - cam.y) * S; if (x < -600 * S || x > W + 600 * S) continue;
-      dglow(f.dnHue[0], x, y, 380 * S * (0.6 + 0.4 * smooth(clamp(e / 7, 0, 1))), 0.07 * smooth(clamp(e / 2.5, 0, 1))); }
+      dglow(dnHueOf(f)[0], x, y, 380 * S * (0.6 + 0.4 * smooth(clamp(e / 7, 0, 1))), 0.07 * smooth(clamp(e / 2.5, 0, 1))); }
     g.globalCompositeOperation = 'source-over';
   }
 }
@@ -1744,11 +1754,11 @@ function dnTreeGeo(o) {
   for (let i = 0; i < 90; i++) { const cx = (R() * 2 - 1) * 310, [yt] = env(cx); G.backLeaves.push([cx, yt + R() * 60, 8 + R() * 9, 2.5 + R() * 2, R() * 6.283, R()]); }
   return G;
 }
-function dnTreePaint(c, sc, warm) {
+function dnTreeStages(c, sc, warm) {   // ağacın boyanması 4 parçaya bölünür (boşta karelere yayılır)
+  const ST = [];
   const G = dnTreeG, w = Math.ceil((DN_TB.x1 - DN_TB.x0) * sc), h = Math.ceil((DN_TB.y1 - DN_TB.y0) * sc);
   if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
-  const x = c.getContext('2d'); x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, w, h);
-  x.setTransform(sc, 0, 0, sc, -DN_TB.x0 * sc, -DN_TB.y0 * sc); x.lineCap = 'round'; x.lineJoin = 'round';
+  const x = c.getContext('2d');
   const rim = warm ? 'rgba(255,220,150,0.9)' : 'rgba(110,236,240,0.65)', body = warm ? '#0d1316' : '#040d17', leafB = warm ? '#12302a' : '#05111b';
   const vein = warm ? '#ffe2a0' : '#7ff2ff', glowc = warm ? '#ffd890' : '#5fe8ff';
   const leafPass = (list, cols, alpha, skip) => {   // renk × parlaklık kovalarına toplu çizim (yaprak başına Path2D yok)
@@ -1761,12 +1771,17 @@ function dnTreePaint(c, sc, warm) {
     for (let key = 0; key < bk.length; key++) if (bk[key]) { const ci = Math.floor(key / NB), ai = key % NB; x.globalAlpha = alpha * (0.45 + (ai + 0.5) / NB * 0.55); x.fillStyle = cols[ci]; x.fill(bk[key]); }
     x.globalAlpha = 1;
   };
+  ST.push(() => {
+  x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, w, h);
+  x.setTransform(sc, 0, 0, sc, -DN_TB.x0 * sc, -DN_TB.y0 * sc); x.lineCap = 'round'; x.lineJoin = 'round';
   x.globalCompositeOperation = 'lighter';
   dnG(x, glowc, 0, -400, 360, warm ? 0.5 : 0.25); dnG(x, warm ? '#fff2cc' : '#9ff6ff', 0, -230, 220, warm ? 0.3 : 0.12);
   x.globalCompositeOperation = 'source-over';
   x.save(); x.translate(0, 2); x.fillStyle = rim; x.globalAlpha = 0.5; x.fill(G.crownBack); x.restore(); x.globalAlpha = 1;
   x.fillStyle = warm ? '#16302e' : '#0a2232'; x.fill(G.crownBack);
   leafPass(G.backLeaves, warm ? ['#ffe6a0', '#bff6e0', '#ffd0b0'] : ['#3fd8ff', '#56f0dc'], warm ? 0.55 : 0.35, warm ? 0.8 : 0.45);
+  });
+  ST.push(() => {
   for (const [dx, dy, a] of [[2.4, -1, 1], [-2, -1, 0.5]]) {
     x.save(); x.translate(dx, dy); x.globalAlpha = a; x.fillStyle = rim;
     for (const p of G.parts) x.fill(p); x.fill(G.crown); x.restore();
@@ -1775,6 +1790,8 @@ function dnTreePaint(c, sc, warm) {
   x.fillStyle = body; for (const p of G.parts) x.fill(p);
   x.strokeStyle = warm ? 'rgba(255,214,150,0.13)' : 'rgba(110,236,240,0.08)'; x.lineWidth = 2.4;
   for (const pts of G.ridges) { x.beginPath(); x.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) x.lineTo(pts[i][0], pts[i][1]); x.stroke(); }
+  });
+  ST.push(() => {
   x.globalCompositeOperation = 'lighter';
   const crackPass = (lw, a) => {
     x.strokeStyle = vein; x.globalAlpha = a; x.lineWidth = lw; x.beginPath();
@@ -1802,24 +1819,42 @@ function dnTreePaint(c, sc, warm) {
     for (let i = 0; i < 9; i++) dnG(x, i % 3 ? '#ffd890' : '#9ff6e0', -300 + i * 75, -430 + (i % 2) * 50, 150, 0.26);
     x.restore(); x.globalCompositeOperation = 'source-over';
   }
+  });
+  ST.push(() => {
   leafPass(G.leaves, warm ? ['#ffe6a0', '#fff6dc', '#ffd890', '#9ff6e6', '#ffcdb5'] : ['#3fd8ff', '#56f0dc', '#8ff5ff'], warm ? 0.95 : 0.6, warm ? 0.9 : 0.4);
   x.globalCompositeOperation = 'lighter';
   for (const [lx, ly, , , , r] of G.leaves) if (warm ? r < 0.5 : r < 0.18) dnG(x, glowc, lx, ly, 16, warm ? 0.32 : 0.28);
   for (const [vx, vy, len, ph] of G.vines) { const ex = vx + Math.sin(ph) * 6, ey = vy + len + 3; dnG(x, glowc, ex, ey, 20, 0.6); dnG(x, '#ffffff', ex, ey, 4, 0.8); }
   x.globalCompositeOperation = 'source-over';
   for (const [vx, vy, len, ph] of G.vines) { x.fillStyle = warm ? '#fff2cc' : '#c8fbff'; x.beginPath(); x.ellipse(vx + Math.sin(ph) * 6, vy + len + 3, 2.4, 3.2, 0, 0, 6.283); x.fill(); }
+  x.globalCompositeOperation = 'source-over'; x.globalAlpha = 1;
+  });
+  return ST;
 }
-function dnTreePrep(o, warm, sc) {
+function dnTreePaint(c, sc, warm) { for (const f of dnTreeStages(c, sc, warm)) f(); }
+function dnTreeCanvas(warm) { let c = warm ? dnTreeWarm : dnTreeCool; if (!c) { c = document.createElement('canvas'); if (warm) dnTreeWarm = c; else dnTreeCool = c; } return c; }
+function dnTreePrep(o, warm, sc) {   // gerekiyorsa kalan bütün parçaları hemen boya
   if (!dnTreeG) dnTreeG = dnTreeGeo(o);
-  let c = warm ? dnTreeWarm : dnTreeCool; if (!c) { c = document.createElement('canvas'); if (warm) dnTreeWarm = c; else dnTreeCool = c; }
-  if (c.dnSc !== sc) { dnTreePaint(c, sc, warm); c.dnSc = sc; }
+  const c = dnTreeCanvas(warm);
+  if (c.dnSc === sc) return;
+  if (!c.dnP || c.dnP.sc !== sc) c.dnP = { sc, i: 0, st: dnTreeStages(c, sc, warm) };
+  while (c.dnP.i < c.dnP.st.length) c.dnP.st[c.dnP.i++]();
+  c.dnSc = sc; c.dnP = null;
+}
+function dnTreeStep(o, warm, sc) {   // boşta: tek parça
+  const c = dnTreeCanvas(warm);
+  if (c.dnSc === sc) return;
+  if (!c.dnP || c.dnP.sc !== sc) { c.dnP = { sc, i: 0, st: dnTreeStages(c, sc, warm) }; return; }
+  c.dnP.st[c.dnP.i++]();
+  if (c.dnP.i >= c.dnP.st.length) { c.dnSc = sc; c.dnP = null; }
 }
 function dnTreeWarmup() {   // yaklaşırken ağaç görüntülerini boşta önceden boya (ilk görüşte takılma olmasın)
   const o = TREE; if (!o) return; const sc = Math.min(dnCS(), 2.2);
   if (dnTreeCool && dnTreeCool.dnSc === sc && dnTreeWarm && dnTreeWarm.dnSc === sc) return;
   if (o.x + DN_TB.x0 > cam.x + VW + 2400 || o.x + DN_TB.x1 < cam.x - 1500) return;
   if (!dnTreeG) { dnQueue(4, 'TG', () => { dnTreeG = dnTreeG || dnTreeGeo(o); }); return; }
-  dnQueue(4, 'TC', () => dnTreePrep(o, false, sc)); dnQueue(5, 'TW', () => dnTreePrep(o, true, sc));
+  if (!(dnTreeCool && dnTreeCool.dnSc === sc)) dnQueue(4, 'TC', () => dnTreeStep(o, false, sc));
+  else dnQueue(5, 'TW', () => dnTreeStep(o, true, sc));
 }
 function dnTree(o, tm) {
   const x = o.x, y = o.y;
@@ -2078,18 +2113,31 @@ const DN_FG = { sc: 0, l: -1, top: [], fern: [] };
 function dnFgSprites() {
   const sc = dnCS(), lq = Math.round(light * 10) / 10;
   if (DN_FG.sc === sc && DN_FG.l === lq) return;
-  DN_FG.sc = sc; DN_FG.l = lq;
-  const rim = dcAt('rim', lq, 0.75), body = '#010309';
-  const mk = (i, w, h, ox, oy, draw) => {
-    const c = (DN_FG._c || (DN_FG._c = {}))[i] || (DN_FG._c[i] = document.createElement('canvas'));
+  const rimOf = q => dcAt('rim', q, 0.75), body = '#010309';
+  if (DN_FG.sc !== sc || !DN_FG.top.length) {   // ilk kez / ölçek değişti: hemen boya
+    DN_FG.sc = sc; DN_FG.l = lq;
+    dnFgDefs((i, w, h, ox, oy, draw) => { const c = document.createElement('canvas'); dnFgPaint(c, i, w, h, ox, oy, draw, sc, lq, rimOf(lq), body); return { c, w, h, ox, oy, i, draw, l: lq }; });
+    return;
+  }
+  // yalnız aydınlık değişti: eski görüntüler kalır, yenileri boşta (karede en fazla birkaç tane) boyanıp değiştirilir → finalde takılma yok
+  let all = true;
+  for (const arr of [DN_FG.top, DN_FG.fern]) arr.forEach((sp, k) => {
+    if (sp.l === lq) return; all = false;
+    dnQueue(2, 'FG' + sp.i, () => { if (sp.l === lq || arr[k] !== sp) return; const c = document.createElement('canvas'); dnFgPaint(c, sp.i, sp.w, sp.h, sp.ox, sp.oy, sp.draw, sc, lq, rimOf(lq), body); arr[k] = Object.assign({}, sp, { c, l: lq }); });
+  });
+  if (all) DN_FG.l = lq;
+}
+function dnFgPaint(c, i, w, h, ox, oy, draw, sc, lq, rim, body) {
+  {
     c.width = Math.ceil(w * sc); c.height = Math.ceil(h * sc);
     const x = c.getContext('2d'); x.setTransform(sc, 0, 0, sc, ox * sc, oy * sc); x.lineCap = 'round';
     const p = new Path2D(); draw(p, rng(i.charCodeAt(0) * 97 + i.charCodeAt(1) * 13 + 5));
     x.save(); x.translate(0, 2); x.fillStyle = rim; x.fill(p); x.restore();
     x.save(); x.translate(0, 5); x.fillStyle = dcAt('rim', lq, 0.08); x.fill(p); x.restore();
     x.fillStyle = body; x.fill(p);
-    return { c, w, h, ox, oy };
-  };
+  }
+}
+function dnFgDefs(mk) {
   DN_FG.top = [0, 1, 2].map(i => mk('t' + i, 320, 190, 160, 20, (p, R) => {   // üstten sarkan yaprak kümeleri
     p.moveTo(150, -10); p.ellipse(0, -10, 150, 22 + R() * 10, 0, 0, 6.283);   // yumuşak yaprak kümesi
     for (let k = 0; k < 6; k++) { const bx = -120 + k * 48 + (R() - 0.5) * 20, rr = 22 + R() * 18; p.moveTo(bx + rr, 4); p.ellipse(bx, 4 + R() * 8, rr, rr * 0.6, 0, 0, 6.283); }
@@ -2158,7 +2206,5 @@ function drawVignette() {
   const r = Math.hypot(W, H) / 2, vg = g.createRadialGradient(W / 2, H * 0.55, r * 0.42, W / 2, H * 0.55, r * 1.05);
   vg.addColorStop(0, 'rgba(3,5,18,0)'); vg.addColorStop(1, `rgba(3,5,18,${0.62 - light * 0.22 - dnBlaze * 0.15})`);
   g.fillStyle = vg; g.fillRect(0, 0, W, H);
-  if (!grainPat) grainPat = g.createPattern(DN_GRAIN, 'repeat');   // çok hafif kâğıt dokusu
-  g.globalAlpha = 0.09; g.globalCompositeOperation = 'overlay'; g.fillStyle = grainPat; g.fillRect(0, 0, W, H);
-  g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  // kâğıt dokusu artık karede tam ekran çizilmiyor: gökyüzü tuvaline (yeniden boyanırken) işleniyor → kare başına maliyet yok
 }

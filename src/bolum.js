@@ -112,7 +112,7 @@ nesne('konusma', 261, yuzey(261), { anahtar: 'p_buyuk', r: 80 });
 nesne('cicek', 264.5, yuzey(264), { r: 34, buyukIcin: true });     // yerde
 nesne('cicek', 274, blDal(14), { r: 34, buyukIcin: true });       // tümsekten dala
 nesne('cicek', 280.5, yuzey(280), { r: 34, buyukIcin: true });   // Büyük Pofuduk'un burnunun dibinde
-nesne('buyukPofuduk', 284, yuzey(284), {});                     // yuvasında; ağacın tepesine çıkan yolu kapatır
+nesne('buyukPofuduk', 284.6, yuzey(284), {});                   // yuvasında; ağacın tepesine çıkan yolu kapatır
 nesne('konusma', 289, yuzey(289), { anahtar: 'p_agac', r: 70 });
 nesne('agac', 294, yuzey(294), { r: 90 });
 
