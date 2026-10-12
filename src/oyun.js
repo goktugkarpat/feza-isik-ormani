@@ -14,9 +14,26 @@ const OM_PARMAK = [];   // sabit parmak yuvaları (her karede yeni nesne/dizi yo
 for (let i = 0; i < 10; i++) OM_PARMAK.push({ id: -1, aktif: false, jump: false, x: 0, y: 0, sira: 0 });
 let omSira = 0, omYon = 0;   // omYon: yürüme parmağının son yönü (histerezis)
 const touches = { get size() { let n = 0; for (const t of OM_PARMAK) if (t.aktif) n++; return n; } };   // eski ad (uyumluluk)
-function dugmeYeri() {   // CSS px; orta boy (≈ başparmak), kenardan biraz içeride
-  const r = clamp(Math.min(innerWidth, innerHeight) * 0.07, 34, 52);
-  GIRDI.dugme.r = r; GIRDI.dugme.x = r + Math.max(26, innerWidth * 0.035); GIRDI.dugme.y = innerHeight - r - Math.max(26, innerHeight * 0.05);
+// Güvenli alan payları (çentik / ana ekran çubuğu): CSS env() ile ölçülür
+const omGuvenli = { sol: 0, alt: 0 };
+function omGuvenliOlc() {
+  try {
+    let d = document.getElementById('omGuvenliProbe');
+    if (!d) {
+      d = document.createElement('div'); d.id = 'omGuvenliProbe';
+      d.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;' +
+        'padding-left:env(safe-area-inset-left,0px);padding-bottom:env(safe-area-inset-bottom,0px)';
+      document.body.appendChild(d);
+    }
+    const cs = getComputedStyle(d);
+    omGuvenli.sol = parseFloat(cs.paddingLeft) || 0; omGuvenli.alt = parseFloat(cs.paddingBottom) || 0;
+  } catch (_) { omGuvenli.sol = omGuvenli.alt = 0; }
+}
+function dugmeYeri() {   // CSS px; 5 yaş başparmağı: iPad Pro'da çap ≈ 80 px, merkez kenarlardan ≈ 76 px
+  omGuvenliOlc();
+  const r = clamp(Math.min(innerWidth, innerHeight) * 0.048, 32, 44);
+  const pay = r + 36;
+  GIRDI.dugme.r = r; GIRDI.dugme.x = omGuvenli.sol + pay; GIRDI.dugme.y = innerHeight - omGuvenli.alt - pay;
 }
 // cömert isabet alanı: düğmenin 1.5 katı + sol alt köşe
 function dugmede(x, y) {
@@ -93,7 +110,7 @@ let ustundeki = null;   // Feza'nın üstünde durduğu nesne
 const OM = {   // ayar sabitleri
   STEP: 1 / 120, KOS: 250, ZIPLA: 730, CIFT: 650, YERCEKIM: 2200, DUSUS: 1.25, BIRAK: 2.1, MAXDUS: 950,
   IVME: 1700, FREN: 2300, DONUS: 3400, HAVA_IVME: 1300, HAVA_FREN: 800,
-  COYOTE: 0.12, TAMPON: 0.15, MIN_BASILI: 0.11, TEPE: 0.6, KOSE: 13, KENAR: 15, PAY: 6,
+  COYOTE: 0.15, TAMPON: 0.2, MIN_BASILI: 0.11, TEPE: 0.6, KOSE: 13, KENAR: 12, PAY: 6,
 };
 let omStandY = 0;   // üstünde durulan cismin son üst y'si / x'i (taşıma için)
 let omStandX = 0;
@@ -131,9 +148,9 @@ function omCismeIn(o, top, vy, was) {
   }
   return true;
 }
-// Yan çarpışmada kenara tutunma affı: ayaklar kenarın biraz altındaysa ve yükselmiyorsa üstüne çıkar
+// Yan çarpışmada kenara tutunma affı: ayaklar kenarın en çok ~12 birim altındaysa (yükselirken ya da düşerken) üstüne çık
 function omKenaraCik(top) {
-  if (P.vy < -160 || P.y - top <= 0 || P.y - top > OM.KENAR) return false;
+  if (P.y - top <= 0 || P.y - top > OM.KENAR) return false;
   if (omKatiVar(P.x, top)) return false;
   return true;
 }
@@ -144,7 +161,11 @@ function moveX(dx) {
   const tx = dx > 0 ? Math.floor((P.x + PW) / T) : Math.floor((P.x - PW) / T);
   for (let ty = ty0; ty <= ty1; ty++) if (cell(tx, ty) === 1) {
     // kenar affı: ayaklar duvarın üst kenarının birkaç birim altındaysa üstüne çık
-    if (!P.ground && (ty > ty0 || cell(tx, ty - 1) !== 1) && omKenaraCik(ty * T)) { const vy = P.vy; P.y = ty * T; P.vy = 0; P.ground = true; inis(P.y, vy); break; }
+    if (!P.ground && (ty > ty0 || cell(tx, ty - 1) !== 1) && omKenaraCik(ty * T)) {
+      P.y = ty * T;
+      if (P.vy >= -160) { const vy = P.vy; P.vy = 0; P.ground = true; inis(P.y, vy); }   // düşerken / tepede: kenara kon
+      break;   // yükselirken: yalnız kenarın üstüne it, zıplama sürsün; yatay hız korunur
+    }
     P.x = dx > 0 ? tx * T - PW - 0.01 : (tx + 1) * T + PW + 0.01;
     P.vx = 0; break;
   }
@@ -156,7 +177,7 @@ function omItBedenler(dx) {
     const c = o.cisim; if (!c.aktif || c.tip === 'ustten') continue;
     const k = omK(o);
     if (P.x + PW <= k.x0 || P.x - PW >= k.x1 || P.y <= k.y0 + 0.5 || P.y - PH >= k.y1) continue;
-    if (o === ustundeki || (P.y - k.y0 <= OM.KENAR && P.vy >= -160)) {   // üst kenara yakın: üstüne çık (kenar affı / ezme)
+    if (o === ustundeki || (P.y - k.y0 <= OM.KENAR + 3 && (P.vy >= -160 || c.tip !== 'kati'))) {   // üst kenara yakın: üstüne çık (kenar affı / ezme)
       const was = P.ground, vy = Math.max(P.vy, 0);
       omCismeIn(o, k.y0, vy, was && o === ustundeki);
       continue;
@@ -436,8 +457,36 @@ function omBolgeAgirlik(x0, x1, x, pay) {   // bölgenin içinde 1, kenarlarınd
   return clamp(Math.min(x - x0 + pay, x1 + pay - x) / (pay * 2), 0, 1);
 }
 let omBuyuk = null;
+// Bölgeye göre yakınlaştırma (BOLUM.kamera: {x0,x1,zoom,yOfs}); kenarlarda yumuşak geçiş
+const omZ = { z: 1, v: 0, yo: 0, yv: 0 };
+function omKameraIpucu(px) {
+  let z = 1, yo = 0, wb = 0;
+  const L = BOLUM.kamera;
+  if (L) for (const k of L) {
+    const w = omBolgeAgirlik(k.x0, k.x1, px, 3 * T);
+    if (w > wb) { wb = w; z = 1 + ((k.zoom || 1) - 1) * w; yo = (k.yOfs || 0) * w; }
+  }
+  omZ.hz = z; omZ.hy = yo;
+}
+// Ölçek tek yerde: S ve VW kamera yakınlığından hesaplanır (resize de bunu çağırır)
+function omOlcek() { S = H / VH * cam.zoom; VW = W / S; }
 function stepCam(dt, snap) {
   const px = P.rx !== undefined ? P.rx : P.x, py = P.ry !== undefined ? P.ry : P.y;
+  omKameraIpucu(px);
+  if (snap || !(dt > 0)) { omZ.z = omZ.hz; omZ.v = 0; omZ.yo = omZ.hy; omZ.yv = 0; }
+  else {
+    omZ.z = omSD(omZ.z, omZ.hz, omZ.v, 0.9, dt); omZ.v = omSdV;
+    if (Math.abs(omZ.z - omZ.hz) < 0.0005 && Math.abs(omZ.v) < 0.001) { omZ.z = omZ.hz; omZ.v = 0; }   // dururken ölçek sabit kalsın (önbellekler)
+    omZ.yo = omSD(omZ.yo, omZ.hy, omZ.yv, 0.9, dt); omZ.yv = omSdV;
+  }
+  // kamera merkezini koruyarak yakınlaştır (ekran ortası aynı dünya noktasında kalsın)
+  if (cam.zoom !== omZ.z) {
+    const eVW = VW, eVH = VH / cam.zoom;
+    cam.zoom = omZ.z; omOlcek();
+    const gVH = VH / cam.zoom;
+    omC.x += (eVW - VW) / 2; omC.y += (eVH - gVH) / 2;
+  }
+  const VHg = VH / cam.zoom;   // görünen dünya yüksekliği
   // ileri bakış: yüz yönü + hız; yavaş dönsün ki yön değiştirince ekran savrulmasın
   const sp = clamp(P.vx / OM.KOS, -1, 1);
   const bakHedef = P.f * 46 + sp * 64;
@@ -460,11 +509,12 @@ function stepCam(dt, snap) {
   // dikey: son basılan zemine göre (zıplarken kamera sabit kalır), bantların dışına çıkınca takip
   if ((P.ground && P.fade <= 0) || snap) omC.tabanY = py;
   else if (py > omC.tabanY) omC.tabanY = py;   // aşağı düşüyor
-  const ust = VH * 0.3, alt = VH * 0.8;
-  let ty = omC.tabanY - VH * 0.62, st = P.ground ? 0.42 : 0.5;
+  // düz zeminde ayaklar ekranın ~%76'sında: üstte bol orman/gökyüzü, altta az toprak
+  const ust = VHg * 0.32, alt = VHg * 0.87, yMax = ROWS * T - VHg + 8;
+  let ty = omC.tabanY - VHg * 0.76 + omZ.yo, st = P.ground ? 0.42 : 0.5;
   if (py - ty < ust) { ty = py - ust; st = 0.2; }
   if (py - ty > alt) { ty = py - alt; st = 0.14; }
-  ty = clamp(ty, -40, ROWS * T - VH + 30);
+  ty = clamp(ty, -40, yMax);
   if (snap) { omC.x = tx; omC.y = ty; omC.vx = omC.vy = 0; }
   else if (dt > 0) {
     omC.x = omSD(omC.x, tx, omC.vx, 0.3, dt); omC.vx = omSdV;
@@ -472,10 +522,10 @@ function stepCam(dt, snap) {
     // Feza asla ekran kenarına çok yaklaşmasın (hızlı sekmelerde)
     const kx0 = px - VW * 0.82, kx1 = px - VW * 0.18;
     if (omC.x < kx0) omC.x = kx0; else if (omC.x > kx1) omC.x = kx1;
-    const ky0 = py - VH * 0.92, ky1 = py - VH * 0.22;
+    const ky0 = py - VHg * 0.94, ky1 = py - VHg * 0.22;
     if (omC.y < ky0) omC.y = ky0; else if (omC.y > ky1) omC.y = ky1;
-    omC.x = clamp(omC.x, 0, maxX); omC.y = clamp(omC.y, -40, ROWS * T - VH + 30);
   }
+  omC.x = clamp(omC.x, 0, maxX); omC.y = clamp(omC.y, -40, yMax);
   // sarsıntı: yalnız Büyük Pofuduk sekmesinde, minik ve yumuşak
   let sx = 0, sy = 0;
   if (omC.sars > 0) {
@@ -496,7 +546,7 @@ function drawFx(tm, dt) {
     const p = parts[i]; p.life -= dt;
     if (p.life <= 0) { parts[i] = parts[parts.length - 1]; parts.pop(); continue; }   // sırası önemsiz: kaydırmadan sil
     p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= Math.exp(-dt * 2); p.vy = p.vy * Math.exp(-dt * 2) - 10 * dt;
-    if (p.x < cam.x - 60 || p.x > cam.x + VW + 60 || p.y < cam.y - 60 || p.y > cam.y + VH + 60) continue;
+    if (p.x < cam.x - 60 || p.x > cam.x + VW + 60 || p.y < cam.y - 60 || p.y > cam.y + VH / cam.zoom + 60) continue;
     const a = p.life / p.max;
     dglow(p.col, p.x, p.y, p.size * (0.6 + a), a * 0.6);
   }
@@ -514,7 +564,7 @@ function drawFx(tm, dt) {
 function resize() {
   DPR = Math.min(2, window.devicePixelRatio || 1);
   W = Math.round(innerWidth * DPR); H = Math.round(innerHeight * DPR);
-  cv.width = W; cv.height = H; S = H / VH * cam.zoom; VW = W / S;
+  cv.width = W; cv.height = H; omOlcek();
   if (typeof skyLight !== 'undefined') skyLight = -1;
   if (typeof grainPat !== 'undefined') grainPat = null;
   dugmeYeri();

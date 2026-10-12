@@ -237,19 +237,24 @@ const ARAYUZ = (() => {
   });
   OLAY.on('carpti', () => { if (!ip.zipladi || now - ip.sonZip > 10) ip.takil += 0.6; });
   function ipucuGuncelle(dt) {
-    if (DURUM !== 'oyun') { uiIpucu.yuru = Math.max(0, uiIpucu.yuru - dt * 2); uiIpucu.zipla = Math.max(0, uiIpucu.zipla - dt * 2); uiIpucu.cift = Math.max(0, uiIpucu.cift - dt * 2); return; }
+    if (DURUM !== 'oyun') { uiIpucu.yuru = Math.max(0, uiIpucu.yuru - dt * 4); uiIpucu.zipla = Math.max(0, uiIpucu.zipla - dt * 3); uiIpucu.cift = Math.max(0, uiIpucu.cift - dt * 3); return; }
     if (ip.basla < 0) ip.basla = now;
-    const t = now - ip.basla;
-    if (GIRDI.hareket || Math.abs(P.vx) > 30) ip.yurudu = true;
-    // takıldı mı? (ileri basıyor ama ilerleyemiyor)
+    const t = now - ip.basla, girdi = !!GIRDI.eksen || GIRDI.dugme.basili || GIRDI.hedefX != null;
+    if (GIRDI.eksen || Math.abs(P.vx) > 30) ip.yurudu = true;
+    ip.bosta = girdi || Math.abs(P.vx) > 5 || !P.ground ? 0 : (ip.bosta || 0) + dt;
+    // takıldı mı? (ileri basıyor ama ilerleyemiyor) → zıplama ipucu
     if (GIRDI.eksen && Math.abs(P.vx) < 20 && P.ground) ip.takil += dt; else ip.takil = Math.max(0, ip.takil - dt * 0.5);
     if (ip.takil > 1.6 && (!ip.zipladi || now - ip.sonZip > 10)) { ip.ziplaGoster = true; ip.takil = 0; }
-    if (!ip.zipladi && t > 3.5 && (ip.yurudu ? t > 4.5 : t > 9)) ip.ziplaGoster = true;   // oyun başında (yürüdükten sonra)
-    const yuruH = !ip.yurudu && t > 1.2 ? 1 : 0;
-    const zipH = ip.ziplaGoster && !(yuruH && !ip.zipladi && t < 9) ? 1 : 0;
+    if (!ip.zipladi && ip.yurudu && t > 5 && !ip.ilkZip) { ip.ilkZip = true; ip.ziplaGoster = true; }   // oyun başında, yürüdükten sonra bir kez
+    if (ip.ziplaGoster && !ip.ziplaT0) ip.ziplaT0 = now;
+    if (ip.ziplaGoster && now - ip.ziplaT0 > 9) { ip.ziplaGoster = false; }   // kendiliğinden söner; takılırsa yine gelir
+    if (!ip.ziplaGoster) ip.ziplaT0 = 0;
+    // yürüme eli: yalnız en başta (ilk yürüyüşe kadar) ya da çok uzun süre hiç dokunmazsa
+    const yuruH = (!ip.yurudu && t > 1.2) || ip.bosta > 25 ? 1 : 0;
+    const zipH = ip.ziplaGoster && !yuruH ? 1 : 0;
     const ciftH = ip.ciftGoster > now && !zipH ? 1 : 0;
-    const yak = (k, h) => { uiIpucu[k] = clamp(uiIpucu[k] + (h ? dt * 1.6 : -dt * 2.5), 0, 1); };
-    yak('yuru', yuruH); yak('zipla', zipH); yak('cift', ciftH);
+    const yak = (k, h, hiz) => { uiIpucu[k] = clamp(uiIpucu[k] + (h ? dt * 1.4 : -dt * hiz), 0, 1); };
+    yak('yuru', yuruH, girdi ? 6 : 3); yak('zipla', zipH, 3); yak('cift', ciftH, 3);
   }
   function ipucuCiz(tm) {
     const boy = Math.min(H * 0.16, W * 0.13);
@@ -259,13 +264,13 @@ const ARAYUZ = (() => {
     }
     if (uiIpucu.yuru > 0) {
       // ekranın sağında: parmak basılı tutar, oklar sağa doğru akar
-      const a = uiIpucu.yuru, hx = W * 0.8, hy = H * 0.62;
+      const a = uiIpucu.yuru * 0.8, hx = W - Math.min(W, H) * 0.2, hy = H - Math.min(W, H) * 0.24;   // sağ alt köşe: yolu ve Feza'yı örtmez
       const u = (tm % 2.4) / 2.4, bas = uiEase(uiSeg(u, 0.05, 0.2)) * (1 - uiEase(uiSeg(u, 0.85, 1)));
       g.globalCompositeOperation = 'lighter';
       dglow('#c8b0ff', hx, hy, boy * (0.45 + bas * 0.25), a * bas * 0.55);
       halka(hx, hy, boy * (0.16 + 0.05 * Math.sin(tm * 6)), a * bas * 0.7, boy * 0.025 + 1);
-      for (let i = 0; i < 3; i++) {   // akan oklar (Feza'ya doğru değil, yürüyeceği yöne)
-        const q = ((tm * 0.9 + i / 3) % 1), ox = hx + boy * (0.35 + q * 0.6), al = a * bas * Math.sin(q * Math.PI) * 0.9;
+      for (let i = 0; i < 3; i++) {   // akan oklar (yürüyeceği yöne)
+        const q = ((tm * 0.9 + i / 3) % 1), ox = hx - boy * 0.95 + boy * (0.35 + q * 0.45), al = a * bas * Math.sin(q * Math.PI) * 0.9;
         oku(ox, hy, boy * 0.09, 1, al);
       }
       g.globalCompositeOperation = 'source-over';
@@ -284,7 +289,8 @@ const ARAYUZ = (() => {
     const hx = GIRDI.hedefX;
     if (hx != null) {
       let ty = null;
-      if (typeof touches !== 'undefined') for (const t of touches.values()) if (!t.jump) ty = t.y;
+      if (GIRDI.hedefY != null) ty = GIRDI.hedefY;
+      else try { if (typeof OM_PARMAK !== 'undefined') { let s = -1; for (const t of OM_PARMAK) if (t.aktif && !t.jump && t.sira > s) { s = t.sira; ty = t.y; } } } catch (e) {}
       const tx = hx * DPR, tyy = (ty != null ? ty : innerHeight * 0.7) * DPR;
       if (parA < 0.05) { parX = tx; parY = tyy; }
       parX = lerp(parX, tx, 1 - Math.exp(-dt * 30)); parY = lerp(parY, tyy, 1 - Math.exp(-dt * 30));
@@ -293,8 +299,9 @@ const ARAYUZ = (() => {
     if (parA <= 0.01) return;
     const r = Math.min(W, H) * 0.06, yon = Math.sign(GIRDI.eksen || 0);
     g.globalCompositeOperation = 'lighter';
-    dglow('#bfa0ff', parX, parY, r * 1.6, parA * 0.32);
-    halka(parX, parY, r * (0.62 + 0.04 * Math.sin(tm * 7)), parA * 0.4, r * 0.05 + 1);
+    dglow('#c4a8ff', parX, parY, r * 2.1, parA * 0.42);
+    dglow('#ffffff', parX, parY, r * 0.7, parA * 0.18);
+    halka(parX, parY, r * (0.66 + 0.05 * Math.sin(tm * 6)), parA * 0.32, r * 0.04 + 1);
     if (yon) for (let i = 0; i < 2; i++) { const q = ((tm * 1.4 + i * 0.5) % 1); oku(parX + yon * r * (0.95 + q * 0.6), parY, r * 0.16, yon, parA * Math.sin(q * Math.PI) * 0.7); }
     g.globalCompositeOperation = 'source-over';
   }
@@ -318,7 +325,7 @@ const ARAYUZ = (() => {
       for (let i = 0; i < 5; i++) {
         x.save(); x.rotate(i * 1.2566);
         const gr = x.createLinearGradient(0, -6, 0, -46);
-        gr.addColorStop(0, sonuk ? 'rgba(150,140,190,0.55)' : '#ffd0ea'); gr.addColorStop(1, sonuk ? 'rgba(180,170,215,0.45)' : '#fff6fb');
+        gr.addColorStop(0, sonuk ? 'rgba(150,140,190,0.5)' : '#ff9fd0'); gr.addColorStop(1, sonuk ? 'rgba(175,165,210,0.42)' : '#ffe6f3');
         x.fillStyle = gr; x.beginPath(); x.moveTo(0, -4); x.bezierCurveTo(-20, -18, -16, -44, 0, -46); x.bezierCurveTo(16, -44, 20, -18, 0, -4); x.fill();
         if (!sonuk) { x.strokeStyle = 'rgba(240,140,190,0.45)'; x.lineWidth = 2; x.beginPath(); x.moveTo(0, -10); x.lineTo(0, -32); x.stroke(); }
         x.restore();
@@ -365,19 +372,25 @@ const ARAYUZ = (() => {
   OLAY.on('tohum', () => { bildirim = { tur: 'tohum', t0: now }; });
   function bildirimCiz(tm) {
     if (!bildirim || DURUM !== 'oyun') return;
-    const u = now - bildirim.t0, sure = 3.4;
+    const u = now - bildirim.t0, sure = 2.8;
     if (u > sure) { bildirim = null; return; }
-    const a = uiEase(uiSeg(u, 0.2, 0.6)) * (1 - uiEase(uiSeg(u, sure - 0.7, sure)));
+    const a = uiEase(uiSeg(u, 0.15, 0.5)) * (1 - uiEase(uiSeg(u, sure - 0.8, sure)));
     const top = bildirim.tur === 'cicek' ? SAYAC.cicekTop : SAYAC.tohumTop, var_ = bildirim.tur === 'cicek' ? SAYAC.cicek : SAYAC.tohum;
     if (!top) return;
-    const boy = Math.min(H * 0.07, W * 0.06), ara = boy * 0.95, x0 = W - boy * 0.9 - (top - 1) * ara, y = boy * 0.9;
-    // yarı saydam yumuşak zemin
-    g.fillStyle = `rgba(16,12,40,${0.32 * a})`; rr(g, x0 - boy * 0.7, y - boy * 0.62, (top - 1) * ara + boy * 1.4, boy * 1.24, boy * 0.62); g.fill();
+    // küçük, zarif: üst ortada ince bir sıra; açılanlar minik parlayan çiçek, açılmayanlar minik sönük nokta
+    const boy = Math.min(H * 0.042, W * 0.034), ara = boy * 0.9, x0 = W / 2 - (top - 1) * ara / 2, y = H * 0.045 + boy * 0.5 - (1 - a) * boy * 0.4;
+    g.globalCompositeOperation = 'lighter';
+    dglow('#6a58c0', W / 2, y, Math.max(top * ara * 0.65, boy * 2), a * 0.18);
+    g.globalCompositeOperation = 'source-over';
     for (let i = 0; i < top; i++) {
-      const acik = i < var_, yeni = i === var_ - 1;
-      const sc = yeni ? uiBack(uiSeg(u, 0.5, 1.0)) : 1;
-      simgeCiz(bildirim.tur, acik && (!yeni || u > 0.5), x0 + i * ara, y, boy, a, yeni ? Math.max(0.6, sc) : 1);
-      if (yeni && u > 0.5 && u < 1.6) { g.globalCompositeOperation = 'lighter'; parilti(x0 + i * ara, y, boy * 0.9 * Math.sin(uiSeg(u, 0.5, 1.6) * Math.PI), a); g.globalCompositeOperation = 'source-over'; }
+      const acik = i < var_, yeni = i === var_ - 1, cx = x0 + i * ara;
+      if (acik && (!yeni || u > 0.45)) {
+        const sc = yeni ? Math.max(0.3, uiBack(uiSeg(u, 0.45, 0.9))) : 1;
+        simgeCiz(bildirim.tur, true, cx, y, boy, a, sc);
+        if (yeni && u < 1.5) { g.globalCompositeOperation = 'lighter'; parilti(cx, y, boy * 0.9 * Math.sin(uiSeg(u, 0.45, 1.5) * Math.PI), a); g.globalCompositeOperation = 'source-over'; }
+      } else {
+        g.fillStyle = `rgba(210,200,255,${0.35 * a})`; g.beginPath(); g.arc(cx, y, boy * 0.11, 0, 6.283); g.fill();
+      }
     }
   }
 
@@ -426,18 +439,18 @@ const ARAYUZ = (() => {
     const satir = [['cicek', SAYAC.cicek, SAYAC.cicekTop], ['pofuduk', SAYAC.pofuduk, SAYAC.pofudukTop]];
     if (SAYAC.tohumTop) satir.push(['tohum', SAYAC.tohum, SAYAC.tohumTop]);
     // sıra: önce açık olanlar tek tek parlar (sesli), sonra sönükler sessizce belirir
-    const olay = []; let t = 1.2;
-    satir.forEach(([tur, v, top], si) => { for (let i = 0; i < top; i++) if (i < v) { olay.push({ si, i, t, ses: true }); t += 0.38; } t += 0.25; });
+    const olay = []; let t = 0.9;
+    satir.forEach(([tur, v, top], si) => { for (let i = 0; i < top; i++) if (i < v) { olay.push({ si, i, t, ses: true }); t += Math.max(0.16, 0.32 - v * 0.012); } t += 0.2; });
     satir.forEach(([tur, v, top], si) => { for (let i = v; i < top; i++) olay.push({ si, i, t: 1.0 + si * 0.15, ses: false }); });
-    son = { t0: now, satir, olay, dugmeT: t + 0.4, calindi: new Set() };
+    son = { t0: now, satir, olay, dugmeT: t + 0.5, calindi: new Set() };
   }
   function baslikKucuk() {
     if (C.sonBaslik) return C.sonBaslik;
     const fs = Math.round(Math.min(H * 0.06, W * 0.055)), w = Math.ceil(fs * 9), h = Math.ceil(fs * 2);
     const c = tuval(w, h), x = c.getContext('2d');
     x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = `400 ${fs}px ${FONT_SERIF}`;
-    x.save(); x.shadowColor = 'rgba(255,200,120,0.95)'; x.shadowBlur = fs * 0.5; x.fillStyle = '#fff8e6'; x.fillText('Orman ışıl ışıl!', w / 2, h / 2); x.restore();
-    const gr = x.createLinearGradient(0, h * 0.25, 0, h * 0.75); gr.addColorStop(0, '#ffffff'); gr.addColorStop(1, '#ffe2a8');
+    x.save(); x.shadowColor = 'rgba(255,190,90,0.9)'; x.shadowBlur = fs * 0.35; x.fillStyle = '#8a4fb0'; x.fillText('Orman ışıl ışıl!', w / 2, h / 2); x.restore();
+    const gr = x.createLinearGradient(0, h * 0.25, 0, h * 0.75); gr.addColorStop(0, '#9b5cc4'); gr.addColorStop(1, '#6a3a94');
     x.fillStyle = gr; x.fillText('Orman ışıl ışıl!', w / 2, h / 2);
     return C.sonBaslik = c;
   }
@@ -468,31 +481,40 @@ const ARAYUZ = (() => {
     return C[key] = { c, m };
   }
   let tekrarYer = null;
+  // kart: sıcak krem, yuvarlak köşe, yumuşak gölge (bir kez çizilir)
+  function sonKart(w, h) {
+    const key = 'kart' + Math.round(w) + 'x' + Math.round(h);
+    if (C[key]) return C[key];
+    const pad = h * 0.12, c = tuval(w + pad * 2, h + pad * 2), x = c.getContext('2d'), r = Math.min(h * 0.12, w * 0.06);
+    x.save(); x.shadowColor = 'rgba(90,40,30,0.35)'; x.shadowBlur = pad * 0.7; x.shadowOffsetY = pad * 0.15;
+    x.fillStyle = 'rgba(255,248,238,0.92)'; rr(x, pad, pad, w, h, r); x.fill(); x.restore();
+    const gr = x.createLinearGradient(0, pad, 0, pad + h); gr.addColorStop(0, 'rgba(255,253,248,0.95)'); gr.addColorStop(1, 'rgba(255,236,222,0.95)');
+    x.fillStyle = gr; rr(x, pad, pad, w, h, r); x.fill();
+    x.strokeStyle = 'rgba(255,214,150,0.9)'; x.lineWidth = Math.max(2, h * 0.008); rr(x, pad + h * 0.02, pad + h * 0.02, w - h * 0.04, h - h * 0.04, r * 0.85); x.stroke();
+    // köşelerde minik yıldız süsleri
+    x.fillStyle = 'rgba(255,200,110,0.8)';
+    for (const [qx, qy] of [[0.05, 0.08], [0.95, 0.08], [0.05, 0.92], [0.95, 0.92]]) { yildiz4(x, pad + w * qx, pad + h * qy, h * 0.025, 0.3); x.fill(); }
+    return C[key] = { c, pad };
+  }
   function sonCiz(tm, dt) {
     if (!son) sonKur();
     const u = now - son.t0;
     const a = uiEase(uiSeg(u, 0, 1.0));
-    // sıcak, yumuşak örtü (odanın üstünde okunurluk)
-    g.fillStyle = `rgba(40,22,60,${0.38 * a})`; g.fillRect(0, 0, W, H);
-    const gr = g.createRadialGradient(W / 2, H * 0.48, 0, W / 2, H * 0.48, Math.max(W, H) * 0.6);
-    gr.addColorStop(0, `rgba(30,18,58,${0.45 * a})`); gr.addColorStop(1, 'rgba(30,18,58,0)');
-    g.fillStyle = gr; g.fillRect(0, 0, W, H);
-    // süzülen altın zerreler
-    g.globalCompositeOperation = 'lighter';
-    if (!motes.length) baslikCiz(tm, 0, 0);
-    for (const m of motes) {
-      const yy = ((m.y - tm * m.v * 1.5) % 1 + 1) % 1, xx = m.x + Math.sin(tm * 0.35 + m.h) * 0.03, tw = 0.5 + 0.5 * Math.sin(tm * 1.4 + m.h * 2);
-      dglow(m.c === '#9ff0ff' ? '#ffe6a8' : m.c, xx * W, yy * H, H * 0.012 * m.s, a * (0.2 + 0.3 * tw));
-    }
-    g.globalCompositeOperation = 'source-over';
-    // küçük süs başlığı (ebeveyn için; ekran onsuz da anlaşılır)
-    const bk = baslikKucuk(), by = H * 0.13;
-    const ba = uiEase(uiSeg(u, 0.3, 1.3));
-    g.globalAlpha = ba; g.drawImage(bk, W / 2 - bk.width / 2, by - bk.height / 2 + (1 - ba) * H * 0.02); g.globalAlpha = 1;
-    // simge satırları
+    // odanın üstüne çok hafif sıcak örtü
+    g.fillStyle = `rgba(70,35,45,${0.22 * a})`; g.fillRect(0, 0, W, H);
+    // yerleşim
     const n = son.satir.length, enCok = Math.max(...son.satir.map(s => s[2]), 1);
-    const boy = Math.min(H * 0.13, (W * 0.8) / Math.max(4, enCok) / 1.05), ara = boy * 1.08;
-    const y0 = H * 0.3, dy = Math.min(H * 0.16, boy * 1.25);
+    const kw = Math.min(W * 0.9, H * 1.3), boy = Math.min(H * 0.11, kw * 0.9 / Math.max(5, enCok) / 1.08), ara = boy * 1.08;
+    const bh = H * 0.1, dy = boy * 1.22, R = Math.min(H * 0.08, W * 0.075);
+    const kh = bh + n * dy + boy * 1.1 + R * 0.9, kx = W / 2 - kw / 2, ky = Math.max(H * 0.04, (H - kh - R * 1.3) / 2);
+    const kart = sonKart(kw, kh), kgir = uiBack(uiSeg(u, 0.1, 0.8));
+    g.save(); g.globalAlpha = a; g.translate(W / 2, ky + kh / 2); g.scale(0.92 + 0.08 * kgir, 0.92 + 0.08 * kgir);
+    g.drawImage(kart.c, -kw / 2 - kart.pad, -kh / 2 - kart.pad); g.restore(); g.globalAlpha = 1;
+    // süs başlık (ebeveyn için; ekran onsuz da anlaşılır)
+    const bk = baslikKucuk(), ba = uiEase(uiSeg(u, 0.4, 1.3)), bs = Math.min(1, bh * 0.95 / bk.height * 1.6);
+    g.globalAlpha = ba; g.drawImage(bk, W / 2 - bk.width * bs / 2, ky + bh * 0.62 - bk.height * bs / 2, bk.width * bs, bk.height * bs); g.globalAlpha = 1;
+    // simge satırları
+    const y0 = ky + bh + dy * 0.5;
     son.satir.forEach(([tur, v, top], si) => {
       const y = y0 + si * dy, x0 = W / 2 - (top - 1) * ara / 2;
       for (let i = 0; i < top; i++) {
@@ -503,40 +525,42 @@ const ARAYUZ = (() => {
           if (ev.ses && !son.calindi.has(ev)) { son.calindi.add(ev); sfx('bloom', 0); }
           const sc = uiBack(uiSeg(q, 0, 0.45)), zip = Math.sin(tm * 2.2 + i * 0.7 + si) * boy * 0.03;
           g.globalCompositeOperation = 'lighter';
-          dglow(tur === 'tohum' ? '#ffd890' : '#ffc0e8', cx, y + zip, boy * 0.85, 0.35 * Math.min(1, q * 2));
-          if (q < 1.1) parilti(cx + boy * 0.3, y - boy * 0.3, boy * 0.55 * Math.sin(uiSeg(q, 0, 1.1) * Math.PI), 1);
+          if (q < 1.1) parilti(cx + boy * 0.3, y - boy * 0.3, boy * 0.6 * Math.sin(uiSeg(q, 0, 1.1) * Math.PI), 1);
           g.globalCompositeOperation = 'source-over';
-          simgeCiz(tur, true, cx, y + zip, boy, Math.min(1, q * 3), Math.max(0.01, sc));
+          simgeCiz(tur, true, cx, y + zip, boy * 1.15, Math.min(1, q * 3), Math.max(0.01, sc));
         } else {
-          simgeCiz(tur, false, cx, y, boy * 0.86, uiEase(uiSeg(q, 0, 0.8)) * 0.85);
+          simgeCiz(tur, false, cx, y, boy * 0.82, uiEase(uiSeg(q, 0, 0.8)) * 0.9);
         }
       }
     });
-    // yıldızlar: tüm satırlar dolunca üç büyük yıldız (her zaman olumlu)
-    const yt = son.dugmeT - 0.3, ys = y0 + n * dy + boy * 0.05;
+    // üç yıldız: hep olumlu
+    const yt = son.dugmeT - 0.3, ys = y0 + n * dy - dy * 0.12;
     for (let i = 0; i < 3; i++) {
       const q = u - yt - i * 0.18; if (q < 0) continue;
-      const sc = uiBack(uiSeg(q, 0, 0.5)), cx = W / 2 + (i - 1) * boy * 0.95, cy = ys - (i === 1 ? boy * 0.12 : 0), r = boy * (i === 1 ? 0.42 : 0.34) * sc;
+      const sc = uiBack(uiSeg(q, 0, 0.5)), cx = W / 2 + (i - 1) * boy * 1.05, cy = ys - (i === 1 ? boy * 0.1 : 0), r = boy * (i === 1 ? 0.5 : 0.4) * sc;
       if (q < 0.05 && !son.calindi.has('y' + i)) { son.calindi.add('y' + i); if (i === 1) sfx('bloom', 1); }
-      g.globalCompositeOperation = 'lighter'; dglow('#ffd27a', cx, cy, r * 2.4, 0.45); g.globalCompositeOperation = 'source-over';
       g.save(); g.translate(cx, cy); g.rotate(Math.sin(tm * 1.5 + i) * 0.08);
-      const gg = g.createLinearGradient(0, -r, 0, r); gg.addColorStop(0, '#fff6c8'); gg.addColorStop(1, '#ffbe3c');
+      const gg = g.createLinearGradient(0, -r, 0, r); gg.addColorStop(0, '#fff2b0'); gg.addColorStop(1, '#ffb52e');
       g.fillStyle = gg; yildiz5(g, 0, 0, r, 0.5); g.fill();
-      g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = Math.max(1, r * 0.08); g.lineJoin = 'round'; g.stroke();
+      g.strokeStyle = '#f08a1c'; g.lineWidth = Math.max(1, r * 0.09); g.lineJoin = 'round'; g.stroke();
+      g.fillStyle = 'rgba(255,255,255,0.7)'; g.beginPath(); g.ellipse(-r * 0.18, -r * 0.3, r * 0.14, r * 0.08, -0.6, 0, 6.283); g.fill();
       g.restore();
+      if (q < 0.9) { g.globalCompositeOperation = 'lighter'; parilti(cx, cy, r * 2.2 * Math.sin(uiSeg(q, 0, 0.9) * Math.PI), 0.9); g.globalCompositeOperation = 'source-over'; }
     }
-    // tekrar oyna düğmesi (dairesel ok)
+    // tekrar oyna düğmesi (dairesel ok), kartın alt kenarına oturur
     const q = u - son.dugmeT;
     if (q > 0) {
-      const R = Math.min(H * 0.085, W * 0.08), cx = W / 2, cy = Math.min(H - R * 1.5, ys + boy * 0.55 + R * 1.25);
+      const cx = W / 2, cy = ky + kh + R * 0.15;
       const sc = uiBack(uiSeg(q, 0, 0.55)) * (1 + 0.04 * Math.sin(tm * 3));
       tekrarYer = { x: cx / DPR, y: cy / DPR, r: R * 1.4 / DPR };
       g.globalCompositeOperation = 'lighter';
       dglow('#ffcf80', cx, cy, R * (2.2 + 0.3 * Math.sin(tm * 3)), 0.35 * Math.min(1, q * 2));
-      const hq = (tm % 2) / 2; halka(cx, cy, R * (1.05 + hq * 0.6), (1 - hq) * 0.45 * Math.min(1, q), R * 0.05 + 1, '255,230,180');
+      const hq = (tm % 2) / 2; halka(cx, cy, R * (1.05 + hq * 0.6), (1 - hq) * 0.5 * Math.min(1, q), R * 0.05 + 1, '255,230,180');
       g.globalCompositeOperation = 'source-over';
       const sp = tekrarSprite(R);
       g.save(); g.translate(cx, cy); g.scale(sc, sc); g.rotate(Math.sin(tm * 1.2) * 0.05); g.drawImage(sp.c, -sp.m, -sp.m); g.restore();
+      // ilk birkaç saniye: dokunma eli düğmeyi gösterir
+      if (q > 2.5 && q < 12) dokunmaEli(cx + R * 0.2, cy + R * 0.15, R * 2.2, -0.45, tm, 1.6, uiEase(uiSeg(q, 2.5, 3.2)) * (1 - uiSeg(q, 10.5, 12)), false);
     }
   }
   OLAY.on('dokunus', v => {
@@ -547,7 +571,7 @@ const ARAYUZ = (() => {
   });
 
   // ══════════ ANA ÇİZİM ══════════
-  let durumOnce = DURUM;
+  let durumOnce = DURUM; const uiHata = {};
   function ciz(tm, dt) {
     kontrol();
     g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
@@ -555,16 +579,18 @@ const ARAYUZ = (() => {
     // başlık (oyun başlayınca yumuşakça söner)
     if (DURUM === 'baslik') { if (!uiBaslikBasladi) { uiBaslikBasladi = true; uiBaslikT0 = tm; } uiBaslikA = Math.min(1, uiBaslikA + dt * 2); }
     else uiBaslikA = Math.max(0, uiBaslikA - dt * 1.6);
-    if (uiBaslikA > 0.005) baslikCiz(tm, uiEase(uiBaslikA), dt);
+    // her parça ayrı korunur: birinde hata olursa diğerleri (özellikle zıplama düğmesi) yine çizilir
+    const dene = (ad, fn) => { try { fn(); } catch (e) { if (!uiHata[ad]) { uiHata[ad] = 1; console.warn('[arayuz] ' + ad, e); } g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; } };
+    if (uiBaslikA > 0.005) dene('baslik', () => baslikCiz(tm, uiEase(uiBaslikA), dt));
     // oyun içi
-    ipucuGuncelle(dt);
+    dene('ipucu', () => ipucuGuncelle(dt));
     zipT = Math.max(0, zipT - dt * 2.5);
     dugmeA = clamp(dugmeA + (DURUM === 'oyun' ? dt * 1.5 : -dt * 3), 0, 1);
-    if (dugmeA > 0.005) { parmakCiz(tm, dt); dugmeCiz(tm, dt, dugmeA); }
-    ipucuCiz(tm);
-    bildirimCiz(tm);
-    if (DURUM === 'son') sonCiz(tm, dt);
-    altyaziCiz();
+    if (dugmeA > 0.005) { dene('parmak', () => parmakCiz(tm, dt)); dene('dugme', () => dugmeCiz(tm, dt, dugmeA)); }
+    dene('ipucuCiz', () => ipucuCiz(tm));
+    dene('bildirim', () => bildirimCiz(tm));
+    if (DURUM === 'son') dene('son', () => sonCiz(tm, dt));
+    dene('altyazi', altyaziCiz);
   }
   return { ciz, altyazi };
 })();

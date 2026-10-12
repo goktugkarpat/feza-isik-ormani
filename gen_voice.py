@@ -21,6 +21,25 @@ import subprocess
 import sys
 
 import edge_tts
+import edge_tts.communicate as _etc
+
+# Oct 2026: the old Read Aloud host started answering 403 in some regions (edge-tts issue #490 / PR #491).
+# The same key works on Edge's new host; on a 403 we switch hosts (and back, if the new one ever fails).
+_KEY = "6A5AA1D4EAFF4E9FB37E23D68491D6F4"
+_HOSTS = [_etc.WSS_URL, f"wss://api.msedgeservices.com/tts/cognitiveservices/websocket/v1?Ocp-Apim-Subscription-Key={_KEY}"]
+_host = {"i": 1}
+
+
+def _use_host(i):
+    _host["i"] = i % len(_HOSTS)
+    _etc.WSS_URL = _HOSTS[_host["i"]]
+    if _host["i"] == 1:
+        _etc.WSS_HEADERS["Ocp-Apim-Subscription-Key"] = _KEY
+    else:
+        _etc.WSS_HEADERS.pop("Ocp-Apim-Subscription-Key", None)
+
+
+_use_host(1)
 
 VOICE = "tr-TR-EmelNeural"
 STYLE = {            # prefix → (rate, pitch, volume)
@@ -126,6 +145,8 @@ async def record(key, text, sem):
             except Exception as e:  # network hiccup / rate limit: back off and retry
                 if os.path.exists(raw):
                     remove_temp(raw)
+                if "403" in str(e) and attempt % 2 == 0:
+                    _use_host(_host["i"] + 1)
                 if attempt == 5:
                     print(f"  FAILED {key}: {e}")
                     return False

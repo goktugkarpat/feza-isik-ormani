@@ -5,6 +5,7 @@
    (ARAYUZ.altyazi(metin, saniye, kim)) ve OLAY 'konusma' {anahtar, kim:'a'|'p', sure} yayar.
    Ses AU'nun WebAudio bağlamından çalar (müzik konuşma boyunca kısılır); sesler.js yüklü değilse ya da ?sessiz
    ise yalnız altyazı + olay (süre tahmini) çalışır.
+   SES.sus() → susar, sırayı boşaltır. SES.konusuyor() · SES.sure(anahtar).
    'p_aferin' (numarasız) → p_aferin1..6 içinden son çalınanları tekrarlamadan biri; övgüler en az 20 sn arayla. */
 'use strict';
 const SES = (() => {
@@ -52,7 +53,7 @@ const SES = (() => {
 
   function sesSure(k) {
     const d = window.VOICE_DUR && VOICE_DUR[k];
-    return d || Math.max(1.4, LINES[k].length / 14 + 0.4);   // kayıt yoksa okuma hızına göre tahmin
+    return d || Math.max(1.4, LINES[k].length / (k.startsWith('a_') ? 11.5 : 14) + 0.4);   // kayıt yoksa okuma hızına göre tahmin
   }
   function sesBase64(b64) {
     const s = atob(b64), n = s.length, u = new Uint8Array(n);
@@ -150,5 +151,8 @@ const SES = (() => {
     if (d === 'final') sesSira = sesSira.filter(s => s.oncelik >= 3);   // oyun bitti: kalan ipuçları gereksiz
     if (!sesHazir && !SESSIZ) { sesHazir = true; setTimeout(sesOnceden, 400); }        // ses bağlamı artık var
   });
-  return { LINES, soyle, konusuyor: () => !!sesCalan, sure: k => LINES[k] ? sesSure(k) : 0 };
+  function sus() {   // sahne atlanınca vb.: susar ve sırayı boşaltır
+    sesSira = []; if (sesCalan) sesKes();
+  }
+  return { LINES, soyle, sus, konusuyor: () => !!sesCalan, sure: k => LINES[k] ? sesSure(k) : 0 };
 })();

@@ -16,7 +16,7 @@
 'use strict';
 const AU = (() => {
   // ───────────────────────── temel ─────────────────────────
-  let ac = null, test = null;
+  let ac = null, test = null, sessizDeneme = false;
   let cikis, limit, master, muzikG, kisG, sfxG, sesG, rev, revMuzik, revSfx, revSfxCok, dly, dlyGiris;
   let gurBuf = null, ruzgarG = null, ruzgarBP = null;
   const B = {};                 // müzik katmanı otobüsleri
@@ -152,6 +152,12 @@ const AU = (() => {
     osc('sine', f * 2, t, t + dec * 0.4, zarf(t, 0.002, 0.35, dec * 0.3, out));
   }
   // sıcak pad (her akorda yeni, uzun çapraz geçiş)
+  let padSon = null;
+  function padBirak(t) {   // bölge değişince eski akorun padi ortada asılı kalmasın
+    if (!padSon) return;
+    try { padSon.gain.cancelScheduledValues(t); padSon.gain.setTargetAtTime(0, t, 0.9); } catch (e) {}
+    padSon = null;
+  }
   function pad(ak, t0, dur) {
     const atk = Math.min(3, dur * 0.45), rel = Math.min(3.5, Math.max(1.2, dur * 0.6));
     if (!yerVar(ak.pad.length * 2 + 2, t0, t0 + dur + rel, true)) return;
@@ -159,7 +165,7 @@ const AU = (() => {
     const vg = ac.createGain();
     vg.gain.setValueAtTime(0, t0); vg.gain.linearRampToValueAtTime(0.05, t0 + atk);
     vg.gain.setValueAtTime(0.05, t0 + dur); vg.gain.linearRampToValueAtTime(0, t0 + dur + rel);
-    lp.connect(vg); vg.connect(B.pad);
+    lp.connect(vg); vg.connect(B.pad); padSon = vg;
     const son = t0 + dur + rel + 0.1;
     ak.pad.forEach((n, i) => {
       osc('sine', NOTE(n), t0, son, kazanc(0.55, lp), i % 2 ? 4 : -4);
@@ -256,7 +262,7 @@ const AU = (() => {
     const bp = buyukPof;
     return {
       durum: d, bolge: bolgeBul(), light: isik(),
-      uyku: !!(bp && !bp.uyandi && d === 'oyun' && typeof P !== 'undefined' ? cl(1.15 - Math.abs(P.x - bp.x) / 950, 0, 1) : 0),
+      uyku: bp && !bp.uyandi && d === 'oyun' && typeof P !== 'undefined' ? cl(1.15 - Math.abs(P.x - bp.x) / 950, 0, 1) : 0,
       uykuYakin: bp && typeof P !== 'undefined' ? cl(1.15 - Math.abs(P.x - bp.x) / 950, 0, 1) : 0,
       uyandi: !!(bp && bp.uyandi),
     };
@@ -273,7 +279,7 @@ const AU = (() => {
     const d = d0;
     const istenen = mod === 'orman' ? bolge : mod;
     if (istenen !== progAd && (mod !== 'orman' || PROG[progAd].ak === undefined || bic % 2 === 0 || progAd === 'ninni' || progAd === 'final')) {
-      if (!(progAd === 'final' && mod === 'final')) { progAd = istenen; pi = 0; bic = 0; motif = null; }
+      if (!(progAd === 'final' && mod === 'final')) { progAd = istenen; pi = 0; bic = 0; motif = null; padBirak(t); oncekiAk = null; }
     }
     const pr = PROG[progAd];
     if (bic === 0) {
@@ -282,8 +288,8 @@ const AU = (() => {
       if (ak !== oncekiAk) {
         let n = 1; while (n < pr.ak.length && pr.ak[(pi + n) % pr.ak.length] === pr.ak[pi]) n++;
         pad(ak, t, n * pr.cb * BAR);
-        sesYurut(tel, ak, 57, 78, t, progAd === 'ninni' ? 0.25 : 0.12);
-        sesYurut(koro, ak, 59, 72, t, 0.3);
+        sesYurut(tel, ak, 57, 78, t, progAd === 'ninni' ? 0.1 : 0.045);
+        sesYurut(koro, ak, 59, 72, t, 0.08);
       }
       akor = ak; oncekiAk = ak;
     }
@@ -369,7 +375,7 @@ const AU = (() => {
   // ── final: bestelenmiş, duygulu bir kabarış ──
   const FINAL_MEL = [   // ölçü başına [sekizlik, nota]
     [[0, 78], [2, 81], [4, 86]], [[0, 85], [3, 83], [4, 81]], [[0, 83], [2, 86], [4, 90]], [[0, 88], [3, 86], [4, 83], [6, 86]],
-    [[0, 81], [2, 78], [4, 81], [6, 86]], [[0, 88], [2, 86], [4, 83], [6, 86]], [[0, 86], [4, 83], [6, 86]], [[0, 88], [4, 85]],
+    [[0, 81], [2, 78], [4, 81], [6, 86]], [[0, 88], [2, 86], [4, 83], [6, 86]], [[0, 86], [4, 83], [6, 86]], [[0, 88], [4, 83]],
     [[0, 86], [2, 90], [4, 93]], [[0, 90], [4, 86]], [[0, 86]],
   ];
   function finalCubuk(t, i) {
@@ -471,8 +477,8 @@ const AU = (() => {
       ton(t, 'sine', adimSol ? 125 : 112, 70, 0.07, 0.035 * v, 0.004, p);
     },
     zipla(t) {
-      gur(t, 0.24, 'bandpass', 550, 2100, 1.3, 0.045, 0.06, 0, 1);
-      const n = akorNotalari(t, 84, 91, true); zil(NOTE(n[Math.floor(n.length / 2)]), t + 0.01, 0.026, 0.8, 0, sfxG, false);
+      gur(t, 0.24, 'bandpass', 550, 2100, 1.3, 0.06, 0.06, 0, 1);
+      const n = akorNotalari(t, 84, 91, true); zil(NOTE(n[Math.floor(n.length / 2)]), t + 0.01, 0.036, 0.8, 0, sfxG, false);
     },
     cift(t) {
       gur(t, 0.42, 'bandpass', 800, 4200, 1.1, 0.06, 0.08, 0, 1);
@@ -487,7 +493,7 @@ const AU = (() => {
     },
     boing(t, v) {
       const k = v > 1 ? 0.62 : 1, d = v > 1 ? 0.75 : 0.5;
-      const o = ton(t, 'sine', 150 * k, 0, d, 0.13, 0.008, 0, 1), o2 = ton(t, 'triangle', 150 * k, 0, d * 0.8, 0.05, 0.008, 0);
+      const o = ton(t, 'sine', 150 * k, 0, d, 0.1, 0.008, 0, 1), o2 = ton(t, 'triangle', 150 * k, 0, d * 0.8, 0.04, 0.008, 0);
       for (const x of [o, o2]) if (x) {
         x.frequency.setValueAtTime(150 * k, t); x.frequency.exponentialRampToValueAtTime(470 * k, t + 0.09);
         x.frequency.setTargetAtTime(380 * k, t + 0.09, 0.12);
@@ -502,26 +508,37 @@ const AU = (() => {
       ton(t, 'sine', 120, 58, 0.22, 0.09, 0.006, 0);
       const n = akorNotalari(t, 86, 95); zil(NOTE(n[0]), t + 0.06, 0.02, 0.9, 0.3, sfxG);
     },
-    hapsu(t) {   // "ha…" (nefes alır) – "şu!" (minik, sevimli)
-      gur(t, 0.42, 'bandpass', 900, 1700, 2.5, 0.035, 0.35, 0);
-      agiz(t + 0.05, 560, 760, 0.38, 0.03, [800, 1250], null, 0.3);
-      const t2 = t + 0.5;
+    hapsuAl(t) {   // "ha… ha…" (hapşırmadan önce nefes çeker)
+      gur(t, 0.4, 'bandpass', 900, 1700, 2.5, 0.03, 0.32, 0);
+      agiz(t + 0.03, 560, 780, 0.36, 0.026, [800, 1250], null, 0.3);
+    },
+    hapsu(t) {     // "(hap)ŞU!" – minik, sevimli; pofuduk.js hapşırdığı karede çağırır
+      agiz(t, 700, 760, 0.07, 0.03, [800, 1250], null, 0.01);
+      const t2 = t + 0.06;
       gur(t2, 0.3, 'highpass', 3200, 2600, 0.7, 0.11, 0.006, 0, 1);
       agiz(t2, 820, 430, 0.26, 0.05, [380, 820], null, 0.01);
+      const n = akorNotalari(t, 88, 100); zil(NOTE(n[0]), t2 + 0.05, 0.016, 0.8, 0.3, sfxG, false);
+    },
+    parilti(t) {   // küçük ışıltı (sahne/arayüz)
+      const n = akorNotalari(t, 86, 100); [0, 2, 4].forEach((k, i) => zil(NOTE(n[Math.min(n.length - 1, k)]), t + i * 0.07, 0.03, 1.4, (i - 1) * 0.4, sfxG));
+      gur(t, 0.6, 'highpass', 6000, 9000, 0.7, 0.008, 0.1, 0, 2);
+    },
+    nefesAl(t) {   // Pırıl nefes çeker: hafif, yükselen hava sesi
+      gur(t, 0.55, 'bandpass', 350, 1100, 1.8, 0.03, 0.45, 0, 1);
     },
     uyanma(t) {
       const n = akorNotalari(t, 79, 96); [0, 1, 2, 3].forEach(i => zil(NOTE(n[Math.min(n.length - 1, i * 2)]), t + i * 0.12, 0.035, 1.8, (i - 1.5) * 0.3, sfxG));
     },
     tohum(t) {
       const n = akorNotalari(t, 86, 100);
-      zil(NOTE(n[0]), t, 0.05, 2.8, -0.2, sfxG); zil(NOTE(n[Math.min(n.length - 1, 3)]), t + 0.13, 0.045, 3, 0.2, sfxG);
+      zil(NOTE(n[0]), t, 0.07, 2.8, -0.2, sfxG); zil(NOTE(n[Math.min(n.length - 1, 3)]), t + 0.13, 0.065, 3, 0.2, sfxG);
       for (let i = 0; i < 9; i++) zil(NOTE(sec(n) + 12), t + 0.2 + i * 0.045 + rnd() * 0.02, 0.009, 0.5, rnd() - 0.5, sfxG, false);
       gur(t, 0.9, 'highpass', 5000, 8000, 0.7, 0.012, 0.2, 0, 2);
     },
-    nefes(t) {
-      gur(t, 1.5, 'bandpass', 280, 2800, 1.6, 0.075, 0.9, 0, 2);
-      gur(t + 0.3, 1.3, 'highpass', 3000, 7000, 0.7, 0.012, 0.8, 0.2, 2);
-      const n = akorNotalari(t + 0.5, 74, 98); n.slice(0, 7).forEach((m, i) => zil(NOTE(m), t + 0.35 + i * 0.16, 0.022 + i * 0.002, 2.4, -0.5 + i * 0.16, sfxG));
+    nefes(t) {     // ışık nefesi: büyülü, yükselen "fuuuş" + ışıltı
+      gur(t, 1.3, 'bandpass', 380, 3000, 1.6, 0.08, 0.25, 0, 2);
+      gur(t + 0.1, 1.3, 'highpass', 3000, 7000, 0.7, 0.014, 0.6, 0.2, 2);
+      const n = akorNotalari(t + 0.3, 74, 98); n.slice(0, 7).forEach((m, i) => zil(NOTE(m), t + 0.12 + i * 0.14, 0.024 + i * 0.002, 2.4, -0.5 + i * 0.16, sfxG));
     },
     nilufer(t) {
       const n = akorNotalari(t, 62, 79, true);
@@ -552,8 +569,9 @@ const AU = (() => {
       zil(NOTE(sec5[sec5.length - 1] + 12), t + sec5.length * 0.085 + 0.1, 0.02, 3, 0.4, sfxG);
     },
     horlama(t, v) { horAl(t, 1.5, v || 1); horVer(t + 1.7, 1.4, v || 1); },
+    horPuf(t, v) { horVer(t, 1.3, v); gur(t, 0.18, 'lowpass', 600, 250, 1.5, 0.07 * v, 0.01, 0); ton(t, 'sine', 140, 90, 0.16, 0.05 * v, 0.008, 0); },
     goz(t) {
-      const n = akorNotalari(t, 86, 98); zil(NOTE(n[0]), t, 0.035, 1.2, 0.2, sfxG); zil(NOTE(n[2] || n[0]), t + 0.16, 0.035, 1.5, 0.3, sfxG);
+      const n = akorNotalari(t, 86, 98); zil(NOTE(n[0]), t, 0.05, 1.2, 0.2, sfxG); zil(NOTE(n[2] || n[0]), t + 0.16, 0.05, 1.5, 0.3, sfxG);
       gur(t + 0.35, 0.16, 'lowpass', 500, 300, 2, 0.06, 0.01, 0); ton(t + 0.35, 'sawtooth', 85, 70, 0.14, 0.03, 0.01, 0);
     },
     esneme(t) {   // kocaman, komik bir esneme: "haaa-ooo"
@@ -571,8 +589,8 @@ const AU = (() => {
       const n = akorNotalari(t, 79, 98); n.forEach((m, i) => zil(NOTE(m), t + 0.3 + i * 0.07, 0.03, 2.2, (i % 2 ? 0.4 : -0.4), sfxG));
     },
     mmf(t) { agiz(t, 190, 160, 0.2, 0.03, [350, 700], null, 0.02); gur(t, 0.12, 'lowpass', 500, 250, 1, 0.03, 0.01, 0); },
-    agac(t) {
-      const n = akorNotalari(t, 74, 101);
+    agac(t) {   // ardından final D majörde başlar: parıltı da D majör
+      const n = []; for (let m = 74; m <= 101; m++) if (AK.D.ton.includes(m % 12)) n.push(m);
       for (let i = 0; i < 22; i++) zil(NOTE(n[i % n.length] + (i >= n.length ? 12 : 0)), t + 0.05 + i * 0.12 + rnd() * 0.02, 0.032, 3.2, (i % 2 ? 0.55 : -0.55) * rnd(), sfxG);
       for (let i = 0; i < 14; i++) arp(akorNotalari(t, 50, 86)[i % 10] || 62, t + i * 0.05, 0.035, -0.7 + i * 0.1, 2.2);
       gur(t, 3.2, 'bandpass', 200, 6000, 0.9, 0.06, 2.2, 0, 2);
@@ -581,7 +599,7 @@ const AU = (() => {
   };
   function horAl(t, dur, v) {   // horlama: alçak, tırtıklı "hrrr" (korkutucu değil: yumuşak süzgeç, kısık)
     if (!yerVar(4, t, t + dur, true)) return;
-    const g = ac.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.11 * v, t + dur * 0.8); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    const g = ac.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.17 * v, t + dur * 0.8); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     const am = ac.createGain(); am.gain.value = 0.55; am.connect(g); g.connect(sfxG); g.connect(revSfx);
     const lfo = ac.createOscillator(); lfo.frequency.value = 24; const lg = kazanc(0.45, am.gain); lfo.connect(lg); lfo.start(t); lfo.stop(t + dur + 0.05);
     const lp = suzgec('lowpass', 520, 2.5, am); lp.frequency.setValueAtTime(380, t); lp.frequency.linearRampToValueAtTime(720, t + dur);
@@ -589,14 +607,14 @@ const AU = (() => {
     const s = ac.createBufferSource(); s.buffer = gurBuf; s.loop = true; const nb = suzgec('bandpass', 700, 1.2, am); s.connect(kazanc(0.5, nb)); s.start(t, rnd()); s.stop(t + dur + 0.05);
   }
   function horVer(t, dur, v) {   // nefes verirken minik ıslık: "fiyuuu"
-    const o = ton(t, 'sine', 950, 0, dur, 0.022 * v, 0.15, 0.1, 1);
+    const o = ton(t, 'sine', 950, 0, dur, 0.035 * v, 0.15, 0.1, 1);
     if (o) { o.frequency.setValueAtTime(950, t); o.frequency.linearRampToValueAtTime(1350, t + dur * 0.35); o.frequency.linearRampToValueAtTime(900, t + dur); }
     gur(t, dur, 'lowpass', 900, 500, 0.7, 0.025 * v, 0.2, 0);
   }
   // ad eşlemesi (eski ve yeni adlar)
   const AD = { jump: 'zipla', zipla: 'zipla', dbl: 'cift', cift: 'cift', ciftzipla: 'cift', land: 'inis', inis: 'inis', bloom: 'cicek', cicek: 'cicek',
-    splash: 'su', su: 'su', boing: 'boing', ziplat: 'boing', puf: 'puf', hapsu: 'hapsu', uyanma: 'uyanma', zilcik: 'uyanma', tohum: 'tohum', nefes: 'nefes',
-    nilufer: 'nilufer', kurtar: 'kurtar', horlama: 'horlama', agac: 'agac', adim: 'adim', goz: 'goz', esneme: 'esneme', kalk: 'kalk', mmf: 'mmf', buyukUyandi: 'buyukUyandi' };
+    splash: 'su', su: 'su', boing: 'boing', ziplat: 'boing', puf: 'puf', hapsu: 'hapsu', hapsuAl: 'hapsuAl', uyanma: 'uyanma', zilcik: 'uyanma', tohum: 'tohum', nefes: 'nefes',
+    nilufer: 'nilufer', kurtar: 'kurtar', horlama: 'horlama', parilti: 'parilti', nefesAl: 'nefesAl', agac: 'agac', adim: 'adim', goz: 'goz', esneme: 'esneme', kalk: 'kalk', mmf: 'mmf', buyukUyandi: 'buyukUyandi' };
   const ESKI = { jump: 1, dbl: 1, bloom: 1, land: 1, splash: 1 };   // olaylar da tetikler → çift çalmasın
   const sonCal = {};
   let sonOlay = -1;
@@ -610,9 +628,32 @@ const AU = (() => {
     SFX[ad](t, v == null ? 1 : v);
   }
   function olaySes(ad, v, gecik) { sonOlay = performance.now(); cal(ad, v, gecik); }
+  // pofuduk.js horlamayı kendi çizimine eşli çağırır ("HORR-PUF" anında): biz "puf"u hemen çalarız, bir sonraki
+  // nefesin "hrrr"ını da ölçülen periyoda göre önceden başlatırız (puf'a tam yetişsin).
+  let horSon = 0, horPer = 0, horZ = null;
+  function disHorlama(v) {
+    const t = zaman(), yakin = d0 ? Math.max(0.35, d0.uykuYakin) : 1;
+    horlamaDis = t + 8;
+    const ara = t - horSon; horSon = t;
+    if (ara > 1.5 && ara < 9) horPer = horPer ? horPer * 0.5 + ara * 0.5 : ara;
+    if (sonCal.horPuf && t - sonCal.horPuf < 0.8) return;
+    sonCal.horPuf = t; if (ac.state === 'running' || test) SFX.horPuf(t + 0.01, (v || 1) * yakin);
+    if (horZ) clearTimeout(horZ);
+    if (horPer && !test) {
+      const sure = horPer * 0.5;
+      horZ = setTimeout(() => {
+        horZ = null;
+        if (!ac || ac.state !== 'running' || (buyukPof && buyukPof.uyandi) || typeof DURUM === 'undefined' || DURUM !== 'oyun') return;
+        horAl(zaman() + 0.02, sure, (v || 1) * yakin);
+      }, Math.max(0, (horPer - sure - 0.02) * 1000));
+    }
+  }
+  let hapsuDis = -1, hapsuZ = null;
   function sfx(k, v) {
+    if (k === 'bloom' && v === 0) k = 'parilti';
     const ad = AD[k]; if (!ad || !ac) return;
-    if (ad === 'horlama') horlamaDis = zaman() + 8;
+    if (ad === 'horlama') { disHorlama(v); return; }
+    if (ad === 'hapsu') { hapsuDis = performance.now(); if (hapsuZ) { clearTimeout(hapsuZ); hapsuZ = null; } }
     if (ESKI[k]) {   // eski çağrı: hemen ardından aynı olay gelirse olay sesi yeter
       const t0 = performance.now();
       setTimeout(() => { if (sonOlay < t0 - 5) cal(ad, k === 'bloom' && v ? 1 : v); }, 30);
@@ -630,11 +671,19 @@ const AU = (() => {
     OLAY.on('ziplatti', o => olaySes('boing', o && o.tip === 'buyukPofuduk' ? 2 : 1));
     OLAY.on('uyandi', o => {
       if (o && o.tip === 'buyukPofuduk') { olaySes('buyukUyandi'); return; }
-      olaySes('puf'); olaySes('hapsu', 1, 0.3); olaySes('uyanma', 1, 1.0);
+      // pofuduk.js hapşırığı kendi karesinde çağırır; biz önce "puf", sonra "ha…" nefesi, en sonda uyanma zili.
+      // Dışarıdan hapşu gelmezse 1.1 sn sonra kendimiz hapşırırız.
+      olaySes('puf'); olaySes('hapsuAl', 1, 0.5); olaySes('uyanma', 1, 1.35);
+      const t0 = performance.now();
+      if (hapsuZ) clearTimeout(hapsuZ);
+      hapsuZ = setTimeout(() => { hapsuZ = null; if (hapsuDis < t0) cal('hapsu', 1); }, 1100);
     });
     OLAY.on('carpti', o => { if (o && (o.tip === 'pofuduk' || o.tip === 'buyukPofuduk') && !o.uyandi) olaySes('mmf'); });
     OLAY.on('tohum', () => olaySes('tohum'));
-    OLAY.on('dokun:karanlik', () => olaySes('nefes', 1, 0.15));
+    // Pırıl'ın ışık nefesi: piril.js 'nefes' {asama:'al'|'ver'} yayar; gelmezse karanlığa dokununca yedek ses
+    let nefesGeldi = -1e9;
+    OLAY.on('nefes', e => { const a = e && e.asama; if (a === 'al') { nefesGeldi = performance.now(); olaySes('nefesAl'); } else if (a === 'ver') { nefesGeldi = performance.now(); olaySes('nefes'); } else if (a === 'basla') nefesGeldi = performance.now(); });
+    OLAY.on('dokun:karanlik', () => { const t0 = performance.now(); setTimeout(() => { if (nefesGeldi < t0) cal('nefes'); }, 1500); });
     OLAY.on('aydinlat', () => olaySes('nilufer'));
     OLAY.on('dustu', () => olaySes('su'));
     OLAY.on('kurtarildi', () => olaySes('kurtar'));
@@ -666,7 +715,7 @@ const AU = (() => {
     hedefle(revMuzik.gain, 0.5 * k.rev, t, 2);
     hedefle(dly.fbG.gain, 0.3 + 0.12 * k.dly, t, 2);
     hedefle(dly.out.gain, 0.6 * k.dly, t, 2);
-    hedefle(B.telLP.frequency, 900 + 1700 * l + (mod === 'final' ? 1200 : 0), t, 2);
+    hedefle(B.telLP.frequency, 750 + 1100 * l + (mod === 'final' ? 700 : 0), t, 2);
     hedefle(ruzgarG.gain, mod === 'orman' ? 0.018 * (1 - 0.5 * l) * (bolge === 'gol' ? 1.4 : 1) : mod === 'ninni' ? 0.004 : 0.008, t, 2);
   }
   function kis(acik, kim) {
@@ -728,7 +777,7 @@ const AU = (() => {
     master = ac.createGain(); master.gain.value = 0.9;
     master.connect(limit); limit.connect(cikis); cikis.connect(ac.destination);
     // müzik: katmanlar → yapıştırıcı kompresör → kısma (konuşma) → master
-    muzikG = ac.createGain(); muzikG.gain.value = 0.5;
+    muzikG = ac.createGain(); muzikG.gain.value = 0.8;
     const yap = ac.createDynamicsCompressor(); yap.threshold.value = -20; yap.ratio.value = 2.5; yap.attack.value = 0.02; yap.release.value = 0.3; yap.knee.value = 8;
     kisG = ac.createGain(); kisG.gain.value = 1;
     const rafa = suzgec('lowshelf', 160, 0, null); rafa.gain.value = -4;   // iPad hoparlöründe boğuk olmasın
@@ -736,7 +785,7 @@ const AU = (() => {
     sfxG = ac.createGain(); sfxG.gain.value = 0.85; sfxG.connect(master);
     sesG = ac.createGain(); sesG.gain.value = 1; sesG.connect(master);
     // yankı
-    rev = ac.createConvolver(); rev.buffer = yankiDarbe(5);
+    rev = ac.createConvolver(); rev.buffer = yankiDarbe(3.6);   // 5 sn iPad için pahalı; gecikme kuyruğu uzatır
     const revCik = ac.createGain(); revCik.gain.value = 0.9; rev.connect(revCik); revCik.connect(kisG);
     revMuzik = ac.createGain(); revMuzik.gain.value = 0.4; muzikG.connect(revMuzik); revMuzik.connect(rev);
     revSfx = kazanc(0.18, rev); revSfxCok = kazanc(0.5, rev);
@@ -761,13 +810,18 @@ const AU = (() => {
     ns.connect(ruzgarBP); ruzgarBP.connect(ruzgarG); ruzgarG.connect(muzikG); ns.start();
     kaliciKur();
     const t = zaman();
-    cikis.gain.setValueAtTime(0, t); cikis.gain.linearRampToValueAtTime(1, t + 2.5);
+    cikis.gain.setValueAtTime(0, t); if (!sessizDeneme) cikis.gain.linearRampToValueAtTime(1, t + 2.5);
     sonrakiCubuk = t + 0.25;
     olaylariBagla();
   }
 
   function start() {
-    if (ac || (typeof SESSIZ !== 'undefined' && SESSIZ)) return;
+    // ?sessiz&sesdene: motor çalışır ama çıkış tamamen kapalı (sessiz deneme)
+    const dene = typeof Q !== 'undefined' && Q.has && Q.has('sesdene');
+    if (ac || (typeof SESSIZ !== 'undefined' && SESSIZ && !dene)) return;
+    sessizDeneme = !!(typeof SESSIZ !== 'undefined' && SESSIZ);
+    // iPad: sessiz anahtarı açıkken de çalsın (iOS 17+: medya oturumu 'playback')
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
     let ctx;
     try { ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' }); } catch (e) { return; }
     kur(ctx);
