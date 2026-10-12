@@ -514,9 +514,10 @@ const ARAYUZ = (() => {
   function sonKur() {
     // yalnız toplananlar gösterilir (hepsi olumlu: gri boş yer yok); hiç toplanmayan tür hiç çıkmaz
     const satir = sonSatirlar();
-    // sıra: simgeler tek tek parlar (sesli)
-    const olay = []; let t = 0.9;
-    satir.forEach((sat, si) => { for (let i = 0; i < sat.length; i++) { olay.push({ si, i, t, ses: true }); t += 0.2; } t += 0.15; });
+    // sıra: simgeler tek tek parlar (sesli); her satırın kendi zaman listesi
+    // çok simge varsa adım kısalır: düğme en geç ~5 sn'de gelir
+    const olay = [], adim = clamp(3.2 / Math.max(1, satir.reduce((n, q) => n + q.n, 0)), 0.08, 0.2); let t = 0.9;
+    satir.forEach((sat, si) => { olay[si] = []; for (let i = 0; i < sat.n; i++) { olay[si].push({ t, ses: i % 2 === 0 || adim > 0.15 }); t += adim; } t += sat.yeniTur ? 0.15 : 0.05; });
     son = { t0: now, satir, olay, dugmeT: t + 0.5, calindi: new Set() };
   }
   function baslikKucuk() {
@@ -573,32 +574,49 @@ const ARAYUZ = (() => {
   }
   // yatay ekranda kart sağda durur, solda sabah odasında Feza ile Pırıl görünür (sahne.js aynı kuralla onları sola alır);
   // dik ekranda kart altta, onlar üstte
-  // satırlar: yalnız toplananlar, satırda en çok 7 simge (çiçekler gerekirse iki satır; Pofuduklar ve tohumlar sığarsa aynı satırda)
+  // satırlar: yalnız toplananlar; her tür kendi satırında (çiçekler · uyanan Pofuduklar · tohumlar), satırda en çok 7 simge;
+  // sığmazsa eşit satırlara bölünür (10 → 5 + 5)
   const UI_SATIR_EN = 7;
   function sonSatirlar() {
     const say = v => Math.max(0, Math.min(40, Math.floor(v || 0)));
-    const satir = [], ekle = (tur, n) => { while (n > 0) { const k = Math.min(n, UI_SATIR_EN); satir.push(Array(k).fill(tur)); n -= k; } };
-    ekle('cicek', say(SAYAC.cicek));
-    const p = say(SAYAC.pofuduk), tq = say(SAYAC.tohum);
-    if (p + tq <= UI_SATIR_EN && p > 0 && tq > 0) satir.push(Array(p).fill('pofuduk').concat(Array(tq).fill('tohum')));
-    else { ekle('pofuduk', p); ekle('tohum', tq); }
+    const satir = [];
+    for (const [tur, n] of [['cicek', say(SAYAC.cicek)], ['pofuduk', say(SAYAC.pofuduk)], ['tohum', say(SAYAC.tohum)]]) {
+      if (n <= 0) continue;
+      const ns = Math.ceil(n / UI_SATIR_EN), per = Math.ceil(n / ns);
+      for (let k = 0, kalan = n; k < ns; k++) { const m = Math.min(per, kalan); kalan -= m; satir.push({ tur, n: m, yeniTur: k === 0, grupN: ns }); }
+    }
     return satir;
   }
+  // kart: başlık · tür satırları · ayrı satırda üç büyük yıldız; kartın üst kenarından iki Pofuduk bakar; kartın altında
+  // (kartın dışında) ortada tekrar düğmesi, iki yanında iki Pofuduk zıplar
   function sonYerlesim(satir) {
-    const n = Math.max(1, satir.length), enCok = Math.max(...satir.map(s => s.length), 1);
     const yatay = W > H * 1.15;
     const kw = yatay ? Math.min(W * 0.54, H * 1.1) : Math.min(W * 0.92, H * 0.75);
     const kx = yatay ? W - kw / 2 - W * 0.035 : W / 2;
-    const boy = Math.min(H * (yatay ? 0.085 : 0.065), H * 0.42 / (n + 1.6), kw * 0.9 / Math.max(5, enCok) / 1.08), ara = boy * 1.08;
-    const bh = H * (yatay ? 0.1 : 0.07), dy = boy * 1.22, R = Math.min(H * (yatay ? 0.085 : 0.065), W * 0.085);
-    const kh = bh + n * dy + boy * 1.4 + R * 0.9;
-    const ky = yatay ? Math.max(H * 0.04, (H - kh - R * 1.3) / 2) : Math.max(H * 0.45, H - kh - R * 1.5 - H * 0.02);
-    return { n, kw, kx, boy, ara, bh, dy, R, kh, ky };
+    const enCok = Math.max(5, ...satir.map(q => q.n));
+    let boy = Math.min(H * (yatay ? 0.085 : 0.075), kw * 0.84 / enCok / 1.12), R = Math.min(H * (yatay ? 0.075 : 0.06), W * 0.085), bh = H * (yatay ? 0.1 : 0.07);
+    let L = null;
+    for (let deneme = 0; deneme < 30; deneme++) {
+      const ara = boy * 1.12, sy = [];
+      let y = bh + boy * 0.5;
+      satir.forEach((sat, si) => { if (si > 0) y += sat.yeniTur ? boy * 1.42 : boy * 1.12; sy.push(y); });
+      if (!satir.length) y = bh;
+      const ys = y + boy * (satir.length ? 1.8 : 0.8), cizgi = y + boy * 0.92;
+      const kh = ys + boy * 0.95, bak = boy * 0.72;
+      const alt = R * 1.45 + R * 1.25 + boy * 0.1;   // düğme kartın altında (arada R*0.45 boşluk)
+      const top = bak + kh + alt;
+      const ky = yatay ? Math.max(H * 0.02 + bak, (H - top) / 2 + bak) : Math.max(H * 0.44 + bak, H - kh - alt - H * 0.015);
+      L = { kw, kx, ky, kh, boy, ara, bh, R, sy, ys, cizgi, bak, by: ky + kh + R * 1.45 };
+      const sinir = yatay ? H * 0.97 : H * 0.995;
+      if ((ky + kh + alt <= sinir && (yatay || ky - bak >= H * 0.42)) || deneme === 29) break;
+      boy *= 0.95; R *= 0.97; bh *= 0.97;
+    }
+    return L;
   }
   // bitiş ekranının pahalı parçalarını sabah sahnesi sürerken parça parça önceden hazırla (açılırken takılma olmasın)
   function sonOnHazirla() {
     const L = sonYerlesim(sonSatirlar());
-    const isler = [() => uiIsit.push(sonKart(L.kw, L.kh).c), () => uiIsit.push(baslikKucuk()), () => uiIsit.push(tekrarSprite(L.R).c), () => parlakSprite(), () => elSprite(),
+    const isler = [() => uiIsit.push(sonKart(L.kw, L.kh).c), () => { for (let i = 0; i < 4; i++) pofSprite(i); }, () => uiIsit.push(baslikKucuk()), () => uiIsit.push(tekrarSprite(L.R).c), () => parlakSprite(), () => elSprite(),
       () => simge('cicek', true), () => simge('pofuduk', true), () => simge('tohum', true)];
     let i = 0;
     const adim = () => { if (i >= isler.length || DURUM === 'son') return; kontrol(); try { isler[i++](); } catch (e) {} setTimeout(adim, 120); };
@@ -606,13 +624,16 @@ const ARAYUZ = (() => {
   }
   OLAY.on('sahneAn', v => { if (v && v.ad === 'sabah') setTimeout(sonOnHazirla, 1800); });
   // ── bitiş kutlaması: zıplayan Pofuduklar (oyundaki renkleriyle, tüylü top) ──
-  const UI_KART_PIRIL = false;   // Pırıl bitiş ekranında odada, Feza'nın yanında (sahne.js) – kartta ayrıca çizilmez
   const UI_PF = [['#ffb2d3', '#fff2f8', '#df78a8'], ['#a8d7ff', '#f0f8ff', '#5f96dc'], ['#ffe08a', '#fffbe8', '#d9a746'], ['#9fe9c9', '#f0fff8', '#55b891']];
+  function pofRenk(i) {
+    let [a, l, d] = UI_PF[i % UI_PF.length];
+    try { if (typeof PF_RENK !== 'undefined' && PF_RENK[[0, 2, 3, 1][i % 4]]) { const q = PF_RENK[[0, 2, 3, 1][i % 4]]; if (q.a && q.l && q.d) { a = q.a; l = q.l; d = q.d; } } } catch (e) {}
+    return [a, l, d];
+  }
   function pofSprite(i) {
     const key = 'pof' + i;
     if (C[key]) return C[key];
-    let [a, l, d] = UI_PF[i % UI_PF.length];
-    try { if (typeof PF_RENK !== 'undefined' && PF_RENK[[0, 2, 3, 1][i % 4]]) { const q = PF_RENK[[0, 2, 3, 1][i % 4]]; a = q.a; l = q.l; d = q.d; } } catch (e) {}
+    const [a, l, d] = pofRenk(i);
     const B = 160, c = tuval(B, B), x = c.getContext('2d'); x.translate(B / 2, B / 2 + 8);
     // tüylü kenar: üst üste binen küçük yaylar
     x.beginPath();
@@ -636,34 +657,47 @@ const ARAYUZ = (() => {
     x.fillStyle = d; x.beginPath(); x.ellipse(-16, 44, 11, 6, 0, 0, 6.283); x.ellipse(16, 44, 11, 6, 0, 0, 6.283); x.fill();
     return C[key] = c;
   }
-  // kart altındaki boşlukta: solda Pırıl süzülüp takla atar, sağda üç Pofuduk sırayla zıplar
-  function kutlamaCiz(tm, u, t0, taban, boy, kw, kx) {
-    const q = u - t0; if (q <= 0) return;
-    const gir = i => uiBack(uiSeg(q, i * 0.18, i * 0.18 + 0.5));
-    // Pofuduklar
-    for (let i = 0; i < 3; i++) {
-      const sc = gir(i + 1); if (sc <= 0.01) continue;
-      const per = 0.82, ph = ((tm + i * 0.27) % per) / per, hop = Math.sin(ph * Math.PI);
-      const ezil = ph < 0.12 ? 1 - ph / 0.12 : ph > 0.94 ? (ph - 0.94) / 0.06 : 0;   // yere değerken basıklık
-      const cx = kx + kw * [-0.3, 0.25, 0.34][i], s = boy * 1.05 * sc, yy = taban - hop * boy * 0.3;
-      g.fillStyle = `rgba(150,90,70,${0.16 * (1 - hop * 0.6)})`; g.beginPath(); g.ellipse(cx, taban + s * 0.04, s * 0.3 * (1 - hop * 0.35), s * 0.06, 0, 0, 6.283); g.fill();
-      g.save(); g.translate(cx, yy); g.rotate(Math.sin(tm * 2.4 + i) * 0.08 * hop);
-      g.scale(1 + ezil * 0.14, 1 - ezil * 0.14);
-      g.drawImage(pofSprite(i), -s / 2, -s * 0.85, s, s); g.restore();
-      if (ezil > 0.85) { g.globalCompositeOperation = 'lighter'; parilti(cx + (i - 1) * s * 0.2, taban - s * 0.1, s * 0.22, 0.7); g.globalCompositeOperation = 'source-over'; }
-    }
-    // Pırıl: süzülür, ara sıra mutlu bir takla atar
-    const sc = gir(0);
-    if (UI_KART_PIRIL && sc > 0.01 && typeof pirilCizPoz === 'function') {
-      const cx = kx - kw * 0.3, cy = taban - boy * 0.62 + Math.sin(tm * 2.2) * boy * 0.08;
-      const tk = (q % 4.2) / 4.2, takla = tk > 0.7 ? uiEase(uiSeg(tk, 0.7, 0.9)) * 6.283 : 0;
-      g.fillStyle = 'rgba(150,90,70,0.12)'; g.beginPath(); g.ellipse(cx, taban + boy * 0.03, boy * 0.32, boy * 0.06, 0, 0, 6.283); g.fill();
-      g.save(); g.translate(cx, cy); g.rotate(takla); g.scale(sc, sc);
-      try { pirilCizPoz(g, 0, 0, boy / 40, 'ucus', tm); } catch (e) { if (!uiHata.piril) { uiHata.piril = 1; console.warn('[arayuz] pirilCizPoz', e); } }
-      g.restore();
-      if (takla > 0) { g.globalCompositeOperation = 'lighter'; for (let k = 0; k < 4; k++) parilti(cx + Math.cos(takla + k * 1.57) * boy * 0.6, cy + Math.sin(takla + k * 1.57) * boy * 0.5, boy * 0.16, Math.sin(uiSeg(tk, 0.7, 0.9) * Math.PI)); g.globalCompositeOperation = 'source-over'; }
+  // kartın üst kenarının arkasından bakan iki Pofuduk (kenarın altı görünmez; minik patileri kenara tutunur)
+  function bakanCiz(tm, q, L, onde) {
+    for (let i = 0; i < 2; i++) {
+      const qi = q - i * 0.3; if (qi <= 0) continue;
+      const cik = uiBack(uiSeg(qi, 0, 0.7)), s = L.boy * 1.25, yon = i ? 1 : -1, renk = i ? 2 : 1;
+      const per = 2.9 + i * 0.5, ph = ((tm + i * 1.3) % per) / per, hop = ph < 0.22 ? Math.sin(ph / 0.22 * Math.PI) : 0;
+      const cx = L.kx + yon * L.kw * 0.35, ayak = L.ky + s * 0.12 + (1 - cik) * s * 0.85 - (Math.sin(tm * 1.6 + i * 2) * 0.025 + hop * 0.2) * s;
+      if (!onde) {
+        g.save(); g.beginPath(); g.rect(0, 0, W, L.ky + 1); g.clip();
+        g.translate(cx, ayak); g.rotate(-yon * (0.1 + 0.06 * Math.sin(tm * 0.9 + i)));
+        g.drawImage(pofSprite(renk), -s / 2, -s * 0.85, s, s); g.restore();
+      } else if (cik > 0.6) {   // patiler kenarın önünde
+        const [a, , d] = pofRenk(renk), pa = Math.min(1, (cik - 0.6) * 4) * (1 - hop);
+        if (pa <= 0.02) continue;
+        g.globalAlpha = pa;
+        for (const px of [-0.2, 0.2]) {
+          g.fillStyle = d; g.beginPath(); g.ellipse(cx + px * s, L.ky + s * 0.015, s * 0.085, s * 0.055, 0, 0, 6.283); g.fill();
+          g.fillStyle = a; g.beginPath(); g.ellipse(cx + px * s, L.ky + s * 0.005, s * 0.065, s * 0.04, 0, 0, 6.283); g.fill();
+        }
+        g.globalAlpha = 1;
+      }
     }
   }
+  // tekrar düğmesinin iki yanında zıplayan iki Pofuduk (kartın dışında)
+  function kutlamaCiz(tm, q, L) {
+    if (q <= 0) return;
+    const taban = L.by + L.R * 0.85;
+    for (let i = 0; i < 2; i++) {
+      const sc = uiBack(uiSeg(q, 0.2 + i * 0.18, 0.7 + i * 0.18)); if (sc <= 0.01) continue;
+      const per = 0.82, ph = ((tm + i * 0.41) % per) / per, hop = Math.sin(ph * Math.PI);
+      const ezil = ph < 0.12 ? 1 - ph / 0.12 : ph > 0.94 ? (ph - 0.94) / 0.06 : 0;   // yere değerken basıklık
+      const cx = L.kx + (i ? 1 : -1) * L.R * 2.35, s = L.boy * 1.05 * sc, yy = taban - hop * L.boy * 0.3;
+      g.fillStyle = `rgba(120,70,60,${0.16 * (1 - hop * 0.6)})`; g.beginPath(); g.ellipse(cx, taban + s * 0.04, s * 0.3 * (1 - hop * 0.35), s * 0.06, 0, 0, 6.283); g.fill();
+      g.save(); g.translate(cx, yy); g.rotate(Math.sin(tm * 2.4 + i) * 0.08 * hop);
+      g.scale(1 + ezil * 0.14, 1 - ezil * 0.14);
+      g.drawImage(pofSprite(i ? 3 : 0), -s / 2, -s * 0.85, s, s); g.restore();
+      if (ezil > 0.85) { g.globalCompositeOperation = 'lighter'; parilti(cx + (i ? 1 : -1) * s * 0.25, taban - s * 0.1, s * 0.22, 0.7); g.globalCompositeOperation = 'source-over'; }
+    }
+  }
+  // tür satırlarının arkasında çok hafif renkli, yuvarlak bir "raf" (her tür kendi yerinde dursun)
+  const UI_RAF = { cicek: '255,160,205', pofuduk: '200,160,255', tohum: '255,205,120' };
   const uiIsit = [];   // ekran kartına bir kez minicik çizilip ısıtılacak tuvaller
   function sonCiz(tm, dt) {
     if (!son) sonKur();
@@ -672,38 +706,55 @@ const ARAYUZ = (() => {
     const a = uiEase(uiSeg(u, 0, 1.0));
     // odanın üstüne çok hafif sıcak örtü
     // yerleşim
-    const { n, kw, kx, boy, ara, bh, dy, R, kh, ky } = sonYerlesim(son.satir);
+    const L = sonYerlesim(son.satir), { kw, kx, boy, ara, bh, R, kh, ky } = L;
+    const qk = u - (son.dugmeT - 0.2);
+    if (qk > 0) dene2('bakan', () => bakanCiz(tm, qk, L, false));   // kartın arkasından bakanlar (karttan önce çizilir)
     const kart = sonKart(kw, kh), kgir = uiBack(uiSeg(u, 0.1, 0.8));
     g.save(); g.globalAlpha = a; g.translate(kx, ky + kh / 2); g.scale(0.92 + 0.08 * kgir, 0.92 + 0.08 * kgir);
     g.drawImage(kart.c, -kw / 2 - kart.pad, -kh / 2 - kart.pad); g.restore(); g.globalAlpha = 1;
+    if (qk > 0) dene2('bakanOn', () => bakanCiz(tm, qk, L, true));
     // süs başlık (ebeveyn için; ekran onsuz da anlaşılır)
     const bk = baslikKucuk(), ba = uiEase(uiSeg(u, 0.4, 1.3)), bs = Math.min(1, bh * 0.95 / bk.height * 1.6);
     g.globalAlpha = ba; g.drawImage(bk, kx - bk.width * bs / 2, ky + bh * 0.62 - bk.height * bs / 2, bk.width * bs, bk.height * bs); g.globalAlpha = 1;
-    // simge satırları
-    const y0 = ky + bh + dy * 0.5;
+    // tür rafları (her türün satır(lar)ının arkasında)
     son.satir.forEach((sat, si) => {
-      const top = sat.length, y = y0 + si * dy, x0 = kx - (top - 1) * ara / 2;
+      if (!sat.yeniTur) return;
+      const ev0 = son.olay[si] && son.olay[si][0]; if (!ev0) return;
+      const ra = uiEase(uiSeg(u - ev0.t, -0.3, 0.3)); if (ra <= 0.01) return;
+      let enCok = 0; for (let k = si; k < si + sat.grupN; k++) enCok = Math.max(enCok, son.satir[k].n);
+      const w = (enCok - 1) * ara + boy * 1.3, y0 = ky + L.sy[si] - boy * 0.62, y1 = ky + L.sy[si + sat.grupN - 1] + boy * 0.62;
+      g.globalAlpha = ra; g.fillStyle = `rgba(${UI_RAF[sat.tur]},0.13)`; rr(g, kx - w / 2, y0, w, y1 - y0, boy * 0.62); g.fill();
+      g.strokeStyle = `rgba(${UI_RAF[sat.tur]},0.3)`; g.lineWidth = Math.max(1, boy * 0.025); g.stroke(); g.globalAlpha = 1;
+    });
+    // simge satırları
+    son.satir.forEach((sat, si) => {
+      const top = sat.n, y = ky + L.sy[si], x0 = kx - (top - 1) * ara / 2;
       for (let i = 0; i < top; i++) {
-        const ev = son.olay.find(e => e.si === si && e.i === i); if (!ev) continue;
+        const ev = son.olay[si] && son.olay[si][i]; if (!ev) continue;
         const q = u - ev.t; if (q < 0) continue;
-        const tur = sat[i], cx = x0 + i * ara, acik = true;
-        if (acik) {
-          if (ev.ses && !son.calindi.has(ev)) { son.calindi.add(ev); sfx('bloom', 0); }
-          const sc = uiBack(uiSeg(q, 0, 0.45)), zip = Math.sin(tm * 2.2 + i * 0.7 + si) * boy * 0.03;
-          g.globalCompositeOperation = 'lighter';
-          if (q < 1.1) parilti(cx + boy * 0.3, y - boy * 0.3, boy * 0.6 * Math.sin(uiSeg(q, 0, 1.1) * Math.PI), 1);
-          g.globalCompositeOperation = 'source-over';
-          simgeCiz(tur, true, cx, y + zip, boy * 1.15, Math.min(1, q * 3), Math.max(0.01, sc));
-        } else {
-          simgeCiz(tur, false, cx, y, boy * 0.82, uiEase(uiSeg(q, 0, 0.8)) * 0.9);
-        }
+        const cx = x0 + i * ara;
+        if (ev.ses && !son.calindi.has(ev)) { son.calindi.add(ev); sfx('bloom', 0); }
+        const sc = uiBack(uiSeg(q, 0, 0.45)), zip = Math.sin(tm * 2.2 + i * 0.7 + si) * boy * 0.03;
+        g.globalCompositeOperation = 'lighter';
+        if (q < 1.1) parilti(cx + boy * 0.3, y - boy * 0.3, boy * 0.6 * Math.sin(uiSeg(q, 0, 1.1) * Math.PI), 1);
+        g.globalCompositeOperation = 'source-over';
+        simgeCiz(sat.tur, true, cx, y + zip, boy * 1.15, Math.min(1, q * 3), Math.max(0.01, sc));
       }
     });
-    // üç yıldız: hep olumlu
-    const yt = son.dugmeT - 0.3, ys = y0 + (n - 1) * dy + boy * 1.3;
+    // üç büyük yıldız kendi satırında (hep olumlu); üstünde ince altın ayraç
+    const yt = son.dugmeT - 0.3, ys = ky + L.ys;
+    if (son.satir.length) {
+      const ca = uiEase(uiSeg(u - yt, -0.4, 0.2)), cy0 = ky + L.cizgi, cw = Math.min(kw * 0.3, boy * 3);
+      if (ca > 0.01) {
+        const gr = g.createLinearGradient(kx - cw, 0, kx + cw, 0);
+        gr.addColorStop(0, 'rgba(255,200,110,0)'); gr.addColorStop(0.5, 'rgba(255,200,110,0.75)'); gr.addColorStop(1, 'rgba(255,200,110,0)');
+        g.globalAlpha = ca; g.fillStyle = gr; g.fillRect(kx - cw, cy0 - Math.max(1, boy * 0.012), cw * 2, Math.max(2, boy * 0.024));
+        g.fillStyle = 'rgba(255,190,90,0.9)'; yildiz4(g, kx, cy0, boy * 0.09, 0.3); g.fill(); g.globalAlpha = 1;
+      }
+    }
     for (let i = 0; i < 3; i++) {
       const q = u - yt - i * 0.18; if (q < 0) continue;
-      const sc = uiBack(uiSeg(q, 0, 0.5)), cx = kx + (i - 1) * boy * 1.05, cy = ys - (i === 1 ? boy * 0.1 : 0), r = boy * (i === 1 ? 0.5 : 0.4) * sc;
+      const sc = uiBack(uiSeg(q, 0, 0.5)), cx = kx + (i - 1) * boy * 1.4, cy = ys - (i === 1 ? boy * 0.12 : 0), r = boy * (i === 1 ? 0.66 : 0.52) * sc;
       if (q < 0.05 && !son.calindi.has('y' + i)) { son.calindi.add('y' + i); if (i === 1) sfx('bloom', 1); }
       g.save(); g.translate(cx, cy); g.rotate(Math.sin(tm * 1.5 + i) * 0.08);
       const gg = g.createLinearGradient(0, -r, 0, r); gg.addColorStop(0, '#fff2b0'); gg.addColorStop(1, '#ffb52e');
@@ -713,18 +764,18 @@ const ARAYUZ = (() => {
       g.restore();
       if (q < 0.9) { g.globalCompositeOperation = 'lighter'; parilti(cx, cy, r * 2.2 * Math.sin(uiSeg(q, 0, 0.9) * Math.PI), 0.9); g.globalCompositeOperation = 'source-over'; }
     }
-    dene2('kutlama', () => kutlamaCiz(tm, u, son.dugmeT - 0.2, ys + boy * 0.5, boy, kw, kx));
+    dene2('kutlama', () => kutlamaCiz(tm, qk, L));
     // tekrar oyna düğmesi (dairesel ok), kartın alt kenarına oturur: nabız gibi atar, etrafında halkalar yayılır;
     // birkaç saniye sonra dokunan el gelir ve hep orada kalır (okuma bilmeyen için tek, açık hedef)
     const q = u - son.dugmeT;
     if (q > 0) {
-      const cx = kx, cy = ky + kh + R * 0.15;
+      const cx = kx, cy = L.by;   // kartın altında, kartı örtmeden
       const vur = Math.pow(Math.max(0, Math.sin(tm * 3.4)), 6);   // kalp atışı gibi kısa nabız
       const sc = uiBack(uiSeg(q, 0, 0.55)) * (1 + 0.035 * Math.sin(tm * 1.7) + 0.06 * vur);
       tekrarYer = { x: cx / DPR, y: cy / DPR, r: R * 1.4 / DPR };
       g.globalCompositeOperation = 'lighter';
       dglow('#ffcf80', cx, cy, R * (2.2 + 0.3 * Math.sin(tm * 1.7) + 0.3 * vur), (0.35 + 0.15 * vur) * Math.min(1, q * 2));
-      for (let k = 0; k < 2; k++) { const hq = ((tm + k * 0.9) % 1.8) / 1.8; halka(cx, cy, R * (1.05 + hq * 0.75), (1 - hq) * 0.55 * Math.min(1, q), R * 0.06 * (1 - hq) + 1, '255,230,180'); }
+      for (let k = 0; k < 2; k++) { const hq = ((tm + k * 0.9) % 1.8) / 1.8; halka(cx, cy, R * (1.05 + hq * 0.45), (1 - hq) * 0.55 * Math.min(1, q), R * 0.06 * (1 - hq) + 1, '255,230,180'); }
       g.globalCompositeOperation = 'source-over';
       const sp = tekrarSprite(R);
       g.save(); g.translate(cx, cy); g.scale(sc, sc); g.rotate(Math.sin(tm * 1.2) * 0.05); g.drawImage(sp.c, -sp.m, -sp.m); g.restore();
