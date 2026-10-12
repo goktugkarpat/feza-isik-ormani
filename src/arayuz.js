@@ -270,8 +270,18 @@ const ARAYUZ = (() => {
     if (v.anahtar === 'p_ciftzipla' && !ip.ciftYapti) ip.ciftGoster = now + 12;   // zaten yapabiliyorsa göstermeye gerek yok
   });
   OLAY.on('dokun:konusma', o => { if (o && o.anahtar === 'p_zipla') ziplaSoyle(); });   // ses kapalıyken de
+  // dikkat anları: kamera bir şeye bakarken (Büyük Pofuduk uyanıyor, göl aydınlanıyor, ağaç yanıyor) el ipucu çıkmaz
+  let uiDikkatT = -99;
+  for (const ad of ['buyukAsama', 'aydinlat', 'nefes', 'agac', 'ziplatti']) OLAY.on(ad, () => { uiDikkatT = now; });
+  OLAY.on('uyandi', o => { if (o && o.tip === 'buyukPofuduk') uiDikkatT = now; });
+  function dikkatAni() {
+    if (now - uiDikkatT < 3.5) return true;
+    try { if (typeof cam !== 'undefined' && cam && cam.dikkat > 0) return true; if (typeof OYUN !== 'undefined' && OYUN.dikkat > 0) return true; } catch (e) {}
+    return false;
+  }
   function ipucuGuncelle(dt) {
-    const sahne = DURUM !== 'oyun' || (typeof SAHNE !== 'undefined' && SAHNE.aktif && SAHNE.aktif()) || P.kilit > 0 || P.fade > 0;
+    const agacYandi = typeof TREE !== 'undefined' && TREE && TREE.done;
+    const sahne = DURUM !== 'oyun' || agacYandi || (typeof SAHNE !== 'undefined' && SAHNE.aktif && SAHNE.aktif()) || P.kilit > 0 || P.fade > 0 || dikkatAni();
     if (sahne) {
       ip.sahneT = now; ip.itT = 0;
       for (const k in uiIpucu) uiIpucu[k] = Math.max(0, uiIpucu[k] - dt * 4);
@@ -283,7 +293,10 @@ const ARAYUZ = (() => {
     if ((GIRDI.eksen && Math.abs(P.vx) > 30) || Math.abs(P.vx) > 60) ip.yurudu = true;
     const bosta = now - Math.max(ip.sonGirdi, ip.sahneT);
     // itiyor ama ilerleyemiyor (yerde, 3 sn kesintisiz) → zıplama eli birkaç saniye
-    if (GIRDI.eksen && Math.abs(P.vx) < 20 && P.ground) ip.itT += dt; else ip.itT = 0;
+    // hedefin (çiçek, ağaç…) dibindeyse itmek "takıldı" sayılmaz
+    let hedefYakin = false;
+    try { const h = typeof HEDEF === 'function' ? HEDEF() : null; if (h && Math.abs(h.x - P.x) < 3 * T && Math.abs(h.y - P.y) < 4 * T) hedefYakin = true; } catch (e) {}
+    if (GIRDI.eksen && Math.abs(P.vx) < 20 && P.ground && !hedefYakin) ip.itT += dt; else ip.itT = 0;
     if (ip.itT >= 3) { ip.itGoster = now + 6; ip.itT = 0; }
     if (ip.ziplaIlk && now - ip.ziplaIlkT > 15) ip.ziplaIlk = false;   // çok uzun kalmasın; itince yine gelir
     const yuruH = !girdi && P.ground && ((!ip.yurudu && now - ip.sahneT > 2) || (ip.yurudu && bosta > 25));
@@ -304,7 +317,7 @@ const ARAYUZ = (() => {
     }
     if (uiIpucu.yuru > 0) {
       // ekranın sağında: parmak basılı tutar, oklar sağa doğru akar
-      const a = uiIpucu.yuru * 0.8, hx = W - Math.min(W, H) * 0.2, hy = H - Math.min(W, H) * 0.24;   // sağ alt köşe: yolu ve Feza'yı örtmez
+      const a = uiIpucu.yuru * 0.8, yer = yuruYeri(boy), hx = yer.x, hy = yer.y;   // sağ altta, çiçeği/Feza'yı/Pırıl'ı örtmeyen bir yer
       const u = (tm % 2.4) / 2.4, bas = uiEase(uiSeg(u, 0.05, 0.2)) * (1 - uiEase(uiSeg(u, 0.85, 1)));
       g.globalCompositeOperation = 'lighter';
       dglow('#c8b0ff', hx, hy, boy * (0.45 + bas * 0.25), a * bas * 0.55);
@@ -316,6 +329,29 @@ const ARAYUZ = (() => {
       g.globalCompositeOperation = 'source-over';
       el(hx, hy, boy, -0.15, bas, a * 0.95);
     }
+  }
+  // yürüme elinin yeri: sağ tarafta aday noktalar (önce yerin altındaki toprak); elin kapladığı alanda açılmamış çiçek,
+  // Feza ya da Pırıl varsa sıradakine geçilir. Seçilen yer el görünürken değişmez (zıplamasın).
+  let uiYuruYer = null;
+  function yuruYeri(boy) {
+    const m = Math.min(W, H), x = W - m * 0.2;
+    const alt = H - boy * 0.95;   // el (parmak ucundan ≈0,9 boy aşağı uzanır) ekranın altına taşmasın
+    const adaylar = [[x, alt], [x, alt - boy * 0.7], [W - m * 0.42, alt], [x, H * 0.42], [W * 0.5, alt]];
+    const dolu = (hx, hy) => {
+      const x0 = hx - boy * 1.05, x1 = hx + boy * 0.55, y0 = hy - boy * 0.35, y1 = hy + boy * 0.9;
+      const icinde = (px, py, r) => px + r > x0 && px - r < x1 && py + r > y0 && py - r < y1;
+      if (typeof cam === 'undefined') return false;
+      const ex = wx => (wx - cam.x) * S, ey = wy => (wy - cam.y) * S;
+      try {
+        for (const o of NESNELER) if ((o.tip === 'cicek' || o.tip === 'tohum') && !o.done && icinde(ex(o.x), ey(o.y - 22), 34 * S)) return true;
+        if (icinde(ex(P.x), ey(P.y - 35), 40 * S)) return true;
+        if (typeof D !== 'undefined' && isFinite(D.x) && icinde(ex(D.x), ey(D.y), 30 * S)) return true;
+      } catch (e) {}
+      return false;
+    };
+    if (uiYuruYer && uiIpucu.yuru > 0.02 && !dolu(uiYuruYer.x, uiYuruYer.y)) return uiYuruYer;
+    for (const [ax, ay] of adaylar) if (!dolu(ax, ay)) return uiYuruYer = { x: ax, y: ay };
+    return uiYuruYer || (uiYuruYer = { x: adaylar[0][0], y: adaylar[0][1] });
   }
   function oku(x, y, s, yon, a) {
     if (a <= 0.01) return;
@@ -476,12 +512,11 @@ const ARAYUZ = (() => {
   // ══════════ BİTİŞ EKRANI ══════════
   let son = null;
   function sonKur() {
-    const satir = [['cicek', SAYAC.cicek, SAYAC.cicekTop], ['pofuduk', SAYAC.pofuduk, SAYAC.pofudukTop]];
-    if (SAYAC.tohumTop) satir.push(['tohum', SAYAC.tohum, SAYAC.tohumTop]);
-    // sıra: önce açık olanlar tek tek parlar (sesli), sonra sönükler sessizce belirir
+    // yalnız toplananlar gösterilir (hepsi olumlu: gri boş yer yok); hiç toplanmayan tür hiç çıkmaz
+    const satir = sonSatirlar();
+    // sıra: simgeler tek tek parlar (sesli)
     const olay = []; let t = 0.9;
-    satir.forEach(([tur, v, top], si) => { for (let i = 0; i < top; i++) if (i < v) { olay.push({ si, i, t, ses: true }); t += Math.max(0.16, 0.32 - v * 0.012); } t += 0.2; });
-    satir.forEach(([tur, v, top], si) => { for (let i = v; i < top; i++) olay.push({ si, i, t: 1.0 + si * 0.15, ses: false }); });
+    satir.forEach((sat, si) => { for (let i = 0; i < sat.length; i++) { olay.push({ si, i, t, ses: true }); t += 0.2; } t += 0.15; });
     son = { t0: now, satir, olay, dugmeT: t + 0.5, calindi: new Set() };
   }
   function baslikKucuk() {
@@ -536,26 +571,42 @@ const ARAYUZ = (() => {
     for (const [qx, qy] of [[0.05, 0.08], [0.95, 0.08], [0.05, 0.92], [0.95, 0.92]]) { yildiz4(x, pad + w * qx, pad + h * qy, h * 0.025, 0.3); x.fill(); }
     return C[key] = { c, pad };
   }
+  // yatay ekranda kart sağda durur, solda sabah odasında Feza ile Pırıl görünür (sahne.js aynı kuralla onları sola alır);
+  // dik ekranda kart altta, onlar üstte
+  // satırlar: yalnız toplananlar, satırda en çok 7 simge (çiçekler gerekirse iki satır; Pofuduklar ve tohumlar sığarsa aynı satırda)
+  const UI_SATIR_EN = 7;
+  function sonSatirlar() {
+    const say = v => Math.max(0, Math.min(40, Math.floor(v || 0)));
+    const satir = [], ekle = (tur, n) => { while (n > 0) { const k = Math.min(n, UI_SATIR_EN); satir.push(Array(k).fill(tur)); n -= k; } };
+    ekle('cicek', say(SAYAC.cicek));
+    const p = say(SAYAC.pofuduk), tq = say(SAYAC.tohum);
+    if (p + tq <= UI_SATIR_EN && p > 0 && tq > 0) satir.push(Array(p).fill('pofuduk').concat(Array(tq).fill('tohum')));
+    else { ekle('pofuduk', p); ekle('tohum', tq); }
+    return satir;
+  }
   function sonYerlesim(satir) {
-    const n = satir.length, enCok = Math.max(...satir.map(s => s[2]), 1);
-    const kw = Math.min(W * 0.9, H * 1.3), boy = Math.min(H * 0.11, kw * 0.9 / Math.max(5, enCok) / 1.08), ara = boy * 1.08;
-    const bh = H * 0.1, dy = boy * 1.22, R = Math.min(H * 0.09, W * 0.085);
-    const kh = bh + n * dy + boy * 1.1 + R * 0.9, ky = Math.max(H * 0.04, (H - kh - R * 1.3) / 2);
-    return { n, kw, boy, ara, bh, dy, R, kh, ky };
+    const n = Math.max(1, satir.length), enCok = Math.max(...satir.map(s => s.length), 1);
+    const yatay = W > H * 1.15;
+    const kw = yatay ? Math.min(W * 0.54, H * 1.1) : Math.min(W * 0.92, H * 0.75);
+    const kx = yatay ? W - kw / 2 - W * 0.035 : W / 2;
+    const boy = Math.min(H * (yatay ? 0.085 : 0.065), H * 0.42 / (n + 1.6), kw * 0.9 / Math.max(5, enCok) / 1.08), ara = boy * 1.08;
+    const bh = H * (yatay ? 0.1 : 0.07), dy = boy * 1.22, R = Math.min(H * (yatay ? 0.085 : 0.065), W * 0.085);
+    const kh = bh + n * dy + boy * 1.4 + R * 0.9;
+    const ky = yatay ? Math.max(H * 0.04, (H - kh - R * 1.3) / 2) : Math.max(H * 0.45, H - kh - R * 1.5 - H * 0.02);
+    return { n, kw, kx, boy, ara, bh, dy, R, kh, ky };
   }
   // bitiş ekranının pahalı parçalarını sabah sahnesi sürerken parça parça önceden hazırla (açılırken takılma olmasın)
   function sonOnHazirla() {
-    const satir = [['cicek', 0, SAYAC.cicekTop], ['pofuduk', 0, SAYAC.pofudukTop]];
-    if (SAYAC.tohumTop) satir.push(['tohum', 0, SAYAC.tohumTop]);
-    const L = sonYerlesim(satir);
+    const L = sonYerlesim(sonSatirlar());
     const isler = [() => uiIsit.push(sonKart(L.kw, L.kh).c), () => uiIsit.push(baslikKucuk()), () => uiIsit.push(tekrarSprite(L.R).c), () => parlakSprite(), () => elSprite(),
-      () => { simge('cicek', true); simge('cicek', false); }, () => { simge('pofuduk', true); simge('pofuduk', false); }, () => { simge('tohum', true); simge('tohum', false); }];
+      () => simge('cicek', true), () => simge('pofuduk', true), () => simge('tohum', true)];
     let i = 0;
     const adim = () => { if (i >= isler.length || DURUM === 'son') return; kontrol(); try { isler[i++](); } catch (e) {} setTimeout(adim, 120); };
     adim();
   }
   OLAY.on('sahneAn', v => { if (v && v.ad === 'sabah') setTimeout(sonOnHazirla, 1800); });
   // ── bitiş kutlaması: zıplayan Pofuduklar (oyundaki renkleriyle, tüylü top) ──
+  const UI_KART_PIRIL = false;   // Pırıl bitiş ekranında odada, Feza'nın yanında (sahne.js) – kartta ayrıca çizilmez
   const UI_PF = [['#ffb2d3', '#fff2f8', '#df78a8'], ['#a8d7ff', '#f0f8ff', '#5f96dc'], ['#ffe08a', '#fffbe8', '#d9a746'], ['#9fe9c9', '#f0fff8', '#55b891']];
   function pofSprite(i) {
     const key = 'pof' + i;
@@ -586,7 +637,7 @@ const ARAYUZ = (() => {
     return C[key] = c;
   }
   // kart altındaki boşlukta: solda Pırıl süzülüp takla atar, sağda üç Pofuduk sırayla zıplar
-  function kutlamaCiz(tm, u, t0, taban, boy, kw) {
+  function kutlamaCiz(tm, u, t0, taban, boy, kw, kx) {
     const q = u - t0; if (q <= 0) return;
     const gir = i => uiBack(uiSeg(q, i * 0.18, i * 0.18 + 0.5));
     // Pofuduklar
@@ -594,7 +645,7 @@ const ARAYUZ = (() => {
       const sc = gir(i + 1); if (sc <= 0.01) continue;
       const per = 0.82, ph = ((tm + i * 0.27) % per) / per, hop = Math.sin(ph * Math.PI);
       const ezil = ph < 0.12 ? 1 - ph / 0.12 : ph > 0.94 ? (ph - 0.94) / 0.06 : 0;   // yere değerken basıklık
-      const cx = W / 2 + kw * (0.23 + i * 0.085), s = boy * 1.2 * sc, yy = taban - hop * boy * 0.42;
+      const cx = kx + kw * [-0.3, 0.25, 0.34][i], s = boy * 1.05 * sc, yy = taban - hop * boy * 0.3;
       g.fillStyle = `rgba(150,90,70,${0.16 * (1 - hop * 0.6)})`; g.beginPath(); g.ellipse(cx, taban + s * 0.04, s * 0.3 * (1 - hop * 0.35), s * 0.06, 0, 0, 6.283); g.fill();
       g.save(); g.translate(cx, yy); g.rotate(Math.sin(tm * 2.4 + i) * 0.08 * hop);
       g.scale(1 + ezil * 0.14, 1 - ezil * 0.14);
@@ -603,8 +654,8 @@ const ARAYUZ = (() => {
     }
     // Pırıl: süzülür, ara sıra mutlu bir takla atar
     const sc = gir(0);
-    if (sc > 0.01 && typeof pirilCizPoz === 'function') {
-      const cx = W / 2 - kw * 0.3, cy = taban - boy * 0.62 + Math.sin(tm * 2.2) * boy * 0.08;
+    if (UI_KART_PIRIL && sc > 0.01 && typeof pirilCizPoz === 'function') {
+      const cx = kx - kw * 0.3, cy = taban - boy * 0.62 + Math.sin(tm * 2.2) * boy * 0.08;
       const tk = (q % 4.2) / 4.2, takla = tk > 0.7 ? uiEase(uiSeg(tk, 0.7, 0.9)) * 6.283 : 0;
       g.fillStyle = 'rgba(150,90,70,0.12)'; g.beginPath(); g.ellipse(cx, taban + boy * 0.03, boy * 0.32, boy * 0.06, 0, 0, 6.283); g.fill();
       g.save(); g.translate(cx, cy); g.rotate(takla); g.scale(sc, sc);
@@ -620,23 +671,22 @@ const ARAYUZ = (() => {
     const u = now - son.t0;
     const a = uiEase(uiSeg(u, 0, 1.0));
     // odanın üstüne çok hafif sıcak örtü
-    g.fillStyle = `rgba(70,35,45,${0.22 * a})`; g.fillRect(0, 0, W, H);
     // yerleşim
-    const { n, kw, boy, ara, bh, dy, R, kh, ky } = sonYerlesim(son.satir);
+    const { n, kw, kx, boy, ara, bh, dy, R, kh, ky } = sonYerlesim(son.satir);
     const kart = sonKart(kw, kh), kgir = uiBack(uiSeg(u, 0.1, 0.8));
-    g.save(); g.globalAlpha = a; g.translate(W / 2, ky + kh / 2); g.scale(0.92 + 0.08 * kgir, 0.92 + 0.08 * kgir);
+    g.save(); g.globalAlpha = a; g.translate(kx, ky + kh / 2); g.scale(0.92 + 0.08 * kgir, 0.92 + 0.08 * kgir);
     g.drawImage(kart.c, -kw / 2 - kart.pad, -kh / 2 - kart.pad); g.restore(); g.globalAlpha = 1;
     // süs başlık (ebeveyn için; ekran onsuz da anlaşılır)
     const bk = baslikKucuk(), ba = uiEase(uiSeg(u, 0.4, 1.3)), bs = Math.min(1, bh * 0.95 / bk.height * 1.6);
-    g.globalAlpha = ba; g.drawImage(bk, W / 2 - bk.width * bs / 2, ky + bh * 0.62 - bk.height * bs / 2, bk.width * bs, bk.height * bs); g.globalAlpha = 1;
+    g.globalAlpha = ba; g.drawImage(bk, kx - bk.width * bs / 2, ky + bh * 0.62 - bk.height * bs / 2, bk.width * bs, bk.height * bs); g.globalAlpha = 1;
     // simge satırları
     const y0 = ky + bh + dy * 0.5;
-    son.satir.forEach(([tur, v, top], si) => {
-      const y = y0 + si * dy, x0 = W / 2 - (top - 1) * ara / 2;
+    son.satir.forEach((sat, si) => {
+      const top = sat.length, y = y0 + si * dy, x0 = kx - (top - 1) * ara / 2;
       for (let i = 0; i < top; i++) {
         const ev = son.olay.find(e => e.si === si && e.i === i); if (!ev) continue;
         const q = u - ev.t; if (q < 0) continue;
-        const cx = x0 + i * ara, acik = i < v;
+        const tur = sat[i], cx = x0 + i * ara, acik = true;
         if (acik) {
           if (ev.ses && !son.calindi.has(ev)) { son.calindi.add(ev); sfx('bloom', 0); }
           const sc = uiBack(uiSeg(q, 0, 0.45)), zip = Math.sin(tm * 2.2 + i * 0.7 + si) * boy * 0.03;
@@ -650,10 +700,10 @@ const ARAYUZ = (() => {
       }
     });
     // üç yıldız: hep olumlu
-    const yt = son.dugmeT - 0.3, ys = y0 + n * dy - dy * 0.12;
+    const yt = son.dugmeT - 0.3, ys = y0 + (n - 1) * dy + boy * 1.3;
     for (let i = 0; i < 3; i++) {
       const q = u - yt - i * 0.18; if (q < 0) continue;
-      const sc = uiBack(uiSeg(q, 0, 0.5)), cx = W / 2 + (i - 1) * boy * 1.05, cy = ys - (i === 1 ? boy * 0.1 : 0), r = boy * (i === 1 ? 0.5 : 0.4) * sc;
+      const sc = uiBack(uiSeg(q, 0, 0.5)), cx = kx + (i - 1) * boy * 1.05, cy = ys - (i === 1 ? boy * 0.1 : 0), r = boy * (i === 1 ? 0.5 : 0.4) * sc;
       if (q < 0.05 && !son.calindi.has('y' + i)) { son.calindi.add('y' + i); if (i === 1) sfx('bloom', 1); }
       g.save(); g.translate(cx, cy); g.rotate(Math.sin(tm * 1.5 + i) * 0.08);
       const gg = g.createLinearGradient(0, -r, 0, r); gg.addColorStop(0, '#fff2b0'); gg.addColorStop(1, '#ffb52e');
@@ -663,12 +713,12 @@ const ARAYUZ = (() => {
       g.restore();
       if (q < 0.9) { g.globalCompositeOperation = 'lighter'; parilti(cx, cy, r * 2.2 * Math.sin(uiSeg(q, 0, 0.9) * Math.PI), 0.9); g.globalCompositeOperation = 'source-over'; }
     }
-    dene2('kutlama', () => kutlamaCiz(tm, u, son.dugmeT - 0.2, ys + boy * 0.5, boy, kw));
+    dene2('kutlama', () => kutlamaCiz(tm, u, son.dugmeT - 0.2, ys + boy * 0.5, boy, kw, kx));
     // tekrar oyna düğmesi (dairesel ok), kartın alt kenarına oturur: nabız gibi atar, etrafında halkalar yayılır;
     // birkaç saniye sonra dokunan el gelir ve hep orada kalır (okuma bilmeyen için tek, açık hedef)
     const q = u - son.dugmeT;
     if (q > 0) {
-      const cx = W / 2, cy = ky + kh + R * 0.15;
+      const cx = kx, cy = ky + kh + R * 0.15;
       const vur = Math.pow(Math.max(0, Math.sin(tm * 3.4)), 6);   // kalp atışı gibi kısa nabız
       const sc = uiBack(uiSeg(q, 0, 0.55)) * (1 + 0.035 * Math.sin(tm * 1.7) + 0.06 * vur);
       tekrarYer = { x: cx / DPR, y: cy / DPR, r: R * 1.4 / DPR };

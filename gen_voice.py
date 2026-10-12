@@ -20,6 +20,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 
 import edge_tts
 import edge_tts.communicate as _etc
@@ -195,7 +196,14 @@ async def main():
         f.write(",\n".join(f" {json.dumps(k)}: \"{v}\"" for k, v in mp3.items()))
         f.write("\n};\n")
         f.write("window.VOICE_DUR = " + json.dumps(dur, ensure_ascii=False) + ";\n")
-    os.replace(temp_out, OUT)
+    for attempt in range(10):   # Windows/Dropbox may briefly lock the old file
+        try:
+            os.replace(temp_out, OUT)
+            break
+        except PermissionError:
+            if attempt == 9:
+                raise
+            time.sleep(0.5)
     keep = {os.path.basename(cache_path(k, t)) for k, t in lines.items()}
     for f in os.listdir(CACHE):  # drop recordings of lines that no longer exist and temp leftovers
         if f.endswith(".mp3") and f not in keep:

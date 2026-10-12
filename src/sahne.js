@@ -320,6 +320,7 @@ const shKucak = { x: SH_PIRIL.x, y: SH_PIRIL.y, px: SH_PIRIL.x, py: SH_PIRIL.y }
 // kucaktaki peluşun kucak noktasına göre yeri (oyun birimi) ve boyu: yüzü Feza'nın yanağına binmesin, kolların arasında dursun
 const SH_KUC = { dx: 4, dy: -7, s: 1 };
 const SH_KUC_OTUR = { dx: 4, dy: 11, s: 1 };   // otururken: kucağında, başı çenesinin altında kalır (yüzü örtülmesin)
+const SH_KUC_KIRP = { dx: 29, dy: -15, s: 1.3 };   // sabah göz kırpma: Feza onu yanağının yanına kaldırır (bütün başı görünür)
 const shKucOfs = { dx: 0, dy: 0, s: 1 };
 // pozTm: pozun kendi zamanı (uyanis için); verilmezse tm.
 function shFeza(x, y, olc, poz, tm, kucakPoz, kucakU, kucakTm, pozTm) {
@@ -331,8 +332,11 @@ function shFeza(x, y, olc, poz, tm, kucakPoz, kucakU, kucakTm, pozTm) {
     // yatış → oturuş ('uyanis' 0.5–1.1 sn) arasında peluşun yeri de yumuşakça değişir
     const ptm = pozTm == null ? tm : pozTm, otur = poz === 'uyanis' ? shEase(shSeg(ptm, 0.45, 1.15)) : 0;
     shKucOfs.dx = lerp(SH_KUC.dx, SH_KUC_OTUR.dx, otur); shKucOfs.dy = lerp(SH_KUC.dy, SH_KUC_OTUR.dy, otur); shKucOfs.s = lerp(SH_KUC.s, SH_KUC_OTUR.s, otur);
+    const kk = sh.kirpK || 0;
+    if (kk > 0) { shKucOfs.dx = lerp(shKucOfs.dx, SH_KUC_KIRP.dx, kk); shKucOfs.dy = lerp(shKucOfs.dy, SH_KUC_KIRP.dy, kk) - Math.sin(kk * Math.PI) * 3; shKucOfs.s = lerp(shKucOfs.s, SH_KUC_KIRP.s, kk); }
     const ara = pirilVar ? (c, kx, ky, o) => {
-      if (pirilVar) try { pirilCizPoz(c, kx + shKucOfs.dx * o, ky + shKucOfs.dy * o, o * shKucOfs.s, kucakPoz, kucakTm == null ? tm : kucakTm, kucakU); } catch (e) { shHata('pirilCizPoz', e); }
+      sh.prEk = { x: kx + shKucOfs.dx * o, y: ky + shKucOfs.dy * o, s: o * shKucOfs.s };   // Pırıl'ın ekrandaki yeri (göz kırpma parıltısı için)
+      if (pirilVar) try { pirilCizPoz(c, sh.prEk.x, sh.prEk.y, sh.prEk.s, kucakPoz, kucakTm == null ? tm : kucakTm, kucakU); } catch (e) { shHata('pirilCizPoz', e); }
     } : null;
     try {
       const k = fezaCizPoz(g, px, py, olc * S * sh.zoom, poz, pozTm == null ? tm : pozTm, ara);
@@ -509,12 +513,19 @@ function shBattaniye(p, b, tm, nefes, otur = 0) {
   shOdaT();
   const Y = SH_YATAK, n = nefes || 0, bb = shEase(b);
   const kalcaH = lerp(3.2 + n * 0.35, 0.9, otur), dizH = lerp(1.6, 2.2, otur);
+  // yatarken battaniye Feza'nın göğsünden ayak ucuna kadar bütün gövdesini örter (bacaklar dışarıda kalmasın):
+  // gövdenin üstünde yumuşak, yuvarlak bir tümsek (oda biriminde gövde ≈ x −37…−29, üst kenarı y ≈ 54.5)
+  const yat = 1 - otur;
   const ust = (xx) => {   // battaniyenin üst kenarı (Feza'nın gövdesinin üstünden geçer)
     const t = (xx - -38) / 41;
     const kalca = Math.exp(-Math.pow((xx + 25.5) / 4.6, 2)) * kalcaH, diz = Math.exp(-Math.pow((xx + 17 + otur * 3) / 4, 2)) * dizH;
-    return 58.8 - kalca - diz + t * 0.6 - Math.max(0, -(xx + 33)) * 0.1;
+    const taban = 58.8 - kalca - diz + t * 0.6 - Math.max(0, -(xx + 33)) * 0.1;
+    if (yat <= 0.001) return taban;
+    const w = shEase(clamp((xx + 35.2) / 2.6, 0, 1)) * (1 - shEase(clamp((xx + 28.6) / 4.2, 0, 1)));
+    const govde = 54.0 - n * 0.25 + Math.pow((xx + 31) / 5, 2) * 0.9;
+    return lerp(taban, Math.min(taban, govde), w * yat);
   };
-  const x0 = lerp(-38, -34.5, otur), x1 = Y.x1 + 0.6, altY = lerp(69.6, SH_YER + 2, bb);
+  const x0 = lerp(-37.6, -34.5, otur), x1 = Y.x1 + 0.6, altY = lerp(69.6, SH_YER + 2, bb);
   // yatak örtüsü (b=0) → yumuşak yosun tepeciği (b=1): kenar noktaları birlikte kayar
   const sagK = { x: lerp(x1 + 2.2, x1 + 8, bb), y: lerp(ust(x1) + 1, ust(x1) + 1.5, bb) };
   const sagA = { x: lerp(x1 + 2, x1 + 15, bb), y: altY };
@@ -563,6 +574,7 @@ function shBattaniye(p, b, tm, nefes, otur = 0) {
     g.strokeStyle = '#2f8a72'; g.lineWidth = 0.42; g.lineCap = 'round'; g.globalAlpha = shSeg(b, 0.12, 0.4);
     g.beginPath();
     for (let xx = x0 + 0.5, i = 0; xx < x1; xx += 1.1, i++) {
+      if (otur > 0.2 && xx < -29.5) continue;   // doğrulunca saçaklar gövdesinin önünden geçmesin
       const y0 = ust(xx) + 0.3, h = (0.8 + ((i * 7) % 5) * 0.35) * bb, sw = Math.sin(tm * 1.6 + i) * 0.25;
       g.moveTo(xx, y0); g.quadraticCurveTo(xx + sw, y0 - h * 0.6, xx + sw * 2 + ((i % 3) - 1) * 0.4, y0 - h);
     }
@@ -587,6 +599,7 @@ function shBattaniye(p, b, tm, nefes, otur = 0) {
     const r = sh.k0 * sh.zoom;
     for (let i = 0; i < 14; i++) {
       const xx = x0 + 2 + i * 2.85, y0 = ust(xx) - 1.6 * bb, tw = 0.5 + 0.5 * Math.sin(tm * 2.1 + i * 1.7);
+      if (otur > 0.2 && xx < -29.5) continue;
       dglow(i % 3 ? '#9ff0d0' : '#bff4ff', shEkranX(xx), shEkranY(y0), r * (1.1 + tw * 0.6), bb * (0.35 + tw * 0.4));
     }
     // tepeciğin yamaçlarında ışıklı sporlar
@@ -760,10 +773,10 @@ function shGirisPlan() {
   P.s2 = P.b2 + 0.7;
   P.b3 = P.s2 + Math.max(d2 + 0.9, 5.6);           // erime
   P.s3 = P.b3 + 0.4;
-  P.erime = Math.max(d3 + 2.8, 9.5);
+  P.erime = Math.max(d3 + 2.0, 7.6);              // anlatıcı susunca uzun bir sessizlik kalmasın (≈2 sn)
   P.b4 = P.b3 + P.erime;                           // orman tamam
-  P.uyan = P.b4 + 0.9;                             // Pırıl: "Feza, uyan!"
-  P.kalk = P.uyan + 1.3;                           // Feza doğrulur, gözlerini ovuşturur
+  P.uyan = P.b4 + 0.35;                            // Pırıl: "Feza, uyan!" (kulağına süzülürken)
+  P.kalk = P.uyan + 1.1;                           // Feza doğrulur, gözlerini ovuşturur
   P.isik = Math.max(P.kalk + 2.7, P.uyan + dU - 0.9);   // parlama yükselir
   P.dunya = P.isik + 1.4;                          // tamEkran → false (oyun dünyası ışığın içinde)
   P.son = P.dunya + 2.3;
@@ -1117,9 +1130,10 @@ function shFinalPlan() {
   P.dolu = P.isik + 2.6;                     // ekran tamamen ışık → oda
   P.oda = P.dolu + 5.0;                      // ışık bir süre çiçek açar (müziğin doruğu), sonra sabah odası belirir
   P.s2 = P.oda + 1.6;
-  P.yak = P.s2 + Math.max(d2 + 0.6, 4.2);    // peluş Pırıl'a yaklaş
-  P.kirp = P.yak + 1.5;                      // göz kırpma
-  P.s3 = P.kirp + 1.0;
+  P.yak = P.s2 + Math.max(d2 * 0.45, 2.6);   // Feza peluş Pırıl'ı yanağına kaldırır, kamera iki yüze yaklaşır
+  P.kirp = Math.max(P.yak + 1.5, P.s2 + d2 - 0.8);   // göz kırpma: anlatıcı "göz kırpmış" derken
+  P.kirpBit = P.kirp + 1.7;
+  P.s3 = P.kirpBit + 0.2;
   P.son = P.s3 + Math.max(d3 + 1.2, 4.0);
   return P;
 }
@@ -1132,13 +1146,17 @@ function shFinalGuncelle(dt) {
   if (t >= P.oda + 0.9) shAn('feza_uyandi'); if (t >= P.kirp) shAn('goz_kirp'); if (t >= P.s3) shAn('son_soz');
   if (!sh.cin && t >= P.kirp) { sh.cin = 1; if (typeof AU !== 'undefined' && AU.sfx) try { AU.sfx('bloom', 0); } catch (e) {} }
   sh.tam = t >= P.dolu;
-  const yk = shEase(shSeg(t, P.yak, P.kirp + 0.2)), fx = shPX(shKucak.px), fy = shPY(shKucak.py - 1.2);
-  // sabah: yatak çerçevenin ortasına yakın, sonra peluş Pırıl'a yavaşça yaklaşılır
-  shKamera(fx, fy, 1.14 + 0.9 * yk + 0.015 * shSeg(t, P.oda, P.son), lerp(W * 0.4, W * 0.5, yk), lerp(fy, H * 0.5, yk));   // göz kırpma yakın planda okunsun
+  // sabah: önce bütün oda (yatakta uyuyan Feza), Feza doğrulunca ona yaklaşılır; Pırıl'ı yanağına kaldırınca
+  // iki yüz ekranı doldurur (göz kırpma büyük ve açık okunsun)
+  sh.kirpK = shEase(shSeg(t, P.yak - 0.2, P.yak + 1.2));
+  const yu = shEase(shSeg(t, P.oda + 1.2, P.oda + 4.2)), yk = shEase(shSeg(t, P.yak - 0.4, P.yak + 1.6));
+  const fx = shPX(lerp(shKucak.x, shKucak.x + 3.8, yk)), fy = shPY(lerp(lerp(shKucak.y, shKucak.y - 2, yu), shKucak.y - 2.9, yk));
+  const z = 1.14 + 0.86 * yu + 1.6 * yk + 0.06 * shSeg(t, P.kirp, P.son);
+  shKamera(fx, fy, z, lerp(lerp(W * 0.4, W * 0.5, yu), W * 0.5, yk), lerp(lerp(fy, H * 0.55, yu), H * 0.5, yk));
   if (t >= P.son && sh.bitti) { shAn('son'); const f = sh.bitti; sh.bitti = null; sh.sonGorunum = true; f(); }
 }
 // sabah odası sahnesi (bitiş ekranının arkasında da kullanılır)
-function shSabahCiz(tm, t, P) {
+function shSabahCiz(tm, t, P, sonKirp) {
   if (!sh.odaSabah) sh.odaSabah = shOdaCiz(SH_SABAH);
   const p = SH_SABAH;
   shResimT(); g.drawImage(sh.odaSabah, 0, 0);
@@ -1149,16 +1167,18 @@ function shSabahCiz(tm, t, P) {
   shYatakArka(p, 0, 0, tm);
   // Feza önce uyuyor, sonra doğrulup gözlerini ovuşturur, gerinir, gülümser; peluş Pırıl kucağında
   const uT = P ? t - (P.oda + 0.9) : 99;
-  const kirp = P ? (t >= P.kirp && t < P.kirp + 0.9) : false;
+  const kirp = P ? (t >= P.kirp && t < P.kirpBit) : !!sonKirp;
   const otur = uT <= 0 ? 0 : shEase(shSeg(uT, 0, 1.1));
   shFeza(SH_FEZA.x, SH_FEZA.y, 1.18, uT <= 0 ? 'uyku' : 'uyanis', uT <= 0 ? tm : uT, kirp ? 'goz_kirp' : 'pelus', undefined, tm);
   shBattaniye(p, 0, tm, uT <= 0 ? Math.sin(tm * 1.5) * 0.5 + 0.5 : 0, otur);
   if (P && t >= P.kirp) {   // göz kırpınca küçük, sıcak parıltı
-    const u = shSeg(t, P.kirp, P.kirp + 1.3);
+    const u = shSeg(t, P.kirp + 0.1, P.kirp + 1.5);
     g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'lighter';
-    const k = sh.k0 * sh.zoom, px = shEkranX(shKucak.px + 4.4), py = shEkranY(shKucak.py - 4.6);   // kırpılan gözün yanında (üstünde değil)
-    dglow('#ffe6b0', px, py, k * 3 * Math.sin(u * Math.PI), Math.sin(u * Math.PI) * 0.35);
-    shParilti(px, py, k * 2.4 * Math.sin(u * Math.PI), Math.sin(u * Math.PI));
+    // Pırıl'ın kırptığı gözün dış köşesinde (pirilCizPoz 'goz_kirp': göz ≈ (8,−14), parıltı (14,−22) peluş biriminde)
+    const q = sh.prEk || { x: shEkranX(shKucak.px), y: shEkranY(shKucak.py), s: sh.k0 * sh.zoom * 0.2 };
+    const px = q.x + 17 * q.s, py = q.y - 25 * q.s, r = q.s * 9;
+    dglow('#ffe6b0', px, py, r * 1.6 * Math.sin(u * Math.PI), Math.sin(u * Math.PI) * 0.4);
+    shParilti(px, py, r * Math.sin(u * Math.PI), Math.sin(u * Math.PI));
     g.globalCompositeOperation = 'source-over';
   }
   shZerreler(tm, 0.6, false);
@@ -1172,7 +1192,11 @@ function shFinalOdak() {   // grubun ekran pikseli cinsinden merkezi ve ona yak�
   const F = OYUN.P, G = shGrup;
   G.x0 = F.x - 30; G.x1 = F.x + 30; G.y0 = F.y - 90; G.y1 = F.y;
   const ekle = (x, y, r) => { if (!isFinite(x) || !isFinite(y)) return; G.x0 = Math.min(G.x0, x - r); G.x1 = Math.max(G.x1, x + r); G.y0 = Math.min(G.y0, y - r); G.y1 = Math.max(G.y1, y + r * 0.3); };
-  for (const o of NESNELER) if (o.tip === 'pofuduk' && Math.abs(o.x - F.x) < 420 && Math.abs(o.y - F.y) < 260) ekle(o.x, o.y - 24, 34);
+  for (const o of NESNELER) {
+    if (o.tip === 'pofuduk' && Math.abs(o.x - F.x) < 420 && Math.abs(o.y - F.y) < 260) ekle(o.x, o.y - 24, 34);
+    // Büyük Pofuduk grubun yanına (yere) gelince bütünüyle kadraja girsin (kenarda yarım kıvrık tutam görünmesin)
+    else if (o.tip === 'buyukPofuduk' && Math.abs(o.x - F.x) < 480 && Math.abs(o.y - F.y) < 90) { ekle(o.x, o.y - 100, 104); G.y0 = Math.min(G.y0, o.y - 240); }
+  }
   if (typeof D !== 'undefined' && Math.abs(D.x - F.x) < 360 && Math.abs(D.y - F.y) < 300) ekle(D.x, D.y, 34);
   const wpx = (G.x1 - G.x0 + 80) * S, hpx = (G.y1 - G.y0 + 120) * S;
   return { x: ((G.x0 + G.x1) / 2 - cam.x) * S, y: ((G.y0 + G.y1) / 2 - cam.y) * S, z: clamp(Math.min(W * 0.78 / wpx, H * 0.62 / hpx), 1.06, 1.26) };
@@ -1319,7 +1343,7 @@ setTimeout(function shIsit() {
 
 const SAHNE = {
   giris(bitince) {
-    shOlc(); sh.mod = 'giris'; sh.t = 0; sh.kalkis = null; sh.bitti = bitince; sh.atla = -1; sh.sesler = {}; sh.zz.length = 0; sh.tam = false;
+    shOlc(); sh.mod = 'giris'; sh.t = 0;  sh.kirpK = 0; sh.kalkis = null; sh.bitti = bitince; sh.atla = -1; sh.sesler = {}; sh.zz.length = 0; sh.tam = false;
     sh.anlar = {}; sh.parca.length = 0; sh.camOturdu = 0; sh.izlendi = 0;
     try { sh.atlanabilir = Q.has('atlanir') || localStorage.getItem('fezaIsikGiris') === '1'; } catch (e) { sh.atlanabilir = false; }
     sh.plan = shGirisPlan(); shKamera(W / 2, H / 2, 1, W / 2, H / 2);
@@ -1329,7 +1353,7 @@ const SAHNE = {
     if (!sh.onPlan) sh.onPlan = shOnPlanCiz();
   },
   final(bitince) {
-    shOlc(); sh.mod = 'final'; sh.t = 0; sh.bitti = bitince; sh.sesler = {}; sh.tam = false; sh.cin = 0; sh.anlar = {}; sh.parca.length = 0; sh.kareOrt = 1 / 60; sh.kamYavas = 0; sh.sonK = null; sh.fo = null;
+    shOlc(); sh.mod = 'final'; sh.t = 0; sh.kirpK = 0; sh.bitti = bitince; sh.sesler = {}; sh.tam = false; sh.cin = 0; sh.anlar = {}; sh.parca.length = 0; sh.kareOrt = 1 / 60; sh.kamYavas = 0; sh.sonK = null; sh.fo = null;
     sh.plan = shFinalPlan(); shKamera(W / 2, H / 2, 1, W / 2, H / 2);
     sh.oda = sh.orman = sh.onPlan = null;   // gece önbelleklerini bırak (bellek)
     setTimeout(() => {
@@ -1354,10 +1378,14 @@ const SAHNE = {
       dene(() => shFinalCiz(tm, dt));
       if (sh.sonGorunum) { sh.mod = null; }
     } else if (sh.sonGorunum && DURUM === 'son') {
-      // bitiş ekranının arkasında: sakin sabah odası (yavaşça geri açılır)
-      const k = 1 - Math.exp(-dt * 0.5);
-      shKamera(sh.fx, sh.fy, lerp(sh.zoom, 1.06, k), lerp(sh.tx, sh.fx, k), lerp(sh.ty, sh.fy, k));
-      dene(() => shSabahCiz(tm, 99, null));
+      // bitiş ekranının arkasında: Feza ile Pırıl görünür kalır (yatay ekranda solda, kart sağda; dikte üstte, kart altta);
+      // Pırıl ara sıra yine göz kırpar
+      const k = 1 - Math.exp(-dt * 1.2), yatay = W > H * 1.15;
+      sh.kirpK = 1;
+      const fx = shPX(shKucak.x + 3.8), fy = shPY(shKucak.y - 2.9);
+      shKamera(lerp(sh.fx, fx, k), lerp(sh.fy, fy, k), lerp(sh.zoom, yatay ? 3.0 : 2.4, k), lerp(sh.tx, yatay ? W * 0.22 : W * 0.5, k), lerp(sh.ty, yatay ? H * 0.5 : H * 0.24, k));
+      sh.sonT = (sh.sonT || 0) + dt;
+      dene(() => shSabahCiz(tm, 99, null, (sh.sonT % 4.5) > 2.8));
     }
   },
   // test kancası

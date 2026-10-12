@@ -2,11 +2,21 @@
    değişince `python gen_voice.py` → sesler.js (window.VOICE_MP3 / VOICE_DUR). Anahtar öneki: a_ anlatıcı, p_ Pırıl.
    Sözleşme: src/SPEC.md › "Voice line keys".
    SES.soyle(anahtar, {oncelik}) → sıraya koyar (cümleler asla üst üste binmez), altyazıyı gösterir
-   (ARAYUZ.altyazi(metin, saniye, kim)) ve OLAY 'konusma' {anahtar, kim:'a'|'p', sure} yayar.
+   (ARAYUZ.altyazi(metin, saniye, kim)) ve OLAY 'konusma' {anahtar, kim:'a'|'p', sure} yayar (yalnız gerçekten çalınca).
+   Takma adlar: 'p_aferin' → p_aferin1..6 (son çalınanlar tekrarlanmaz) · 'p_yardim' → p_yardim1 / p_yardim2 sırayla.
    Ses AU'nun WebAudio bağlamından çalar (müzik konuşma boyunca kısılır); sesler.js yüklü değilse ya da ?sessiz
-   ise yalnız altyazı + olay (süre tahmini) çalışır.
-   SES.sus() → susar, sırayı boşaltır. SES.konusuyor() · SES.sure(anahtar).
-   'p_aferin' (numarasız) → p_aferin1..6 içinden son çalınanları tekrarlamadan biri; övgüler en az 20 sn arayla. */
+   ise yalnız altyazı + olay (kayıt süresiyle) çalışır.
+   SES.sus() → susar, sırayı boşaltır. SES.konusuyor() · SES.sure(anahtar) · SES.kayit (deneme günlüğü) · SES.sira().
+
+   Sıra kuralları (Feza okuyamaz: ses tek talimat kanalı; ama BAYAT talimat kafa karıştırır):
+   · Her cümlenin bir ömrü ve bir GEÇERLİLİK koşulu var; çalma anında koşul tutmuyorsa cümle atılır
+     (göl aydınlandıysa "burası karanlık" söylenmez, Feza 8+ kare ilerlediyse "zıpla" söylenmez...).
+   · Aynı konudaki yeni cümle eskisini siler (Büyük Pofuduk aşamaları: yalnız sonuncusu).
+   · Oyun cümleleri arasında nefes payı 2,5–4 sn (uzun cümleden sonra daha uzun); olay tepkileri 1 sn sonra ve
+     öne geçer; acil cümleler (kurtarma, yardım, "üstüne zıpla", "ağaca dokun") 0,35 sn sonra, gerekirse çalan
+     cümleyi yumuşakça keserek (kesilen talimat hâlâ geçerliyse bir kez yeniden sıraya girer).
+   · Övgü: olaydan sonra 1,5 sn içinde ses boşalırsa söylenir, yoksa atılır; en az 12 sn arayla, çeşitli.
+   · DURUM 'oyun' değilse ya da ağaç yandıysa oyun cümlesi başlamaz (çalan da kesilir; "ağaca dokun" bitebilir). */
 'use strict';
 const SES = (() => {
   const LINES = /*SESLER*/{
@@ -14,7 +24,7 @@ const SES = (() => {
     "a_giris2": "Pırıl, mor renkli, minicik bir ejderhaymış. Bir gece Feza uykuya dalınca, Pırıl'ın gözleri yavaşça parlamaya başlamış.",
     "a_giris3": "Ve oda, yavaş yavaş, sihirli bir ormana dönüşmüş. Işık Ormanı'na!",
     "p_uyan": "Feza, uyan! Ormanımızın ışığı sönmüş, bize yardım lazım!",
-    "p_merhaba": "Hangi tarafa gitmek istersen, parmağını ekranın o tarafına koy ve tut! Hadi, şu parlayan çiçeğe gidelim!",
+    "p_merhaba": "Hadi, şu parlayan çiçeğe gidelim! Parmağını ekranın o tarafına koy ve tut!",
     "p_zipla": "Zıplamak için, köşedeki yuvarlak düğmeye bas! Hop!",
     "p_cicek_ilk": "Yaşasın, çiçek açtı! Orman biraz aydınlandı. Hadi, öbür çiçekleri de bulalım!",
     "p_uyuyor": "Bak, yolda bir Pofuduk uyuyor! Üstüne zıpla, onu uyandır!",
@@ -32,6 +42,8 @@ const SES = (() => {
     "p_agac": "İşte Işık Ağacı! Hadi Feza, koş, ağaca dokun!",
     "p_yol": "Feza, bu tarafa gel! Beni takip et!",
     "p_kurtar": "Tuttum seni! Bir daha deneyelim, sen yaparsın!",
+    "p_yardim1": "Gel, sana yardım edeyim!",
+    "p_yardim2": "Bekle, seni ben taşıyayım!",
     "p_aferin1": "Aferin sana!",
     "p_aferin2": "Süpersin, Feza!",
     "p_aferin3": "Çok güzel gidiyorsun!",
@@ -43,13 +55,86 @@ const SES = (() => {
     "a_final3": "Ve her gece, yeni bir macera onları bekliyordu..."
   }/*SESLER-SON*/;
 
-  // ── öncelik: 3 anlatıcı/sahne · 2 olay ve yönlendirme · 1 ipucu · 0 övgü (meşgulse atılır) ──
-  const sesOncelik = k => k.startsWith('a_') || k === 'p_uyan' ? 3 : /^p_aferin/.test(k) ? 0 : k === 'p_yol' ? 1 : 2;
-  const sesKim = k => k.startsWith('a_') ? 'a' : 'p';
-  const sesBuf = {};          // anahtar → AudioBuffer (bir kez çözülür)
-  const sesCoz = {};          // anahtar → çözülme sözü
-  let sesSira = [], sesCalan = null, sesKaynak = null, sesBitisZ = null, sesSonOvgu = -1e9, sesOvguGecmis = [];
   const sesSaat = () => performance.now() / 1000;
+  const ovguMu = k => /^p_aferin/.test(k);
+  const anlatici = k => k.startsWith('a_') || k === 'p_uyan';
+  const sesKim = k => k.startsWith('a_') ? 'a' : 'p';
+  // ── cümle bilgisi: oncelik (3 sahne · 2 oyun · 1 yönlendirme · 0 övgü), acil (2 araya girer · 1 olay tepkisi), ömür (sn), konu ──
+  const KONU_SIRA = { p_buyuk: 1, p_buyuk_goz: 2, p_buyuk_esne: 3, p_buyuk_kalk: 4, p_agac: 5, p_karanlik: 1, p_nilufer: 2 };
+  function sesBilgi(k) {
+    if (anlatici(k)) return { oncelik: 3, acil: 0, omur: 1e9, konu: null };
+    if (ovguMu(k)) return { oncelik: 0, acil: 0, omur: 1.5, konu: null };
+    if (k === 'p_yol') return { oncelik: 1, acil: 0, omur: 3, konu: null };
+    if (k === 'p_kurtar' || /^p_yardim/.test(k)) return { oncelik: 2, acil: 2, omur: 3, konu: 'kurtar' };
+    if (k === 'p_buyuk_kalk' || k === 'p_agac') return { oncelik: 2, acil: 2, omur: 12, konu: 'buyuk' };
+    if (k === 'p_buyuk_goz' || k === 'p_buyuk_esne') return { oncelik: 2, acil: 1, omur: 8, konu: 'buyuk' };
+    if (k === 'p_buyuk') return { oncelik: 2, acil: 0, omur: 20, konu: 'buyuk' };
+    if (k === 'p_nilufer') return { oncelik: 2, acil: 1, omur: 12, konu: 'gol' };
+    if (k === 'p_karanlik') return { oncelik: 2, acil: 1, omur: 15, konu: 'gol' };
+    if (k === 'p_cicek_ilk' || k === 'p_uyandi' || k === 'p_tohum') return { oncelik: 2, acil: 1, omur: 5, konu: null };
+    return { oncelik: 2, acil: 0, omur: 20, konu: null };   // konuşma tetikleyicilerinin talimatları
+  }
+
+  // ── oyun durumuna bakan yardımcılar ──
+  const gP = () => (typeof P !== 'undefined' ? P : null);
+  const gN = () => (typeof NESNELER !== 'undefined' ? NESNELER : []);
+  const sesOnb = {};
+  function sesTetik(k) {          // bolum.js'teki konuşma tetikleyicisi
+    if (!(k in sesOnb)) sesOnb[k] = gN().find(n => n.tip === 'konusma' && n.anahtar === k) || null;
+    return sesOnb[k];
+  }
+  function sesSonraki(k, tip) {   // tetikleyiciden sonraki ilk <tip> nesnesi (cümlenin anlattığı şey)
+    const ad = k + '>' + tip;
+    if (!(ad in sesOnb)) { const o = sesTetik(k); sesOnb[ad] = o ? gN().filter(n => n.tip === tip && n.x >= o.x - 2).sort((a, b) => a.x - b.x)[0] || null : null; }
+    return sesOnb[ad];
+  }
+  const sesIleride = (k, kare) => { const o = sesTetik(k), p = gP(); return !!(o && p && p.x > o.x + kare * T); };
+  const sesBitmis = (k, tip) => { const o = sesSonraki(k, tip); return !!(o && (o.done || o.uyandi || o.lit)); };
+  let sesAsama = 0, sesBuyukZip = false, sesBuyukO, sesAydin = false;
+  const sesBuyuk = () => { if (sesBuyukO === undefined) sesBuyukO = gN().find(n => n.tip === 'buyukPofuduk') || null; return sesBuyukO; };
+  const sesBuyukAsama = () => { const b = sesBuyuk(); return Math.max(sesAsama, b && b.uyandi ? 3 : 0, (b && b.pf && b.pf.asama) || 0); };
+  const agacYandi = () => !!(typeof TREE !== 'undefined' && TREE && TREE.done);
+  // her talimatın "hâlâ yerinde mi?" koşulu (çalma anında bakılır)
+  const KOSUL = {
+    p_merhaba: () => !sesBitmis('p_merhaba', 'cicek') && !sesIleride('p_merhaba', 10),
+    p_zipla: () => !sesIleride('p_zipla', 8),
+    p_uyuyor: () => { const o = sesSonraki('p_uyuyor', 'pofuduk'), p = gP(); return !(o && (o.uyandi || (p && p.x > o.x + 3 * T))); },
+    p_karanlik: () => !sesAydin && !sesIleride('p_karanlik', 12),   // Pırıl üflerken de söylenebilir; ışık gelince değil
+    p_nilufer: () => { const p = gP(), gl = typeof BOLUM !== 'undefined' && BOLUM.gol; return !p || !gl || (p.x > gl.x0 - 16 * T && p.x < gl.x1 + T); },
+    p_minder: () => !sesBitmis('p_minder', 'cicek') && !sesIleride('p_minder', 14),
+    p_ciftzipla: () => !sesBitmis('p_ciftzipla', 'cicek') && !sesIleride('p_ciftzipla', 13),
+    p_sakli: () => !gN().some(n => n.tip === 'tohum' && n.done) && !sesIleride('p_sakli', 9),
+    p_buyuk: () => sesBuyukAsama() < 1,
+    p_buyuk_goz: () => sesBuyukAsama() < 2,
+    p_buyuk_esne: () => sesBuyukAsama() < 3,
+    p_buyuk_kalk: () => { const p = gP(), b = sesBuyuk(); return !sesBuyukZip && !(p && b && p.x > b.x + 2 * T && p.y < b.y - 4 * T); },
+  };
+  // sert: çalan cümle sürebilir mi? · gecerli: sıradaki cümle şimdi başlayabilir mi? ('' = evet, yoksa neden)
+  function sesSert(s) {
+    if (anlatici(s.k)) return true;
+    const d = typeof DURUM !== 'undefined' ? DURUM : 'oyun';
+    if (d === 'final' && s.bas && (s.k === 'p_agac' || ovguMu(s.k))) return true;   // ağaçtaki son cümle bitebilir
+    if (d !== 'oyun') return false;
+    if (agacYandi()) return s.k === 'p_agac' || ovguMu(s.k);
+    return true;
+  }
+  function sesGecerli(s) {
+    if (sesSaat() > s.son) return 'süre doldu';
+    if (anlatici(s.k)) return '';
+    if (!sesSert(s)) return 'oyun bitti';
+    if (agacYandi() && !ovguMu(s.k)) return 'ağaç yandı';
+    const f = KOSUL[s.k];
+    if (f) { try { if (!f()) return 'yeri geçti'; } catch (e) {} }
+    return '';
+  }
+
+  // ── çözme / çalma ──
+  const sesBuf = {}, sesCoz = {};
+  let sesSira = [], sesCalan = null, sesKaynak = null, sesBitisZ = null;
+  const sesSoylendi = {}, tekrarli = k => ovguMu(k) || k === 'p_yol' || k === 'p_kurtar' || /^p_yardim/.test(k);
+  let sesSonBitis = -1e9, sesSonSure = 0, sesSonOvgu = -1e9, sesOvguGecmis = [], sesYardimN = 0;
+  const kayit = [];
+  const sesNot = (ne, k, neden) => { kayit.push([+sesSaat().toFixed(2), ne, k, neden || '']); if (kayit.length > 400) kayit.shift(); };
 
   function sesSure(k) {
     const d = window.VOICE_DUR && VOICE_DUR[k];
@@ -72,8 +157,7 @@ const SES = (() => {
       } catch (e) { res(null); }
     });
   }
-  // Sık kullanılan cümleleri boşta önceden çöz (ilk konuşmada gecikme olmasın)
-  function sesOnceden() {
+  function sesOnceden() {     // cümleleri boşta önceden çöz (ilk konuşmada gecikme olmasın)
     if (!window.VOICE_MP3) return;
     const ks = Object.keys(LINES).filter(k => VOICE_MP3[k]);
     let i = 0;
@@ -81,51 +165,92 @@ const SES = (() => {
     adim();
   }
 
-  function soyle(k, ops) {
-    if (k === 'p_aferin') k = sesOvguSec();
-    if (!k || !LINES[k]) return;
-    const oncelik = ops && ops.oncelik != null ? ops.oncelik : sesOncelik(k);
-    const t = sesSaat();
-    if (/^p_aferin/.test(k)) {    // övgü: seyrek ve çeşitli; meşgulse hiç söyleme
-      if (t - sesSonOvgu < 20 || sesCalan || sesSira.length) return;
-      sesSonOvgu = t; sesOvguGecmis.push(k); if (sesOvguGecmis.length > 3) sesOvguGecmis.shift();
-    }
-    if ((sesCalan && sesCalan.k === k) || sesSira.some(s => s.k === k)) return;   // aynı cümle zaten sırada
-    if (oncelik <= 0 && (sesCalan || sesSira.length)) return;
-    // talimatlar (öncelik ≥ 2) asla atılmaz: Feza okuyamıyor, ne yapacağını sesten öğreniyor.
-    // Yalnız "bu tarafa gel" gibi yönlendirmeler (1) daha önemli bir cümle gelince sıradan çıkar.
-    sesSira = sesSira.filter(s => s.oncelik >= 2 || s.oncelik >= oncelik);
-    sesSira.push({ k, oncelik, t });
-    sesSira.sort((a, b) => b.oncelik - a.oncelik || a.t - b.t);
-    // anlatıcı/sahne cümlesi gelirse ve bir ipucu çalıyorsa: ipucu yumuşakça kesilsin
-    if (sesCalan && oncelik >= 3 && sesCalan.oncelik < 2) sesKes();
-    sesCozumle(k);
-    if (!sesCalan) sesSonraki();
-  }
-  function sesOvguSec() {
+  function sesOvguSec(k) {     // son çalınan üç övgüyü tekrarlama
+    if (k !== 'p_aferin' && !sesOvguGecmis.includes(k)) return k;
     const ks = Object.keys(LINES).filter(x => /^p_aferin\d/.test(x) && !sesOvguGecmis.includes(x));
     return ks.length ? ks[Math.floor(Math.random() * ks.length)] : null;
   }
-  function sesKes() {
+  // sıralama: sahne > acil > öncelik > eskisi
+  const sesSirala = (a, b) => (b.oncelik >= 3) - (a.oncelik >= 3) || b.acil - a.acil || b.oncelik - a.oncelik || a.t - b.t;
+  // önceki cümle bittikten sonra ne kadar nefes payı
+  function sesAra(s) {
+    if (s.oncelik >= 3) return 0.25;
+    if (s.acil >= 2) return 0.35;
+    if (s.oncelik <= 0) return 0.5;
+    if (s.acil >= 1 || sesSonOvgu === sesSonBitis) return 1.0;   // kısa övgüden sonra uzun bekleme gerekmez
+    return clamp(1.0 + 0.45 * sesSonSure, 2.5, 4.0);
+  }
+  function soyle(k, ops) {
+    if (k === 'p_aferin' || ovguMu(k)) k = sesOvguSec(k);
+    if (k === 'p_yardim') k = 'p_yardim' + (1 + (sesYardimN++ % 2));
+    if (!k || !LINES[k]) return;
+    const t = sesSaat(), b = sesBilgi(k);
+    let oncelik = b.oncelik, omur = b.omur;
+    if (ops && ops.oncelik != null) {
+      if (ops.oncelik >= 3) { oncelik = 3; omur = 1e9; }
+      else if (ops.oncelik <= 0 && !ovguMu(k)) { oncelik = Math.min(oncelik, 1); omur = Math.min(omur, 3); }
+    }
+    if (ovguMu(k) && t - sesSonOvgu < 12) { sesNot('at', k, 'övgü sık'); return; }
+    if ((sesCalan && sesCalan.k === k) || sesSira.some(s => s.k === k)) return;   // aynı cümle zaten sırada
+    if (sesSoylendi[k] && !tekrarli(k)) return;                                     // talimatlar/tepkiler bir kez
+    const s = { k, oncelik, acil: oncelik >= 3 ? 0 : b.acil, konu: b.konu, t, son: t + omur, kez: 0, bas: 0, sure: sesSure(k) };
+    // aynı konudaki eski cümleler geçersiz (yalnız en yeni aşama söylenir)
+    if (s.konu) {
+      const ks = KONU_SIRA[k] || 9;
+      sesSira = sesSira.filter(q => { const eski = q.konu === s.konu && (KONU_SIRA[q.k] || 0) <= ks; if (eski) sesNot('at', q.k, 'yenisi geldi: ' + k); return !eski; });
+    }
+    sesSira.push(s);
+    sesNot('sira', k);
+    sesCozumle(k);
+    // acil cümle: çalan oyun cümlesini gerekirse yumuşakça kes
+    const c = sesCalan;
+    if (c && s.acil >= 2 && c.oncelik < 3 && c.acil < 2) {
+      const kalan = c.bas ? c.bas + c.sure - t : c.sure;
+      const eskidi = (c.konu && c.konu === s.konu) || !!sesGecerli(Object.assign({}, c, { son: 1e9 }));
+      if ((eskidi && kalan > 0.8) || kalan > 1.2) {   // bitmek üzereyse bitsin
+        if (!eskidi && c.oncelik === 2 && c.acil === 0 && !c.kez) {   // kesilen talimat sonra bir kez daha söylenir
+          sesSira.push(Object.assign({}, c, { t, son: t + 12, kez: 1, bas: 0 })); sesNot('sira', c.k, 'kesildi, yeniden');
+        }
+        sesKes(eskidi ? 'eskidi: ' + k : 'araya girdi: ' + k);
+      }
+    } else if (c && oncelik >= 3 && c.oncelik < 3 && !(c.bas && c.bas + c.sure - t < 1)) sesKes('sahne');   // anlatıcı gelirse oyun cümlesi susar (bitmek üzereyse bitsin)
+    sesTik();
+  }
+  function sesKes(neden) {
+    if (sesCalan) sesNot('kes', sesCalan.k, neden);
     if (sesKaynak) { try { sesKaynak.g.gain.setTargetAtTime(0, sesKaynak.ac.currentTime, 0.05); sesKaynak.s.stop(sesKaynak.ac.currentTime + 0.3); } catch (e) {} }
     sesBitti();
   }
   function sesBitti() {
     if (sesBitisZ) { clearTimeout(sesBitisZ); sesBitisZ = null; }
+    if (sesCalan) { sesSonBitis = sesSaat(); if (ovguMu(sesCalan.k)) sesSonOvgu = sesSonBitis; sesSonSure = sesCalan.bas ? clamp(sesSonBitis - sesCalan.bas, 0, sesCalan.sure) : 0; }
     sesCalan = null; sesKaynak = null;
     if (typeof AU !== 'undefined' && AU.kis) AU.kis(false);
-    if (sesSira.length) setTimeout(() => { if (!sesCalan) sesSonraki(); }, 250); // cümleler arası nefes
+    sesTik();
   }
-  function sesSonraki() {
-    const t = sesSaat();
-    // çok bekleyen yönlendirmeleri at (talimatlar ve anlatıcı hep söylenir)
-    sesSira = sesSira.filter(s => s.oncelik >= 2 || t - s.t < 8);
-    const s = sesSira.shift(); if (!s) return;
+  // her 0,1 sn: çalanı denetle; sıradakini, nefes payı dolunca başlat
+  function sesTik() {
+    if (sesCalan) { if (!sesSert(sesCalan)) sesKes('oyun bitti'); return; }
+    if (!sesSira.length) return;
+    sesSira = sesSira.filter(s => { const n = sesGecerli(s); if (n) sesNot('at', s.k, n); return !n; });
+    if (!sesSira.length) return;
+    sesSira.sort(sesSirala);
+    const s = sesSira[0];
+    if (sesSaat() < sesSonBitis + sesAra(s)) return;
+    sesSira.shift();
+    sesBaslat(s);
+  }
+  function sesBaslat(s) {
     sesCalan = s;
     sesCozumle(s.k).then(buf => {
       if (sesCalan !== s) return;
+      if (!sesSert(s)) { sesNot('at', s.k, 'oyun bitti'); sesCalan = null; sesTik(); return; }
       const sure = buf ? buf.duration : sesSure(s.k);
       const kim = sesKim(s.k);
+      s.sure = sure; s.bas = sesSaat() + 0.12;
+      sesSoylendi[s.k] = 1;
+      if (ovguMu(s.k)) { sesSonOvgu = sesSaat(); sesOvguGecmis.push(s.k); if (sesOvguGecmis.length > 3) sesOvguGecmis.shift(); }
+      sesNot('cal', s.k, (s.bas - s.t).toFixed(1) + ' sn bekledi');
       if (typeof ARAYUZ !== 'undefined' && ARAYUZ.altyazi) ARAYUZ.altyazi(LINES[s.k], sure + 0.6, kim);
       OLAY.emit('konusma', { anahtar: s.k, kim, sure });
       let ac = null;
@@ -136,23 +261,31 @@ const SES = (() => {
           src.buffer = buf; gg.gain.value = kim === 'a' ? 1.0 : 0.95;
           src.connect(gg); gg.connect(AU.sesCikis());
           AU.kis(true, kim);
-          const t0 = ac.currentTime + 0.12;   // müzik önce kısılsın
-          src.start(t0);
+          src.start(ac.currentTime + 0.12);   // müzik önce kısılsın
           sesKaynak = { s: src, g: gg, ac };
           src.onended = () => { if (sesCalan === s) sesBitti(); };
         } catch (e) { ac = null; }
       }
       // yedek zamanlayıcı (onended gelmezse / sessiz modda)
-      sesBitisZ = setTimeout(() => { if (sesCalan === s) sesBitti(); }, (sure + (ac ? 0.6 : 0.35)) * 1000);
+      sesBitisZ = setTimeout(() => { if (sesCalan === s) sesBitti(); }, (sure + (ac ? 0.6 : 0.12)) * 1000);
     });
   }
+  setInterval(sesTik, 100);
+
+  // oyun olaylarından durum
+  OLAY.on('aydinlat', () => { sesAydin = true; });
+  OLAY.on('buyukAsama', v => { if (v && v.asama) sesAsama = Math.max(sesAsama, v.asama); });
+  OLAY.on('uyandi', o => { if (o && o.tip === 'buyukPofuduk') sesAsama = 3; });
+  // Büyük Pofuduk Feza'yı tepeye fırlatınca "İşte Işık Ağacı! Koş, dokun!" hemen (tepedeki tetikleyici ağaca çok yakın)
+  OLAY.on('ziplatti', o => { if (o && o.tip === 'buyukPofuduk' && o.uyandi) { sesBuyukZip = true; if (!agacYandi()) soyle('p_agac'); } });
   let sesHazir = false;
   OLAY.on('durum', d => {
-    if (d === 'final') sesSira = sesSira.filter(s => s.oncelik >= 3);   // oyun bitti: kalan ipuçları gereksiz
+    if (d === 'final' || d === 'son') sesSira = sesSira.filter(s => s.oncelik >= 3);   // oyun bitti: kalan ipuçları gereksiz
     if (!sesHazir && !SESSIZ) { sesHazir = true; setTimeout(sesOnceden, 400); }        // ses bağlamı artık var
+    sesTik();
   });
   function sus() {   // sahne atlanınca vb.: susar ve sırayı boşaltır
-    sesSira = []; if (sesCalan) sesKes();
+    sesSira = []; if (sesCalan) sesKes('sus');
   }
-  return { LINES, soyle, sus, konusuyor: () => !!sesCalan, sure: k => LINES[k] ? sesSure(k) : 0 };
+  return { LINES, soyle, sus, konusuyor: () => !!sesCalan, sure: k => LINES[k] ? sesSure(k) : 0, kayit, sira: () => sesSira.map(s => s.k) };
 })();

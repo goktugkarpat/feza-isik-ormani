@@ -370,10 +370,12 @@ function stepPlayer(dt) {
     return;
   }
   if (P.kilit > 0) { P.kilit -= dt; axis = 0; jumpPressed = false; }   // sahne anlarında kontrol kısa süre kapalı
+  const agacBitti = typeof TREE !== 'undefined' && TREE && TREE.done;
+  if (agacBitti) { axis = 0; jumpPressed = false; P.buf = 0; }   // ağaç yandı: finale kadar kontrol yok
   // yatay: yumuşak hızlanma, yumuşak ama kısa duruş, hızlı dönüş
   const target = axis * OM.KOS;
   let acc;
-  if (P.ground) acc = target === 0 ? OM.FREN : (P.vx * target < 0 ? OM.DONUS : (Math.abs(target) > Math.abs(P.vx) ? OM.IVME : OM.FREN));
+  if (P.ground) acc = target === 0 ? (agacBitti ? 900 : OM.FREN) : (P.vx * target < 0 ? OM.DONUS : (Math.abs(target) > Math.abs(P.vx) ? OM.IVME : OM.FREN));
   else acc = target === 0 ? OM.HAVA_FREN : (P.vx * target < 0 ? OM.DONUS * 0.6 : OM.HAVA_IVME);
   if (P.ground && target !== 0 && Math.abs(P.vx) < OM.KOS * 0.4 && P.vx * target >= 0) acc *= 1.4;   // ilk adım daha çevik
   if (P.vx < target) P.vx = Math.min(target, P.vx + acc * dt); else if (P.vx > target) P.vx = Math.max(target, P.vx - acc * dt);
@@ -473,7 +475,10 @@ TUR.kaydet('tohum', { dokun(o) { o.done = true; SAYAC.tohum++; burst(o.x, o.y - 
 TUR.kaydet('agac', { dokun(o) {
   if (TREE.done) return;
   if (NESNELER.some(n => n.tip === 'buyukPofuduk' && !n.uyandi)) { o.dokundu = false; return; }
-  TREE.done = true; lightTarget = 1; ripples.push({ x: o.x, y: o.y - 160, r: 0, life: 3 }); omCagir('dragonHappy', typeof dragonHappy === 'function' ? dragonHappy : null, o); omSfx('bloom', 1); OLAY.emit('agac', o);
+  TREE.done = true; lightTarget = 1; ripples.push({ x: o.x, y: o.y - 160, r: 0, life: 3 }); omCagir('dragonHappy', typeof dragonHappy === 'function' ? dragonHappy : null, o); omSfx('bloom', 1);
+  // kontroller kapanır (parmak basılı kalsa da Feza tepeden yürüyüp gitmesin), basılı dokunuşlar bırakılır, Feza yumuşakça durur
+  P.kilit = Math.max(P.kilit || 0, 4); omHepsiniBirak(); jumpPressed = false; P.buf = 0;
+  OLAY.emit('agac', o);
   omZamanla(2.6, finaleGec);   // oyun saatiyle: sekme gizliyken beklesin
 } });
 function bloom(fl) {
@@ -497,6 +502,7 @@ function omHedefMi(o) {
   return false;
 }
 function HEDEF() {
+  if (typeof TREE !== 'undefined' && TREE && TREE.done) return null;   // ağaç yandı: atlanmış çiçeğe geri çağırma yok
   let best = null, geri = null;
   const sinir = P.x - 10 * T;
   for (const o of NESNELER) if (omHedefMi(o)) {
@@ -561,7 +567,8 @@ function omKameraIpucu(px) {
     const w = clamp(1 - (Math.abs(TREE.x - px) - 14 * T) / (6 * T), 0, 1);
     if (w > 0) {
       const gerek = (omC.tabanY - (TREE.y - OM_AGAC_TAC)) / 0.86;   // görünmesi gereken dünya yüksekliği
-      const zf = clamp(VH / Math.max(gerek, 1) / OM_TABAN_ZOOM, 0.72, 2);
+      const bu = omBuyuk && omBuyuk.tip === 'buyukPofuduk' && omBuyuk.uyandi;   // uyandıysa hedef artık ağaç: yuvadan da taç görünsün
+      const zf = clamp(VH / Math.max(gerek, 1) / OM_TABAN_ZOOM, bu ? 0.6 : 0.72, 2);
       z = Math.min(z, lerp(z, zf, w)); omZ.agacW = w;
     }
   }
@@ -570,15 +577,120 @@ function omKameraIpucu(px) {
 const OM_AGAC_TAC = 300;
 // Ölçek tek yerde: S ve VW kamera yakınlığından hesaplanır (resize de bunu çağırır)
 function omOlcek() { S = H / VH * cam.zoom; VW = W / S; }
+
+// ── Dikkat çerçevesi: önemli bir an olunca (Büyük Pofuduk'un aşamaları, ilk görünüşü, ağacın tacı, ışık nefesi, ilk Pofuduk)
+// kamera birkaç saniye o şeyi Feza ile BİRLİKTE tam gösterecek biçimde yumuşakça uzaklaşır ve ona doğru bakar, sonra yavaşça
+// normale döner. Kutu her karede yeniden hesaplanır (hareket eden şeyler). Finalde (ağaç yandı) kalıcıdır: yanan ağaç + Feza +
+// kutlayan grup. Yakınlık yalnız uzaklaşabilir (en çok zMin'e kadar); finalde kutuya göre ayarlanır (en çok temel yakınlık).
+const omDk = { fn: null, ad: '', bitis: 0, guc: 1, zMin: 0.66, w: 0, wv: 0, final: false, gorulen: {},
+  x0: 0, x1: 0, y0: 0, y1: 0, fezaYok: false, cx: 0, cy: 0, zf: 1 };
+function omDikkat(ad, sure, fn, guc, zMin) {
+  if (omDk.final && ad !== 'final') return;
+  if (omDk.fn && omDk.ad !== ad && now < omDk.bitis && (omDk.guc || 1) > (guc || 1)) return;   // daha güçlü bir an sürüyor
+  omDk.fn = fn; omDk.ad = ad; omDk.bitis = now + sure; omDk.guc = guc || 1; omDk.zMin = zMin || 0.66;
+}
+function omDkEkle(x0, y0, x1, y1) {
+  omDk.x0 = Math.min(omDk.x0, x0); omDk.x1 = Math.max(omDk.x1, x1); omDk.y0 = Math.min(omDk.y0, y0); omDk.y1 = Math.max(omDk.y1, y1);
+}
+function omBuyukBul() { return NESNELER.find(n => n.tip === 'buyukPofuduk') || null; }
+function omBuyukKutu(b) {   // Büyük Pofuduk'un gövdesi (≈200×200, uyurken de ayakta da) + üstündeki "z"ler için biraz pay
+  if (!b) return;
+  const p = b.pf, hy = p && isFinite(p.hy) ? p.hy : 0;
+  omDkEkle(b.x - 120, b.y + hy - 230, b.x + 120, b.y + 12);
+}
+function omAgacKutu(tacPay) {   // ağacın gövdesi + tacının alt/orta kısmı (taç ≈540 birim yüksek, ≈800 geniş)
+  if (typeof TREE === 'undefined' || !TREE) return;
+  omDkEkle(TREE.x - 190, TREE.y - tacPay, TREE.x + 190, TREE.y + 20);
+}
+// Finalde: yanan ağaç + Feza + yakındaki kutlayanlar (küçük Pofuduklar, Pırıl, yanına konan Büyük Pofuduk)
+function omFinalKutu() {
+  if (typeof TREE === 'undefined' || !TREE) return;
+  const fx = P.rx !== undefined ? P.rx : P.x, fy = P.ry !== undefined ? P.ry : P.y;
+  const yakin = Math.abs(fx - TREE.x) < 520 && Math.abs(fy - TREE.y) < 160;
+  omDk.fezaYok = !yakin;   // Feza ağaçtan uzaksa (olmamalı) ağaç önceliklidir
+  if (!yakin) { omDk.x0 = omDk.x1 = TREE.x; omDk.y0 = omDk.y1 = TREE.y; }
+  omAgacKutu(470);
+  if (!yakin) return;
+  for (const o of NESNELER) {
+    if (o.tip === 'pofuduk' && Math.abs(o.x - fx) < 380 && Math.abs(o.y - fy) < 140) omDkEkle(o.x - 36, o.y - 70, o.x + 36, o.y + 6);
+    else if (o.tip === 'buyukPofuduk' && Math.abs(o.x - fx) < 420 && Math.abs(o.y - fy) < 60) omBuyukKutu(o);
+  }
+  if (typeof D !== 'undefined' && Math.abs(D.x - fx) < 360 && Math.abs(D.y - fy) < 300) omDkEkle(D.x - 34, D.y - 34, D.x + 34, D.y + 30);
+}
+// Kamera ipucuna dikkat çerçevesini uygula: hedef yakınlık (omZ.hz) ve dikey ofset; merkez stepCam'de
+function omDikkatHesap(dt, snap, px, py) {
+  const aktif = !!omDk.fn && (omDk.final || now < omDk.bitis);
+  const hw = aktif ? clamp(omDk.guc, 0, 1) : 0;
+  if (snap || !(dt > 0)) { omDk.w = hw; omDk.wv = 0; }
+  else { omDk.w = omSD(omDk.w, hw, omDk.wv, aktif ? 0.5 : 0.85, dt); omDk.wv = omSdV; if (!aktif && omDk.w < 0.002) { omDk.w = 0; omDk.wv = 0; } }
+  omDk.w = clamp(omDk.w, 0, 1);
+  if (omDk.w <= 0 || !omDk.fn) { if (!aktif) omDk.fn = null; return; }
+  // kutu: Feza (başı dahil) + andaki şeyler
+  omDk.fezaYok = false;
+  omDk.x0 = px - 50; omDk.x1 = px + 50; omDk.y0 = py - 100; omDk.y1 = py + 10;
+  try { omDk.fn(); } catch (e) { omHataBildir('dikkat', e); omDk.fn = null; return; }
+  const asp = W / Math.max(H, 1);
+  const gen = omDk.x1 - omDk.x0 + 2 * 70, yuk = omDk.y1 - omDk.y0 + 50 + 45;   // kenar payları (altta biraz toprak)
+  let zf = Math.min(VH / yuk, VH * asp / gen);
+  if (omDk.final) zf = clamp(zf, 0.7, OM_TABAN_ZOOM);
+  else zf = clamp(Math.min(zf, omZ.hz), omDk.zMin, omZ.hz);   // yalnız uzaklaş
+  omDk.zf = zf;
+  omDk.cx = (omDk.x0 + omDk.x1) / 2; omDk.cy = (omDk.y0 - 50 + omDk.y1 + 45) / 2;
+  const w = smooth(omDk.w);
+  omZ.hz = lerp(omZ.hz, zf, w); omZ.hy = lerp(omZ.hy, 0, w);
+}
+// olaylar → dikkat anları
+OLAY.on('buyukAsama', e => {
+  const b = e && e.o; if (!b) return;
+  const sure = e.asama === 1 ? 3.2 : e.asama === 2 ? 3.6 : 2.6;
+  omDk.gorulen.buyuk = true;
+  omDikkat('buyuk' + e.asama, sure, () => omBuyukKutu(b), 1, 0.66);
+  if (e.asama >= 3) omZamanla(2.4, () => {   // ayağa kalktı: şimdi de ağacın parlayan tacını göster
+    if (DURUM !== 'oyun' || (typeof TREE !== 'undefined' && TREE && TREE.done)) return;
+    omDikkat('agacGoster', 3.8, () => { omBuyukKutu(b); omAgacKutu(400); }, 1, 0.62);
+  });
+});
+OLAY.on('konusma', e => {   // "Vay, ne kocaman bir Pofuduk!" söylenirken o da ekranda olsun
+  if (!e || e.anahtar !== 'p_buyuk' || DURUM !== 'oyun') return;
+  const b = omBuyukBul(); if (!b || b.pf && b.pf.asama > 0) return;
+  omDk.gorulen.buyuk = true;
+  omDikkat('buyuk0', Math.max(3, Math.min(5, (e.sure || 3) + 0.8)), () => omBuyukKutu(b), 1, 0.62);
+});
+OLAY.on('dokun:konusma', o => {   // tetik noktası (ses kapalıyken de): Büyük Pofuduk'u ilk kez göster
+  if (o && o.anahtar === 'p_buyuk') omIlkGorus(-1);
+});
+OLAY.on('nefes', e => {   // Pırıl'ın ışık nefesi: Pırıl + ilk nilüferler (ve adacık) Feza ile birlikte, hafifçe
+  if (!e || e.asama !== 'al' || DURUM !== 'oyun' || omDk.gorulen.nefes) return;
+  omDk.gorulen.nefes = true;
+  omDikkat('nefes', 5.2, () => {
+    const fx = P.rx !== undefined ? P.rx : P.x;
+    if (typeof D !== 'undefined') omDkEkle(D.x - 40, D.y - 40, D.x + 40, D.y + 30);
+    for (const o of NESNELER) if (o.tip === 'nilufer' && o.x > fx - 100 && o.x < fx + 560) omDkEkle(o.x - 40, o.y - 30, o.x + 40, o.y + 20);
+  }, 0.75, 0.8);
+});
+OLAY.on('uyandi', o => {   // ilk Pofuduk uyanınca: kısa ve hafif
+  if (!o || o.tip !== 'pofuduk' || omDk.gorulen.ilkPof || DURUM !== 'oyun') return;
+  omDk.gorulen.ilkPof = true;
+  omDikkat('ilkPof', 2.2, () => omDkEkle(o.x - 50, o.y - 90, o.x + 50, o.y + 8), 0.6, 0.9);
+});
+OLAY.on('agac', () => { omDk.final = false; omDikkat('final', 1e9, omFinalKutu, 1, 0.7); omDk.final = true; });
+// Büyük Pofuduk ilk kez görüş alanına girerken (henüz uyurken) bir kez
+function omIlkGorus(px) {
+  if (omDk.gorulen.buyuk || DURUM !== 'oyun') return;
+  const b = omBuyukBul(); if (!b) return;
+  if (px < 0 || (px > b.x - 23 * T && px < b.x)) { omDk.gorulen.buyuk = true; omDikkat('buyukGorus', 3.4, () => omBuyukKutu(b), 1, 0.62); }
+}
 function stepCam(dt, snap) {
   const px = P.rx !== undefined ? P.rx : P.x;
   let py = P.ry !== undefined ? P.ry : P.y;
   // suya düştü / Pırıl onu yakalamak üzere: kamera aşağı dalmasın, son görünen yerde beklesin
   if (P.fade > 0 && py > ROWS * T - 20 && !snap && omC.sonPy !== undefined) py = omC.sonPy; else omC.sonPy = py;
   omKameraIpucu(px);
+  omIlkGorus(px);
+  omDikkatHesap(dt, snap, px, py);
   if (snap || !(dt > 0)) { omZ.z = omZ.hz; omZ.v = 0; omZ.yo = omZ.hy; omZ.yv = 0; }
   else {
-    omZ.z = omSD(omZ.z, omZ.hz, omZ.v, 0.9, dt); omZ.v = omSdV;
+    omZ.z = omSD(omZ.z, omZ.hz, omZ.v, omDk.w > 0.02 ? 0.6 : 0.9, dt); omZ.v = omSdV;   // dikkat anında biraz daha çabuk
     if (Math.abs(omZ.z - omZ.hz) < 0.0005 && Math.abs(omZ.v) < 0.001) { omZ.z = omZ.hz; omZ.v = 0; }   // dururken ölçek sabit kalsın (önbellekler)
     omZ.yo = omSD(omZ.yo, omZ.hy, omZ.yv, 0.9, dt); omZ.yv = omSdV;
   }
@@ -608,7 +720,7 @@ function stepCam(dt, snap) {
   if (snap) omC.odak = odak;
   else if (odak > omC.odak + 14) omC.odak = odak - 14; else if (odak < omC.odak - 14) omC.odak = odak + 14;
   const maxX = Math.max(0, COLS * T - VW);
-  const tx = clamp(omC.odak - VW / 2, 0, maxX);
+  let tx = clamp(omC.odak - VW / 2, 0, maxX);
   // dikey: son basılan zemine göre (zıplarken kamera sabit kalır), bantların dışına çıkınca takip
   if ((P.ground && P.fade <= 0) || snap) omC.tabanY = py;
   else if (py > omC.tabanY) omC.tabanY = py;   // aşağı düşüyor
@@ -618,16 +730,25 @@ function stepCam(dt, snap) {
   if (py - ty < ust) { ty = py - ust; st = 0.2; }
   if (py - ty > alt) { ty = py - alt; st = 0.14; }
   if (omZ.agacW > 0 && TREE) ty = Math.min(ty, lerp(ty, Math.max(TREE.y - OM_AGAC_TAC - 40, omC.tabanY - VHg * 0.86), omZ.agacW));   // ağacın tacı görünsün
+  // dikkat çerçevesi: kutunun ortasına bak; kutu sığmadıysa özne öncelikli, ama Feza ekranda kalır
+  const dw = omDk.w > 0 ? smooth(omDk.w) : 0;
+  if (dw > 0) {
+    let dx = omDk.cx - VW / 2, dy = omDk.cy - VHg / 2;
+    if (!omDk.fezaYok) { dx = clamp(dx, px - VW * 0.93, px - VW * 0.07); dy = clamp(dy, py - VHg * 0.9, py - 100 - VHg * 0.04); }
+    tx = lerp(tx, clamp(dx, 0, maxX), dw); ty = lerp(ty, dy, dw); st = Math.max(st, lerp(st, 0.45, dw));
+  }
   ty = clamp(ty, -40, yMax);
   if (snap) { omC.x = tx; omC.y = ty; omC.vx = omC.vy = 0; }
   else if (dt > 0) {
     omC.x = omSD(omC.x, tx, omC.vx, 0.3, dt); omC.vx = omSdV;
     omC.y = omSD(omC.y, ty, omC.vy, st, dt); omC.vy = omSdV;
     // Feza asla ekran kenarına çok yaklaşmasın (hızlı sekmelerde)
-    const kx0 = px - VW * 0.82, kx1 = px - VW * 0.18;
-    if (omC.x < kx0) omC.x = kx0; else if (omC.x > kx1) omC.x = kx1;
-    const ky0 = py - VHg * 0.94, ky1 = py - VHg * 0.22;
-    if (omC.y < ky0) omC.y = ky0; else if (omC.y > ky1) omC.y = ky1;
+    if (!(dw > 0 && omDk.fezaYok)) {   // (finalde Feza ağaçtan uzaksa ağaç öncelikli)
+      const kp = lerp(0.18, 0.06, dw), kx0 = px - VW * (1 - kp), kx1 = px - VW * kp;
+      if (omC.x < kx0) omC.x = kx0; else if (omC.x > kx1) omC.x = kx1;
+      const ky0 = py - VHg * 0.94, ky1 = py - VHg * 0.22;
+      if (omC.y < ky0) omC.y = ky0; else if (omC.y > ky1) omC.y = ky1;
+    }
   }
   omC.x = clamp(omC.x, 0, maxX); omC.y = clamp(omC.y, -40, yMax);
   // sarsıntı: yalnız Büyük Pofuduk sekmesinde, minik ve yumuşak
