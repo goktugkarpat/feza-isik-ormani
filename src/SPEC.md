@@ -78,3 +78,19 @@ Pırıl, who winks. Narrator: "Ve her gece, yeni bir macera onları bekliyordu..
 ## Quality bar
 Ori-like (≈75%) with a little Gris; silky 60 fps on iPad (2048×1536 canvas): no per-frame `ctx.filter`/`shadowBlur`, cache
 offscreen canvases, keep allocations low. Smooth animation everywhere; no pops. Readable characters. Kid-friendly.
+
+## Voice line keys (texts live in ses.js `LINES`; audio agent writes/records them, others only call `SES.soyle(key)`)
+Narrator (sahne.js calls): `a_giris1` `a_giris2` `a_giris3` `a_final1` `a_final2` `a_final3`.
+Pırıl, from `konusma` triggers placed by bolum.js: `p_merhaba` `p_zipla` `p_uyuyor` `p_karanlik` `p_minder` `p_ciftzipla`
+`p_sakli` `p_buyuk` `p_agac`. Pırıl, event-driven by piril.js: `p_uyan` (sahne.js, end of intro), `p_cicek_ilk` (first flower),
+`p_uyandi` (first Pofuduk woken), `p_nilufer` (after 'aydinlat'), `p_tohum` (first seed), `p_buyuk_goz` `p_buyuk_esne`
+`p_buyuk_kalk` (Big Pofuduk stages, on `OLAY 'buyukAsama' {o, asama:1|2|3}` emitted by pofuduk.js), `p_yol` (guidance),
+`p_kurtar` (rescue), occasional varied praise `p_aferin1..p_aferin6` (never every time).
+`SES.soyle(key, {oncelik})` queues lines (no overlap; low-priority lines may be dropped), shows the subtitle via
+`ARAYUZ.altyazi(text, seconds, kim)` and emits `OLAY 'konusma' {anahtar, kim:'a'|'p', sure}` so Pırıl can move her mouth.
+
+## Cutscene drawing helpers
+feza.js exposes `fezaCizPoz(ctx, x, y, olcek, poz, tm)` and piril.js `pirilCizPoz(ctx, x, y, olcek, poz, tm)` — draw the character
+at screen/any transform (feet/centre at x,y) in a named pose, for sahne.js. Feza poses: `uyku` (lying asleep on his side, hugging),
+`uyanis` (sitting up, rubbing eyes, smiling), `sevinc`, `ayakta`. Pırıl poses: `pelus` (limp sleeping plush in his arms),
+`uyaniyor` (eyes opening, glow starting), `ucus`, `goz_kirp` (wink). sahne.js must guard with `typeof fezaCizPoz === 'function'`.
