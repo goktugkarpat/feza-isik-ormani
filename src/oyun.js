@@ -545,7 +545,7 @@ let omBuyuk = null;
 // Temel yakınlık: düz zeminde görünen dünya yüksekliği = VH / OM_TABAN_ZOOM. Bölge yakınlıkları (göl, açıklık...) bunun ÜSTÜNE
 // çarpan olarak uygulanır. feza.js Feza'yı 1,4 kat büyüttüğü için (FZ_SC) 1'de Feza zaten ekranın ≈%14'ü (≈78 birim / 560);
 // daha yakın (ör. VH/480) olunca ≈%16 olur ve ileriyi görme azalır. Tek ayar yeri burası.
-const OM_TABAN_ZOOM = 1;
+const OM_TABAN_ZOOM = 1.12;   // iPad'de Feza ekranın ~%16'sı (5 yaşındaki için okunaklı)
 const omZ = { z: OM_TABAN_ZOOM, v: 0, yo: 0, yv: 0 };
 function omKameraIpucu(px) {
   let z = 1, yo = 0, wb = 0;

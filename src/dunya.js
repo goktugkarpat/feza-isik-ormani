@@ -11,24 +11,24 @@
 
 // ── renkler: 3 durak (gece mavisi → turkuaz → altın-turkuaz şafak) ──
 const DNP = {   // 3. durak = sıcak, büyülü şafak: gökte gül-şeftali-altın, uzakta leylak-gül sis, orta tonlarda bal ve yosun yeşili
-  skyTop: ['#030716', '#061a30', '#2a2c58'],
-  skyMid: ['#0a2048', '#0f4560', '#9a6a8c'],
+  skyTop: ['#030716', '#061a30', '#1e3458'],
+  skyMid: ['#0a2048', '#0f4560', '#8a6a8c'],
   skyLow: ['#1a4c80', '#2b8c9c', '#ffc890'],
-  haze:   ['#1d4c84', '#1f6e88', '#b08a88'],
+  haze:   ['#1d4c84', '#1f6e88', '#9a9a8c'],
   hazeHi: ['#4d8fd0', '#6fdad8', '#ffe0a8'],
   wash:   ['#2a5aa0', '#3aa0b0', '#ffa8a0'],
-  gris:   ['#1f4c84', '#21718a', '#a07e98'],
-  far:    ['#143462', '#124a60', '#5a5a78'],
-  mid:    ['#0a1d42', '#0a2f44', '#2e3a52'],
-  near:   ['#030916', '#04101c', '#10142a'],
-  canopy: ['#02050d', '#030a12', '#0c0c1c'],
-  earth:  ['#06101e', '#071622', '#161828'],
+  gris:   ['#1f4c84', '#21718a', '#a08aa0'],
+  far:    ['#143462', '#124a60', '#3e6470'],
+  mid:    ['#0a1d42', '#0a2f44', '#22404a'],
+  near:   ['#030916', '#04101c', '#0c1820'],
+  canopy: ['#02050d', '#030a12', '#060e12'],
+  earth:  ['#06101e', '#071622', '#121c22'],
   rim:    ['#6adfff', '#7ff0e4', '#ffd6a0'],
-  bio:    ['#3ad6ff', '#45f0d6', '#ffd0a0'],
+  bio:    ['#3ad6ff', '#45f0d6', '#b8f0c0'],
   warm:   ['#8ac4ff', '#b4f2dc', '#ffc890'],
-  grass:  ['#071526', '#08202c', '#1a2028'],
-  water:  ['#0a2350', '#0e4866', '#4a5a88'],
-  moss:   ['#0b2834', '#0d3a3c', '#3a4a30'],
+  grass:  ['#071526', '#08202c', '#122428'],
+  water:  ['#0a2350', '#0e4866', '#3e6a88'],
+  moss:   ['#0b2834', '#0d3a3c', '#2e5034'],
 };
 const dnHex = (a, b, t) => { const A = hex(a), B = hex(b); let s = '#'; for (let i = 0; i < 3; i++) s += Math.round(lerp(A[i], B[i], t)).toString(16).padStart(2, '0'); return s; };
 function dcol(k, t) { const a = DNP[k]; t = clamp(t, 0, 1); return t < 0.5 ? dnHex(a[0], a[1], t * 2) : dnHex(a[1], a[2], t * 2 - 1); }
@@ -488,8 +488,10 @@ const DN_FAR = dnMakeTrees(51, -300, DN_LW * 0.22 + 2600, 80, 175, 0.22, (R, x, 
 const DN_SPORE_FAR = [];
 // açıklığın ardında Gris'vari yumuşak tepeler: üst üste iki sırt, üstlerinde ışıyan çiçek noktaları ve tek tük yuvarlak ağaçlar
 function dnPaintMeadowHills(x, x0, x1, t) {
-  const wA = lx => { const w = dnRegW(dnLW(lx, 0.22), null); return smooth(clamp(w.aciklik * 1.4 + w.gol * 0.25, 0, 1)); };
-  let any = false; for (let lx = x0; lx <= x1; lx += 64) if (wA(lx) > 0.02) { any = true; break; }
+  // katman uzayında bölge geçişi çok dik (≈60 birim) → geniş pencerede ortalanır, tepeler yavaşça yükselir (dik duvar olmasın)
+  const raw = lx => { const w = dnRegW(dnLW(lx, 0.22), null); return clamp(w.aciklik * 1.4 + w.gol * 0.25, 0, 1); };
+  const wA = lx => { let s = 0; for (let o = -240; o <= 240; o += 60) s += raw(lx + o); return smooth(s / 9); };
+  let any = false; for (let lx = x0 - 240; lx <= x1 + 240; lx += 60) if (raw(lx) > 0.02) { any = true; break; }
   if (!any) return;
   for (let k = 0; k < 2; k++) {
     const ridge = lx => (k ? 452 : 420) + (1 - wA(lx)) * 320 - wA(lx) * (k ? 60 : 95) - (Math.sin(lx * (k ? 0.009 : 0.006) + k * 2) * 22 + Math.sin(lx * 0.021 + k) * 8) * wA(lx);
@@ -656,9 +658,10 @@ function drawBackground(tm) {
   }
   // ışık kaynağı: yumuşak hale; açık gökyüzünde ay diski
   g.globalCompositeOperation = 'lighter';
-  dglow(dq('hazeHi'), sx, sy, H * 0.95, 0.22 + light * 0.14 + dnOpen * 0.06);
-  dglow(dq('warm'), sx, sy, H * 0.32, 0.28 + light * 0.12);
-  dglow('#ffffff', sx, sy, H * 0.07, 0.3 + light * 0.15);
+  const sk = 1 - light * 0.45;   // şafakta gök zaten açık: toplamalı ışık beyaza patlamasın
+  dglow(dq('hazeHi'), sx, sy, H * 0.95, (0.22 + light * 0.14 + dnOpen * 0.06) * sk);
+  dglow(dq('warm'), sx, sy, H * 0.32, (0.28 + light * 0.12) * sk);
+  dglow('#ffffff', sx, sy, H * 0.07, (0.3 + light * 0.15) * sk);
   const ma = clamp(DNR.gol * 1.1 + DNR.aciklik * (1 - light) * 0.8, 0, 1) * (1 - light * 0.5);
   if (ma > 0.02) {
     g.globalCompositeOperation = 'source-over'; const mr = 30 * S;
@@ -673,8 +676,8 @@ function drawBackground(tm) {
   dnFog(490, 260, 0.5, 'haze', 0.22);
   dnLake(tm, sx);
   g.globalCompositeOperation = 'lighter';
-  dglow(dq('hazeHi'), sx, sy + H * 0.06, H * 0.8, 0.2 - light * 0.04);   // ışık kaynağının sisteki saçılması
-  dglow(dq('warm'), sx, sy, H * 0.3, 0.16 - light * 0.04);
+  dglow(dq('hazeHi'), sx, sy + H * 0.06, H * 0.8, 0.2 - light * 0.1);   // ışık kaynağının sisteki saçılması
+  dglow(dq('warm'), sx, sy, H * 0.3, 0.16 - light * 0.08);
   const oyP = 110 * 0.35 + dnDY() * 0.35 * DN_FYK;   // orta derinlikte ışık cepleri
   for (let i = 0, n = Math.ceil(DN_LW * 0.35 / 520) + 3; i < n; i++) {
     const lx = i * 520 + 180 - cam.x * 0.35; if (lx < -400 || lx > VW + 400) continue;
@@ -707,7 +710,7 @@ function drawBackground(tm) {
   if (dnBlaze > 0) {   // final: orman alevlenir (sıcak altın ışık her yerden)
     g.globalCompositeOperation = 'lighter';
     const tx = (TREE.x - cam.x) * S, ty = (TREE.y - 330 - cam.y) * S;
-    dglow('#ffd890', tx, ty, H * 1.6, 0.28 * dnBlaze); dglow('#fff2cc', tx, ty, H * 0.6, 0.22 * dnBlaze);
+    dglow('#ffb070', tx, ty, H * 1.6, 0.2 * dnBlaze); dglow('#ffe6b0', tx, ty, H * 0.6, 0.16 * dnBlaze);
     g.globalCompositeOperation = 'source-over';
   }
   // okunurluk: karakterlerin arkasında çok hafif, yumuşak bir gölge
@@ -895,8 +898,8 @@ const DN_TRUNKS = [];
   } }
 // ── zemin kesiti (Ori): katmanlı toprak, kök ağı, gömülü taşlar, ışıyan oyuklar; önbellekli 2B karolar ──
 const DN_SOIL = [   // derinlikle koyulaşan çivit-turkuaz katmanlar (gece → turkuaz → sıcak şafakta kahve-mor)
-  ['#0f2c40', '#0f3640', '#3a3440'], ['#0b2234', '#0b2a36', '#2a2636'], ['#081a2c', '#08202e', '#1e1c2c'],
-  ['#061325', '#061826', '#141424'], ['#040d1c', '#04111e', '#0c0c1a'], ['#02070f', '#030a12', '#06060e']];
+  ['#0f2c40', '#0f3640', '#2e3a3a'], ['#0b2234', '#0b2a36', '#222c30'], ['#081a2c', '#08202e', '#182026'],
+  ['#061325', '#061826', '#10161c'], ['#040d1c', '#04111e', '#0a0e14'], ['#02070f', '#030a12', '#05080c']];
 const dnSoil = (i, t, a = 1) => { const s = DN_SOIL[i]; t = clamp(t, 0, 1); const h = t < 0.5 ? dnHex(s[0], s[1], t * 2) : dnHex(s[1], s[2], t * 2 - 1); return a < 1 ? dnRgba(h, a) : h; };
 function dnTopY(x) { const c = clamp(Math.floor(x / T), 0, COLS - 1), t = topOf(c); if (t < ROWS) return t * T; for (let d = 1; d < 6; d++) { const a = topOf(clamp(c - d, 0, COLS - 1)), b = topOf(clamp(c + d, 0, COLS - 1)); if (a < ROWS || b < ROWS) return Math.min(a, b) * T; } return DN_LH; }
 // katman sınırları: yüzeyi izleyen dalgalı çizgiler (yumuşatılmış yüzey + gürültü)

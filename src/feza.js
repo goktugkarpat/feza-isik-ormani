@@ -192,8 +192,10 @@ function fzShorts(x) {
 
 // ── kafa ──
 // out: gözün dış köşesinin yönü (-1 sol, +1 sağ)
+let fzEyeV = 1;   // 1: fotoğrafa daha yakın (biraz küçük iris, yumuşak kirpik; oyun boyunda da net okunuyor) · 0: eski büyük göz
 function fzEye(x, cx, cy, w, h, R, far, pd, out) {
-  const lid = R.lid * fzQ.a_lidM;
+  const lid = R.lid * fzQ.a_lidM, ev = fzEyeV;
+  if (ev) h *= 0.88;
   x.lineCap = 'round'; x.lineJoin = 'round';
   if (R.sq > 0.5) {      // sıkı sıkı kapalı (itme, zorlanma): > <  (uç burna doğru)
     pd = pd || 1; x.strokeStyle = FZ.lash; x.lineWidth = far ? 0.62 : 0.78;
@@ -214,7 +216,7 @@ function fzEye(x, cx, cy, w, h, R, far, pd, out) {
   const ch = clamp((R.mSmile - 0.7) / 0.3, 0, 1) * (1 - clamp(R.mOpen, 0, 1) * 0.4) * (1 - R.mRound) * 0.3 * h;
   x.save();
   x.beginPath(); x.ellipse(cx, ec, w, eh, 0, 0, 6.2832); x.fillStyle = '#fdf8f3'; x.fill(); x.clip();
-  const ri = far ? 1.5 : 1.78, rx = far ? ri * 0.7 : ri * 0.9;
+  const ri = (far ? 1.5 : 1.78) * (ev ? 0.86 : 1), rx = far ? ri * 0.7 : ri * 0.9;
   const ix = cx + R.gx * w * 0.3 + (far ? 0.12 : 0.05), iy = cy + R.gy * h * 0.25 + 0.2;
   const ig = x.createRadialGradient(ix, iy + ri * 0.5, ri * 0.05, ix, iy, ri);
   ig.addColorStop(0, '#d59d5e'); ig.addColorStop(0.38, '#9a5d2e'); ig.addColorStop(0.78, '#5a2f17'); ig.addColorStop(1, '#2c1408');
@@ -231,7 +233,7 @@ function fzEye(x, cx, cy, w, h, R, far, pd, out) {
   if (ch > 0.02) { x.fillStyle = FZ.skin; x.beginPath(); x.ellipse(cx, cy + h + h * 0.95 - ch, w * 1.5, h, 0, 0, 6.2832); x.fill(); }
   x.restore();
   // kirpik çizgisi + dış köşede küçük kıvrım
-  x.strokeStyle = FZ.lash; x.lineWidth = far ? 0.55 : 0.72;
+  x.strokeStyle = ev ? '#3a2416' : FZ.lash; x.lineWidth = (far ? 0.55 : 0.72) * (ev ? 0.78 : 1);
   x.beginPath(); x.ellipse(cx, ec, w * 1.02, eh * 1.02, 0, Math.PI * 1.06, Math.PI * 1.96); x.stroke();
   if (out) {
     const ox = cx + out * w * 0.93, oy = ec - eh * 0.32;
@@ -314,6 +316,8 @@ function fzLkPath(x, w, tw, mode) {   // fzLW'deki eğri; mode 0: kapalı şerit
     const k = FZ_LN * 4, an = Math.atan2(S4[k + 3], S4[k + 2]);
     x.arc(S4[k], S4[k + 1], tw, an, an - Math.PI, true);
     for (let i = FZ_LN - 1; i >= 0; i--) { const k = i * 4; x.lineTo(S4[k] - S4[k + 2], S4[k + 1] - S4[k + 3]); }
+    // kök ucu da yumuşak yuvarlak (düz kesik kenar görünmesin; tepede hafif, doğal bir tümsek verir)
+    x.ellipse(S4[0], S4[1], w * 0.5, w, Math.atan2(S4[3], S4[2]) - 1.5708, -1.5708, 1.5708, true);
     x.closePath();
   } else if (mode === 1) {   // tutamı komşusundan ayıran ince gölge (uç tarafta)
     x.moveTo(S4[28] - S4[30] * 0.8, S4[29] - S4[31] * 0.8);
@@ -327,7 +331,7 @@ function fzLkPath(x, w, tw, mode) {   // fzLW'deki eğri; mode 0: kapalı şerit
 function fzLocks(x, D, tm, hx, hy, k, mode) {
   const H = FZ.hair;
   for (let i = 0; i < D.length; i++) {
-    const l = D[i], sp = l[11], sw = Math.sin(tm * 1.7 + i * 1.9 + k) * 0.16 * sp, ex = hx * sp + sw, ey = hy * sp;
+    const l = D[i], sp = l[11], sw = Math.sin(tm * 1.7 + (l.length > 12 ? l[12] : i * 1.9 + k)) * 0.16 * sp, ex = hx * sp + sw, ey = hy * sp;
     fzLW[0] = l[0]; fzLW[1] = l[1]; fzLW[2] = l[2] + ex * 0.3; fzLW[3] = l[3] + ey * 0.3;
     fzLW[4] = l[4] + ex * 0.7; fzLW[5] = l[5] + ey * 0.7; fzLW[6] = l[6] + ex; fzLW[7] = l[7] + ey;
     if (mode === 0) { x.beginPath(); fzLkPath(x, l[8], l[9], 0); x.fillStyle = H[l[10]]; x.fill(); }
@@ -338,10 +342,10 @@ function fzLocks(x, D, tm, hx, hy, k, mode) {
 // saç kütlesi (tutamların altında); yollar tutamlarla aynı yönde (birleşik kırpma delik açmasın)
 function fzMass(x, front, bx, by) {
   if (front) {
-    x.moveTo(9.2, -0.6); x.quadraticCurveTo(10.7, -7.6, 8.4, -11.4 + by);
-    x.quadraticCurveTo(5.6 + bx, -14.5 + by, 1.0, -14.5 + by); x.quadraticCurveTo(-3.6 + bx, -14.5 + by, -7.4, -11.8 + by);
-    x.quadraticCurveTo(-10.7, -7.8, -9.2, -0.6); x.lineTo(-8.0, -1.6);
-    x.quadraticCurveTo(-7.6, -6.4, -4.0, -8.4); x.quadraticCurveTo(0, -9.4, 4.0, -8.4); x.quadraticCurveTo(7.6, -6.4, 8.0, -1.6);
+    x.moveTo(8.9, -2.8); x.quadraticCurveTo(10.5, -7.6, 8.4, -11.4 + by * 0.6);
+    x.quadraticCurveTo(5.6 + bx, -14.5 + by * 0.5, 1.0, -14.5 + by * 0.5); x.quadraticCurveTo(-3.6 + bx, -14.5 + by * 0.5, -7.4, -11.8 + by * 0.6);
+    x.quadraticCurveTo(-10.5, -7.8, -8.9, -2.8); x.lineTo(-7.8, -3.4);
+    x.quadraticCurveTo(-7.5, -6.6, -4.0, -8.4); x.quadraticCurveTo(0, -9.4, 4.0, -8.4); x.quadraticCurveTo(7.5, -6.6, 7.8, -3.4);
   } else {
     x.moveTo(8.2, -6.4); x.quadraticCurveTo(9.4, -10.6 + by, 5.4, -12.4 + by);
     x.quadraticCurveTo(1.2 + bx, -14.0 + by, -3.4, -12.9 + by); x.quadraticCurveTo(-8.2 + bx, -12.0 + by, -9.8, -6.8);
@@ -368,10 +372,11 @@ const FZ_HS_FR = [
   [3.2, -12.9, 4.4, -10.2, 3.4, -8.2, 5.4, -6.4, 1.0, 0.6, 3, 0.6]];
 // önden görünüş (kakül sağdan ayrılıp sola taranmış)
 const FZ_HF_NAPE = [
-  [-6.8, -2.0, -9.4, 0.2, -8.4, 2.2, -9.4, 3.6, 1.5, 0.85, 1, 0.6], [6.8, -2.0, 9.4, 0.2, 8.4, 2.2, 9.4, 3.6, 1.5, 0.85, 1, 0.6]];
+  [-7.0, -3.4, -9.2, -1.8, -8.8, 0.0, -10.4, 0.9, 1.15, 0.6, 1, 0.6], [7.0, -3.4, 9.2, -1.8, 8.8, 0.0, 10.4, 0.9, 1.15, 0.6, 1, 0.6]];
 const FZ_HF = [
-  [-6.4, -11.0, -10.0, -8.4, -7.8, -3.8, -9.8, -1.0, 2.5, 1.15, 2, 0.55], [6.4, -11.0, 10.0, -8.4, 7.8, -3.8, 9.8, -1.0, 2.5, 1.15, 2, 0.55],
-  [-4.4, -12.2, -8.2, -9.2, -6.4, -6.0, -7.8, -2.8, 2.2, 1.0, 3, 0.5], [5.0, -12.2, 8.4, -9.2, 6.8, -6.0, 8.0, -2.8, 2.2, 1.0, 1, 0.5],
+  [0.6, -13.6, 2.4, -15.2, 4.8, -15.1, 6.6, -13.4, 2.1, 1.5, 3, 0.2],
+  [-6.4, -11.0, -9.8, -8.6, -8.4, -4.8, -10.6, -2.4, 1.85, 0.75, 2, 0.6], [6.4, -11.0, 9.8, -8.6, 8.4, -4.8, 10.6, -2.4, 1.85, 0.75, 2, 0.6],
+  [-4.4, -12.2, -8.2, -9.2, -6.4, -6.0, -7.8, -2.8, 2.2, 1.0, 3, 0.5], [5.0, -12.2, 8.4, -9.2, 6.8, -6.0, 8.0, -3.0, 2.0, 0.95, 2, 0.5],
   [2.8, -12.6, -0.6, -15.0, -4.6, -14.6, -7.6, -11.6, 2.6, 1.25, 3, 0.45], [4.2, -12.6, 6.8, -14.2, 8.6, -12.6, 9.1, -9.4, 2.5, 1.2, 3, 0.45]];
 const FZ_HF_FR = [
   [1.4, -13.4, -3.0, -12.6, -6.8, -10.0, -7.0, -5.8, 2.5, 1.15, 2, 0.6],
@@ -381,6 +386,30 @@ const FZ_HF_FR = [
   [5.1, -12.8, 5.4, -10.4, 3.6, -8.4, 4.4, -5.7, 2.1, 1.0, 2, 0.6],
   [5.8, -12.6, 8.2, -11.0, 7.4, -8.0, 8.4, -5.6, 1.9, 0.95, 1, 0.55],
   [2.8, -13.4, 0.8, -11.0, -2.4, -9.2, -2.2, -6.2, 0.9, 0.55, 3, 0.6]];
+// ── dönüşte saç: tutamlar yandan görünüşteki yerlerinden önden görünüşteki yerlerine kayar (çizim değişmez, saç döner).
+// Her yuva bir yan tutamı ile bir ön tutamı eşler (en yakın komşu; eşi kalmayan tutamlara da yuva açılır).
+const FZ_HSA = FZ_HS_NAPE.concat(FZ_HS, FZ_HS_FR), FZ_HFA = FZ_HF_NAPE.concat(FZ_HF, FZ_HF_FR);
+const FZ_SN = FZ_HS_NAPE.length, FZ_FN = FZ_HF_NAPE.length;
+const FZ_SLOT = (() => {
+  const d = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]) + Math.hypot(a[4] - b[4], a[5] - b[5]) + Math.hypot(a[6] - b[6], a[7] - b[7]);
+  const near = (l, L) => { let bi = 0, bd = 1e9; L.forEach((m, j) => { const q = d(l, m); if (q < bd) { bd = q; bi = j; } }); return bi; };
+  const sl = [], usedS = new Set();
+  FZ_HFA.forEach((f, j) => { const i = near(f, FZ_HSA); sl.push([i, j]); usedS.add(i); });
+  FZ_HSA.forEach((sv, i) => { if (!usedS.has(i)) sl.push([i, near(sv, FZ_HFA)]); });
+  return sl.map(([i, j], n) => ({ i, j, ph: n * 1.9 + 0.7, l: new Array(13).fill(0) }));
+})();
+// çizim sıraları: yanda (ense yuvaları kütlenin arkasında), önden (ense yuvaları başın arkasında)
+const FZ_SO = FZ_SLOT.slice().sort((a, b) => a.i - b.i || a.j - b.j), FZ_FO = FZ_SLOT.slice().sort((a, b) => a.j - b.j || a.i - b.i);
+const FZ_SB = [FZ_SO.filter(q => q.i < FZ_SN).map(q => q.l), FZ_SO.filter(q => q.i >= FZ_SN).map(q => q.l)];
+const FZ_FB = [FZ_FO.filter(q => q.j < FZ_FN).map(q => q.l), FZ_FO.filter(q => q.j >= FZ_FN).map(q => q.l)];
+const FZ_NONE = [];
+function fzHairMix(w) {   // w: 0 yan … 1 önden
+  for (const q of FZ_SLOT) {
+    const a = FZ_HSA[q.i], b = FZ_HFA[q.j], l = q.l;
+    for (let k = 0; k < 12; k++) l[k] = a[k] + (b[k] - a[k]) * w;
+    l[10] = Math.round(l[10]); l[12] = q.ph;
+  }
+}
 // kırpılmış gölgelendirme: alt taraf koyu, tepe sıcak, kafanın eğrisini izleyen yumuşak parlak bant
 function fzHairShade(x, front, tm, hx, hy, bx, by, A, B) {
   x.save(); x.beginPath(); fzMass(x, front, bx, by); fzLocks(x, A, tm, hx, hy, 2, 1); fzLocks(x, B, tm, hx, hy, 3, 1); x.clip();
@@ -397,32 +426,38 @@ function fzHairShade(x, front, tm, hx, hy, bx, by, A, B) {
   x.strokeStyle = 'rgba(45,24,12,0.22)'; x.lineWidth = 0.3; fzLocks(x, A, tm, hx, hy, 2, 2); fzLocks(x, B, tm, hx, hy, 3, 2);
 }
 function fzHair(x, tm) {
-  const hx = fzQ.a_hx, hy = fzQ.a_hy, bx = hx * 0.25, by = hy * 0.3;
-  fzLocks(x, FZ_HS_NAPE, tm, hx, hy, 0, 0);
+  const w = fzQ.a_hw || 0, hx = fzQ.a_hx * (1 - 0.5 * w), hy = fzQ.a_hy, bx = hx * 0.25, by = hy * 0.3;
+  let A = FZ_HS, B = FZ_HS_FR, N = FZ_HS_NAPE;
+  if (w > 0.001) { fzHairMix(w); N = FZ_SB[0]; A = FZ_SB[1]; B = FZ_NONE; }
+  fzLocks(x, N, tm, hx, hy, 0, 0);
   const mg = x.createLinearGradient(0, -14, 0, 5);
   mg.addColorStop(0, FZ.hair[3]); mg.addColorStop(0.45, FZ.hair[2]); mg.addColorStop(1, FZ.hair[1]);
   x.fillStyle = mg; x.beginPath(); fzMass(x, false, bx, by); x.fill();
-  fzLocks(x, FZ_HS, tm, hx, hy, 2, 0); fzLocks(x, FZ_HS_FR, tm, hx, hy, 3, 0);
-  fzHairShade(x, false, tm, hx, hy, bx, by, FZ_HS, FZ_HS_FR);
+  if (w > 0.001) { x.globalAlpha = w * w; x.beginPath(); fzMass(x, true, bx, by); x.fill(); }
+  x.globalAlpha = 1;
+  fzLocks(x, A, tm, hx, hy, 2, 0); fzLocks(x, B, tm, hx, hy, 3, 0);
+  fzHairShade(x, w > 0.5, tm, hx, hy, bx, by, A, B);
   // birkaç ince uçuşan tel
   x.strokeStyle = 'rgba(135,92,58,0.75)'; x.lineWidth = 0.22;
   x.beginPath(); x.moveTo(-3.4, -13.8); x.quadraticCurveTo(-4.4, -16.4 + hy * 0.4, -6.8 + hx * 0.5, -16.2 + hy * 0.5);
   x.moveTo(-9.8, -7.0); x.quadraticCurveTo(-12.4, -5.4, -12.2 + hx * 0.6, -2.4 + hy * 0.5); x.stroke();
 }
 function fzHairFront(x, tm, back) {
-  const hx = fzQ.a_hx * 0.5, hy = fzQ.a_hy, H = FZ.hair, bx = hx * 0.25, by = hy * 0.3;
+  const w = fzQ.a_hw === undefined ? 1 : fzQ.a_hw, hx = fzQ.a_hx * (1 - 0.5 * w), hy = fzQ.a_hy, H = FZ.hair, bx = hx * 0.25, by = hy * 0.3;
+  let A = FZ_HF, B = FZ_HF_FR, N = FZ_HF_NAPE;
+  if (w < 0.999) { fzHairMix(w); N = FZ_FB[0]; A = FZ_FB[1]; B = FZ_NONE; }
   if (back) {   // başın arkasında kalan saç ve kısa, yumuşak ense uçları
     x.fillStyle = H[1]; x.beginPath();
-    x.moveTo(9.0, 1.6); x.quadraticCurveTo(10.8, -6.0, 7.4, -11.8); x.quadraticCurveTo(0, -16.0, -7.4, -11.8);
-    x.quadraticCurveTo(-10.8, -6.0, -9.0, 1.6); x.quadraticCurveTo(0, 3.6, 9.2, 1.6); x.closePath(); x.fill();
-    fzLocks(x, FZ_HF_NAPE, tm, hx, hy, 0, 0);
+    x.moveTo(8.8, 0.2); x.quadraticCurveTo(10.6, -6.0, 7.4, -11.8); x.quadraticCurveTo(0, -16.0, -7.4, -11.8);
+    x.quadraticCurveTo(-10.6, -6.0, -8.8, 0.2); x.quadraticCurveTo(0, 2.2, 8.8, 0.2); x.closePath(); x.fill();
+    fzLocks(x, N, tm, hx, hy, 0, 0);
     return;
   }
   const mg = x.createLinearGradient(0, -15, 0, 0);
   mg.addColorStop(0, H[3]); mg.addColorStop(0.5, H[2]); mg.addColorStop(1, H[1]);
   x.fillStyle = mg; x.beginPath(); fzMass(x, true, bx, by); x.fill();
-  fzLocks(x, FZ_HF, tm, hx, hy, 2, 0); fzLocks(x, FZ_HF_FR, tm, hx, hy, 3, 0);
-  fzHairShade(x, true, tm, hx, hy, bx, by, FZ_HF, FZ_HF_FR);
+  fzLocks(x, A, tm, hx, hy, 2, 0); fzLocks(x, B, tm, hx, hy, 3, 0);
+  fzHairShade(x, w > 0.5, tm, hx, hy, bx, by, A, B);
   x.strokeStyle = 'rgba(135,92,58,0.75)'; x.lineWidth = 0.22;
   x.beginPath(); x.moveTo(1.6, -14.8); x.quadraticCurveTo(0.8, -17.2 + hy * 0.4, -1.8 + hx * 0.5, -17.0 + hy * 0.5);
   x.moveTo(-9.6, -7.0); x.quadraticCurveTo(-11.8, -6.0, -11.8 + hx * 0.6, -3.4 + hy * 0.5); x.stroke();
@@ -602,6 +637,7 @@ function drawFeza(tm) {
   x.setTransform(1, 0, 0, 1, 0, 0); x.globalCompositeOperation = 'source-over'; x.globalAlpha = 1; x.clearRect(0, 0, px, px);
   // dönüş: yan -> önden -> yeni yan. Genişlik hiç 0.92'nin altına inmez; ayna çevirme önden görünüşteyken olur.
   const u = P.a_turnU < 1 ? P.a_turnU : P.a_fu > 0 ? P.a_fu : 1, front = u > 0.3 && u < 0.72;
+  P.a_hw = smooth(clamp((0.45 - Math.abs(u - 0.5)) / 0.3, 0, 1));   // saç dönüşü: yan → önden → yan
   const fsc = P.a_side * (u < 0.3 ? lerp(1, 0.92, u / 0.3) : u >= 0.72 && u < 1 ? lerp(0.92, 1, (u - 0.72) / 0.28) : 1);
   x.setTransform(S, 0, 0, S, SZ / 2 * S, OY * S);
   x.scale(fsc * R.sx * FZ_SC, R.sy * FZ_SC);
@@ -617,7 +653,7 @@ function drawFeza(tm) {
   x.fillStyle = lg; x.fillRect(0, 0, px, px);
   const dx = (D.x - bx) * S + SZ / 2 * S, dy = (D.y - by) * S + OY * S;
   const rg = x.createRadialGradient(dx, dy, 0, dx, dy, need * 0.9);
-  rg.addColorStop(0, `rgba(200,150,255,${(0.35 * (1 - 0.6 * (P.a_tasW || 0))).toFixed(3)})`); rg.addColorStop(1, 'rgba(200,150,255,0)');
+  rg.addColorStop(0, `rgba(200,150,255,${(0.2 * (1 - 0.5 * (P.a_tasW || 0))).toFixed(3)})`); rg.addColorStop(1, 'rgba(200,150,255,0)');
   x.fillStyle = rg; x.fillRect(0, 0, px, px);
   x.globalCompositeOperation = 'source-over';
   // kenar ışıkları: sağ üstteki ay + Pırıl
@@ -712,7 +748,7 @@ function fezaUpdate(dt) {
   const gr = P.ground && P.fade <= 0 && !carry;
   // olaylar: yere iniş, kalkış, kayma (ters yöne dönerken)
   if (gr && !P.a_wasG) {
-    P.a_landT = 0; P.a_landP = P.a_wasCarry ? 0.34 : clamp(P.a_prevVy / 850, 0.18, 1);
+    P.a_landT = 0; P.a_landP = P.a_wasCarry ? 0.34 : clamp(P.a_prevVy / 850, 0.18, 0.88);
     if (fzMover()) P.a_balKick = 1;
     if (P.a_fromL) { P.a_tadaT = 0; P.a_fromL = false; }
     if (!P.a_wasCarry) OLAY.emit('adim', { x: P.x, y: P.y, hiz: sp, inis: true });   // parmak ucuyla yumuşak iniş
@@ -740,7 +776,7 @@ function fezaUpdate(dt) {
   if (edge) P.a_edge = edge;
   const oops = edge && ((P.a_edgeT - 0.25) % 8) > 0 && ((P.a_edgeT - 0.25) % 8) < 1.9;
   P.a_getup = Math.max(0, (P.a_getup || 0) - dt);
-  if (!still) { if (P.a_sit > 0.5) P.a_getup = 0.4; P.a_act = ''; P.a_seq = 0; P.a_nextAct = FZ_SEQ[0][0]; P.a_sit = 0; P.a_ledge = 0; }
+  if (!still) { if (P.a_sit > 0.5) P.a_getup = 0.5; P.a_act = ''; P.a_seq = 0; P.a_nextAct = FZ_SEQ[0][0]; P.a_sit = 0; P.a_ledge = 0; }
   else if (!P.a_act && !cheer && !oops && !tada && P.a_idle >= P.a_nextAct) {
     let a;
     if (P.a_seq < FZ_SEQ.length) { a = FZ_SEQ[P.a_seq++][1]; P.a_nextAct = P.a_seq < FZ_SEQ.length ? FZ_SEQ[P.a_seq][0] : P.a_idle + 7; }
@@ -957,7 +993,7 @@ function fezaUpdate(dt) {
     T.la1 = 0.7; T.la2 = 0.5; T.ba1 = 0.55; T.ba2 = 0.6; T.lean = 0.25; T.head = 0.3;
     T.happy = 1; T.mOpen = 0.9; T.mSmile = 1; T.brow = 0.3;
   }
-  if (P.a_getup > 0 && gr) { kmin = kmax = 9; T.lean += 0.15; }   // oturduğu yerden kalkarken acele etmeden
+  if (P.a_getup > 0 && gr) { kmin = kmax = 6.5; T.lean += 0.15; }   // oturduğu yerden kalkarken acele etmeden
   // ── üst katmanlar ──
   // büyük şeylere hayranlıkla bakma (Büyük Pofuduk, Işık Ağacı)
   let aw = 0, agx = 0, agy = 0;
@@ -1038,15 +1074,15 @@ function fezaUpdate(dt) {
   // çizim pozu = yumuşak poz + iniş çökmesi + kalkış uzaması + çarpma
   const R = Object.assign(P.a_R, cur), lt = P.a_landT;
   // kalkış uzaması iki karede yükselir (tek karede bacak düzelip kalça sıçramasın), sonra söner
-  // iniş çökmesi: u² e^(2-2u) (0.12 sn'de en dipte, tepe noktası ve dönüş yumuşak); kalkış uzaması: 6.75 p (1-p)² (sonu yumuşak)
-  const lu = lt / 0.12, tp = 1 - P.a_take;
+  // iniş çökmesi: u² e^(2-2u) (0.13 sn'de en dipte, tepe noktası ve dönüş yumuşak); kalkış uzaması: 6.75 p (1-p)² (sonu yumuşak)
+  const lu = lt / 0.13, tp = Math.pow(1 - P.a_take, 1.3);
   const cr = gr ? P.a_landP * lu * lu * Math.exp(2 - 2 * lu) : 0, tk = P.a_take > 0 ? 6.75 * tp * (1 - tp) * (1 - tp) : 0;
   R.lt1 += 0.8 * cr; R.lt2 -= 1.5 * cr; R.bt1 += 0.6 * cr; R.bt2 -= 1.4 * cr; R.lean += 0.25 * cr; R.head += 0.12 * cr;
   R.la1 += 0.5 * cr; R.ba1 += 0.4 * cr; R.sx += 0.1 * cr; R.sy -= 0.08 * cr; R.lid *= 1 - 0.3 * cr;
   R.sy += 0.08 * tk; R.sx -= 0.06 * tk; R.lt1 -= 0.6 * tk * R.lt1; R.lt2 *= 1 - 0.7 * tk;
   const bu = P.a_bump * P.a_bump;   // Pofuduk'a tosladı: kısa geri sekme
   R.lean -= 0.3 * bu; R.head -= 0.2 * bu; R.sx += 0.06 * bu; R.sy -= 0.05 * bu; R.hx -= 1.2 * bu;
-  const sb = P.a_stomp > 0.8 ? (P.a_stomp - 0.8) / 0.2 : 0;   // basınca kısa ezilme
+  const su = (1 - P.a_stomp) / 0.24, sb = P.a_stomp > 0 && su < 1 ? Math.sin(su * Math.PI) : 0;   // basınca kısa ezilme (3 karede iner, yumuşak döner)
   R.sy -= 0.1 * sb; R.sx += 0.08 * sb;
   // takla açısı (başı ve sonu yavaş); büyük fırlatmada toparlanınca ağır bir takla
   const u = P.flip > 0 ? 1 - P.flip : 0;
@@ -1084,7 +1120,9 @@ function fezaUpdate(dt) {
   for (let i = 0; i < 2; i++) {
     const h = dt / 2;
     P.a_hvx += ((tx - P.a_hx) * 230 - P.a_hvx * 10) * h; P.a_hx += P.a_hvx * h;
-    P.a_hvy += ((ty - P.a_hy) * 230 - P.a_hvy * 10) * h; P.a_hy += P.a_hvy * h;
+    P.a_hvy += ((ty - P.a_hy) * 230 - P.a_hvy * 10) * h;
+    P.a_hvx = clamp(P.a_hvx, -46, 46); P.a_hvy = clamp(P.a_hvy, -46, 46);   // fırlatmada bile saç bir karede sıçramasın
+    P.a_hy += P.a_hvy * h;
   }
   P.a_hx = clamp(P.a_hx, -3.5, 3.5); P.a_hy = clamp(P.a_hy, -3.5, lim + 0.5);
   // önden pozlarda eller hedefe, önden görünüş belirdikten sonra yumuşakça gider (sıçrama olmasın)
