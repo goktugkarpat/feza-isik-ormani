@@ -22,13 +22,14 @@
 <canvas id="c"></canvas>
 <script src="src/ortak.js"></script>
 <script>
-  // Bölüm seçimi: ?bolum=N > başlıktan seçim bayrağı (sessionStorage) > 1. Yalnız biri yüklenir (ikisi aynı adları tanımlar).
+  // Bölüm seçimi: ?bolum=N > başlıktan seçim bayrağı (sessionStorage) > 1. Yalnız biri yüklenir (aynı adları tanımlarlar).
   var BOLUM_NO = 1;
   try {
     var bq = /[?&]bolum=(\d)/.exec(location.search);
-    BOLUM_NO = bq ? (+bq[1] === 2 ? 2 : 1) : (sessionStorage.getItem('fezaIsikSec') === '2' ? 2 : 1);   // başlık sayfası her zaman Bölüm 1; Bölüm 2 başlıktaki düğmeyle (oturum bayrağı)
+    var bs = bq ? +bq[1] : +(sessionStorage.getItem('fezaIsikSec') || 1);   // başlık sayfası her zaman Bölüm 1; Bölüm 2/3 seçim ekranından (oturum bayrağı + yenileme)
+    BOLUM_NO = (bs === 2 || bs === 3) ? bs : 1;
   } catch (e) {}
-  document.write('<script src="src/' + (BOLUM_NO === 2 ? 'bolum2' : 'bolum') + '.js"><\/script>');
+  document.write('<script src="src/' + (BOLUM_NO === 3 ? 'bolum3' : BOLUM_NO === 2 ? 'bolum2' : 'bolum') + '.js"><\/script>');
 </script>
 <script src="src/dunya.js"></script>
 <script src="src/feza.js"></script>
@@ -40,6 +41,11 @@
 <script src="src/dunya2.js"></script>
 <script src="src/yildiz.js"></script>
 <script src="src/takim.js"></script>
+<script src="src/dunya3.js"></script>
+<script src="src/bulut.js"></script>
+<script src="src/kuzu.js"></script>
+<script src="src/sekil.js"></script>
+<script src="src/ucus.js"></script>
 <script src="src/muzik.js"></script>
 <script src="sesler.js"></script>
 <script src="src/ses.js"></script>
