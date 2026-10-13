@@ -123,6 +123,10 @@ function tkGuncelle(o, dt) {
   } else if (k.durum === 'sira') {
     k.dmA = Math.max(0, k.dmA - dt * 0.8);
     if (!k.drag) k.bosT += dt; else k.bosT = 0;
+    // geç yardım: ~4 sn dokunmazsa el sıradaki noktaya dokunmayı gösterir (dokuna dokuna bağlamak da olur, sürüklemek de)
+    if (!k.drag && k.bosT > 4 && k.n < k.sek.seq.length && typeof ARAYUZ !== 'undefined' && ARAYUZ && typeof ARAYUZ.elGoster === 'function') {
+      const q = tkNoktalar(k)[k.sek.seq[k.n]]; ARAYUZ.elGoster(q.x, q.y);
+    }
     if (k.bosT > 22 && k.n === 0) { tkDur(o, 'goster'); k.dmN = 0; k.bosT = 0; }   // sabırla yeniden göster
   } else if (k.durum === 'dogru') {
     tkDogru(o, dt);
@@ -219,6 +223,15 @@ function tkDogru(o, dt) {
   if (k.t > 4.0) { k.bitti = true; D.tkKut = false; tkDur(o, 'bitti'); D.expr = 'happy'; D.exprT = 1; tkBirak(o); }
 }
 
+// Iskalanan dokunuş şeklin üstünde mi (noktalara ~1,7R, çizgilere ~0,8R)? Feza aynadan uzaklaşmaya başladıysa hiç yutulmaz.
+function tkIskaYakin(o, x, y) {
+  const k = o && o.tk; if (!k || (k.durum !== 'sira' && k.durum !== 'goster')) return false;
+  if (Math.abs(P.x - o.x) > 330) return false;
+  const nk = tkNoktalar(k), sq = k.sek.seq, R = tkR();
+  for (const p of nk) if (Math.hypot(x - p.x, y - p.y) < R * 1.7) return true;
+  for (let j = 0; j < sq.length - 1; j++) { const A = nk[sq[j]], B = nk[sq[j + 1]]; if (tkSegMes(A.x, A.y, B.x, B.y, x, y) < R * 0.8) return true; }
+  return false;
+}
 // ── girdi (capture): noktaya dokunuş + sürükleme yürüme girdisine ulaşmaz ──
 addEventListener('pointerdown', e => {
   if (!tkAkt || DURUM !== 'oyun' || e.pointerType === 'mouse' && e.button !== 0) return;
@@ -226,9 +239,9 @@ addEventListener('pointerdown', e => {
   if (tkPtr.id !== -1) return;
   let ok = false;
   try { ok = tkBasla(tkAkt, e.clientX, e.clientY, e.pointerId); } catch (er) { console.warn('[takim]', er); }
-  if (!ok) {   // gökyüzü bölgesine ıskalanan dokunuş yumuşakça yok sayılır (yanlışlıkla yürümesin); yer bölgesine basış yürütür
-    const y = tkYer, k = tkAkt.tk;
-    if ((k.durum === 'sira' || k.durum === 'goster') && e.clientY < y.cy + y.hh + 70) { e.preventDefault(); e.stopPropagation(); }
+  if (!ok) {   // noktaların hemen yakınına ıskalanan dokunuş yumuşakça yok sayılır (yanlışlıkla yürümesin); başka her yere basış yürütür
+    // (eskiden göğün bütün üst yarısı yutuluyordu: oraya basıp yürümek isteyen çocuk kıpırdayamıyordu — bot ölçümü, LEVEL12)
+    if (tkIskaYakin(tkAkt, e.clientX, e.clientY)) { e.preventDefault(); e.stopPropagation(); }
     return;
   }
   e.preventDefault(); e.stopPropagation();

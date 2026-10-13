@@ -5,7 +5,7 @@
    Pırıl aynı ezgiyi yeniden gösterir (sonsuz sabır). Feza hiç yapmazsa hiçbir şey kilitlenmez.
    Yazı yok, yeni ses kaydı yok: yalnız ışık + muzik.js'teki çelesta sentezi (AU.sfx('sarki' | 'sarkiBitti' | 'sarkiOlmadi')).
    Girdi: pencere "capture" aşamasında çiçeğe dokunuş yakalanır (oyun.js'in yürüme/zıplama girdisine hiç ulaşmaz, Feza kıpırdamaz).
-   Önek: sk*. Dokunma eli YOK: "sıra sende" görsel dille anlatılır (üç çiçek nefes alıp zıplar, Feza'dan çiçeklere ışık akar). piril.js 'sarki' modu (D.srk). */
+   Önek: sk*. Dokunma eli yalnız GEÇ yardım olarak (≈5,5 sn boşta ya da aynı turda 2 yanlış): sıradaki çiçeğe dokunur. "Sıra sende" görsel dille anlatılır (üç çiçek nefes alıp zıplar, Feza'dan çiçeklere ışık akar). piril.js 'sarki' modu (D.srk). */
 'use strict';
 const SK_RENK = [['#7fe9ff', '#d6fbff'], ['#c9a2ff', '#efe0ff'], ['#ff9fd3', '#ffe0f2']];   // aqua · leylak · pembe (açık / çekirdek)
 const SK_DX = [-66, 0, 66];                                                                   // çiçeklerin orta çiçeğe uzaklığı
@@ -110,6 +110,8 @@ function skGuncelle(o, dt) {
     } else if (k.t > T0 + mel.length * ARA + 0.7) { skDur(o, 'sira'); k.adim = 0; k.bosT = 0; }
   } else if (k.durum === 'sira') {
     k.bosT += dt;
+    // geç yardım (ilk anda değil): uzun süre dokunmazsa ya da aynı turda iki kez şaşırırsa el sıradaki çiçeğe dokunmayı gösterir
+    if ((k.bosT > 5.5 || (k.yanlis >= 2 && k.t > 0.6)) && k.mel && k.adim < k.mel.length) skElGoster(o, k.mel[k.adim]);
     if (k.bosT > 16) { k.gi = 0; k.komGi = -1; k.adim = 0; k.mel = skMelodi(o); skDur(o, 'goster'); k.t = -0.2; }   // sabırla yeniden göster
   } else if (k.durum === 'yanlis') {
     if (k.t > 1.5) { k.gi = 0; k.komGi = -1; k.adim = 0; skDur(o, 'goster'); k.t = 0; }
@@ -118,6 +120,10 @@ function skGuncelle(o, dt) {
   }
 }
 
+function skElGoster(o, i) {   // arayuz.js dokunma eli (CSS px; her karede çağrılınca görünür)
+  if (typeof ARAYUZ === 'undefined' || !ARAYUZ || typeof ARAYUZ.elGoster !== 'function') return;
+  const p = skPx(skCx(o, i), skCy(o) + 4); ARAYUZ.elGoster(p.x, p.y);
+}
 // Feza'nın dokunuşu: i. çiçek
 function skBas(o, i) {
   const k = o.sk;

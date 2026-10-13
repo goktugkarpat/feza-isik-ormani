@@ -121,9 +121,57 @@ function ucIcerik(o) {
   o.kemer.push({ x: X(0.80), y: yuk(0.35), rx: 46, ry: 128, renk: '#ffb3d1', gecti: false, parla: 0, ph: 3 });
   dizi(yay(X(0.85), yuk(-0.15), 640, 120, 7), gok);   // son dizi: gökkuşağı renkleri, inişe doğru
   // kuş sürüsü: koridorun ortasında yanlarında uçar
-  o.kus = { bas: X(0.29), son: X(0.6), a: 0, list: [] };
+  o.vayX = X(0.575);
+  o.kus = { bas: X(0.29), son: X(0.55), a: 0, list: [] };
   for (let i = 0; i < 7; i++) o.kus.list.push({ ox: 150 + (i % 4) * 60 + r() * 30, oy: -150 - Math.floor(i / 2) * 26 + r() * 20 + (i % 2) * 50, ph: r() * 6.28, s: 0.8 + r() * 0.4, hz: 2.6 + r() * 0.8 });
   o.iskTop = o.isk.length;
+}
+
+// ── bulut hayvanları: "Bulutlarda ne var?"da canlanan hayvanlar uçuşun ortasında gökyüzünde yanlarına gelip selam verir ──
+const ucHayvanlar = [];
+OLAY.on('sekil', e => { const ad = e && e.hayvan; if (ad && ucHayvanlar.indexOf(ad) < 0) ucHayvanlar.push(ad); });
+const UC_VAY_SURE = 11;   // gökte kalış süresi (sn)
+function ucVayListe() {
+  const a = ucHayvanlar.slice(0, 4);
+  for (const d of ['balina', 'tavsan', 'kus', 'fil']) { if (a.length >= 3) break; if (a.indexOf(d) < 0) a.push(d); }
+  return a;
+}
+function ucVayGuncelle(o, dt, mx) {
+  if (!o.vay) { if (o.bagli && o.faz === 'ucus' && mx > o.vayX) { o.vay = { t: 0, liste: ucVayListe(), giris: [] }; } return; }
+  const V = o.vay; V.t += dt;
+  V.liste.forEach((ad, i) => {
+    if (!V.giris[i] && V.t > 0.4 + i * 0.9) { V.giris[i] = true; const ix = typeof SKL_HAYVAN !== 'undefined' ? SKL_HAYVAN.indexOf(ad) : i; ucSfx('sekilCanlan', ix < 0 ? i : ix); if (i === 0 && typeof dragonHappy === 'function') { try { dragonHappy(o); } catch (e) {} } o.sevT = 1.3; }
+  });
+}
+let ucVayBuf = null;
+function ucVayCiz(o, tm) {
+  const V = o.vay; if (!V || V.t > UC_VAY_SURE + 4) return;
+  if (typeof sklPoz !== 'function' || typeof sklBulutCiz !== 'function' || typeof sklYeni !== 'function') return;
+  if (!ucVayBuf) ucVayBuf = sklYeni();
+  const vh = H / S, n = V.liste.length;
+  for (let i = 0; i < n; i++) {
+    const ad = V.liste[i], t = V.t - 0.4 - i * 0.9; if (t < 0) continue;
+    // ekranın sağından süzülerek gelir, yanlarında uçar, sonunda geride kalır (sola akar)
+    const gel = ucOut(clamp(t / 2.4, 0, 1)), git = ucEase(clamp((t - (UC_VAY_SURE - i * 0.9)) / 3, 0, 1));
+    const hedefF = 0.4 + (i / Math.max(1, n - 1)) * 0.36;
+    const fx = lerp(1.3, hedefF, gel) - git * (hedefF + 0.5);
+    const fy = 0.22 + (i % 2) * 0.08 + Math.sin(tm * 0.8 + i * 1.7) * 0.02;
+    const R = (ad === 'balina' ? 96 : 74) * (0.7 + 0.3 * gel);
+    const x = cam.x + VW * fx, y = cam.y + vh * fy;
+    if (x < cam.x - R * 2 || x > cam.x + VW + R * 2) continue;
+    const tt = t % 3.9, amp = smooth(clamp(Math.min(tt, 3.9 - tt) / 0.5, 0, 1));
+    try {
+      sklPoz(ad, tt, amp, ucVayBuf);
+      dglow('#fff3e0', x, y, R * 2.4, 0.35);
+      sklBulutCiz(x, y, R, ucVayBuf, ucVayBuf.length, sklRenkler(ad, 1), 0.08, tm);
+      sklYuzCiz(x, y, R, ucVayBuf, ad, 1, tm, i * 1.3);
+    } catch (e) { o.vay.t = 1e9; return; }
+    // selam: etraflarında süzülen minik kalp-yıldızlar
+    if (gel > 0.5 && git < 0.5) for (let k = 0; k < 3; k++) {
+      const u = (tm * 0.5 + k / 3 + i * 0.27) % 1;
+      ucYildiz(x + Math.sin(k * 2.4 + tm) * R * 0.9, y - R * 0.6 - u * 60, 6, tm + k, Math.sin(u * Math.PI) * 0.9, UC_YILDIZ[(i * 2 + k) % 7], null, 0.3);
+    }
+  }
 }
 
 // ── durum ──
@@ -224,13 +272,14 @@ function ucAdim(o, dt, girdi) {
     if (o.faz === 'ucus') {
       const K = o.K, V = o.V;
       // yatay: yumuşakça sabit hıza çıkar (parmak yalnız yüksekliği seçer)
-      const hz = V;
+      o.boost = Math.max(0, (o.boost || 0) - dt * 0.9);
+      const hz = V * (1 + 0.4 * ucEase(o.boost));   // kemerden geçince kısa "vınnn" hızlanması
       o.vx += (hz - o.vx) * (1 - Math.exp(-dt * 0.9));
       o.dx += o.vx * dt;
       // dikey hedef: parmağın yüksekliği (Feza'nın gövdesi parmağa gelsin) / klavye / otomatik pilot
       const parmak = girdi && girdi.hedefY !== null && girdi.hedefY !== undefined && isFinite(girdi.hedefY);
-      if (parmak) { o.kH = girdi.hedefY + 34; o.oto = 0; }
-      else if (girdi && girdi.eksenY) { o.kH += clamp(girdi.eksenY, -1, 1) * 340 * dt; o.oto = 0; }
+      if (parmak) { o.kH = girdi.hedefY + 34; o.oto = 0; o.denedi = true; }
+      else if (girdi && girdi.eksenY) { o.denedi = true; o.kH += clamp(girdi.eksenY, -1, 1) * 340 * dt; o.oto = 0; }
       else {
         o.oto = Math.min(1, (o.oto || 0) + dt * 0.5);   // bırakınca 2 sn içinde yavaşça devreye girer
         const oy = ucOtoY(o, o.dx);
@@ -278,7 +327,6 @@ function ucAdim(o, dt, girdi) {
       o.faz = 'in'; o.t = 0; o.rot = 0;
       ucSfx('ucusIn');
       burst(o.dx, o.ix.y - 6, 30, ['#ffffff', '#ffe1cf', '#ffd0e6', '#fff3b0'], 170, 1.2, 13);
-      ripples.push({ x: o.dx, y: o.ix.y - 4, r: 0, life: 1.2, small: false });
     }
   } else if (f === 'in') {     // yere değiş: yumuşak çökme
     const u = clamp(o.t / 0.45, 0, 1);
@@ -324,6 +372,8 @@ function ucGorsel(o, dt) {
   if (o.faz !== 'bekle' && o.faz !== 'bitti') {
     const m = ucMerkez(o), s = o.olc, c = Math.cos(o.rot), si = Math.sin(o.rot);
     const tx = m.x + (UC_KUYRUK.x * c - UC_KUYRUK.y * si) * s, ty = m.y + (UC_KUYRUK.x * si + UC_KUYRUK.y * c) * s;
+    if (!o.kuyruk) o.kuyruk = { x: 0, y: 0, yon: -1 };   // kuzu.js: peşteki kuzucuklar kuyruk ucunun arkasına dizilir
+    o.kuyruk.x = tx; o.kuyruk.y = ty;
     o.izT += dt;
     if (ucusta && o.izT > 1 / 40) {
       o.izT = 0;
@@ -346,7 +396,7 @@ function ucGorsel(o, dt) {
       }
       for (const k of o.kemer) {
         if (!k.gecti && m.x > k.x && m.x - k.x < 120 && Math.abs(fy + 10 - k.y) < k.ry * 0.8) {
-          k.gecti = true; k.parla = 1; o.sevT = 1.3;
+          k.gecti = true; k.parla = 1; o.sevT = 1.3; o.boost = 1; k.zipV = 3.5;
           ucSfx('kemer'); ucSfx('isiltiTopla', 7);
           for (let i = 0; i < 18; i++) { const a = i / 18 * 6.283; parca(k.x + Math.cos(a) * k.rx, k.y + Math.sin(a) * k.ry, Math.cos(a) * 60 - 40, Math.sin(a) * 60, 1.2, UC_RENK[i % 7], 8); }
           OLAY.emit('ucusKemer', { o, k });
@@ -354,8 +404,9 @@ function ucGorsel(o, dt) {
       }
     } else for (const sp of o.isk) if (sp.al) sp.t += dt;
   }
-  for (const k of o.kemer) { k.parla = Math.max(0, k.parla - dt * 0.7); }
+  for (const k of o.kemer) { k.parla = Math.max(0, k.parla - dt * 0.7); k.zipV = (k.zipV || 0) + (-(k.zip || 0) * 60 - (k.zipV || 0) * 6) * dt; k.zip = (k.zip || 0) + k.zipV * dt; }
   for (const bl of o.bulut) { bl.ezV += (-bl.ez * 40 - bl.ezV * 5) * dt; bl.ez += bl.ezV * dt; }
+  if (o.faz !== 'bekle' && o.faz !== 'bitti') ucVayGuncelle(o, dt, ucMerkez(o).x);
   // kuş sürüsü görünürlüğü
   if (o.kus) { const m = ucusta ? ucMerkez(o).x : -1e9, ic = m > o.kus.bas && m < o.kus.son; o.kus.a = clamp(o.kus.a + (ic ? dt * 0.6 : -dt * 0.5), 0, 1); if (ic && !o.kus.gel) { o.kus.gel = true; ucSfx('kuslar'); } }
   if (o.sevT > 0) o.sevT -= dt;
@@ -377,20 +428,21 @@ function ucTopla(o, sp) {
 
 // ── çizim ──
 function ucKemerCiz(k, tm, on) {   // ön (on) ya da arka yarım: içinden geçilen bulut halkası (arka yarı biraz gölgeli)
+  const zp = clamp(k.zip || 0, -0.3, 0.3), krx = k.rx * (1 + zp * 0.5), kry = k.ry * (1 - zp * 0.25);
   const N = 26, renk = on ? k.renk : (k.arka || (k.arka = mixHex(k.renk, '#b07aa8', 0.22)));
   const sw = Math.sin(tm * 1.3 + k.ph) * 2;
   if (!on) { g.globalCompositeOperation = 'lighter'; dglow('#fff0f6', k.x, k.y, k.ry * 1.1, 0.12 + 0.3 * k.parla); g.globalCompositeOperation = 'source-over'; }
   // gövde: kalın yumuşak halka (ponponların arası boş görünmesin)
-  g.save(); g.translate(k.x, k.y + sw); g.scale(1, k.ry / k.rx);
-  g.strokeStyle = on ? (k.govde || (k.govde = mixHex(k.renk, '#ffffff', 0.25))) : renk; g.lineWidth = 40 * k.rx / k.ry; g.lineCap = 'round';
-  g.beginPath(); if (on) g.arc(0, 0, k.rx, Math.PI * 0.5, Math.PI * 1.5); else g.arc(0, 0, k.rx, -Math.PI * 0.5, Math.PI * 0.5); g.stroke();
+  g.save(); g.translate(k.x, k.y + sw); g.scale(1, kry / krx);
+  g.strokeStyle = on ? (k.govde || (k.govde = mixHex(k.renk, '#ffffff', 0.25))) : renk; g.lineWidth = 40 * krx / kry; g.lineCap = 'round';
+  g.beginPath(); if (on) g.arc(0, 0, krx, Math.PI * 0.5, Math.PI * 1.5); else g.arc(0, 0, krx, -Math.PI * 0.5, Math.PI * 0.5); g.stroke();
   g.restore();
   for (let i = 0; i < N; i++) {
     const a = i / N * 6.283 + 0.07, c = Math.cos(a);
     if ((c < 0) !== on) continue;
     const w = Math.sin(tm * 1.3 + i * 0.8 + k.ph) * 2;
     const dis = 1 + 0.12 * Math.sin(i * 1.7 + k.ph);   // ponponlar biraz dışa/içe: kabarık kenar
-    const x = k.x + c * k.rx * dis * 1.15, y = k.y + Math.sin(a) * k.ry * dis + w + sw;
+    const x = k.x + c * krx * dis * 1.15, y = k.y + Math.sin(a) * kry * dis + w + sw;
     const r = 27 + Math.sin(i * 2.3 + k.ph) * 4 + k.parla * 5;
     ucPonCiz(renk, x, y, r, 1, true);
   }
@@ -463,22 +515,36 @@ function ucIzCiz(o, tm) {
     const x = o.iz[j * 2], y = o.iz[j * 2 + 1] + Math.sin(tm * 3 + k * 0.4) * 3 * u;
     dglow(UC_RENK[(k >> 2) % 7], x, y, 26 * (1 - u * 0.5), 0.42 * (1 - u));
   }
-  g.lineCap = 'round';
-  for (let k = 1; k < n; k++) {
-    const a = (o.izI - k + UC_IZ_N * 4) % UC_IZ_N, b = (o.izI - 1 - k + UC_IZ_N * 4) % UC_IZ_N, u = k / UC_IZ_N;
-    g.strokeStyle = `rgba(255,245,255,${(0.5 * (1 - u)).toFixed(3)})`; g.lineWidth = 5 * (1 - u) + 1;
-    g.beginPath(); g.moveTo(o.iz[a * 2], o.iz[a * 2 + 1]); g.lineTo(o.iz[b * 2], o.iz[b * 2 + 1]); g.stroke();
+  g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = '#fff5ff';
+  for (let k0 = 0; k0 < n - 1; k0 += 8) {   // 8'li parçalar: kare başına az çizim çağrısı
+    const u = k0 / UC_IZ_N, k1 = Math.min(n - 1, k0 + 8);
+    g.globalAlpha = 0.5 * (1 - u); g.lineWidth = 5 * (1 - u) + 1;
+    g.beginPath();
+    for (let k = k0; k <= k1; k++) { const j = (o.izI - 1 - k + UC_IZ_N * 4) % UC_IZ_N; if (k === k0) g.moveTo(o.iz[j * 2], o.iz[j * 2 + 1]); else g.lineTo(o.iz[j * 2], o.iz[j * 2 + 1]); }
+    g.stroke();
+  }
+  g.globalAlpha = 1;
+  for (let k = 3; k < n; k += 5) {   // izde göz kırpan minik yıldızlar
+    const j = (o.izI - 1 - k + UC_IZ_N * 4) % UC_IZ_N, u = k / UC_IZ_N, tw = Math.sin(tm * 7 + k * 1.3);
+    if (tw > 0.2) ucYildiz(o.iz[j * 2] + Math.sin(k) * 6, o.iz[j * 2 + 1] + Math.cos(k * 1.7) * 8, 6 * tw * (1 - u), tm + k, (1 - u), '#ffffff');
   }
   g.globalCompositeOperation = 'source-over';
 }
-function ucRuzgar(o, tm) {   // hızı hissettiren ince rüzgâr çizgileri (ekrana göre)
-  const a = o.bagli ? clamp(o.vx / Math.max(o.V, 1), 0, 1) : 0; if (a < 0.05) return;
-  const top = cam.y, h = H / S;
-  g.strokeStyle = '#ffffff'; g.lineCap = 'round'; g.lineWidth = 2;
-  for (let i = 0; i < 12; i++) {
-    const sp = 0.6 + (i * 0.37) % 0.5, x = cam.x + VW - ((tm * 900 * sp + i * 197) % (VW + 300)) + 150, y = top + h * ((i * 0.618) % 1);
-    g.globalAlpha = 0.16 * a * (0.5 + 0.5 * Math.sin(i * 1.7 + tm));
-    g.beginPath(); g.moveTo(x, y); g.lineTo(x + 70 + 40 * sp, y); g.stroke();
+const UC_RZ = [[0.45, 1.2, 0.09, 7], [1, 2, 0.15, 6], [1.8, 3.2, 0.2, 4]];   // paralaks katmanları: [hız, kalınlık, alfa, sayı]
+function ucRuzgar(o, tm) {   // hızı hissettiren rüzgâr çizgileri (3 derinlik; kemerden geçince parlar ve uzar)
+  const a = o.bagli ? clamp(o.vx / Math.max(o.V, 1), 0, 1.4) : 0; if (a < 0.05) return;
+  const top = cam.y, h = H / S, bst = ucEase(o.boost || 0);
+  g.strokeStyle = '#ffffff'; g.lineCap = 'round';
+  let n0 = 0;
+  for (const [hz, lw, al, n] of UC_RZ) {
+    g.lineWidth = lw;
+    for (let j = 0; j < n; j++) {
+      const i = n0 + j, sp = hz * (0.85 + (i * 0.37) % 0.3), L = (40 + 60 * hz) * (1 + bst * 1.2);
+      const x = cam.x + VW - ((tm * 620 * sp * (1 + bst * 0.6) + i * 197) % (VW + 400)) + 200, y = top + h * ((i * 0.618 + 0.05) % 1);
+      g.globalAlpha = al * a * (1 + bst * 1.5) * (0.6 + 0.4 * Math.sin(i * 1.7 + tm));
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + L, y); g.stroke();
+    }
+    n0 += n;
   }
   g.globalAlpha = 1;
 }
@@ -522,8 +588,8 @@ function ucFlash(o) {
   if (o.flash > 0.01) {
     const m = ucMerkez(o);
     g.globalCompositeOperation = 'lighter';
-    dglow('#fff6ff', m.x, m.y, 200 * (0.6 + o.flash * 0.6), 0.42 * o.flash);
-    dglow('#d8b0ff', m.x, m.y, 420, 0.3 * o.flash);
+    dglow('#fff6ff', m.x, m.y, 180 * (0.6 + o.flash * 0.6), 0.3 * o.flash);
+    dglow('#c9a0ff', m.x, m.y, 380, 0.22 * o.flash);
     g.globalCompositeOperation = 'source-over';
   }
   if (o.halka >= 0) {
@@ -532,31 +598,57 @@ function ucFlash(o) {
     g.beginPath(); g.arc(m.x, m.y, 30 + u * 260, 0, 6.283); g.stroke();
   }
 }
-function ucKapiCiz(o, tm) {   // bekleyen kapı: yerde ışık havuzu + yukarı süzülen pırıltılar + kanat silüeti
+function ucKapiCiz(o, tm) {   // bekleyen kapı: yerde lila ışık halkası, dönen renkli yıldızlar, yükselen pırıltılar, ışıktan kanatlar
   const x = o.kx, y = o.ky, p = 0.5 + 0.5 * Math.sin(tm * 2.2);
-  g.globalCompositeOperation = 'lighter';
-  dglow('#e6c8ff', x, y - 40, 110 + p * 20, 0.45);
-  dglow('#fff4d8', x, y - 10, 60, 0.5);
-  g.save(); g.translate(x, y - 6); g.scale(1, 0.25); dglow('#ffffff', 0, 0, 90, 0.5); g.restore();
-  for (let i = 0; i < 9; i++) {
-    const u = (tm * 0.35 + i / 9) % 1, a = Math.sin(u * Math.PI);
-    const px = x + Math.sin(i * 2.1 + tm * 1.3) * 34 * (1 - u * 0.5), py = y - 10 - u * 190;
-    dglow(UC_RENK[i % 7], px, py, 14, 0.7 * a);
-  }
-  g.globalCompositeOperation = 'source-over';
-  for (let i = 0; i < 9; i++) {
-    const u = (tm * 0.35 + i / 9) % 1, a = Math.sin(u * Math.PI);
-    ucYildiz(x + Math.sin(i * 2.1 + tm * 1.3) * 34 * (1 - u * 0.5), y - 10 - u * 190, 5, tm + i, a, '#ffffff');
-  }
-  // ışıktan iki kanat silüeti (burada uçulacak!)
-  g.save(); g.translate(x, y - 120); g.globalAlpha = 0.25 + 0.15 * p; g.fillStyle = '#ffffff';
-  const fl = Math.sin(tm * 2.2) * 0.25;
+  g.save(); g.translate(x, y - 4); g.scale(1, 0.28); dglow('#b98cff', 0, 0, 120, 0.55); dglow('#ffffff', 0, 0, 60, 0.5); g.restore();
+  dglow('#c9a0ff', x, y - 70, 120 + p * 16, 0.35);
+  // ışıktan kanatlar (burada uçulacak!)
+  g.save(); g.translate(x, y - 95 - p * 6);
+  const fl = Math.sin(tm * 2.2) * 0.22;
   for (const sd of [-1, 1]) {
-    g.save(); g.scale(sd, 1); g.rotate(-0.2 + fl);
-    g.beginPath(); g.moveTo(6, 0); g.quadraticCurveTo(40, -46, 92, -40); g.quadraticCurveTo(70, -20, 78, -8); g.quadraticCurveTo(52, -6, 58, 8); g.quadraticCurveTo(30, 6, 6, 10); g.fill();
+    g.save(); g.scale(sd, 1); g.rotate(-0.25 + fl);
+    g.beginPath(); g.moveTo(6, 0); g.quadraticCurveTo(40, -50, 96, -44); g.quadraticCurveTo(74, -24, 82, -10); g.quadraticCurveTo(56, -8, 60, 6); g.quadraticCurveTo(32, 6, 6, 10); g.closePath();
+    g.globalAlpha = 0.5 + 0.2 * p; g.fillStyle = '#e6d4ff'; g.fill();
+    g.globalAlpha = 0.8; g.strokeStyle = '#a77cff'; g.lineWidth = 2.5; g.lineJoin = 'round'; g.stroke();
+    g.globalAlpha = 0.6; g.strokeStyle = '#ffffff'; g.lineWidth = 1.5;
+    g.beginPath(); g.moveTo(14, -2); g.quadraticCurveTo(46, -30, 84, -38); g.moveTo(16, 2); g.quadraticCurveTo(44, -10, 70, -12); g.stroke();
     g.restore();
   }
   g.restore(); g.globalAlpha = 1;
+  // yerde dönen renkli yıldız halkası (arka yarı önce)
+  for (let pass = 0; pass < 2; pass++) for (let i = 0; i < 7; i++) {
+    const a = tm * 1.2 + i / 7 * 6.283, on = Math.sin(a) > 0;
+    if (on !== (pass === 1)) continue;
+    ucYildiz(x + Math.cos(a) * 58, y - 14 + Math.sin(a) * 14, on ? 9 : 7, tm * 2 + i, on ? 1 : 0.7, UC_YILDIZ[i], mixHex(UC_YILDIZ[i], '#8a3f6a', 0.45), 0.3);
+  }
+  // yükselen pırıltılar
+  for (let i = 0; i < 9; i++) {
+    const u = (tm * 0.35 + i / 9) % 1, a = Math.sin(u * Math.PI);
+    ucYildiz(x + Math.sin(i * 2.1 + tm * 1.3) * 40 * (1 - u * 0.5), y - 20 - u * 200, 6, tm + i, a, UC_YILDIZ[i % 7], null, 0.3);
+  }
+}
+
+// parmak ipucu (yazısız): uçuşun başında hiç dokunulmadıysa ekranın sağında yukarı-aşağı kayan yumuşak bir "dokunuş" ışığı
+function ucIpucu(o, tm) {
+  if (o.faz !== 'ucus') { return; }
+  const hedef = !o.denedi && o.t > 1.2 && o.t < 12 ? 1 : 0;
+  const dtt = clamp(tm - (o.ipSon || tm), 0, 0.1); o.ipSon = tm;
+  o.ipA = clamp((o.ipA || 0) + (hedef ? dtt * 1.8 : -dtt * 3), 0, 1);
+  if (o.ipA <= 0.01) return;
+  const vh = H / S, x = cam.x + VW * 0.8, y0 = cam.y + vh * 0.3, y1 = cam.y + vh * 0.68;
+  const u = 0.5 - 0.5 * Math.cos(tm * 1.6), y = lerp(y0, y1, u), a = o.ipA;
+  g.globalAlpha = 0.5 * a; g.strokeStyle = '#ffffff'; g.lineWidth = 4; g.setLineDash([2, 12]); g.lineCap = 'round';
+  g.beginPath(); g.moveTo(x, y0); g.lineTo(x, y1); g.stroke(); g.setLineDash([]);
+  g.globalAlpha = 0.7 * a; g.lineWidth = 4;   // uçlarda minik oklar
+  g.beginPath(); g.moveTo(x - 12, y0 + 4); g.lineTo(x, y0 - 8); g.lineTo(x + 12, y0 + 4); g.moveTo(x - 12, y1 - 4); g.lineTo(x, y1 + 8); g.lineTo(x + 12, y1 - 4); g.stroke();
+  g.globalAlpha = 1;
+  for (let i = 3; i >= 0; i--) {   // iz
+    const uu = 0.5 - 0.5 * Math.cos(tm * 1.6 - i * 0.12), yy = lerp(y0, y1, uu);
+    dglow(i ? '#c9a0ff' : '#ffffff', x, yy, 34 - i * 4, (i ? 0.3 : 0.7) * a);
+  }
+  g.globalAlpha = 0.85 * a; g.fillStyle = '#ffffff'; g.beginPath(); g.arc(x, y, 17 + 2.5 * Math.sin(tm * 6), 0, 6.283); g.fill();
+  g.globalAlpha = 0.9 * a; g.strokeStyle = '#b98cff'; g.lineWidth = 3; g.stroke();
+  g.globalAlpha = 1;
 }
 
 // görünür alan (dünya)
@@ -596,6 +688,7 @@ TUR.kaydet('ucusKapisi', {
   ciz(o, tm) {
     const v = ucGor();
     if (o.faz === 'bekle' && !o.done) ucKapiCiz(o, tm);
+    if (o.vay) ucVayCiz(o, tm);
     for (const k of o.kemer) if (k.x > v.x0 - 200 && k.x < v.x1 + 200) ucKemerCiz(k, tm, false);
     for (const bl of o.bulut) if (bl.x > v.x0 - 200 && bl.x < v.x1 + 200) ucBulutCiz(bl, tm);
     ucIskCiz(o, tm, v.x0, v.x1);
@@ -614,6 +707,7 @@ TUR.kaydet('ucusKapisi', {
     for (const k of o.kemer) if (k.x > v.x0 - 200 && k.x < v.x1 + 200) ucKemerCiz(k, tm, true);
     ucRuzgar(o, tm);
     ucFlash(o);
+    ucIpucu(o, tm);
   },
 });
 

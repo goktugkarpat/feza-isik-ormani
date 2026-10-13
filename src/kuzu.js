@@ -18,14 +18,25 @@
 
 // ── renkler ── (pastel ama doygun; i = ışıltı rengi, y = yanak)
 const KZ_RENK = [
-  { a: '#ff8c8c', l: '#ffe8e6', d: '#d9535f', y: '#ff6f86', i: '#ffa8a8' },   // 0 kırmızı
+  { a: '#ff7a7a', l: '#ffe4e0', d: '#d4404f', y: '#ff5f7a', i: '#ff9a96' },   // 0 kırmızı
   { a: '#ffb36e', l: '#fff1e2', d: '#e07d38', y: '#ff7a7a', i: '#ffc890' },   // 1 turuncu
   { a: '#ffdc62', l: '#fffbe2', d: '#d6a72c', y: '#ff9480', i: '#ffec96' },   // 2 sarı
   { a: '#8fdc8a', l: '#effde8', d: '#4ea860', y: '#ff94a4', i: '#acf2a4' },   // 3 yeşil
   { a: '#7cc4ff', l: '#eaf6ff', d: '#3f88d6', y: '#ff94b4', i: '#a2d8ff' },   // 4 mavi
-  { a: '#8a90f0', l: '#ecedff', d: '#4f56c2', y: '#ff94c6', i: '#adb2ff' },   // 5 lacivert
+  { a: '#6f7ce6', l: '#e6e9ff', d: '#3c44a6', y: '#ff94c6', i: '#98a4ff' },   // 5 lacivert
   { a: '#c492f0', l: '#f7edff', d: '#8b56c8', y: '#ff8cc6', i: '#dab4ff' },   // 6 mor
 ];
+// gökteki yayla aynı renkler (dunya3.js DN3_RB ya da bulut.js BU_GK varsa ana renk oradan; açık/koyu tonlar ondan türetilir)
+(() => {
+  const RB = typeof DN3_RB !== 'undefined' && DN3_RB && DN3_RB.length >= 7 ? DN3_RB : typeof BU_GK !== 'undefined' && BU_GK && BU_GK.length >= 7 ? BU_GK : null;
+  if (!RB) return;
+  const m = (a, b, t) => { const A = hex(a), B = hex(b); return '#' + [0, 1, 2].map(i => Math.round(A[i] + (B[i] - A[i]) * t).toString(16).padStart(2, '0')).join(''); };
+  for (let i = 0; i < 7; i++) {
+    const a = RB[i]; if (typeof a !== 'string' || a.length !== 7) continue;
+    const p = KZ_RENK[i];
+    p.a = m(a, '#ffffff', 0.12); p.l = m(a, '#ffffff', 0.84); p.d = m(a, '#4a3470', 0.3); p.i = m(a, '#ffffff', 0.35);
+  }
+})();
 const KZ_GRI = { a: '#b4b1c0', l: '#f0eff5', d: '#7b788c', y: '#d8b9c8', i: '#dcd8ea' };
 const KZ_GOZ = '#2f2542', KZ_AGIZ = '#7a3d62', KZ_AGIZIC = '#d9668f', KZ_DIL = '#ffb3c8';
 function kzRgba(h, a) { const c = hex(h); return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')'; }
@@ -37,6 +48,8 @@ function kzPalHazir(p, gri) {   // yüz, kulak içi, bacak, tırnak renkleri (bi
   p.bac = kzMix(p.f, p.d, 0.2);
   p.tir = kzMix(p.d, '#5a4a6a', 0.45);
   p.bac2 = kzMix(p.bac, p.d, 0.25);   // uzaktaki bacaklar
+  p.kul = kzMix(p.f, p.a, gri ? 0.3 : 0.4);   // kulak dışı
+  p.kulK = kzRgba(p.d, 0.45);
 }
 kzPalHazir(KZ_GRI, true);
 for (const p of KZ_RENK) kzPalHazir(p, false);
@@ -44,7 +57,7 @@ for (const p of KZ_RENK) kzPalHazir(p, false);
 // ── boyutlar (dünya birimi; Feza 60 boyunda) ──
 const KZ_BW = 54, KZ_BH = 38, KZ_BAC = 9, KZ_HW = 26, KZ_HH = 24;
 const KZ_OLC = 0.84;        // sürüdekiler biraz küçülür (Feza'nın yanında kalabalık görünmesin)
-const KZ_ARA = 50;          // sürüde iki kuzu arası (en az)
+const KZ_ARA = 56;          // sürüde iki kuzu arası (en az)
 const KZ_FEZA = 54;         // Feza'ya en yakın
 const KZ_ILK = 62;          // izde ilk kuzunun Feza'ya uzaklığı
 const KZ_G = 1500;          // zıplama yerçekimi (görüntü)
@@ -114,7 +127,7 @@ function kzYun(pal, w, h, seed) {
     let u, v; do { u = R() * 2 - 1; v = R() * 2 - 1; } while (u * u + v * v > 0.8);
     const px = u * rx, py = v * ry, rr = 1.5 + R() * 2.1, a = R() * 6.283, lum = -u * 0.5 - v * 0.9 + (R() - 0.5) * 0.6;
     x.lineWidth = 0.9 + R() * 0.4;
-    x.strokeStyle = lum > 0 ? kzRgba(pal.l, 0.5) : kzRgba(pal.d, 0.2);
+    x.strokeStyle = lum > 0 ? kzRgba(pal.l, 0.34) : kzRgba(pal.d, 0.14);
     x.beginPath(); x.arc(px, py, rr, a, a + 3.4 + R()); x.stroke();
   }
   gr = x.createLinearGradient(0, ry * 0.05, 0, ry * 1.02);
@@ -385,7 +398,7 @@ function kzYayFiz(k, dt) {
     k.kulv += (-k.kul * 140 - k.kulv * 5.5) * h; k.kul += k.kulv * h;
     k.kuyv += (-k.kuy * 160 - k.kuyv * 5) * h; k.kuy += k.kuyv * h;
   }
-  k.sq = clamp(k.sq, -0.25, 0.3); k.kul = clamp(k.kul, -1, 1); k.kuy = clamp(k.kuy, -1.2, 1.2); k.sqv = clamp(k.sqv, -12, 12);
+  k.sq = clamp(k.sq, -0.2, 0.18); k.kul = clamp(k.kul, -1, 1); k.kuy = clamp(k.kuy, -1.2, 1.2); k.sqv = clamp(k.sqv, -12, 12);
 }
 function kzZipla(k, guc) { k.sqv += guc; k.kulv += guc * 1.5 * (Math.random() < 0.5 ? -1 : 1); k.kuyv += guc * 2; }
 function kzHop(k, dt) {   // görüntü zıplaması (hy: eksi = yukarı)
@@ -602,7 +615,7 @@ function kzTakip(o, k, dt) {
   // yüz ve duruş
   k.mutluT = Math.max(0, (k.mutluT || 0) - dt);
   k.egim = lerp(k.egim, 0, 1 - Math.exp(-dt * 5)); k.yanak = lerp(k.yanak, 0.5, 1 - Math.exp(-dt * 3)); k.parla = lerp(k.parla, 0.15, 1 - Math.exp(-dt * 3));
-  let ac = 0.88, mutlu = k.mutluT > 0 ? 1 : 0, agiz = 'gulus', basY = -0.5, kulA = -0.05 + Math.sin(k.t * 1.3 + k.seed) * 0.05, bakX = clamp((P.x - o.x) / 140, -1, 1), bakY = 0;
+  let ac = 1, mutlu = k.mutluT > 0 ? 1 : 0, agiz = 'gulus', basY = -0.5, kulA = -0.05 + Math.sin(k.t * 1.3 + k.seed) * 0.05, bakX = clamp((P.x - o.x) / 140, -1, 1), bakY = 0;
   if (k.hava) { mutlu = 1; agiz = 'acik'; kulA = -0.35; }
   else if (Math.abs(o.x - tx) > 6) agiz = 'acik';
   // boşta küçük işler (Feza dururken)
@@ -736,7 +749,15 @@ function kzGit(o, k, dt, tx, ty, yer) {
   if (k.binek && k.binek.cisim) { o.x += k.binek.cisim.dx || 0; o.y += k.binek.cisim.dy || 0; }
   const uzak = Math.max(0, Math.abs(dx) - 110);
   const maxv = 330 + uzak * 2;
-  const mx = clamp(dx * 8 * dt, -maxv * dt, maxv * dt);
+  let mx = clamp(dx * 8 * dt, -maxv * dt, maxv * dt);
+  if (Math.abs(mx) > 0.01) {   // öndeki arkadaşına binmesin: aynı yöne gidiyorsa arkasında sıraya girer
+    const yn = Math.sign(mx);
+    for (const q of kzSuru) {
+      if (q === o || q.kz.hava || Math.abs(q.y - o.y) > 22) continue;
+      const ara = (q.x - o.x) * yn;
+      if (ara > 0 && ara < 60) mx = yn * Math.min(Math.abs(mx), Math.max(0, ara - 46));
+    }
+  }
   o.x += mx;
   const yy = kzZeminBul(o.x, o.y, 16, 16);
   if (yy === null) {   // ayağının altı kaydı (yüzen bulut gitti…): süzülerek hedefe
@@ -771,7 +792,7 @@ function kzAyir(o, k, dt) {
     if (q === o || q.kz.hava || Math.abs(o.y - q.y) > 22) continue;
     const d = o.x - q.x, ad = Math.abs(d), en = KZ_ARA - 8;
     if (ad < en) {
-      const nx = o.x + (ad < 0.5 ? (k.sira > q.kz.sira ? -1 : 1) : Math.sign(d)) * (en - ad) * Math.min(1, dt * 5) * 0.5;
+      const nx = o.x + (ad < 0.5 ? (k.sira > q.kz.sira ? -1 : 1) : Math.sign(d)) * (en - ad) * Math.min(1, dt * (ad < 30 ? 12 : 5)) * 0.5;
       if (kzZeminBul(nx, o.y, 10, 10) !== null) o.x = nx;
     }
   }
@@ -796,9 +817,9 @@ function kzUcus(o, k, dt) {
   let tx, ty;
   if (U && U.kuyruk && typeof U.kuyruk.x === 'number') {   // ucus.js isterse kuyruk ucunu verir: {x, y, yon}
     const yon = U.kuyruk.yon || -1;
-    tx = U.kuyruk.x + yon * (24 + k.sira * 42); ty = U.kuyruk.y + Math.sin(k.t * 2.2 + k.sira * 0.9) * 7;
+    tx = U.kuyruk.x + yon * (24 + k.sira * 30); ty = U.kuyruk.y + Math.sin(k.t * 2.2 + k.sira * 0.9) * 7;
   } else {
-    const h = kzUcIzNokta(118 + k.sira * 42); tx = h.x; ty = h.y + 22 + Math.sin(k.t * 2.2 + k.sira * 0.9) * 7;
+    const h = kzUcIzNokta(110 + k.sira * 30); tx = h.x; ty = h.y + 22 + Math.sin(k.t * 2.2 + k.sira * 0.9) * 7;
   }
   const w = 5.5, ex = tx - o.x, ey = ty - o.y;
   k.vx += (ex * w * w - 2 * w * k.vx) * dt; k.vy += (ey * w * w - 2 * w * k.vy) * dt;
@@ -885,7 +906,7 @@ function kzYayda(o, k, dt) {
   }
   // yerinde parlar: gökkuşağı dalgası (kırmızıdan mora sırayla zıplama; her ikinci dalgada takla)
   o.x = lerp(o.x, k.yx, 1 - Math.exp(-dt * 4)); o.y = lerp(o.y, k.yy, 1 - Math.exp(-dt * 4));
-  k.parla = lerp(k.parla, 1, 1 - Math.exp(-dt * 2));
+  k.parla = lerp(k.parla, 0.75 + 0.25 * Math.sin(kzYay.t * 2.2 + k.renkI), 1 - Math.exp(-dt * 2));
   k.yonH = lerp(k.yonH, 0.12 * (P.x < o.x ? -1 : 1), 1 - Math.exp(-dt * 3));
   k.bakX = clamp((P.x - o.x) / 200, -1, 1) * 0.6; k.bakY = 0.3;
   k.gy = Math.sin(kzYay.t * 2 + k.renkI * 0.5) * 4;
@@ -912,7 +933,7 @@ function kzCiz(o, k, tm) {
   // ışıltı (dönüşümsüz)
   g.globalCompositeOperation = 'lighter';
   if (k.umut > 0.02) { const pu = 0.75 + 0.25 * Math.sin(tm * 3.1 + o.x * 0.01); dglow('#fff6e8', X, Y - 26, 78 * pu, 0.2 * k.umut); }
-  if (rU > 0.01) dglow(k.pal.i, X, Y + govdeY * olc, (64 + 40 * k.parla) * olc, (0.16 + 0.32 * k.parla) * rU);
+  if (rU > 0.01) dglow(k.pal.i, X, Y + govdeY * olc, (58 + 26 * k.parla) * olc, (0.13 + 0.14 * k.parla) * rU);
   g.globalCompositeOperation = 'source-over';
   // gölge
   if (k.zemin !== null && k.zemin !== undefined) {
@@ -1008,7 +1029,8 @@ function kzKafa(k, c, s, rU, tm) {
     const ang = dirX >= 0 ? dr : Math.PI - dr;
     const ca = Math.cos(ang), sa = Math.sin(ang);
     g.save(); g.translate(bx + ca * L * 0.46, by + sa * L * 0.46); g.rotate(ang);
-    g.fillStyle = fCol; g.beginPath(); g.ellipse(0, 0, L * 0.52, KZ_HW * 0.15, 0, 0, 6.283); g.fill();
+    g.fillStyle = basU >= 0.5 ? k.pal.kul : KZ_GRI.kul; g.beginPath(); g.ellipse(0, 0, L * 0.52, KZ_HW * 0.15, 0, 0, 6.283); g.fill();
+    g.strokeStyle = basU >= 0.5 ? k.pal.kulK : KZ_GRI.kulK; g.lineWidth = 0.7; g.stroke();
     g.fillStyle = icCol; g.globalAlpha = 0.85; g.beginPath(); g.ellipse(L * 0.06, 0.4, L * 0.34, KZ_HW * 0.075, 0, 0, 6.283); g.fill();
     g.globalAlpha = 1; g.restore();
   }
@@ -1036,7 +1058,7 @@ function kzKafa(k, c, s, rU, tm) {
   const mx = c * hw * 0.42, my = hh * 0.5;
   g.strokeStyle = KZ_AGIZ; g.fillStyle = KZ_AGIZ; g.lineWidth = 1.05; g.lineCap = 'round';
   switch (k.agiz) {
-    case 'uzgun': g.beginPath(); g.arc(mx, my + 2.4, 2.1, 1.2 * Math.PI, 1.8 * Math.PI); g.stroke(); break;
+    case 'uzgun': g.beginPath(); g.arc(mx, my + 2.2, 1.6, 1.25 * Math.PI, 1.75 * Math.PI); g.stroke(); break;
     case 'o': g.beginPath(); g.ellipse(mx, my + 0.6, 1.1, 1.3, 0, 0, 6.283); g.fill(); break;
     case 'cigne': g.beginPath(); g.moveTo(mx - 1.4, my + 0.5); g.quadraticCurveTo(mx, my + 1.4 + Math.sin(tm * 26) * 0.6, mx + 1.4, my + 0.5); g.stroke(); break;
     case 'gulus':
@@ -1089,7 +1111,7 @@ function kzGoz(k, sg, ex, ey, sc, fCol) {
     g.beginPath(); g.moveTo(lerp(xIn, xOut, 0.12), lerp(yIn, yOut, 0.12)); g.lineTo(lerp(xIn, xOut, 0.86), lerp(yIn, yOut, 0.86)); g.stroke();
   }
   if (eg > 0.05) {   // endişeli kaş: iç ucu yukarıda
-    g.globalAlpha = 0.55 * eg; g.lineWidth = 0.9 * sc;
+    g.globalAlpha = 0.22 * eg; g.lineWidth = 0.8 * sc;
     g.beginPath(); g.moveTo(ex - sg * rx * 1.05, ey - ryT - 2.6 * sc - eg * 0.8); g.lineTo(ex + sg * rx * 0.95, ey - ryT - 1.4 * sc); g.stroke();
     g.globalAlpha = 1;
   }

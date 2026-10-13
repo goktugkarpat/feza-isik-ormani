@@ -54,14 +54,15 @@ const DN3_REGC = { pembeBulut: ['#ff9ccf', 0.45], kuzuCayir: ['#a6ecc0', 0.4], r
 function dn3Region() {
   const R = DN3.reg || (DN3.reg = { r: 255, g: 190, b: 200, a: 0, hex: '#ffbec8', wind: 0, ucus: 0, tepe: 0 });
   const cx = cam.x + VW / 2, L = dn3Bolgeler();
-  let sr = 0, sg = 0, sb = 0, sw = 0, sa = 0, wind = 0, uc = 0, tp = 0;
+  let sr = 0, sg = 0, sb = 0, sw = 0, sa = 0, wind = 0, uc = 0, tp = 0, sk = 0, pb = 0, kc = 0;
   for (let i = 0; i < L.length; i++) { const b = L[i]; if (!b) continue; const c = DN3_REGC[b.ad]; if (!c) continue; const w = clamp(Math.min(cx - b.x0 + 6 * T, b.x1 + 6 * T - cx) / (12 * T), 0, 1); if (w <= 0) continue;
-    const A = hex(c[0]); sr += A[0] * w; sg += A[1] * w; sb += A[2] * w; sw += w; sa += c[1] * w; if (b.ad === 'ruzgar') wind = Math.max(wind, w); if (b.ad === 'ucus' || b.ad === 'bosluk') uc = Math.max(uc, w); if (b.ad === 'tepe') tp = Math.max(tp, w); }
+    const A = hex(c[0]); sr += A[0] * w; sg += A[1] * w; sb += A[2] * w; sw += w; sa += c[1] * w; if (b.ad === 'ruzgar') wind = Math.max(wind, w); if (b.ad === 'ucus' || b.ad === 'bosluk') uc = Math.max(uc, w); if (b.ad === 'tepe') tp = Math.max(tp, w); if (b.ad === 'sekil') sk = Math.max(sk, w); if (b.ad === 'pembeBulut') pb = Math.max(pb, w); if (b.ad === 'kuzuCayir') kc = Math.max(kc, w); }
   if (sw > 0) { R.r = sr / sw; R.g = sg / sw; R.b = sb / sw; R.a = sa / Math.max(1, sw); } else R.a = 0;
   const B = dn3Bolum();
   if (B && B.ucus && isFinite(B.ucus.x0) && isFinite(B.ucus.x1)) uc = Math.max(uc, clamp(Math.min(cx - B.ucus.x0 + 4 * T, B.ucus.x1 + 4 * T - cx) / (8 * T), 0, 1));
   if (B && B.gokkusagi && isFinite(B.gokkusagi.x)) tp = Math.max(tp, clamp(1 - Math.abs(cx - B.gokkusagi.x) / (22 * T), 0, 1));
-  R.wind = wind; R.ucus = uc; R.tepe = tp;
+  R.wind = wind; R.ucus = uc; R.tepe = tp; R.sekil = sk; R.pembe = pb; R.cayir = kc;
+  DN3.drift = (DN3.drift || 0) + DN3.dt * (1 + 3.5 * wind + 1.5 * DN3.fly);   // rüzgârda bulutlar daha hızlı kayar (birikimli: sıçrama yok)
   R.hex = '#' + ((1 << 24) | (Math.round(R.r) << 16) | (Math.round(R.g) << 8) | Math.round(R.b)).toString(16).slice(1);
   return R;
 }
@@ -174,14 +175,15 @@ function dn3Sun(tm) {
 function dn3Rays(tm, a) {
   if (a < 0.01) return; const x = DN3.sx, y = DN3.sy, m = Math.max(W, H) * 1.5, br = 0.75 + 0.25 * Math.sin(tm * 0.37) * Math.sin(tm * 0.23 + 1);
   g.globalCompositeOperation = 'lighter';
-  for (let i = 0; i < 2; i++) { const sp = dn3RaySpr(i); g.save(); g.translate(x, y); g.rotate(i ? -tm * 0.0065 + 0.4 : tm * 0.009); g.globalAlpha = a * (i ? 0.75 : 1) * (i ? 1.25 - br * 0.5 : br); g.drawImage(sp, -m, -m, m * 2, m * 2); g.restore(); }
+  const nR = a > 0.25 ? 2 : 1;   // GPU: sakin bölgelerde tek hüzme katmanı
+  for (let i = 0; i < nR; i++) { const sp = dn3RaySpr(i); g.save(); g.translate(x, y); g.rotate(i ? -tm * 0.0065 + 0.4 : tm * 0.009); g.globalAlpha = a * (i ? 0.75 : 1) * (i ? 1.25 - br * 0.5 : br); g.drawImage(sp, -m, -m, m * 2, m * 2); g.restore(); }
   g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
 }
 
 // ═══════════ gökkuşağı: önbellekli yay (bant bant; yeni bant soldan sağa çizilerek belirir) ═══════════
 const DN3_RBC = { R: 0, k: 0.25, pad: 0, ghost: null, band: [], comp: new Map() };
 function dn3RbGeo() {   // ekranda gökkuşağı merkezi ve yarıçapı
-  const R = Math.round(Math.min(W * 0.44, H * 0.52)); return R;
+  const R = Math.round(Math.min(W * 0.46, H * 0.5)); return R;
 }
 function dn3RbPaint(mask, single) {   // mask: bit i = bant i görünür; single: tek bant (süpürme için) ya da -1; 'g' hayalet
   const R = DN3_RBC.R, k = DN3_RBC.k, bw = R * 0.034, pad = DN3_RBC.pad, w = Math.ceil((R + pad) * 2 * k), h = Math.ceil((R + pad) * k) + 2;
@@ -209,19 +211,19 @@ function dn3RbBand(i) { let c = DN3_RBC.band[i]; if (!c) c = DN3_RBC.band[i] = d
 function dn3RbComp(mask) { let c = DN3_RBC.comp.get(mask); if (!c) { if (DN3_RBC.comp.size > 10) DN3_RBC.comp.clear(); c = dn3RbPaint(mask, -1); DN3_RBC.comp.set(mask, c); } return c; }
 const DN3_SWEEP = 2.2;
 function dn3Rainbow(tm) {
-  dn3RbBuild(); const R = DN3_RBC.R, pad = DN3_RBC.pad, cx = W * 0.44, cy = DN3.hy + 0.035 * H, dw = (R + pad) * 2, dh = (R + pad) + 2 / DN3_RBC.k;
+  dn3RbBuild(); const R = DN3_RBC.R, pad = DN3_RBC.pad, cx = W * 0.44, cy = Math.min(DN3.hy + 0.035 * H, H * 0.62 + R * 0.05), dw = (R + pad) * 2, dh = (R + pad) + 2 / DN3_RBC.k;
   DN3.rcx = cx; DN3.rcy = cy;
   const fin = DN3.finT !== undefined ? smooth(clamp((now - DN3.finT) / 2.5, 0, 1)) : 0;
-  let mask = 0, nOn = 0; const sweeping = [];
-  for (let i = 0; i < 7; i++) { const t0 = DN3.rbT[i]; if (t0 === undefined || now < t0) continue; nOn++; if (now - t0 >= DN3_SWEEP) mask |= 1 << i; else sweeping.push(i); }
+  let mask = 0, nOn = 0, swp = 0;
+  for (let i = 0; i < 7; i++) { const t0 = DN3.rbT[i]; if (t0 === undefined || now < t0) continue; nOn++; if (now - t0 >= DN3_SWEEP) mask |= 1 << i; else swp |= 1 << i; }
   const ga = (1 - nOn / 7) * 0.13 + 0.03 * Math.sin(tm * 0.8);   // kayıp gökkuşağının çok soluk izi
   if (ga > 0.01) { g.globalAlpha = ga; g.drawImage(DN3_RBC.ghost, cx - R - pad, cy - R - pad, dw, dh); g.globalAlpha = 1; }
-  const base = 0.62 + 0.2 * DN3.reg.tepe + 0.18 * fin, br = 0.92 + 0.08 * Math.sin(tm * 0.6);
+  const base = 0.6 + 0.15 * DN3.reg.tepe + 0.1 * fin, br = 0.92 + 0.08 * Math.sin(tm * 0.6);
   if (mask) {
     const c = dn3RbComp(mask); g.globalAlpha = base * br; g.drawImage(c, cx - R - pad, cy - R - pad, dw, dh);
-    g.globalCompositeOperation = 'lighter'; g.globalAlpha = (0.14 + 0.2 * fin) * br; g.drawImage(c, cx - R - pad, cy - R - pad, dw, dh); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
+    g.globalCompositeOperation = 'lighter'; g.globalAlpha = (0.12 + 0.08 * fin) * br; g.drawImage(c, cx - R - pad, cy - R - pad, dw, dh); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
   }
-  for (const i of sweeping) {   // yeni bant: soldan sağa çizilir, ucunda parlayan ışık
+  for (let i = 0; i < 7; i++) { if (!((swp >> i) & 1)) continue;   // yeni bant: soldan sağa çizilir, ucunda parlayan ışık
     const e = (now - DN3.rbT[i]) / DN3_SWEEP, q = dn3Ease(clamp(e / 0.8, 0, 1)), an = Math.PI + Math.PI * q, rc = R - (i + 0.5) * R * 0.034;
     g.save(); g.beginPath(); g.moveTo(cx, cy); g.arc(cx, cy, R + pad, Math.PI - 0.02, an); g.closePath(); g.clip();
     g.globalAlpha = base * (0.85 + 0.6 * (1 - e)); g.drawImage(dn3RbBand(i), cx - R - pad, cy - R - pad, dw, dh);
@@ -231,7 +233,7 @@ function dn3Rainbow(tm) {
     else dn3Eg(DN3_RB[i], cx + Math.cos(an) * rc, cy + Math.sin(an) * rc, 50 * S, 50 * S, 0.5 * (1 - clamp((e - 0.8) / 0.2, 0, 1)));
     g.globalCompositeOperation = 'source-over';
   }
-  if (mask || sweeping.length) {   // yay boyunca kayan ışıltılar
+  if (mask || swp) {   // yay boyunca kayan ışıltılar
     g.globalCompositeOperation = 'lighter';
     const n = 3 + Math.round(5 * fin);
     for (let j = 0; j < n; j++) { const u = (tm * (0.05 + 0.012 * j) + j * 0.37) % 1, bi = (j * 3) % 7; if (!((mask >> bi) & 1)) continue; const an = Math.PI + Math.PI * u, rc = R - (bi + 0.5) * R * 0.034, a = Math.sin(u * Math.PI);
@@ -246,6 +248,11 @@ function dn3Puff(x, cx, cy, r, hi, body, edge, a) {   // mat, yumuşak kabarcık
   gr.addColorStop(0, hi); gr.addColorStop(0.55, body); gr.addColorStop(1, edge);
   x.globalAlpha = a; x.fillStyle = gr; x.beginPath(); x.arc(cx, cy, r, 0, 6.283); x.fill(); x.globalAlpha = 1;
 }
+function dn3PuffFlat(x, cx, cy, r, hi, body) {   // uzak katmanlar: düz gövde, yalnız sağ-üstte geniş, yumuşak ışık (Gris sadeliği)
+  x.fillStyle = body; x.beginPath(); x.arc(cx, cy, r, 0, 6.283); x.fill();
+  const gr = x.createRadialGradient(cx + r * 0.3, cy - r * 0.42, 0, cx + r * 0.3, cy - r * 0.42, r * 1.05); gr.addColorStop(0, hi); gr.addColorStop(0.55, dn3Hx(hi, 0.35)); gr.addColorStop(1, dn3Hx(hi, 0));
+  x.save(); x.beginPath(); x.arc(cx, cy, r, 0, 6.283); x.clip(); x.fillStyle = gr; x.fillRect(cx - r, cy - r, r * 2, r * 2); x.restore();
+}
 function dn3Rim(x, cx, cy, r, col, a) {   // kenar ışığı: kabarcıktan ÖNCE sağ-üste kaymış disk; üstüne çizilen kabarcık yalnız ince bir hilal bırakır
   x.globalAlpha = a; x.fillStyle = col; x.beginPath(); x.arc(cx + r * 0.05 + 0.6, cy - r * 0.075 - 0.8, r, 0, 6.283); x.fill(); x.globalAlpha = 1;
 }
@@ -253,56 +260,61 @@ const dn3Prof = (u, s) => 0.5 + 0.2 * Math.sin(6.2832 * u * 2 + s) + 0.15 * Math
 
 // ═══════════ paralaks katmanları: uzak bulut kuleleri, bulut denizi sıraları ═══════════
 const DN3_LAY = [
-  { kind: 'tower', f: 0.018, dr: 1.2, P: 3200, up: 330, dn: 60, yo: 6, lo: 0.12, rMin: 26, rMax: 52, hi: '#f4ecff', body: '#c6b6ea', edge: '#a99ad8', bot: '#b9a8e2', rim: '#ffe0c8', rimA: 0.5, seed: 11 },
-  { kind: 'bank', f: 0.05, dr: 2.5, P: 2900, up: 120, dn: 70, yo: 14, lo: 0.25, rMin: 20, rMax: 42, hi: '#fff0f6', body: '#d8b4e2', edge: '#b9a0dc', bot: '#c8aadc', rim: '#ffd8b8', rimA: 0.55, seed: 23 },
-  { kind: 'bank', f: 0.11, dr: 4, P: 2600, up: 120, dn: 90, yo: 44, lo: 0.25, rMin: 22, rMax: 46, hi: '#fff4f0', body: '#ecb6d4', edge: '#c8a0d6', bot: '#d8aad8', rim: '#ffdcae', rimA: 0.65, seed: 37 },
-  { kind: 'bank', f: 0.22, dr: 6, P: 2400, up: 130, dn: 120, yo: 96, lo: 0.3, rMin: 24, rMax: 50, hi: '#fff8ee', body: '#f6bccb', edge: '#d4a4d4', bot: '#e2b0d4', rim: '#ffe4a6', rimA: 0.75, seed: 41 },
-  { kind: 'bank', f: 0.4, dr: 9, P: 2200, up: 140, dn: 170, yo: 168, lo: 0.3, rMin: 26, rMax: 56, hi: '#fffaf0', body: '#fcc6cc', edge: '#dcaad6', bot: '#d6acd8', rim: '#fff0b4', rimA: 0.8, seed: 53 },
+  { kind: 'tower', bl: 0.38, f: 0.018, dr: 1.2, P: 3200, up: 330, dn: 60, yo: 6, lo: 0.12, rMin: 26, rMax: 52, hi: '#f6eaff', body: '#c4b4ea', edge: '#ab9ede', bot: '#c8b8ea', rim: '#ffe4cc', rimA: 0.35, seed: 11, hz: '#ffe2d0' },
+  { kind: 'bank', bl: 0.42, f: 0.05, dr: 2.5, P: 2900, up: 120, dn: 70, yo: 14, lo: 0.25, rMin: 29, rMax: 61, hi: '#ffeef6', body: '#c4a2dc', edge: '#a88cd0', bot: '#c0a4dc', rim: '#ffd4b4', rimA: 0.45, seed: 23, hz: '#ffd8dc' },
+  { kind: 'bank', bl: 0.5, f: 0.11, dr: 4, P: 2600, up: 120, dn: 90, yo: 44, lo: 0.25, rMin: 32, rMax: 67, hi: '#fff0ec', body: '#de9cc6', edge: '#b888c6', bot: '#d4a0cc', rim: '#ffd6a0', rimA: 0.55, seed: 37, hz: '#ffd6d8' },
+  { kind: 'bank', bl: 0.55, f: 0.22, dr: 6, P: 2400, up: 130, dn: 120, yo: 96, lo: 0.3, rMin: 35, rMax: 72, hi: '#fff4e8', body: '#f0a8be', edge: '#cc8cbc', bot: '#e0a4c6', rim: '#ffe09c', rimA: 0.6, seed: 41, hz: '#ffdcd8' },
+  { kind: 'bank', bl: 0.6, f: 0.4, dr: 9, P: 2200, up: 140, dn: 170, yo: 168, lo: 0.3, rMin: 38, rMax: 81, hi: '#fff8ee', body: '#f9bcc2', edge: '#d898c0', bot: '#e6b0ca', rim: '#fff0b0', rimA: 0.65, seed: 53, hz: '#f4c8dc' },
 ];
 const dn3LayQ = L => clamp(H / VH * 0.55, 0.45, Math.min(1.3, 4200 / L.P));
 function dn3PaintLayer(L) {
-  const q = dn3LayQ(L); L.q = q;
+  L.q = dn3LayQ(L); const q = L.q * (L.bl || 0.5);   // düşük çözünürlükte boyanır: büyütülünce doğal yumuşaklık
   const w = Math.round(L.P * q), h = Math.round((L.up + L.dn) * q), c = L.cv && L.cv.width === w && L.cv.height === h ? L.cv : (L.cv = dn3Cv(w, h)), x = c.getContext('2d');
-  x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, w, h); x.setTransform(q, 0, 0, q, 0, 0); x.lineCap = 'round';
-  const R = rng(L.seed), foot = L.up, Pp = L.P;
-  const hb = u => L.up * (L.lo + (1 - L.lo) * clamp(dn3Prof(u, L.seed), 0, 1));
-  // gövde tabanı (kabarcıkların altı boş kalmasın)
-  const base = new Path2D(); base.moveTo(-10, L.up + L.dn + 4);
-  for (let i = -8; i <= Pp + 8; i += 8) base.lineTo(i, foot - hb((((i % Pp) + Pp) % Pp) / Pp) * (L.kind === 'tower' ? 0.25 : 0.5));
-  base.lineTo(Pp + 10, L.up + L.dn + 4); base.closePath();
-  const gb = x.createLinearGradient(0, foot - L.up * 0.5, 0, L.up + L.dn); gb.addColorStop(0, L.body); gb.addColorStop(0.45, dn3Mix(L.body, L.bot, 0.6)); gb.addColorStop(1, L.bot);
-  x.fillStyle = gb; x.fill(base);
-  const puffs = [];
-  if (L.kind === 'tower') {   // kümülüs kuleleri: üst üste kabarcık yığını
-    const nT = 7;
-    for (let t = 0; t < nT; t++) {
-      const bx = (t + 0.2 + R() * 0.6) / nT * Pp, th = L.up * (0.45 + R() * 0.5), bw = 120 + R() * 160, lv = 6;
-      for (let j = 0; j < lv; j++) { const q2 = j / (lv - 1), ww = bw * (1 - q2 * 0.62), yy = foot - th * q2 - 10, n = 2 + Math.round(3 * (1 - q2));
-        for (let m = 0; m < n; m++) { const r = (L.rMin + R() * (L.rMax - L.rMin)) * (1 - q2 * 0.4) * (0.8 + ww / 400); puffs.push({ x: bx + (m / Math.max(1, n - 1) - 0.5) * ww + (R() - 0.5) * 16, y: yy + r * 0.5, r, o: j * 10 + m }); } }
+  x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, w, h); x.setTransform(q, 0, 0, q, 0, 0); x.lineCap = 'round'; x.lineJoin = 'round';
+  const R = rng(L.seed), foot = L.up, Pp = L.P, bottom = L.up + L.dn + 4;
+  const hb = u => L.up * (L.lo + (1 - L.lo) * clamp(dn3Prof(((u % 1) + 1) % 1, L.seed), 0, 1));
+  // kümülüs öbekleri: her öbek = kubbe + üstte daha küçük katlar; tek bir hacim ışığıyla gölgelenir (top top kabarcık değil)
+  const cl = [], rows = L.kind === 'tower' ? [{ k: 1, b: 0, t: 3, wm: 1.5 }, { k: 0.3, b: 0.1, t: 1, wm: 0.9 }] : L.f < 0.08 ? [{ k: 1, b: 0, t: 2, wm: 1 }, { k: 0.45, b: 0.18, t: 1, wm: 0.9 }] : [{ k: 1, b: 0, t: 2, wm: 1 }, { k: 0.5, b: 0.22, t: 1, wm: 0.85 }];
+  rows.forEach((row, ri) => { let px = -R() * 60;
+    while (px < Pp) { const u = px / Pp, cw = L.rMax * (2.6 + R() * 2.6) * row.wm, chh = Math.max(L.up * 0.12, hb(u) * row.k * (0.7 + R() * 0.45)), base = foot + L.up * row.b + 4;
+      cl.push({ cx: px, cw, chh, base, ri, tiers: row.t > 1 ? 1 + Math.floor(R() * row.t * 0.99) + (R() < 0.5 ? 1 : 0) : 1, sd: Math.floor(R() * 1e6) });
+      px += cw * (0.45 + R() * 0.3); } });
+  cl.sort((a, b) => a.ri - b.ri || b.chh - a.chh);
+  const offs = [-Pp, 0, Pp], top0 = dn3Mix(L.body, L.hi, 0.3), base0 = dn3Mix(L.body, L.edge, 0.55);
+  for (const C of cl) for (const o of offs) {
+    const cx = C.cx + o; if (cx + C.cw < -40 || cx - C.cw > Pp + 40) continue;
+    const RR = rng(C.sd), uni = new Path2D(), lobes = []; let topY = C.base;
+    for (let t = 0; t < Math.min(3, C.tiers); t++) {   // katlar: alt kubbe geniş, üsttekiler daralır
+      const tw = C.cw * (1 - t * 0.32), th = C.chh * (t ? 0.5 : 0.62), tb = C.base - C.chh * (t ? 0.42 + t * 0.2 : 0), tx = cx + (RR() - 0.5) * C.cw * 0.18 * t, n = t ? 3 + Math.floor(RR() * 2) : 5 + Math.floor(RR() * 3);
+      for (let j = 0; j < n; j++) { const v = n > 1 ? j / (n - 1) : 0.5, sv = Math.sin(Math.PI * (0.08 + v * 0.84)), r = tw * (0.13 + 0.11 * sv) * (0.8 + RR() * 0.45), lx = tx + (v - 0.5) * tw * 0.86, ly = tb - th * (0.15 + 0.85 * Math.pow(sv, 0.9)) * (0.85 + RR() * 0.3) + r;
+        uni.moveTo(lx + r, ly); uni.arc(lx, ly, r, 0, 6.283); lobes.push([lx, ly, r]); topY = Math.min(topY, ly - r); }
     }
-    for (let i = 0; i < 60; i++) { const px = R() * Pp, r = L.rMin * (0.7 + R() * 0.6), u = px / Pp; puffs.push({ x: px, y: foot - hb(u) * 0.3 + r * 0.6, r, o: 100 }); }
-  } else {
-    const rows = [{ k: 1, rs: 1, o: 0 }, { k: 0.66, rs: 0.8, o: 1 }, { k: 0.34, rs: 0.62, o: 2 }];
-    for (const row of rows) { let px = -R() * 30; while (px < Pp) { const u = px / Pp, top = foot - hb(u) * row.k, r = (L.rMin + R() * (L.rMax - L.rMin)) * row.rs * (0.6 + 0.6 * hb(u) / L.up); puffs.push({ x: px, y: top + r, r, o: row.o }); px += r * (0.5 + R() * 0.4); } }
+    for (let j = 0; j < 4; j++) { const bx = cx + (j / 3 - 0.5) * C.cw * 0.8, br = C.cw * (0.13 + RR() * 0.04); uni.moveTo(bx + br, C.base); uni.arc(bx, C.base, br, 0, 6.283); }   // yuvarlak taban lobları (köşe yok)
+    uni.rect(cx - C.cw * 0.4, C.base, C.cw * 0.8, bottom - C.base);
+    // kenar ışığı: sağ-üste kaymış siluet
+    x.save(); x.translate(1.6, -2.2); x.globalAlpha = L.rimA * (C.ri ? 0.3 : 0.6); x.fillStyle = L.rim; x.fill(uni); x.restore(); x.globalAlpha = 1;
+    const gb = x.createLinearGradient(0, topY, 0, C.base + 10); gb.addColorStop(0, top0); gb.addColorStop(0.55, L.body); gb.addColorStop(1, base0); x.fillStyle = gb; x.fill(uni);
+    x.save(); x.clip(uni);
+    const lx0 = cx + C.cw * 0.2, ly0 = topY + (C.base - topY) * 0.15, lr = C.cw * 0.72, lg = x.createRadialGradient(lx0, ly0, 0, lx0, ly0, lr);
+    lg.addColorStop(0, dn3Hx(L.hi, 0.7)); lg.addColorStop(0.45, dn3Hx(L.hi, 0.25)); lg.addColorStop(1, dn3Hx(L.hi, 0)); x.fillStyle = lg; x.fillRect(lx0 - lr, ly0 - lr, lr * 2, lr * 2);
+    const sx0 = cx - C.cw * 0.42, sy0 = C.base, sr = C.cw * 0.62, sg = x.createRadialGradient(sx0, sy0, 0, sx0, sy0, sr);
+    sg.addColorStop(0, dn3Hx(L.edge, 0.55)); sg.addColorStop(1, dn3Hx(L.edge, 0)); x.fillStyle = sg; x.fillRect(sx0 - sr, sy0 - sr, sr * 2, sr * 2);
+    x.strokeStyle = L.edge; for (const lb of lobes) { if (lb[1] + lb[2] > C.base - C.chh * 0.1) continue; x.globalAlpha = 0.1; x.lineWidth = lb[2] * 0.08; x.beginPath(); x.arc(lb[0] - lb[2] * 0.04, lb[1] + lb[2] * 0.02, lb[2] * 0.96, 0.35, 2.75); x.stroke(); }
+    x.globalAlpha = 1; x.restore();
   }
-  puffs.sort((a, b) => a.o - b.o || a.y - b.y);
-  for (const p of puffs) for (const o of [-Pp, 0, Pp]) {
-    const cx = p.x + o; if (cx + p.r < -10 || cx - p.r > Pp + 10) continue;
-    dn3Puff(x, cx, p.y, p.r, L.hi, L.body, L.edge, 1);
-    x.globalCompositeOperation = 'lighter'; dn3Rim(x, cx, p.y, p.r, L.rim, L.rimA * 0.55, Math.max(1.2, p.r * 0.06)); x.globalCompositeOperation = 'source-over';
-  }
-  // alt kısım: sisle karışan yumuşak geçiş
-  const gf = x.createLinearGradient(0, foot, 0, L.up + L.dn); gf.addColorStop(0, dn3Hx(L.bot, 0)); gf.addColorStop(1, dn3Hx(L.bot, 0.85)); x.fillStyle = gf; x.fillRect(0, foot, Pp, L.dn + 4);
+  // alt kısım: sis rengine karışan yumuşak geçiş (sis bandı katmana pişirilir; karede ayrıca çizilmez)
+  const gf = x.createLinearGradient(0, foot - L.up * 0.1, 0, bottom); gf.addColorStop(0, dn3Hx(L.hz || L.bot, 0)); gf.addColorStop(0.45, dn3Hx(L.hz || L.bot, 0.55)); gf.addColorStop(1, dn3Hx(L.bot, 0.95));
+  x.fillStyle = gf; x.fillRect(-10, foot - L.up * 0.1, Pp + 20, bottom - foot + L.up * 0.1 + 6);
 }
 function dn3LayFoot(L) { return DN3.hy + L.yo * S + DN3.dyS * L.f * 0.9; }
 function dn3DrawLayer(L, alpha, tm) {
   if (!L.cv) return;
-  const Pw = L.P * S, ox = ((-(cam.x * L.f + tm * L.dr) * S) % Pw + Pw) % Pw, foot = dn3LayFoot(L), top = foot - L.up * S, dh = (L.up + L.dn) * S;
+  const Pw = L.P * S, ox = ((-(cam.x * L.f + (DN3.drift || 0) * L.dr) * S) % Pw + Pw) % Pw, foot = dn3LayFoot(L), top = foot - L.up * S, dh = (L.up + L.dn) * S;
   if (top > H) return;
   g.globalAlpha = alpha;
   for (let x0 = ox - Pw; x0 < W; x0 += Pw) g.drawImage(L.cv, x0, top, Pw + 1, dh);
   g.globalAlpha = 1;
-  const b = top + dh - 1; if (b < H && alpha > 0.98) { g.fillStyle = L.bot; g.fillRect(0, b, W, H - b); }
+  const b = top + dh - 1; if (b < H && L === DN3_LAY[DN3_LAY.length - 1]) { g.fillStyle = L.bot; g.fillRect(0, b, W, H - b); }   // yalnız en yakın katman (üst üste dolgu yok)
 }
 const dn3Haze = (y, hgt, a, col) => dn3Eg(col, W * 0.5, y, W * 0.8, hgt, a);
 
@@ -370,6 +382,31 @@ function dn3Islands(tm, nearPass) {
   }
 }
 
+// ═══════════ hayal bulutları: gökte tavşan, balina, ayıcık biçimli bulutlar (Bulut Şekilleri bölgesinde belirginleşir) ═══════════
+const DN3_SHP = [
+  [['e', 0, 0, 92, 58, 0], ['c', 82, -48, 44], ['e', 66, -128, 15, 46, -0.22], ['e', 102, -122, 15, 44, 0.28], ['c', -92, -12, 22], ['c', -44, 46, 26], ['c', 44, 48, 24], ['c', -30, -44, 40], ['c', 20, -50, 38]],   // tavşan
+  [['e', 0, 0, 150, 58, 0], ['c', 90, -24, 52], ['c', 20, -40, 50], ['c', -60, -30, 44], ['e', -168, -36, 44, 16, -0.6], ['e', -170, 6, 44, 15, 0.5], ['c', 116, -96, 11], ['c', 100, -116, 14], ['c', 128, -118, 12], ['c', 112, -138, 10]],   // balina
+  [['c', 0, 24, 80], ['c', 0, -70, 56], ['c', -44, -116, 23], ['c', 44, -116, 23], ['c', -78, 0, 30], ['c', 78, 0, 30], ['c', -40, 92, 30], ['c', 40, 92, 30]],   // ayıcık
+];
+const dn3ShpC = [];
+function dn3ShapeSpr(i) {
+  if (dn3ShpC[i]) return dn3ShpC[i]; const q = 0.55, w = 460, h = 340, c = dn3Cv(w * q, h * q), x = c.getContext('2d'); x.setTransform(q, 0, 0, q, w * q / 2, h * q * 0.58);
+  const P2 = new Path2D(); for (const sh of DN3_SHP[i]) { if (sh[0] === 'c') { P2.moveTo(sh[1] + sh[3], sh[2]); P2.arc(sh[1], sh[2], sh[3], 0, 6.283); } else { P2.moveTo(sh[1] + sh[3], sh[2]); P2.ellipse(sh[1], sh[2], sh[3], sh[4], sh[5], 0, 6.283); } }
+  x.save(); x.translate(3, -4); x.fillStyle = 'rgba(255,224,170,0.7)'; x.fill(P2); x.restore();
+  const gr = x.createLinearGradient(0, -170, 0, 130); gr.addColorStop(0, '#fffaf6'); gr.addColorStop(0.6, '#fbe4f0'); gr.addColorStop(1, '#e6cdec'); x.fillStyle = gr; x.fill(P2);
+  x.save(); x.clip(P2); const lg = x.createRadialGradient(80, -110, 0, 80, -110, 260); lg.addColorStop(0, 'rgba(255,255,255,0.8)'); lg.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = lg; x.fillRect(-230, -200, 460, 340); x.restore();
+  return dn3ShpC[i] = { c, w, h, oy: h * 0.58 };
+}
+function dn3Shapes(tm) {
+  const R = DN3.reg, a = 0.1 + 0.6 * R.sekil; if (a < 0.02) return; const span = 2700;
+  for (let i = 0; i < 3; i++) {
+    const wx = (((i * 900 + 300 - cam.x * 0.035 - (DN3.drift || 0) * 3) % span) + span) % span - 500; if (wx > VW + 300) continue;
+    const sp = dn3ShapeSpr(i), s = (0.62 + 0.12 * i) * S, sx = wx * S, sy = DN3.hy - (0.3 + 0.1 * ((i * 7) % 3)) * H + Math.sin(tm * 0.3 + i * 2) * 6 * S + DN3.dyS * 0.04;
+    g.globalAlpha = a * (0.85 + 0.15 * Math.sin(tm * 0.5 + i)); g.drawImage(sp.c, sx - sp.w * s / 2, sy - sp.oy * s, sp.w * s, sp.h * s);
+  }
+  g.globalAlpha = 1;
+}
+
 // ═══════════ kuş siluetleri (uzakta, yavaş kanat çırpan küçük sürüler) ═══════════
 const DN3_KUS = [{ y: 0.42, sp: 0.012, x0: 0.1, n: 4, s: 1, ph: 0 }, { y: 0.6, sp: 0.008, x0: 0.62, n: 3, s: 0.75, ph: 2 }, { y: 0.3, sp: 0.01, x0: 0.35, n: 2, s: 0.6, ph: 4 }];
 function dn3Birds(tm) {
@@ -407,30 +444,27 @@ function dn3Background(tm) {
   dn3SunPos(); dn3Sun(tm);
   dn3Rainbow(tm);
   const reg = DN3.reg, fin = DN3.finT !== undefined ? smooth(clamp((now - DN3.finT) / 3, 0, 1)) : 0;
-  dn3DrawLayer(DN3_LAY[0], 0.78 + 0.22 * reg.ucus, tm);
+  dn3DrawLayer(DN3_LAY[0], 0.6 + 0.3 * reg.ucus, tm);
   dn3Haze(hy - 30 * S, 80 * S, 0.3, '#ffe2d0');
+  dn3Shapes(tm);
   dn3Islands(tm, false);
   dn3DrawLayer(DN3_LAY[1], 1, tm);
-  dn3Rays(tm, 0.32 + 0.18 * reg.ucus + 0.2 * reg.tepe + 0.25 * fin);
+  dn3Rays(tm, 0.17 + 0.12 * reg.ucus + 0.1 * reg.tepe + 0.1 * fin);
   dn3Birds(tm);
-  dn3Haze(dn3LayFoot(DN3_LAY[1]) + 10 * S, 34 * S, 0.35, '#ffd8dc');
   dn3Islands(tm, true);
   dn3DrawLayer(DN3_LAY[2], 1, tm);
-  dn3Haze(dn3LayFoot(DN3_LAY[2]) + 14 * S, 40 * S, 0.32, '#ffd6d8');
   g.globalCompositeOperation = 'lighter'; dn3Eg('#ffd8a8', DN3.sx, hy + 20 * S, W * 0.6, 120 * S, 0.22 + 0.1 * Math.sin(tm * 0.45)); g.globalCompositeOperation = 'source-over';   // güneşin bulut denizine vuran ışığı
   dn3DrawLayer(DN3_LAY[3], 1, tm);
-  dn3Haze(dn3LayFoot(DN3_LAY[3]) + 20 * S, 46 * S, 0.3, '#ffdcd8');
   dn3DrawLayer(DN3_LAY[4], 1, tm);
-  dn3Haze(dn3LayFoot(DN3_LAY[4]) + 40 * S, 60 * S, 0.28, '#f4c8dc');
   if (reg.a > 0.01) { g.globalCompositeOperation = 'lighter'; dn3Eg(reg.hex, W * 0.5, hy + 60 * S, W * 0.8, 160 * S, 0.1 * reg.a); g.globalCompositeOperation = 'source-over'; }
-  if (fin > 0) { g.globalCompositeOperation = 'lighter'; dn3Eg('#fff0c8', W * 0.5, hy, W, H * 0.5, 0.18 * fin * (0.85 + 0.15 * Math.sin(tm * 1.3))); g.globalCompositeOperation = 'source-over'; }
+  if (fin > 0) { g.globalCompositeOperation = 'lighter'; dn3Eg('#fff0c8', W * 0.5, hy, W, H * 0.5, 0.08 * fin * (0.85 + 0.15 * Math.sin(tm * 1.3))); g.globalCompositeOperation = 'source-over'; }
 }
 
 // ═══════════ zemin: yumuşak bulut kütleleri (ızgara 1) ═══════════
 const DN3_GC = [[0, '#fffbf4'], [16, '#fff1ee'], [44, '#ffe2ea'], [86, '#f8d0e4'], [140, '#e6c4ec'], [190, '#d2baee'], [240, '#c2b0ea']];
-function dn3GA(d) { return d < 96 ? 1 : 1 - smooth(clamp((d - 96) / (DN3_DEPTH - 96), 0, 1)); }
+function dn3GA(d) { return d < 56 ? 1 : 1 - smooth(clamp((d - 56) / (DN3_DEPTH - 56), 0, 1)); }
 function dn3GColRGB(d) { let i = 0; while (i < DN3_GC.length - 2 && d > DN3_GC[i + 1][0]) i++; const a = DN3_GC[i], b = DN3_GC[i + 1], t = clamp((d - a[0]) / (b[0] - a[0]), 0, 1), A = hex(a[1]), B = hex(b[1]); return [lerp(A[0], B[0], t), lerp(A[1], B[1], t), lerp(A[2], B[2], t)]; }
-function dn3BuildGCol() { DN3.gcol = []; for (let d = 0; d <= DN3_DEPTH; d += 5) { const c = dn3GColRGB(d); DN3.gcol.push(`rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${dn3GA(d).toFixed(3)})`); } }
+function dn3BuildGCol() { DN3.gcol = []; DN3.gcolO = []; for (let d = 0; d <= DN3_DEPTH; d += 5) { const c = dn3GColRGB(d); DN3.gcol.push(`rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${dn3GA(d).toFixed(3)})`); DN3.gcolO.push(`rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`); } }
 const dn3GHex = d => { const c = dn3GColRGB(d); return '#' + ((1 << 24) | ((c[0] | 0) << 16) | ((c[1] | 0) << 8) | (c[2] | 0)).toString(16).slice(1); };
 function dn3BuildComps() {
   const runs = [];
@@ -455,44 +489,68 @@ function dn3MakeComp(c0, cols, id) {
     for (let k = -3; k <= 3; k++) { const wk = 4 - Math.abs(k), xx = clamp(x + k * 4, x0 + 0.5, x1 - 0.5), j = ci(xx); s += wk * tops[j]; b += wk * bE[j]; w += wk; }
     st[i] = s / w; sb[i] = Math.max(st[i] + 24, b / w);
   }
+  const sf = new Float32Array(N); for (let i = 0; i < N; i++) { let a = 0, w = 0; for (let k = -12; k <= 12; k++) { const j = clamp(i + k, 0, N - 1), wk = 13 - Math.abs(k); a += st[j] * wk; w += wk; } sf[i] = a / w; }   // maske için çok yumuşak yüzey
   const path = new Path2D(); path.moveTo(xs[0], st[0]); for (let i = 1; i < N; i++) path.lineTo(xs[i], st[i]); for (let i = N - 1; i >= 0; i--) path.lineTo(xs[i], sb[i]); path.closePath();
   const sAt = x => st[clamp(Math.round((x - x0) / 4), 0, N - 1)], bAt = x => sb[clamp(Math.round((x - x0) / 4), 0, N - 1)];
   const top = [], back = [], hl = [], cr = [];
   for (let x = x0 + 4 + R() * 6; x < x1 - 4; x += 13 + R() * 11) { const r = 10 + R() * 11, cy = sAt(x) + r * 0.64; top.push({ x, y: cy, r, rim: R() < 0.85 }); if (R() < 0.45) cr.push({ x: x + (R() - 0.5) * 6, y: cy + r * 0.3, r: r * 1.05 }); }
+  for (let j = 0; j + 1 < n; j++) {   // iç basamaklar: dikey yüzü kabarcıklarla ört (düz kutu duvarı olmasın)
+    const ta = tops[j], tb = tops[j + 1]; if (Math.abs(ta - tb) < T * 0.5) continue;
+    const bx = (c0 + j + 1) * T, dir = ta < tb ? 1 : -1, hiT = Math.min(ta, tb), loT = Math.max(ta, tb);
+    for (let y = hiT + 12; y < loT + 4; y += 15 + R() * 6) { const r = 14 + R() * 8; top.push({ x: bx + dir * r * 0.3 - dir * 4, y, r, rim: dir > 0 && R() < 0.5, d: y - hiT }); }
+  }
   for (const sd of [-1, 1]) { const ex = sd < 0 ? x0 : x1, s0 = sAt(ex + (sd < 0 ? 2 : -2)), b0 = bAt(ex + (sd < 0 ? 2 : -2));
     top.push({ x: ex - sd * 5, y: s0 + 9, r: 13 + R() * 3, rim: true });
-    for (let d = 10; d < b0 - s0 - 4; d += 14 + R() * 6) { const r = Math.max(9, 15 + R() * 7 - d * 0.03); back.push({ x: ex + sd * r * 0.3, y: s0 + d, r, d }); } }
+    for (let d = 14; d < b0 - s0 - 4; d += 16 + R() * 8) { const r = Math.max(12, 22 + R() * 9 - d * 0.04); back.push({ x: ex + sd * r * 0.4, y: s0 + d + 4, r, d }); } }
   for (let x = x0 + 6; x < x1 - 6; x += 15 + R() * 9) { const i = clamp(Math.round((x - x0) / 4), 0, N - 1), j = ci(x); if (!real[j]) continue; const r = 10 + R() * 8; back.push({ x, y: sb[i] - r * 0.4, r, d: sb[i] - st[i], bot: true }); }
   for (let x = x0 + 10; x < x1 - 10; x += 22 + R() * 14) { const r = 14 + R() * 20; hl.push({ x: x + R() * 8, y: sAt(x) + 18 + R() * 50, r, a: 0.16 + R() * 0.14 }); }
   top.sort((a, b) => a.y - b.y);
   let minT = 1e9, maxB = -1e9; for (let i = 0; i < N; i++) { minT = Math.min(minT, st[i]); maxB = Math.max(maxB, sb[i]); }
-  return { id, x0, x1, N, xs, st, sb, path, top, back, hl, cr, minT, maxB: maxB + 16, sAt };
+  return { id, x0, x1, N, xs, st, sb, sf, path, top, back, hl, cr, minT, maxB: maxB + 16, sAt };
 }
 function dn3PaintTile(x, X0, X1) {
   const m0 = X0 - 70, m1 = X1 + 70;
   for (const C of DN3.comps) {
     if (C.x1 + 70 < X0 || C.x0 - 70 > X1) continue;
-    // 1) yan ve alt kabarcıklar (gövdenin arkasında: dışa taşan yumuşak kenarlar)
-    for (const p of C.back) { if (p.x < m0 || p.x > m1) continue; const a = dn3GA(p.d), d = clamp(p.d, 0, DN3_DEPTH);
-      if (p.bot) dn3Puff(x, p.x, p.y, p.r, '#f6e8f6', dn3GHex(Math.min(DN3_DEPTH, d + 30)), dn3GHex(Math.min(DN3_DEPTH, d + 70)), a);
-      else dn3Puff(x, p.x, p.y, p.r, dn3GHex(Math.max(0, d - 30)), dn3GHex(d), dn3GHex(Math.min(DN3_DEPTH, d + 40)), a); }
-    // 2) gövde: yüzeyi izleyen kaydırılmış çizgilerle derinlik rengi + alta doğru şeffaflaşma
-    x.save(); x.clip(C.path); x.lineJoin = 'round'; x.lineCap = 'butt';
     const i0 = Math.max(0, Math.floor((m0 - C.x0) / 4)), i1 = Math.min(C.N - 1, Math.ceil((m1 - C.x0) / 4));
-    for (let k = DN3.gcol.length - 1; k >= 0; k--) { const d = k * 5; x.strokeStyle = DN3.gcol[k]; x.lineWidth = 7; x.beginPath(); for (let i = i0; i <= i1; i++) x.lineTo(C.xs[i], C.st[i] + d); x.stroke(); }
+    // 1) alt kabarcıklar (yüzen blokların altı; gövdenin arkasında)
+    for (const p of C.back) { if (!p.bot || p.x < m0 || p.x > m1) continue; const d = clamp(p.d, 0, DN3_DEPTH); dn3Puff(x, p.x, p.y, p.r, dn3GHex(Math.max(0, d - 10)), dn3GHex(Math.min(DN3_DEPTH, d + 20)), dn3GHex(Math.min(DN3_DEPTH, d + 50)), 1); }
+    // 2) gövde: yüzeyi izleyen kaydırılmış opak çizgilerle derinlik rengi
+    x.save(); x.clip(C.path); x.lineJoin = 'round'; x.lineCap = 'butt';
+    for (let k = DN3.gcolO.length - 1; k >= 0; k--) { const d = k * 5, u = smooth(clamp(d / 70, 0, 1)); x.strokeStyle = DN3.gcolO[k]; x.lineWidth = 7; x.beginPath(); for (let i = i0; i <= i1; i++) x.lineTo(C.xs[i], C.st[i] + (C.sf[i] - C.st[i]) * u + d); x.stroke(); }   // derinde basamak izleri yumuşasın
     for (const h of C.hl) { if (h.x < m0 || h.x > m1) continue; const rg = x.createRadialGradient(h.x + h.r * 0.2, h.y - h.r * 0.3, 0, h.x, h.y, h.r); rg.addColorStop(0, `rgba(255,255,255,${h.a})`); rg.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = rg; x.fillRect(h.x - h.r, h.y - h.r, h.r * 2, h.r * 2); }
-    x.strokeStyle = 'rgba(196,160,214,0.2)'; x.lineWidth = 2.2; x.lineCap = 'round';
-    for (const q of C.cr) { if (q.x < m0 || q.x > m1) continue; x.beginPath(); x.arc(q.x, q.y, q.r, 0.55, 2.6); x.stroke(); }
     x.restore();
-    // 3) üst kabarcıklar (pamuk top), altın kenar ışığı
-    for (const p of C.top) { if (p.x < m0 || p.x > m1) continue;
-      dn3Puff(x, p.x, p.y, p.r, '#ffffff', '#fff6f0', '#ffe0ea', 1);
-      if (p.rim) dn3Rim(x, p.x, p.y, p.r, '#ffd994', 0.55, 1.6); }
-    // 4) üst kenarda yumuşak sıcak ışıma
+    // 3) uçlarda dışa taşan yan kabarcıklar (düz duvar olmasın)
+    for (const p of C.back) { if (p.bot || p.x < m0 || p.x > m1) continue; const d = clamp(p.d, 0, DN3_DEPTH); dn3Puff(x, p.x, p.y, p.r, dn3GHex(Math.max(0, d - 20)), dn3GHex(Math.min(DN3_DEPTH, d + 10)), dn3GHex(Math.min(DN3_DEPTH, d + 60)), 1); }
+    // 5) üst kabarcıklar: önce altın kenar diskleri, sonra mat pamuk loblar
+    for (const p of C.top) { if (p.x < m0 || p.x > m1 || !p.rim) continue; dn3Rim(x, p.x, p.y, p.r, '#ffe0a0', 0.9); }
+    for (const p of C.top) { if (p.x < m0 || p.x > m1) continue; if (p.d) dn3Puff(x, p.x, p.y, p.r, dn3GHex(Math.max(0, p.d * 0.5 - 10)), dn3GHex(Math.min(DN3_DEPTH, p.d * 0.6 + 8)), dn3GHex(Math.min(DN3_DEPTH, p.d * 0.7 + 30)), 1); else dn3Puff(x, p.x, p.y, p.r, '#ffffff', '#fff7f2', '#fde4ec', 1); }
+    // 6) üst kenarda yumuşak sıcak ışıma
     x.globalCompositeOperation = 'lighter'; x.lineJoin = 'round'; x.lineCap = 'round';
-    for (const [lw, a] of [[22, 0.05], [9, 0.07]]) { x.strokeStyle = `rgba(255,214,160,${a})`; x.lineWidth = lw; x.beginPath(); for (let i = i0; i <= i1; i++) x.lineTo(C.xs[i], C.st[i] - 6); x.stroke(); }
+    for (const [lw, a] of [[24, 0.04], [10, 0.06]]) { x.strokeStyle = `rgba(255,214,160,${a})`; x.lineWidth = lw; x.beginPath(); for (let i = i0; i <= i1; i++) x.lineTo(C.xs[i], C.st[i] - 8); x.stroke(); }
     x.globalCompositeOperation = 'source-over';
   }
+  dn3FadeMask(x, X0, X1);
+}
+// alta doğru şeffaflaşma: düşük çözünürlüklü alfa maskesi (1 piksel = 4 birim), her sütunun kendi yüzeyine göre; destination-out ile uygulanır (bant/dikiş yok)
+let dn3MaskC = null;
+function dn3FadeMask(x, X0, X1) {
+  const G = dn3GGeo(), U = 4, xa = X0 - 60, cw = Math.ceil((X1 - X0 + 120) / U), ch = Math.ceil(G.TH / U) + 1;
+  if (!dn3MaskC) dn3MaskC = dn3Cv(2, 2); if (dn3MaskC.width !== cw || dn3MaskC.height !== ch) { dn3MaskC.width = cw; dn3MaskC.height = ch; }
+  const mx = dn3MaskC.getContext('2d'), im = mx.createImageData(cw, ch), D = im.data; let any = false;
+  for (const C of DN3.comps) {
+    if (C.x1 + 60 < xa || C.x0 - 60 > X1 + 60) continue;
+    for (let i = 0; i < cw; i++) {
+      const wx = xa + (i + 0.5) * U; if (wx < C.x0 - 52 || wx > C.x1 + 52) continue;
+      const k = clamp(Math.round((wx - C.x0) / 4), 0, C.N - 1), s0 = C.sf[k], b0 = (wx < C.x0 || wx > C.x1) ? s0 + DN3_DEPTH + 40 : C.sb[k] + 26;
+      if (b0 < s0 + 60) continue;
+      const j0 = Math.max(0, Math.floor((s0 + 56 - G.y0) / U)), j1 = Math.min(ch - 1, Math.ceil((b0 - G.y0) / U));
+      for (let j = j0; j <= j1; j++) { const d = G.y0 + (j + 0.5) * U - s0, a = 1 - dn3GA(d), o = (j * cw + i) * 4 + 3, v = Math.round(a * 255); if (v > D[o]) { D[o] = v; any = true; } }
+    }
+  }
+  if (!any) return;
+  mx.putImageData(im, 0, 0);
+  x.save(); x.globalCompositeOperation = 'destination-out'; x.imageSmoothingEnabled = true; x.drawImage(dn3MaskC, xa, G.y0, cw * U, ch * U); x.restore();
 }
 const dn3GGeo = () => ({ y0: DN3.GTOP2 - 50, TH: DN3.GBOT + 20 - (DN3.GTOP2 - 50), sc: clamp(H / VH * 0.62, 0.55, 1.5) });
 function dn3GMake(k, G) {
@@ -515,13 +573,19 @@ function dn3DrawGround() {
 }
 
 // ═══════════ ince bulut şeridi (ızgara 2) ve LEVEL3 için bulut gövdesi ═══════════
-function dn3SlabPaint(x, w, th, R, a) {   // (0,0) = sol uçta yürüme yüzeyi; gövde aşağı doğru th kalınlıkta
-  for (let px = 2; px < w - 2; px += 11 + R() * 9) { const r = th * (0.42 + R() * 0.22); dn3Puff(x, px, th - r * 0.15, r, '#f8ecf8', '#e8d0ee', '#cdb8ec', 0.95 * a); }
-  const gr = x.createLinearGradient(0, 0, 0, th); gr.addColorStop(0, '#fffaf4'); gr.addColorStop(0.45, '#ffe4ec'); gr.addColorStop(1, '#ead2f0');
-  x.globalAlpha = a; x.fillStyle = gr; x.beginPath(); x.moveTo(th * 0.4, 1); x.lineTo(w - th * 0.4, 1); x.quadraticCurveTo(w + th * 0.3, th * 0.5, w - th * 0.4, th); x.lineTo(th * 0.4, th); x.quadraticCurveTo(-th * 0.3, th * 0.5, th * 0.4, 1); x.fill(); x.globalAlpha = 1;
-  const ends = [[1, th * 0.42, th * 0.5], [w - 1, th * 0.42, th * 0.5]];
-  for (const e of ends) dn3Puff(x, e[0], e[1], e[2], '#ffffff', '#fff2f2', '#f0d4e8', a);
-  for (let px = 4 + R() * 4; px < w - 4; px += 10 + R() * 8) { const r = Math.min(th * 0.62, 6 + R() * 6), cy = r * 0.64; dn3Puff(x, px, cy, r, '#ffffff', '#fff6f2', '#ffe2ec', a); if (R() < 0.8) dn3Rim(x, px, cy, r, '#ffd994', 0.5 * a, 1.2); }
+function dn3SlabPaint(x, w, th, R, a) {   // (0,0) = sol uçta yürüme yüzeyi; gövde aşağı doğru th kalınlıkta. Tek siluet + hacim ışığı (inci dizisi değil)
+  const top = new Path2D(), bot = new Path2D(), lobes = [];
+  let px = -th * 0.15; while (px < w + th * 0.15) { const e = Math.min(px, w - px), big = R() < 0.3 ? 1.5 : 1, r = Math.max(th * 0.35, Math.min(th * 0.95, (th * 0.42 + R() * th * 0.3) * big * clamp(0.55 + e / (th * 2), 0.55, 1))); const cy = r * 0.66 + (e < th ? (th - e) * 0.18 : 0); top.moveTo(px + r, cy); top.arc(px, cy, r, 0, 6.283); lobes.push([px, cy, r]); px += r * (0.75 + R() * 0.45); }
+  top.moveTo(th * 0.35, th * 0.5); top.rect(th * 0.2, th * 0.4, w - th * 0.4, th * 0.55);
+  for (let qx = th * 0.4; qx < w - th * 0.3; qx += th * (0.5 + R() * 0.4)) { const r = th * (0.28 + R() * 0.18); bot.moveTo(qx + r, th * 0.86); bot.arc(qx, th * 0.86, r, 0, 6.283); }
+  x.globalAlpha = a;
+  x.fillStyle = '#d9c2ee'; x.fill(bot);   // alt lila kabarcıklar
+  x.save(); x.translate(1.2, -1.6); x.fillStyle = '#ffdc96'; x.globalAlpha = 0.85 * a; x.fill(top); x.restore(); x.globalAlpha = a;
+  const gr = x.createLinearGradient(0, -th * 0.3, 0, th * 1.1); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.4, '#fff0f2'); gr.addColorStop(0.75, '#f6d8ea'); gr.addColorStop(1, '#e2c8ee'); x.fillStyle = gr; x.fill(top);
+  x.save(); x.clip(top);
+  const lg = x.createRadialGradient(w * 0.7, -th * 0.2, 0, w * 0.7, -th * 0.2, Math.max(w * 0.6, th * 2)); lg.addColorStop(0, 'rgba(255,248,232,0.7)'); lg.addColorStop(1, 'rgba(255,248,232,0)'); x.fillStyle = lg; x.fillRect(-th, -th, w + th * 2, th * 3);
+  x.strokeStyle = '#e6c6e2'; x.globalAlpha = 0.14 * a; for (const l of lobes) { x.lineWidth = l[2] * 0.12; x.beginPath(); x.arc(l[0], l[1], l[2] * 0.95, 0.4, 2.7); x.stroke(); }
+  x.restore(); x.globalAlpha = 1;
 }
 const dn3SlabC = new Map();
 function dn3SlabSpr(w, th, seed) {
@@ -625,7 +689,7 @@ function dn3DrawDeco(tm) {
 function dn3Tepe(tm) {
   const B = dn3Bolum(); if (!B || !B.gokkusagi || !isFinite(B.gokkusagi.x)) return;
   const gx = B.gokkusagi.x, gy = isFinite(B.gokkusagi.y) ? B.gokkusagi.y : DN3.GREF; if (gx < cam.x - 700 || gx > cam.x + VW + 700) return;
-  const fin = DN3.finT !== undefined ? smooth(clamp((now - DN3.finT) / 2, 0, 1)) : 0, a = (0.35 + 0.65 * DN3.f) * (0.85 + 0.15 * Math.sin(tm * 0.9)) + fin * 0.6;
+  const fin = DN3.finT !== undefined ? smooth(clamp((now - DN3.finT) / 2, 0, 1)) : 0, a = ((0.35 + 0.65 * DN3.f) * (0.85 + 0.15 * Math.sin(tm * 0.9)) + fin * 0.3) * 0.55;
   g.globalCompositeOperation = 'lighter';
   dn3Eg('#ffe6a8', gx, gy - 260, 150 + 60 * fin, 420, 0.22 * a);   // gökten inen ışık sütunu
   dn3Eg('#fff4d0', gx, gy - 120, 70 + 30 * fin, 220, 0.2 * a);
@@ -731,7 +795,7 @@ function dn3Foreground(tm) {
   // üst kenar: aşağı sarkan yumuşak bulut tutamları (ters çevrilmiş)
   for (let n = 0; n < 3; n++) {
     const sp = DN3_FG.puff[n], span = 2300, wx = ((n * 760 + 120 - cam.x * 1.22 - tm * 6) % span + span) % span - 520; if (wx > VW + 40) continue;
-    const s = 0.85 + (n % 2) * 0.2, cxs = (wx + 260 * s) * S, a = 0.55 * open * (0.35 + 0.65 * dn3Foc(cxs, 60 * S));
+    const s = 0.85 + (n % 2) * 0.2, cxs = (wx + 260 * s) * S, a = 0.5 * open * (1 - 0.6 * fly) * (0.35 + 0.65 * dn3Foc(cxs, 60 * S));
     if (a < 0.02) continue; g.globalAlpha = a; g.save(); g.translate(wx * S, (-44 - n * 8) * S); g.scale(s, -s * 0.8); g.drawImage(sp.c, 0, -300 * S, 520 * S, 300 * S); g.restore();
   }
   // alt kenar: kontrol bölgeleri (sol alt düğme) boş; orta-sağ

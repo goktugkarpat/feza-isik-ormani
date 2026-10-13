@@ -945,8 +945,13 @@ OLAY.on('sarsinti', e => {
 // Pırıl'ın ortam ışığı: onun ARKASINDA (drawDragon'dan önce) çizilir, yoksa onu pembeye boyar
 function omPirilHale() {
   g.globalCompositeOperation = 'lighter';
-  dglow('#b88aff', D.x, D.y, 150, 0.24);
-  dglow('#ffe0ff', D.x, D.y, 40, 0.11);
+  if (BOLUM_NO === 3) {   // parlak şafak göğü: 'lighter' geniş lila hâle beyaz pus yapar → küçük, sıcak ve hafif
+    dglow('#ff9ec4', D.x, D.y, 70, 0.08);
+    dglow('#ffd9a8', D.x, D.y, 28, 0.06);
+  } else {
+    dglow('#b88aff', D.x, D.y, 150, 0.24);
+    dglow('#ffe0ff', D.x, D.y, 40, 0.11);
+  }
   g.globalCompositeOperation = 'source-over';
 }
 function drawFx(tm, dt) {
@@ -1258,9 +1263,10 @@ function omAcilisCiz() {
   g.globalCompositeOperation = 'lighter';
   const fx = P.rx !== undefined ? P.rx : P.x, fy = (P.ry !== undefined ? P.ry : P.y) - 42;
   const hedefler = [[fx, fy, 1], [D.x, D.y, 0.8]];
+  const gir = smooth(clamp((u + 0.4) / 0.8, 0, 1));   // karanlıkta birden parlamasın: ilk ≈0,8 sn'de yumuşakça belirir
   for (let k = 0; k < 2; k++) {
     const hx = hedefler[k][0], hy = hedefler[k][1], sc = hedefler[k][2];
-    const bl = 1 - smooth(clamp((u - 0.9 - k * 0.25) / 2.3, 0, 1));   // belirme parıltısı sönerken karakter görünür
+    const bl = (1 - smooth(clamp((u - 0.9 - k * 0.25) / 2.3, 0, 1))) * gir;   // belirme parıltısı sönerken karakter görünür
     dglow(OM_ACL_R[0], hx, hy, 150 * sc, bl * 0.95); dglow('#ffffff', hx, hy, 70 * sc, bl);
     for (let i = 0; i < OM_ACL_N; i++) {
       const t = clamp((u + 0.2 - i * 0.045 - k * 0.2) / 1.4, 0, 1); if (t <= 0 || t >= 1) continue;
@@ -1269,7 +1275,7 @@ function omAcilisCiz() {
     }
   }
   const su = clamp(1 - u / 2.2, 0, 1);   // sudan yükselen ışık: ayakların altında
-  if (su > 0) { dglow(OM_ACL_R[3], fx, fy + 42, 130, su * 0.45); }
+  if (su > 0) { dglow(OM_ACL_R[3], fx, fy + 42, 130, su * 0.45 * gir); }
   g.globalCompositeOperation = 'source-over';
 }
 function omDevamGirisi() {

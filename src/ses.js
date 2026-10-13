@@ -8,6 +8,8 @@
    Feza BOLUM.gollar[1]'in yakınında) p_karanlik2 / p_nilufer2 çalınır; geçerlilik/ömür kuralları asıl anahtarınkiyle aynı.
    Ses AU'nun WebAudio bağlamından çalar (müzik konuşma boyunca kısılır); sesler.js yüklü değilse ya da ?sessiz
    ise yalnız altyazı + olay (kayıt süresiyle) çalışır.
+   Bölüm 2/3 tetikleyicileri öneksiz olur ('y_gol' → p_y_gol, 'b_zip' → p_b_zip); Bölüm 3'te a_finalN / a_y_finalN → a_b_finalN.
+   Uzun sessizlikte (≥50 sn) Pırıl ara sıra küçük dostça bir söz söyler (p_dost*; oturumda en çok 3). Ayrıntı: src/BOLUM3.md › SES notları.
    SES.sus() → susar, sırayı boşaltır. SES.konusuyor() · SES.sure(anahtar) · SES.kayit (deneme günlüğü) · SES.sira().
 
    Sıra kuralları (Feza okuyamaz: ses tek talimat kanalı; ama BAYAT talimat kafa karıştırır):
@@ -93,6 +95,7 @@ const SES = (() => {
     "p_b_sekil1": "Bu bulutun içinde biri saklanıyor. Hadi, bulalım!",
     "p_b_sekil2": "Bak bak, bir şey çıkıyor!",
     "p_b_sekil3": "Buldun! Bulut canlandı, bak nasıl seviniyor!",
+    "p_b_sekil4": "Bak, bu sensin Feza!",
     "p_b_ucus": "Hadi Feza, bin sırtıma! Uçuyoruz!",
     "p_b_ucus2": "Yaşasın, uçuyoruz! Parlayan ışıltıları topla!",
     "p_b_tepe": "İşte Gökkuşağı Tepesi! Kuzucuklar da seninle geldi. Hadi, en tepeye çık!",
@@ -444,7 +447,7 @@ const SES = (() => {
   });
   OLAY.on('ucusBitti', () => { sesUcusOlay = false; sesUcusBitti = true; });
   OLAY.on('gokkusagiBasla', () => { sesGokBasladi = true; soyle('p_b_bitti', { oncelik: 3 }); });
-  OLAY.on('sekil', () => setTimeout(() => soyle('p_b_sekil3'), 1200));   // sekil.js kendisi söylediyse tekrar edilmez
+  OLAY.on('sekil', e => { if (!(e && e.hayvan === 'feza')) setTimeout(() => soyle('p_b_sekil3'), 1200); });   // Feza şeklinde sekil.js 'p_b_sekil4' der; söylendiyse tekrar edilmez
   // Uzun sessizlikte küçük dostça sözler (en çok 3 kez, en az 90 sn arayla; Feza oynarken, uçuş/sahne dışında, kimse konuşmuyorken)
   let sesDostN = 0, sesDostT = -1e9, sesHareketT = sesSaat(), sesOyunT = -1e9;
   OLAY.on('durum', d => { if (d === 'oyun' && sesOyunT < 0) sesOyunT = sesSaat(); });

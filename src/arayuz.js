@@ -399,8 +399,9 @@ const ARAYUZ = (() => {
     const BL = [[-22, 6, 17], [-12, -8, 19], [6, -11, 19], [22, -1, 17], [16, 14, 16], [-4, 17, 17], [0, 3, 22]];
     x.beginPath(); for (const [bx, by, br] of BL) { x.moveTo(bx + br, by); x.arc(bx, by, br, 0, 6.283); }
     const gr = x.createRadialGradient(-6, -14, 4, 0, 4, 44);
-    if (sonuk) { gr.addColorStop(0, 'rgba(215,213,228,0.7)'); gr.addColorStop(1, 'rgba(150,148,175,0.6)'); }
+    if (sonuk) { gr.addColorStop(0, '#dcdae8'); gr.addColorStop(1, '#a3a1bb'); }   // opak (kontur içten görünmesin); soluklığı çizimdeki saydamlık verir
     else { gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.45, mixc('#ffffff', renk, 0.45)); gr.addColorStop(1, renk); }
+    x.strokeStyle = sonuk ? 'rgba(110,100,140,0.4)' : 'rgba(150,80,120,0.45)'; x.lineWidth = 4.4; x.stroke();   // dış kontur (dolgunun ARKASINDA: iç daireler görünmesin) — aydınlık gökte de seçilsin
     x.fillStyle = gr; x.fill();
     if (!sonuk) { x.fillStyle = 'rgba(255,255,255,0.75)'; x.beginPath(); x.ellipse(-10, -16, 9, 5, -0.4, 0, 6.283); x.fill(); }
     // baş (önde, solda) + kulaklar + tepe tutamı
@@ -509,6 +510,11 @@ const ARAYUZ = (() => {
     g.globalCompositeOperation = 'lighter';
     dglow('#6a58c0', W / 2, y, Math.max(top * ara * 0.65, boy * 2), a * 0.18);
     g.globalCompositeOperation = 'source-over';
+    if (typeof BOLUM_NO !== 'undefined' && BOLUM_NO === 3) {   // aydınlık şafak göğü: sıranın arkasına hafif koyu, yumuşak bir yastık (simgeler okunsun)
+      const pw = (top - 1) * ara + boy * 1.6, ph = boy * 1.4;
+      g.globalAlpha = a; g.fillStyle = 'rgba(86,52,120,0.2)'; rr(g, W / 2 - pw / 2, y - ph / 2, pw, ph, ph / 2); g.fill();
+      g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = Math.max(1, boy * 0.04); g.stroke(); g.globalAlpha = 1;
+    }
     for (let i = 0; i < top; i++) {
       const acik = i < var_, yeni = i === var_ - 1, cx = x0 + i * ara;
       if (acik && (!yeni || u > 0.45)) {

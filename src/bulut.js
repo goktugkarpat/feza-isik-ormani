@@ -93,7 +93,7 @@ TUR.kaydet('bulutZip', {
   kur(o) {
     o.w = o.w || 110; const h = o.h || 18;   // ≤ 18: zeminde yürürken engel olmaz, üstüne çıkınca kendiliğinden zıplatır (kenar affı)
     o.ust = o.y; o.y = o.ust + h;
-    o.cisim = { w: o.w - 8, h, tip: 'ziplat', guc: o.guc || 960, aktif: true, dx: 0, dy: 0 };
+    o.cisim = { w: o.gom ? o.w : o.w - 8, h, tip: 'ziplat', guc: o.guc || 960, aktif: true, dx: 0, dy: 0 };
     o.e = 0; o.ev = 0; o.ph = (o.x * 0.013) % 6.28; o.seed = 3 + Math.floor(o.x / 17) % 40; o.parla = 0; o.pT = Math.random() * 2;
     o.pr = []; for (let i = 0; i < 4; i++) o.pr.push({ x: 0, y: 0, t: -1 - i * 0.6, h: 0 });
   },
@@ -162,7 +162,8 @@ TUR.kaydet('bulutYuzen', {
       g.strokeStyle = 'rgba(255,240,226,' + (0.5 * Math.abs(yon)).toFixed(3) + ')'; g.lineWidth = 2.2; g.lineCap = 'round';
       for (let i = 0; i < 3; i++) { const yy = ust + 6 + i * 7, x0 = o.x - Math.sign(yon) * (w * 0.5 + 4 + i * 6), l = 22 + i * 8; g.beginPath(); g.moveTo(x0, yy); g.quadraticCurveTo(x0 - Math.sign(yon) * l * 0.5, yy - 3 + Math.sin(tm * 3 + i) * 2, x0 - Math.sign(yon) * l, yy + 1); g.stroke(); }
     }
-    buBulutCiz(buBulut(w, 22, 'yuzen', o.seed), o.x, ust, w, 1, 1);
+    if (typeof dn3Bulut === 'function') dn3Bulut(o.x, ust, w, 20, { seed: o.seed });   // zeminin ince bulutlarıyla aynı görünüm (basılır olduğu belli)
+    else buBulutCiz(buBulut(w, 22, 'yuzen', o.seed), o.x, ust, w, 1, 1);
   },
 });
 
@@ -171,7 +172,7 @@ function buEsintiSprite(w, h) {
   const key = 'es' + w + '_' + h; if (buSp[key]) return buSp[key];
   const k = 1, c = buCan(w * 2 * k, h * k), x = c.getContext('2d');
   const gy = x.createLinearGradient(0, 0, 0, h);
-  gy.addColorStop(0, 'rgba(230,255,250,0)'); gy.addColorStop(0.3, 'rgba(230,255,250,0.55)'); gy.addColorStop(0.85, 'rgba(240,255,252,0.8)'); gy.addColorStop(1, 'rgba(240,255,252,0.2)');
+  gy.addColorStop(0, 'rgba(196,244,236,0)'); gy.addColorStop(0.3, 'rgba(196,244,236,0.5)'); gy.addColorStop(0.85, 'rgba(214,250,244,0.75)'); gy.addColorStop(1, 'rgba(214,250,244,0.15)');
   x.fillStyle = gy; x.fillRect(0, 0, c.width, h);
   x.globalCompositeOperation = 'destination-in';   // yanlara doğru yumuşak sönüm
   const gx = x.createLinearGradient(0, 0, c.width, 0);
@@ -216,10 +217,8 @@ TUR.kaydet('esinti', {
   },
   ciz(o, tm) {
     const w = o.w, h = o.h + 40, top = o.y - h, br = 0.75 + 0.25 * Math.sin(tm * 1.6 + o.ph) + o.guc * 0.4;
-    g.globalCompositeOperation = 'lighter';
-    g.globalAlpha = clamp(0.2 * br, 0, 0.45); g.drawImage(buEsintiSprite(w, h), o.x - w, top, w * 2, h); g.globalAlpha = 1;
-    dglow('#d8fff4', o.x, o.y - 6, w * 0.9, 0.3 * br);
-    g.globalCompositeOperation = 'source-over';
+    g.globalAlpha = clamp(0.32 * br, 0, 0.6); g.drawImage(buEsintiSprite(w, h), o.x - w, top, w * 2, h); g.globalAlpha = 1;   // nane tonu: pembe gökte ayrı görünsün
+    g.globalCompositeOperation = 'lighter'; dglow('#c8fff0', o.x, o.y - 6, w * 0.7, 0.16 * br); g.globalCompositeOperation = 'source-over';
     // yükselen rüzgâr çizgileri (yumuşak S kıvrımları)
     g.lineCap = 'round';
     for (const p of o.cz) {
@@ -271,13 +270,15 @@ TUR.kaydet('gokkusagi', {
     o.cx = o.cx || o.x; o.R = o.R || 600; o.cy = o.cy || (o.y - 86 + o.R); o.bant = o.bant || 15;
     o.tepeX0 = o.tepeX0 || o.x - 260; o.tepeX1 = o.tepeX1 || o.x + 260;
     o.evre = BU_GK_EVRE.bekle; o.t = 0; o.done = false; o.uyandi = false; o.basladi = false; o.bu = [0, 0, 0, 0, 0, 0, 0]; o.parla = 0; o.ghost = 0; o.bekleT = 0;
-    o.yayX = []; o.yayY = []; o.yay = [];
+    o.yayX = []; o.yayY = []; o.yay = []; o.konumlar = o.yay;   // konumlar: kuzu.js'in okuduğu ad ({x,y}×7, renkI sırasıyla)
     for (let i = 0; i < 7; i++) { const a = (125 - i * 15) * Math.PI / 180, p = buYay(o, o.R + 115, a); o.yayX.push(p.x); o.yayY.push(p.y); o.yay.push(p); }
     // gökkuşağını zeminin üstüyle sınırlayan kırpma yolu (dünya sabit: bir kez)
     const c0 = Math.max(0, Math.floor((o.cx - o.R - 60) / T)), c1 = Math.min(COLS - 1, Math.floor((o.cx + o.R + 60) / T));
     const p = new Path2D(); p.moveTo(c0 * T, -3000); p.lineTo((c1 + 1) * T, -3000);
     for (let c = c1; c >= c0; c--) { const y = topOf(c) * T + 2; p.lineTo((c + 1) * T, y); p.lineTo(c * T, y); }
     p.closePath(); o.kirp = p;
+    o.ayak = [];   // yayın orta çizgisinin zeminden çıktığı / zemine değdiği iki nokta (ışık bulutları)
+    for (const yon of [1, -1]) for (let i = 0; i <= 180; i++) { const a = yon > 0 ? Math.PI - i * Math.PI / 180 : i * Math.PI / 180, q = buYay(o, o.R - o.bant * 3.5, a); if (q.y < buYuzeyY(q.x) - 2) { o.ayak.push(q); break; } }
     o.grad = null; o.yildizlar = [];
     for (let i = 0; i < 26; i++) o.yildizlar.push({ a: Math.PI * (0.08 + 0.84 * Math.random()), r: o.R - Math.random() * o.bant * 7, ph: Math.random() * 6.28 });
   },
@@ -306,13 +307,13 @@ TUR.kaydet('gokkusagi', {
         const t0 = BU_T.kuzu + i * BU_T.bantAra, u = clamp((t - t0) / BU_T.bantSure, 0, 1);
         if (u > 0 && o.bu[i] === 0) { buSfx('gokkusagiParca', i); OLAY.emit('gokkusagiParca', { o, renkI: i }); }
         o.bu[i] = u;
-        if (u > 0 && u < 1 && Math.random() < dt * 40) { const a = Math.PI * (1 - u), r = o.R - o.bant * (i + 0.5), p = buYay(o, r, a); parca(p.x, p.y, (Math.random() - 0.5) * 60, -30 - Math.random() * 50, 1.1, BU_GK_ACIK[i], 5 + Math.random() * 4); }
+        if (u > 0 && u < 1 && Math.random() < dt * 20) { const a = Math.PI * (1 - u), r = o.R - o.bant * (i + 0.5), p = buYay(o, r, a); parca(p.x, p.y, (Math.random() - 0.5) * 60, -30 - Math.random() * 50, 1.1, BU_GK_ACIK[i], 5 + Math.random() * 4); }
       }
     }
     const tTam = BU_T.kuzu + 6 * BU_T.bantAra + BU_T.bantSure;
     if (o.evre < BU_GK_EVRE.tam && t >= tTam) {
       o.evre = BU_GK_EVRE.tam; o.parla = 1; buSfx('gokkusagiTamam', 1); OLAY.emit('gokkusagiParlak', o);
-      for (let i = 0; i < 40; i++) { const a = Math.PI * Math.random(), p = buYay(o, o.R - o.bant * 3.5 + (Math.random() - 0.5) * 100, a); parca(p.x, p.y, (Math.random() - 0.5) * 80, -40 - Math.random() * 60, 1.6, BU_R_GK[i % 8], 6 + Math.random() * 6); }
+      for (let i = 0; i < 20; i++) { const a = Math.PI * Math.random(), p = buYay(o, o.R - o.bant * 3.5 + (Math.random() - 0.5) * 100, a); parca(p.x, p.y, (Math.random() - 0.5) * 80, -40 - Math.random() * 60, 1.6, BU_R_GK[i % 8], 6 + Math.random() * 6); }
     }
     const tSicra = tTam + 0.6;
     if (o.evre === BU_GK_EVRE.tam && t >= tSicra) {   // Feza yayın tepesine sıçrar
@@ -331,10 +332,10 @@ TUR.kaydet('gokkusagi', {
       o.v = Math.min(o.v + 150 * dt, 420); o.fi += o.v * dt / o.R;
       const p = buYay(o, o.R, Math.PI / 2 - o.fi);
       P.x = p.x; P.y = p.y; P.vx = o.v * Math.cos(o.fi); P.vy = 0; P.ground = false; P.f = 1; P.poz = 'kayma'; P.kaymaAci = o.fi;
-      if (Math.random() < dt * 30) parca(P.x - 10, P.y - 4, -60 - Math.random() * 60, -20 - Math.random() * 40, 0.9, BU_R_GK[Math.floor(Math.random() * 8)], 5 + Math.random() * 5);
+      if (Math.random() < dt * 15) parca(P.x - 10, P.y - 4, -60 - Math.random() * 60, -20 - Math.random() * 40, 0.9, BU_R_GK[Math.floor(Math.random() * 8)], 5 + Math.random() * 5);
       if (p.y >= buYuzeyY(p.x) - 1 || o.fi > 1.4) {   // yere indi
         P.y = buYuzeyY(p.x); P.vy = 0; P.vx = Math.min(o.v, 260); P.ground = true; P.poz = null; P.kaymaAci = 0;
-        burst(P.x, P.y - 4, 22, BU_R_GK, 170, 1.2, 8); OLAY.emit('inis', { x: P.x, y: P.y, siddet: 500 });
+        burst(P.x, P.y - 4, 12, BU_R_GK, 150, 1.0, 7); OLAY.emit('inis', { x: P.x, y: P.y, siddet: 500 });
         o.evre = BU_GK_EVRE.son; o.tSon = t;
       }
     }
@@ -348,7 +349,8 @@ TUR.kaydet('gokkusagi', {
     if (gor < 0.01 && o.evre === BU_GK_EVRE.bekle) { buGkHayal(o, tm, 0); return; }
     if (!o.grad) {   // her bant için dikey sönüm (ayaklar bulutlara karışır) — dünya sabit, bir kez
       o.grad = [];
-      for (let i = 0; i < 7; i++) { const gr = g.createLinearGradient(0, o.cy - o.R, 0, o.cy - o.R + 330); gr.addColorStop(0, BU_GK[i]); gr.addColorStop(0.72, BU_GK[i]); gr.addColorStop(1, 'rgba(255,255,255,0)'); o.grad.push(gr); }
+      const RB = (typeof DN3_RB !== 'undefined' && DN3_RB && DN3_RB.length >= 7) ? DN3_RB : BU_GK;   // dunya3.js'in gök gökkuşağıyla aynı renkler
+      for (let i = 0; i < 7; i++) { const gr = g.createLinearGradient(0, o.cy - o.R, 0, o.cy - o.R + 330); const A = hex(RB[i]), cs = 'rgba(' + A[0] + ',' + A[1] + ',' + A[2] + ','; gr.addColorStop(0, RB[i]); gr.addColorStop(0.55, RB[i]); gr.addColorStop(0.82, cs + '0.55)'); gr.addColorStop(1, cs + '0)'); o.grad.push(gr); }
     }
     g.save(); g.clip(o.kirp);
     const bekle = o.evre === BU_GK_EVRE.bekle;
@@ -357,7 +359,7 @@ TUR.kaydet('gokkusagi', {
     const tumu = bekle ? 0 : o.bu[6];
     if (!bekle && o.bu[0] > 0) {
       g.globalCompositeOperation = 'lighter';
-      g.globalAlpha = 0.10 + 0.12 * o.parla; g.strokeStyle = '#fff2dc'; g.lineWidth = o.bant * 7 + 50;
+      g.globalAlpha = 0.05 + 0.06 * o.parla; g.strokeStyle = '#fff2dc'; g.lineWidth = o.bant * 7 + 50;
       g.beginPath(); g.arc(o.cx, o.cy, o.R - o.bant * 3.5, Math.PI, Math.PI * (1 + o.bu[0])); g.stroke();
       g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
     }
@@ -369,27 +371,30 @@ TUR.kaydet('gokkusagi', {
       g.globalAlpha = bekle ? 0.16 + 0.05 * Math.sin(tm * 2 + i) : 0.92;
       g.strokeStyle = o.grad[i]; g.lineWidth = o.bant + 0.8;
       g.beginPath(); g.arc(o.cx, o.cy, r, Math.PI, a1); g.stroke();
-      if (!bekle && u < 1) { const p = buYay(o, r, Math.PI - Math.PI * u); g.globalAlpha = 1; g.globalCompositeOperation = 'lighter'; dglow(BU_GK_ACIK[i], p.x, p.y, 40, 0.9); dglow('#ffffff', p.x, p.y, 14, 0.8); g.globalCompositeOperation = 'source-over'; }
+      if (!bekle && u < 1) { const p = buYay(o, r, Math.PI - Math.PI * u); g.globalAlpha = 1; g.globalCompositeOperation = 'lighter'; dglow(BU_GK_ACIK[i], p.x, p.y, 34, 0.45); dglow('#ffffff', p.x, p.y, 12, 0.4); g.globalCompositeOperation = 'source-over'; }
     }
     g.globalAlpha = 1;
     if (!bekle && tumu > 0) {
       // parlak üst kenar (kaydırak yüzeyi) + ışıltılar
       g.globalCompositeOperation = 'lighter';
-      g.strokeStyle = 'rgba(255,255,255,' + (0.35 * tumu + 0.3 * o.parla).toFixed(3) + ')'; g.lineWidth = 2.5;
+      g.strokeStyle = 'rgba(255,255,255,' + (0.18 * tumu + 0.15 * o.parla).toFixed(3) + ')'; g.lineWidth = 2.5;
       g.beginPath(); g.arc(o.cx, o.cy, o.R - 1, Math.PI, BU_PI2); g.stroke();
-      for (const s of o.yildizlar) { const pu = 0.5 + 0.5 * Math.sin(tm * 2.6 + s.ph); if (pu < 0.55) continue; const p = buYay(o, s.r, s.a); buPirilti(p.x, p.y, 3 + 3 * pu, (pu - 0.5) * 1.6 * tumu, tm * 0.5 + s.ph); }
+      for (const s of o.yildizlar) { const pu = 0.5 + 0.5 * Math.sin(tm * 2.6 + s.ph); if (pu < 0.55) continue; const p = buYay(o, s.r, s.a); buPirilti(p.x, p.y, 3 + 3 * pu, (pu - 0.5) * 0.8 * tumu, tm * 0.5 + s.ph); }
       g.globalCompositeOperation = 'source-over';
     }
     g.restore();
   },
   cizOn(o, tm) {
-    // yayın zemine değdiği yerlerde küçük ışık bulutları (ayaklar bulutlara karışır)
+    // yayın zeminden çıktığı ve zemine değdiği yerlerde yumuşak ışık bulutları (ayaklar bulutlara karışır)
     if (o.evre === BU_GK_EVRE.bekle) return;
-    const tumu = o.bu[6];
-    if (tumu <= 0) return;
+    const tumu = o.bu[6], ilk = o.bu[0];
+    if (ilk <= 0) return;
     g.globalCompositeOperation = 'lighter';
-    const xs = o.cx + Math.sqrt(Math.max(0, o.R * o.R - Math.pow(o.cy - buYuzeyY(o.cx + o.R * 0.8), 2)));
-    dglow('#fff0f6', xs, buYuzeyY(xs) - 6, 90, 0.35 * tumu); dglow('#ffffff', xs, buYuzeyY(xs) - 4, 36, 0.4 * tumu);
+    for (let i = 0; i < o.ayak.length; i++) {
+      const q = o.ayak[i], a = (i === 0 ? Math.min(1, ilk * 4) : tumu) * (0.85 + 0.15 * Math.sin(tm * 1.7 + i * 2));
+      if (a <= 0.01) continue;
+      dglow('#ffe8f2', q.x, q.y - 4, 100, 0.2 * a); dglow('#ffffff', q.x, q.y, 44, 0.26 * a);
+    }
     g.globalCompositeOperation = 'source-over';
   },
 });
@@ -434,7 +439,8 @@ TUR.kaydet('bulutKopru', {
   guncelle(o, dt) { if (o.yedek) o.a = Math.min(1, o.a + dt * (Math.abs(P.x - o.x) < 700 ? 2 : 0)); },
   ciz(o, tm) {
     if (!o.yedek || o.a < 0.01) return;
-    buBulutCiz(buBulut(o.w, 20, 'kopru', o.seed), o.x, o.y - 4 + Math.sin(tm * 1.3 + o.seed) * 1.2, o.w, 1, 1, o.a);
+    if (typeof dn3Bulut === 'function') dn3Bulut(o.x, o.y - 4, o.w, 20, { seed: o.seed, alpha: o.a });
+    else buBulutCiz(buBulut(o.w, 20, 'kopru', o.seed), o.x, o.y - 4, o.w, 1, 1, o.a);
   },
 });
 

@@ -1585,32 +1585,48 @@ function pfDans(o, p, dt) {
 }
 
 // ── Finalde fenerler: her Pofuduk sırayla Işık Ağacı'na uçar, tacın altına parlayan minik bir fener asar, dansa geri döner ──
-// Fener yerleri ağaca göre (taç altı, dalların arası); uçuş başlarken o an ekranda görünen ve diğerlerinden en uzak yer seçilir.
+// Fener yerleri ağaca göre (taç altı, dalların arası), ekranda görünenlerden; dans sırasına göre soldan sağa paylaştırılır
+// (yollar kesişmez). Yan yana dansçılar art arda değil aralıklı kalkar; havadakiler birbirine yaklaşırsa yumuşakça açılır.
 const PF_FENER_ADAY = [];
 for (let r = 0; r < 3; r++) for (let x = -330 + r * 15; x <= 330; x += 45) if (Math.abs(x) > 28) PF_FENER_ADAY.push(x, -200 - r * 30 - (Math.abs(x) % 2) * 6);
-const PF_FEN_YUK = 1.25, PF_FEN_AS = 0.5, PF_FEN_DON = 1.1;
+const PF_FEN_YUK = 1.25, PF_FEN_AS = 0.5, PF_FEN_DON = 1.1, PF_FEN_ARA = 52;
 function pfFenerKur(F) {
   const L = F.kucuk.slice().sort((a, b) => {
     const sa = F.yer && F.yer[a.pf.dansI], sb = F.yer && F.yer[b.pf.dansI];
     return (sa ? sa.sira : 99) - (sb ? sb.sira : 99);
   });
-  const n = L.length, ara = n > 1 ? Math.min(0.55, 4.4 / (n - 1)) : 0;
-  F.fener = L.map((o, k) => ({ o, tS: 1.4 + k * ara, durum: 0, t: 0, lx: 0, ly: 0, ust: 0, on: -1, ph: k * 1.7, col: o.pf.pal, x0: 0, y0: 0, x1: 0, y1: 0 }));
+  // kalkış sırası: 0,1,4,5,8,9,… sonra 2,3,6,7,… (komşular aynı anda havada olmasın)
+  const L2 = L.filter((o, k) => (k >> 1) % 2 === 0).concat(L.filter((o, k) => (k >> 1) % 2 === 1));
+  const n = L2.length, ara = n > 1 ? Math.min(0.5, 4 / (n - 1)) : 0;
+  F.fener = L2.map((o, k) => ({ o, tS: 1.4 + k * ara, durum: 0, t: 0, lx: 0, ly: 0, ust: 0, on: -1, ph: k * 1.7, col: o.pf.pal, x0: 0, y0: 0, x1: 0, y1: 0, ox: 0, oy: 0, sol: 0 }));
 }
+function pfFenerSx(F, f) { const s = F.yer && F.yer[f.o.pf.dansI]; return s ? s.x : f.o.x; }
 function pfFenerYer(F, e) {
   const agac = typeof TREE !== 'undefined' && TREE, tx = agac ? TREE.x : P.x, ty = agac ? TREE.y : P.y;
   const zx0 = cam.x + 55, zx1 = Math.max(zx0, cam.x + VW - 55), zy0 = cam.y + 75;
-  let enI = -1, enD = -1, yedI = 0, yedD = 1e9;
-  for (let i = 0; i < PF_FENER_ADAY.length; i += 2) {
-    const x = tx + PF_FENER_ADAY[i], y = ty + PF_FENER_ADAY[i + 1];
-    if (F.buyuk && Math.abs(x - F.buyuk.x) < 128) continue;   // Büyük Pofuduk'un başının üstüne değil
-    let d = 1e6;
-    for (const f of F.fener) if (f !== e && f.durum > 0 && f.on !== -2) d = Math.min(d, Math.hypot(f.lx - x, (f.ly - y) * 1.6));
-    if (x >= zx0 && x <= zx1 && y >= zy0) { if (d > enD) { enD = d; enI = i; } }
-    else { const dd = Math.max(zx0 - x, x - zx1, zy0 - y, 0) - d * 0.01; if (dd < yedD) { yedD = dd; yedI = i; } }
+  // görünen sütunlar ilk uçuşta bir kez seçilir (kamera kaysa da pay değişmez; aynı yere iki fener olmaz)
+  if (!F.fenX) {
+    const xs = [];
+    let yedX = tx, yedD = 1e9;
+    for (let i = 0; i < PF_FENER_ADAY.length; i += 2) {
+      if (PF_FENER_ADAY[i + 1] !== -200) continue;   // yalnız ilk sıranın sütunları; yükseklik aşağıda
+      const x = tx + PF_FENER_ADAY[i];
+      if (F.buyuk && Math.abs(x - F.buyuk.x) < 128) continue;   // Büyük Pofuduk'un başının üstüne değil
+      if (x >= zx0 && x <= zx1) xs.push(x);
+      else { const dd = Math.max(zx0 - x, x - zx1); if (dd < yedD) { yedD = dd; yedX = x; } }
+    }
+    xs.sort((a, b) => a - b);
+    F.fenX = xs.length ? xs : [clamp(yedX, zx0, zx1)];
   }
-  const i = enI >= 0 ? enI : yedI;
-  e.lx = clamp(tx + PF_FENER_ADAY[i], zx0, zx1); e.ly = Math.max(ty + PF_FENER_ADAY[i + 1], zy0);
+  const n = F.fener.length, sx = pfFenerSx(F, e), ei = F.fener.indexOf(e);
+  let r = 0;
+  for (let k = 0; k < n; k++) { const f = F.fener[k]; if (f === e) continue; const fx = pfFenerSx(F, f); if (fx < sx || (fx === sx && k < ei)) r++; }
+  const u = (r + 0.5) / n, m = F.fenX.length;
+  // m sütunu n fenere eşit aralıkla yay (sütun azsa iki fener aynı sütunda farklı yükseklikte)
+  const xi = clamp(u * m - 0.5, 0, m - 1), x0i = Math.floor(xi), xf = xi - x0i;
+  const lxx = m > 1 ? lerp(F.fenX[x0i], F.fenX[Math.min(m - 1, x0i + 1)], xf) : F.fenX[0];
+  e.lx = clamp(lxx, zx0, zx1);
+  e.ly = Math.max(ty - 200 - (r % 2) * 34 - Math.round(Math.abs(u - 0.5) * 3) * 20, zy0);   // komşular farklı yükseklikte; dıştakiler biraz yukarıda
   e.ust = Math.min(ty - 300, e.ly - 46);
 }
 function pfFenerGuncelle(F, dt) {
@@ -1618,9 +1634,16 @@ function pfFenerGuncelle(F, dt) {
   for (const e of F.fener) {
     if (e.durum !== 0 || F.t < e.tS) continue;
     const p = e.o.pf;
-    if (F.t > 14) { e.durum = 4; continue; }   // hiç yerine varamadıysa (olmamalı): fenersiz kalsın
+    if (F.t > 20) { e.durum = 4; continue; }   // hiç yerine varamadıysa (olmamalı): fenersiz kalsın
     if (!p.dansHazir || p.jy !== 0 || p.sihir || p.fen) continue;
     pfFenerYer(F, e);
+    // yolu açık mı: yakınında havada biri (kalkan/dönen) ya da aynı fener sütununa giden biri varsa biraz bekler
+    let bos = true;
+    for (const f of F.fener) {
+      if (f === e || f.durum < 1 || f.durum > 3 || !f.o) continue;
+      if (Math.abs(f.o.x - e.o.x) < 72 || (f.durum < 3 && Math.abs(f.lx - e.lx) < 44) || (f.durum === 3 && Math.abs(f.lx - e.lx) < 70)) { bos = false; break; }
+    }
+    if (!bos && F.t < e.tS + 1.6) continue;
     e.durum = 1; e.t = 0; e.x0 = e.o.x; e.y0 = e.o.y; p.fen = e;
     pfZipla(p, 4); pfPirilti(e.o.x, e.o.y - 10, 6, [p.pal.i, '#ffffff', '#fff3b0'], 120, 0.6, 7, -Math.PI / 2, 1.8);
   }
@@ -1628,7 +1651,7 @@ function pfFenerGuncelle(F, dt) {
 function pfFenerUc(o, p, dt, s) {
   const e = p.fen; e.t += dt;
   const hx = e.lx, hy = e.ly + 40;   // fener patilerin üstünde, başının biraz yukarısında
-  let nx, ny;
+  let nx, ny, sol = 1;
   if (e.t < PF_FEN_YUK) {   // yükseliş: pırıltılı bir yayla tacın altına
     const u = 0.5 - 0.5 * Math.cos(Math.PI * e.t / PF_FEN_YUK), it = 1 - u, cx = lerp(e.x0, hx, 0.35), cy = Math.min(e.y0, hy) - 70;
     nx = it * it * e.x0 + 2 * it * u * cx + u * u * hx; ny = it * it * e.y0 + 2 * it * u * cy + u * u * hy;
@@ -1646,12 +1669,26 @@ function pfFenerUc(o, p, dt, s) {
     const u = clamp((e.t - PF_FEN_YUK - PF_FEN_AS) / PF_FEN_DON, 0, 1), k = 0.5 - 0.5 * Math.cos(Math.PI * u), it = 1 - k;
     const cx = lerp(e.x1, gx, 0.6), cy = Math.min(e.y1, gy) - 40;
     nx = it * it * e.x1 + 2 * it * k * cx + k * k * gx; ny = it * it * e.y1 + 2 * it * k * cy + k * k * gy;
+    sol = clamp((1 - u) * 4, 0, 1);   // inişin sonunda açılma sıfırlanır (tam yerine konar)
     if (u >= 1) {
       e.durum = 4; p.fen = null; o.x = gx; o.y = gy; p.yt = gy; p.jy = 0; p.jv = -140; p.gy = 0; p.rot = 0; pfZipla(p, 4.5);
       pfPirilti(o.x, o.y - 6, 4, [p.pal.i, '#ffffff'], 70, 0.5, 6, -Math.PI / 2, 2.4);
       return;
     }
   }
+  if (e.t < 0.3) sol = Math.min(sol, e.t / 0.3);   // kalkışta da yumuşak başla
+  // havadaki iki Pofuduk birbirine yaklaşırsa yumuşakça açılır (yollarının yönü bozulmaz)
+  let px = 0, py = 0;
+  for (const f of pfFinal.fener) {
+    if (f === e || f.durum < 1 || f.durum > 3 || !f.o) continue;
+    const ddx = nx - f.o.x, ddy = ny - f.o.y, dd = Math.hypot(ddx, ddy);
+    if (dd < PF_FEN_ARA) {
+      const k = (PF_FEN_ARA - dd) / PF_FEN_ARA * 40;
+      if (dd < 1) px += (e.x0 < f.x0 ? -1 : 1) * k; else { px += ddx / dd * k; py += ddy / dd * k * 0.8; }
+    }
+  }
+  e.ox = lerp(e.ox, clamp(px, -36, 36), 1 - Math.exp(-dt * 12)); e.oy = lerp(e.oy, clamp(py, -30, 30), 1 - Math.exp(-dt * 12)); e.sol = sol;
+  nx += e.ox * sol; ny += e.oy * sol;
   const vx = nx - o.x;
   o.x = nx; o.y = ny; p.yt = ny; p.jy = 0; p.jv = 0; p.wy = 0;
   p.gy = lerp(p.gy, -Math.sin(p.t * 8) * 3, 1 - Math.exp(-dt * 8));

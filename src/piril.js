@@ -205,6 +205,14 @@ OLAY.on('ziplatti', o => {
   drSparkle(D.x, D.y, 8, 90);
 });
 OLAY.on('ziplama', () => { dragonInit(); D.jumps++; });
+OLAY.on('ciftZiplama', () => { dragonInit(); D.ciftT = D.t; });
+OLAY.on('inis', v => {   // büyük zıplamadan (çift zıplama / zıplatan bulut) sonra yere inince ara sıra önüne dönüp alkışlar
+  dragonInit(); if (!v || P.ucus) return;
+  const buyuk = D.t - (D.ciftT || -99) < 2.2 || (v.siddet || 0) >= 480;
+  if (!buyuk || D.t - (D.alkT || -99) < 22 || Math.random() > 0.4 || !drPlaying() || !drFree() || D.talkT > 0) return;
+  D.alkT = D.t; drMode('alkis'); D.alkDur = 1.5; D.alkSide = Math.sign(D.x - P.x) || -P.f; D.clapPh = 0;
+});
+OLAY.on('isilti', () => { dragonInit(); D.bkSev = 1; });   // Bölüm 3 uçuşu: Feza ışıltı topladı
 OLAY.on('kuzu', v => {   // Bölüm 3: kuzucuk renklendi → onun renginde kalpler/yıldızlarla sevinç turu (cümleleri ses.js söyler)
   dragonInit(); const o = v && v.o; if (!o || !isFinite(o.x) || !isFinite(o.y)) return;
   D.kzRenk = DR_GOK[((v.renkI | 0) % 7 + 7) % 7]; D.kzRenkT = 2.6; D.since = 0;
@@ -415,6 +423,7 @@ function drUcusta(dt) {
   D.tasiyor = false; D.yawnT = -1; D.yawn = 0; D.beckonW = 0; D.beckon = 0; D.puff = 0; D.blowM = 0; D.stretch = 0; D.gasp = 0; D.nom = 0;
   D.guideCd = Math.max(D.guideCd, 8); D.stuckT = 0; D.jumps = 0; D.wrongT = 0; D.idleCd = Math.max(D.idleCd, 6); D.sakliIste = null;
   drTalkStep(dt);   // uçuşta konuşursa 'binek' pozunun ağzı oynar
+  D.bkSev = Math.max(0, (D.bkSev || 0) - dt / 0.9);   // ışıltı toplayınca kısa sevinç ('binek' pozu okur)
   D.pence.x = D.x; D.pence.y = D.y + 12;
   drResetTail();
 }
@@ -956,6 +965,16 @@ function stepDragon(dt) {
       }
       D.lookAt.x = bx; D.lookAt.y = by; D.lookAtT = 0.2;
     }
+  } else if (D.mode === 'alkis') {     // Feza'nın yanında önüne dönüp alkışlar ("bravo!"), sonra yanına döner
+    const u = D.modeT, sd = D.alkSide;
+    tx = P.x + sd * 46; ty = P.y - 104 + Math.sin(u * 5) * 3; k = 50; damp = 11; flapW = 4.2;
+    D.faceHold = 0.15; D.expr = 'happy'; D.exprT = 0.3;
+    D.lookAt.x = P.x; D.lookAt.y = P.y - 50; D.lookAtT = 0.2;
+    hopW = Math.abs(Math.sin(u * 9)) * 3 * Math.max(0, 1 - u / D.alkDur);
+    const on = u > 0.22 && u < D.alkDur - 0.22, eski = D.clapPh;
+    D.clapPh += dt * (on ? 13 : 0);
+    if (on && Math.floor(eski / Math.PI) !== Math.floor(D.clapPh / Math.PI)) { drFx(D.x, D.y + 2, 'star'); if (D.sSq) D.sSq.v -= 0.8; }   // el çırpınca minik yıldız
+    if (u >= D.alkDur || !drPlaying()) drMode('follow');
   } else if (D.mode === 'dans') {      // final: Feza'nın çevresinde sekiz çizen sevinç dansı
     const a = D.modeT * 2.6;
     tx = P.x + Math.sin(a) * 74; ty = P.y - 112 + Math.sin(2 * a) * 22; k = 60; damp = 12; flapW = 5.5;
@@ -970,6 +989,7 @@ function stepDragon(dt) {
   if (D.mode !== 'nefes') { D.puff = Math.max(0, D.puff - dt * 4); D.blowM = Math.max(0, D.blowM - dt * 6); D.stretch = Math.max(0, D.stretch - dt * 3); }
   if (D.mode !== 'yol' && D.mode !== 'sakli' && D.mode !== 'merak' && D.mode !== 'sekil') D.beckonW = 0;
   D.beckon = lerp(D.beckon, D.beckonW, 1 - Math.exp(-dt * 10));
+  D.clap = lerp(D.clap || 0, D.mode === 'alkis' && D.modeT > 0.15 && D.modeT < D.alkDur - 0.15 ? 1 : 0, 1 - Math.exp(-dt * 12));
   D.headRoll = lerp(D.headRoll, rollW, 1 - Math.exp(-dt * 6));
 
   if (!isFinite(tx) || !isFinite(ty)) { tx = P.x - P.f * 40; ty = P.y - 112; if (D.mode !== 'follow') drMode('follow'); }   // hedef bozuksa (eksik nesne/olay verisi) güvenli takip
@@ -1051,8 +1071,15 @@ function stepDragon(dt) {
     else if (Math.abs(D.vx) < 50) { const rel = P.x - D.x; if (rel * D.ft < -26) D.ft = -D.ft; }
   }
   // dönüş (saydam karışım yok → hayalet kare yok): yan → (ezilerek) 3/4 önden → tam önden → öbür 3/4 → yan
+  if (D.mode === 'alkis') {   // yarım dönüş: yandan önden görünüşe döner, alkış boyunca önden kalır, aynı yana geri döner (dönüş yolu aynı: sıçrama yok)
+    const u = D.modeT, T = D.alkDur;
+    D.ft = D.face; D.face0 = D.face; D.tTo = D.face;
+    const want = u < 0.25 ? 0.5 * smooth(u / 0.25) : u < T - 0.25 ? 0.5 : Math.min(0.999, 0.5 + 0.5 * smooth((u - (T - 0.25)) / 0.25));
+    D.tt = D.tt >= 0 ? (D.tt <= 0.5 ? Math.max(D.tt, Math.min(want, 0.5)) : Math.max(D.tt, want)) : want;
+  } else {
   if (D.tt < 0 && D.ft !== D.face) { D.tt = 0; D.face0 = D.face; D.tTo = D.ft; }
-  if (D.tt >= 0) {
+  }
+  if (D.tt >= 0 && D.mode !== 'alkis') {
     // yarıda vazgeçerse aynı yoldan geri döner (yüz yönü sıçramaz)
     if (D.ft !== D.tTo) { D.tTo = D.ft; D.face0 = -D.ft; D.tt = 1 - D.tt; }
     D.tt += dt / (Math.abs(D.vx) > 220 ? 0.22 : 0.3);   // hızlıyken daha çevik döner
@@ -1093,7 +1120,7 @@ function stepDragon(dt) {
   D.stretch = Math.max(D.stretch, D.yawn * 0.8);
 
   D.exprT -= dt; if (D.exprT <= 0 && D.mode !== 'happy' && D.mode !== 'push') D.expr = 'normal';
-  D.blinkT -= dt; if (D.blinkT < -0.14) D.blinkT = 1.6 + Math.random() * 3.4;
+  D.blinkT -= dt; if (D.blinkT < -0.14) D.blinkT = D.blink2 ? 1.6 + Math.random() * 3.4 : (Math.random() < 0.22 ? 0.12 : 1.6 + Math.random() * 3.4), D.blink2 = !D.blink2 && D.blinkT < 0.2;   // ara sıra çift göz kırpma
 
   // taşırken: Feza pençelerden sarkar (feza.js D.tasiyor ve D.pence'ye bakabilir)
   const pw = drLocal(DR_PAW[0], DR_PAW[1]); D.pence.x = pw.x; D.pence.y = pw.y;
@@ -1295,6 +1322,19 @@ function drawTail(x, tm) {
     x.globalCompositeOperation = 'source-over';
   }
 }
+let drTuyC = null;
+function drTuySprite() {   // gündüz ışık tüyü (256×64; elips, lila→nane gradyan, beyaz kenar, ince damar)
+  if (drTuyC !== null) return drTuyC || null;
+  if (typeof document === 'undefined') { drTuyC = false; return null; }
+  const c = document.createElement('canvas'); c.width = 256; c.height = 64;
+  const x = c.getContext('2d'), Lk = 246, rk = 29, cx = 128, cy = 32;
+  const gr = x.createLinearGradient(cx - Lk / 2, 0, cx + Lk / 2, 0);
+  gr.addColorStop(0, 'rgba(206,178,255,0.62)'); gr.addColorStop(0.6, 'rgba(176,150,250,0.42)'); gr.addColorStop(1, 'rgba(130,226,196,0.39)');
+  x.fillStyle = gr; x.beginPath(); x.ellipse(cx, cy, Lk / 2, rk, 0, 0, 6.283); x.fill();
+  x.strokeStyle = 'rgba(255,255,255,0.75)'; x.lineWidth = 5; x.stroke();
+  x.strokeStyle = 'rgba(150,120,230,0.35)'; x.lineWidth = 3.4; x.beginPath(); x.moveTo(cx - Lk / 2 + 11, cy); x.lineTo(cx + Lk * 0.35, cy); x.stroke();
+  return (drTuyC = c);
+}
 function drawWing(x, far, tm) {   // ışıktan kanat: yarı saydam, lavanta-nane, yumuşak üç tüy
   const A = D.wingA * (far ? 0.55 : 1); if (A < 0.01) return;
   const w = Math.sin(D.ph + (far ? 0.35 : 0));
@@ -1311,6 +1351,10 @@ function drawWing(x, far, tm) {   // ışıktan kanat: yarı saydam, lavanta-nan
     const dir = -2.25 - k * (0.42 - 0.1 * vs) - 0.18 * vs + fl, Lk = (23 - k * 4.5) * (1 + 0.16 * vs), rk = (4.2 - k * 0.7) * (1 - 0.12 * vs);
     const sh = 0.86 + 0.14 * Math.sin(tm * 6.5 + k * 2.1 + (far ? 2 : 0)) + 0.25 * vs;   // ışıltı
     x.save(); x.rotate(dir);
+    const spr = so ? drTuySprite() : null;
+    if (spr) {   // gündüz tüyü: önbellekli sprite (gradyan + kenar + damar), yalnız boyu/saydamlığı değişir
+      x.globalAlpha = A * (0.82 + 0.18 * sh); x.drawImage(spr, 0, -rk * 1.1, Lk * 1.04, rk * 2.2); x.globalAlpha = 1;
+    } else {
     const gr = x.createLinearGradient(0, 0, Lk, 0);
     if (so) {   // gündüz (Bölüm 3): parlak gökte beyaza boğulmasın; lila-nane yarı saydam tüy, beyaz kenar
       gr.addColorStop(0, `rgba(206,178,255,${0.62 * A})`); gr.addColorStop(0.6, `rgba(176,150,250,${0.42 * A * sh})`); gr.addColorStop(1, `rgba(130,226,196,${(0.34 + 0.1 * vs) * A})`);
@@ -1318,6 +1362,7 @@ function drawWing(x, far, tm) {   // ışıktan kanat: yarı saydam, lavanta-nan
     x.fillStyle = gr; x.beginPath(); x.ellipse(Lk / 2, 0, Lk / 2, rk, 0, 0, 6.283); x.fill();
     x.strokeStyle = so ? `rgba(255,255,255,${0.75 * A})` : `rgba(255,255,255,${(0.32 + 0.2 * vs) * A})`; x.lineWidth = so ? 0.7 : 0.6; x.stroke();
     if (so) { x.strokeStyle = `rgba(150,120,230,${0.35 * A})`; x.lineWidth = 0.45; x.beginPath(); x.moveTo(1, 0); x.lineTo(Lk * 0.85, 0); x.stroke(); }   // tüy damarı
+    }
     if (vs > 0.15 || k === 0) {   // tüy ucunda minik parıltı
       const tw = 0.5 + 0.5 * Math.sin(tm * 11 + k * 2.6 + (far ? 1.3 : 0));
       x.fillStyle = '#ffffff'; drTwinkle(x, Lk * 0.96, 0, 1.6 + 1.4 * vs, A * tw * (k === 0 ? 0.35 + 0.5 * vs : 0.6 * vs));
@@ -1472,6 +1517,10 @@ function drEar(x, rot, s) {   // yeşil yüzgeç kulak (arkası taraklı); yerel
   x.fillStyle = gr; x.fill(); x.strokeStyle = 'rgba(80,110,20,0.8)'; x.lineWidth = 0.6; x.stroke();
   x.restore();
 }
+function drChin(x, mx) {   // önden limon yeşili çene: karından yukarı yumuşak "U" (köşesiz)
+  x.beginPath(); x.moveTo(mx - 4.4, -4.4); x.quadraticCurveTo(mx, -2.8, mx + 4.4, -4.4);
+  x.quadraticCurveTo(mx + 6.6, -2.2, mx + 6, 2); x.lineTo(mx - 6, 2); x.quadraticCurveTo(mx - 6.6, -2.2, mx - 4.4, -4.4); x.closePath(); x.fill();
+}
 function drFront(x, tm, yaw) {   // önden görünüş (dönüşte yaw ile 3/4'e döner; ara sahnelerde tam önden)
   const C = DR_COL, pose = D.pose, lg = D.glide * 2, pl = D.plush;
   const yw = yaw || 0, ya = Math.abs(yw), ys = yw >= 0 ? 1 : -1, YA = yw * 0.95;   // YA: başın dönüş açısı (radyan)
@@ -1482,6 +1531,7 @@ function drFront(x, tm, yaw) {   // önden görünüş (dönüşte yaw ile 3/4'e
     const shx = sd * 7 + bsh * 0.6, shy = -0.8;
     let px = sd * lerp(10.4, 10, pose) + bsh, py = lerp(3.4, -14, pose);
     px = lerp(px, sd * 10.8, pl * (1 - pose)); py = lerp(py, 6.6, pl * (1 - pose));
+    if (D.clap > 0.01) { const w = Math.abs(Math.sin(D.clapPh || 0)); px = lerp(px, sd * (1.7 + 4.6 * w) + bsh, D.clap); py = lerp(py, -2.2 - 1.2 * w, D.clap); }   // alkış: eller göğsün önünde buluşur
     x.strokeStyle = C.line; x.lineWidth = 6.4; x.lineCap = 'round';
     x.beginPath(); x.moveTo(shx, shy); x.lineTo(px, py); x.stroke();
     x.strokeStyle = C.pur; x.lineWidth = 5.2; x.stroke();
@@ -1537,7 +1587,7 @@ function drFront(x, tm, yaw) {   // önden görünüş (dönüşte yaw ile 3/4'e
   headP(); x.fillStyle = hg; x.fill('nonzero');
   x.save(); headP(); x.clip();
   // limon yeşili çene (karına bağlanır; ağızdan aşağı)
-  x.fillStyle = C.lime; x.beginPath(); x.moveTo(mx - 4.6, -4.2); x.quadraticCurveTo(mx, -3, mx + 4.6, -4.2); x.lineTo(mx + 5.2, 2); x.lineTo(mx - 5.2, 2); x.closePath(); x.fill();
+  x.fillStyle = C.lime; drChin(x, mx);
   x.strokeStyle = 'rgba(110,150,20,0.45)'; x.lineWidth = 0.45; x.beginPath(); x.moveTo(mx - 4, -2.3); x.lineTo(mx + 4, -2.3); x.moveTo(mx - 4.6, -0.8); x.lineTo(mx + 4.6, -0.8); x.stroke();
   x.restore();
   // dış çizgi: kafa + (3/4'te) burun çıkıntısının dış kenarı
@@ -1548,7 +1598,7 @@ function drFront(x, tm, yaw) {   // önden görünüş (dönüşte yaw ile 3/4'e
     x.beginPath(); x.ellipse(snx, -6.6, 5.4, 4.2, 0, 0, 6.283); x.stroke(); x.restore();
     x.save(); x.beginPath(); x.ellipse(snx, -6.6, 5.4, 4.2, 0, 0, 6.283); x.clip();   // burnun altında kafa çizgisi görünmesin
     x.fillStyle = hg; x.beginPath(); x.ellipse(snx, -6.6, 5.6, 4.4, 0, 0, 6.283); x.fill();
-    x.fillStyle = C.lime; x.beginPath(); x.moveTo(mx - 4.6, -4.2); x.quadraticCurveTo(mx, -3, mx + 4.6, -4.2); x.lineTo(mx + 5.2, 2); x.lineTo(mx - 5.2, 2); x.closePath(); x.fill();
+    x.fillStyle = C.lime; drChin(x, mx);
     x.restore();
   }
   x.strokeStyle = 'rgba(255,245,255,0.4)'; x.lineWidth = 1.2; x.beginPath(); x.ellipse(0, -12, 11.2, 10, 0, -2.5, -0.7); x.stroke();
@@ -1664,20 +1714,17 @@ function drSide(x, tm) {   // yandan görünüş (sağa bakan yerel uzay)
   drawWing(x, false, tm);
   drHeadSide(x, tm);
 }
-function drHeadSide(x, tm) {   // yandan kafa (sağa bakan yerel uzay; boyun eklemi (4.5,-9)); drSide ve 'binek' pozu kullanır
-  const C = DR_COL;
-  // ── kafa ──
-  x.save(); x.translate(4.5, -9); x.rotate(D.headTilt + D.headRoll + (D.sniff || 0) * 0.06); x.translate(-4.5, 9);
-  drCrest(x, tm, 1);
-  const headPath = () => {
-    x.beginPath(); x.moveTo(-5, -11);
-    x.bezierCurveTo(-5.2, -18.8, 0, -23.4, 6.6, -23.4);
-    x.bezierCurveTo(12.8, -23.4, 16.4, -19.2, 16.6, -14.8);
-    x.bezierCurveTo(18.9, -14.4, 20.4, -11.8, 19.9, -9);
-    x.bezierCurveTo(19.5, -6.4, 17.2, -5.6, 15, -5.7);
-    x.bezierCurveTo(13.6, -2.6, 9.6, -0.6, 5.4, -0.8);
-    x.bezierCurveTo(0, -1.2, -4.8, -5, -5, -11); x.closePath();
-  };
+function drHeadPath(x) {
+  x.beginPath(); x.moveTo(-5, -11);
+  x.bezierCurveTo(-5.2, -18.8, 0, -23.4, 6.6, -23.4);
+  x.bezierCurveTo(12.8, -23.4, 16.4, -19.2, 16.6, -14.8);
+  x.bezierCurveTo(18.9, -14.4, 20.4, -11.8, 19.9, -9);
+  x.bezierCurveTo(19.5, -6.4, 17.2, -5.6, 15, -5.7);
+  x.bezierCurveTo(13.6, -2.6, 9.6, -0.6, 5.4, -0.8);
+  x.bezierCurveTo(0, -1.2, -4.8, -5, -5, -11); x.closePath();
+}
+function drHeadStatik(x) {   // yandan kafanın hareketsiz katmanı: dolgu, limon çene, burun ışığı, parlama, dış çizgi, burun deliği
+  const C = DR_COL, headPath = () => drHeadPath(x);
   const hg = x.createRadialGradient(6, -18, 1, 5, -11, 16);
   hg.addColorStop(0, C.purL); hg.addColorStop(0.6, C.pur); hg.addColorStop(1, C.purD);
   headPath(); x.fillStyle = hg; x.fill();
@@ -1694,6 +1741,29 @@ function drHeadSide(x, tm) {   // yandan kafa (sağa bakan yerel uzay; boyun ekl
   x.restore();
   headPath(); x.strokeStyle = C.line; x.lineWidth = 0.85; x.stroke();
   x.fillStyle = C.line; x.beginPath(); x.ellipse(18.6, -11, 0.55, 0.42, -0.3, 0, 6.283); x.fill();   // burun deliği
+}
+// Önbellekli katman: tuvalin gerçek piksel ölçeğine göre (≈%6 adımlarla, yukarı yuvarlanır: hiç büyütülmez) bir kez çizilir, sonra tek drawImage.
+// q = {c, s}; (x0,y0,w,h) = katmanın yerel sınırları; fn(ctx) yerel koordinatta çizer.
+const DR_HKC = { c: null, s: 0 };
+function drOnbCiz(x, q, x0, y0, w, h, fn) {
+  const m = x.getTransform(), ps = Math.hypot(m.a, m.b);
+  if (!(ps > 0.2 && ps < 30) || typeof document === 'undefined') { fn(x); return; }
+  const st = Math.pow(1.06, Math.ceil(Math.log(ps) / Math.log(1.06)));
+  if (!q.c || q.s !== st) {
+    if (!q.c) q.c = document.createElement('canvas');
+    q.c.width = Math.ceil(w * st) + 4; q.c.height = Math.ceil(h * st) + 4; q.s = st;
+    const c = q.c.getContext('2d'); c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, q.c.width, q.c.height);
+    c.setTransform(st, 0, 0, st, 2 - x0 * st, 2 - y0 * st); fn(c);
+  }
+  x.drawImage(q.c, x0 - 2 / st, y0 - 2 / st, q.c.width / st, q.c.height / st);
+}
+function drHeadSide(x, tm) {   // yandan kafa (sağa bakan yerel uzay; boyun eklemi (4.5,-9)); drSide ve 'binek' pozu kullanır
+  const C = DR_COL;
+  // ── kafa ──
+  x.save(); x.translate(4.5, -9); x.rotate(D.headTilt + D.headRoll + (D.sniff || 0) * 0.06); x.translate(-4.5, 9);
+  drCrest(x, tm, 1);
+  const headPath = () => drHeadPath(x);
+  if (D.hOnb) drOnbCiz(x, DR_HKC, -6.5, -25.5, 28, 27, drHeadStatik); else drHeadStatik(x);
   if (D.puff > 0.02) {   // şişkin yanak: kafa çizgisinin dışına taşar
     const pr = D.puff, cx = 12.4 + pr * 1.2, cy = -6 + pr * 0.6, rx = 3 + 4 * pr, ry = 2.2 + 3.4 * pr;
     x.fillStyle = C.pur; x.beginPath(); x.ellipse(cx, cy, rx, ry, 0, 0, 6.283); x.fill();
@@ -1760,6 +1830,21 @@ function drBinekGovde(x) {
   x.bezierCurveTo(12, 9.6, 17.4, 5.2, 17.8, 0);
   x.bezierCurveTo(18.2, -3.6, 17, -6.2, 14, -7.4); x.closePath();
 }
+function drBinekGovdeKatman(x) {   // 'binek' gövdesinin hareketsiz katmanı (önbelleğe çizilir): sırt dikenleri, gövde, karın, parlama, yakın uyluk
+  const C = DR_COL;
+  drBlobs(x, [12.6, -12.4, 1.9, 14.8, -15.8, 1.7, 9.8, -10.6, 1.9, 6.2, -10.4, 2.0, -7.6, -10.4, 2.1, -11.8, -9.2, 2.0, -15.2, -6.4, 1.8, 16.4, -9.6, 1.8], C.crest, C.crestD, 1.3);
+  const bg = x.createRadialGradient(-1, -6, 2, 0, 1, 20);
+  bg.addColorStop(0, C.purL); bg.addColorStop(0.55, C.pur); bg.addColorStop(1, C.purD);
+  drBinekGovde(x); x.fillStyle = bg; x.fill(); x.strokeStyle = C.line; x.lineWidth = 0.85; x.stroke();
+  x.save(); drBinekGovde(x); x.clip();
+  drBelly(x, 1.5, 7.6, 5.2, 16, Math.PI / 2 - 0.05, 0);
+  x.strokeStyle = 'rgba(255,245,255,0.38)'; x.lineWidth = 1.3; x.beginPath(); x.moveTo(-15, -5.6); x.quadraticCurveTo(-8, -8.6, -3, -7.6); x.moveTo(3, -7.8); x.quadraticCurveTo(8, -9, 12, -7); x.stroke();   // sırtta kadife parlaması
+  x.restore();
+  // yakın bacaklar: arkaya uzanmış tombul ayaklar (uçuşta ayak tabanı görünür), öne kıvrık kısa kol
+  x.fillStyle = C.pur; x.strokeStyle = C.line; x.lineWidth = 0.8;
+  x.beginPath(); x.ellipse(-7.4, 5.4, 6, 5.4, -0.25, 0, 6.283); x.fill(); x.stroke();
+}
+const DR_BKC = { c: null, s: 0 };
 function drBinek(x, tm, u) {
   const C = DR_COL, h = drBinekHal(tm, u), ph = h.ph, uu = clamp(+u || 0, -1, 1);
   // yardımcı çizimlerin okuduğu durum
@@ -1772,7 +1857,12 @@ function drBinek(x, tm, u) {
   D.headTilt = -0.1 + Math.sin(ph - 1.8) * 0.035 - uu * 0.06; D.headRoll = 0;
   if (cyc > 2.2 && cyc < 3.3) { D.eyeOv = 'happy'; D.headTilt -= 0.06 * Math.sin((cyc - 2.2) / 1.1 * Math.PI); }   // kıkır kıkır
   else if (cyc > 4.5 && cyc < 5.7) { const w = Math.sin((cyc - 4.5) / 1.2 * Math.PI); D.lookX = 1 - 1.8 * w; D.lookY = -0.12 - 0.6 * w; D.headTilt -= 0.08 * w; }   // Feza'ya bakış
+  const fz = P.ucus && P.ucus.faz;
+  if (fz === 'buyu' || fz === 'bin' || fz === 'atla' || fz === 'kucul') { D.eyeOv = 'open'; D.lookX = -0.95; D.lookY = 0.25; D.headTilt = 0.02 + Math.sin(ph - 1.8) * 0.03; }   // binerken/inerken Feza'ya (arkaya) bakar
   D.blinkT = bl < 0.14 && D.eyeOv === 'open' ? -bl : 1;
+  const sev = P.ucus ? (D.bkSev || 0) : 0;   // ışıltı toplandı: gözler kavis, baş kalkar, ağız kocaman
+  if (sev > 0.05) { D.eyeOv = 'happy'; D.headTilt -= 0.12 * Math.sin(Math.min(1, sev) * Math.PI * 0.5); D.blinkT = 1; }
+  D.mSc = 1.3 + 0.35 * sev;
   if (D.mouth > 0.06) D.expr = 'happy';   // konuşurken ağız heceleri (drMouthKind 'talk')
   // ışık halesi (sıcak gün doğumu + lila)
   const op = x.globalCompositeOperation;
@@ -1799,17 +1889,8 @@ function drBinek(x, tm, u) {
     }
     D.tail = tl; D.dz = 1.3; drawTail(x, tm); D.dz = 1; }
   // sırt dikenleri (koltuk boş: Feza oturur), gövde, karın
-  drBlobs(x, [12.6, -12.4, 1.9, 14.8, -15.8, 1.7, 9.8, -10.6, 1.9, 6.2, -10.4, 2.0, -7.6, -10.4, 2.1, -11.8, -9.2, 2.0, -15.2, -6.4, 1.8, 16.4, -9.6, 1.8], C.crest, C.crestD, 1.3);
-  const bg = x.createRadialGradient(-1, -6, 2, 0, 1, 20);
-  bg.addColorStop(0, C.purL); bg.addColorStop(0.55, C.pur); bg.addColorStop(1, C.purD);
-  drBinekGovde(x); x.fillStyle = bg; x.fill(); x.strokeStyle = C.line; x.lineWidth = 0.85; x.stroke();
-  x.save(); drBinekGovde(x); x.clip();
-  drBelly(x, 1.5, 7.6, 5.2, 16, Math.PI / 2 - 0.05, 0);
-  x.strokeStyle = 'rgba(255,245,255,0.38)'; x.lineWidth = 1.3; x.beginPath(); x.moveTo(-15, -5.6); x.quadraticCurveTo(-8, -8.6, -3, -7.6); x.moveTo(3, -7.8); x.quadraticCurveTo(8, -9, 12, -7); x.stroke();   // sırtta kadife parlaması
-  x.restore();
-  // yakın bacaklar: arkaya uzanmış tombul ayaklar (uçuşta ayak tabanı görünür), öne kıvrık kısa kol
-  x.fillStyle = C.pur; x.strokeStyle = C.line; x.lineWidth = 0.8;
-  x.beginPath(); x.ellipse(-7.4, 5.4, 6, 5.4, -0.25, 0, 6.283); x.fill(); x.stroke();
+  drOnbCiz(x, DR_BKC, -21, -19, 41, 32, drBinekGovdeKatman);
+  x.fillStyle = C.purL; x.strokeStyle = C.line; x.lineWidth = 0.8;
   x.fillStyle = C.purL; x.beginPath(); x.ellipse(-12.6, 9.6 + lsw, 5.6, 3, 0.42, 0, 6.283); x.fill(); x.stroke();
   x.strokeStyle = 'rgba(82,51,140,0.5)'; x.lineWidth = 0.5; x.beginPath(); x.moveTo(-15.4, 9 + lsw); x.lineTo(-14.6, 10.8 + lsw); x.moveTo(-13.2, 10 + lsw); x.lineTo(-12.4, 11.8 + lsw); x.stroke();
   x.strokeStyle = C.line; x.lineWidth = 6.2; x.lineCap = 'round';
@@ -1826,7 +1907,7 @@ function drBinek(x, tm, u) {
   x.fillStyle = C.lime; x.beginPath(); x.moveTo(15.4, 1); x.quadraticCurveTo(18.6, -4.6, 20.4, -9); x.lineTo(24, -9); x.lineTo(20, 2); x.closePath(); x.fill();
   x.strokeStyle = 'rgba(110,150,20,0.45)'; x.lineWidth = 0.45; x.beginPath(); for (let i = 0; i < 4; i++) { const yy = -1 - i * 2.2; x.moveTo(16.4 + i * 0.9, yy); x.lineTo(21 + i * 0.6, yy - 0.6); } x.stroke();
   x.restore();
-  D.mSc = 1.3; x.save(); x.translate(16.6, -6.2); drHeadSide(x, tm); x.restore(); D.mSc = 1;
+  D.hOnb = true; x.save(); x.translate(16.6, -6.2); drHeadSide(x, tm); x.restore(); D.mSc = 1; D.hOnb = false;
   x.restore();
   D.wingSO = false;
 }
@@ -2004,6 +2085,13 @@ function drawDragon(tm) {
   }
   if (D.spo && D.spo.a > 0.01) {   // uçuşan ışık sporu (Pırıl'ın kovaladığı)
     const sp = D.spo, tw = 0.75 + 0.25 * Math.sin(tm * 9 + sp.ph);
+    if (gun) {   // gündüz: pamuk gibi pembe-beyaz bulut tüyü (açık gökte ışık topu görünmez)
+      x.globalAlpha = 0.55 * sp.a; x.fillStyle = '#ff9cc8'; x.beginPath(); x.arc(sp.x, sp.y + 0.8, 4.6, 0, 6.283); x.fill();
+      x.globalAlpha = sp.a; x.fillStyle = '#ffffff';
+      for (let i = 0; i < 7; i++) { const a = i * 0.898 + tm * 1.3; x.beginPath(); x.ellipse(sp.x + Math.cos(a) * 3.8, sp.y + Math.sin(a) * 3.8, 2.4, 1.1, a, 0, 6.283); x.fill(); }
+      x.beginPath(); x.arc(sp.x, sp.y, 2.8, 0, 6.283); x.fill(); x.globalAlpha = 1;
+      x.fillStyle = '#ffd23f'; drTwinkle(x, sp.x + 3, sp.y - 3, 4 * tw, 0.9 * sp.a);
+    } else {
     x.globalCompositeOperation = 'lighter';
     drGlow(x, '#fff2a8', sp.x, sp.y, 26 * tw, 0.5 * sp.a); drGlow(x, '#bff4ff', sp.x, sp.y, 12, 0.7 * sp.a); drGlow(x, '#ffffff', sp.x, sp.y, 6, 1 * sp.a);
     x.globalCompositeOperation = 'source-over';
@@ -2011,6 +2099,7 @@ function drawDragon(tm) {
     for (let i = 0; i < 6; i++) { const a = i * 1.047 + tm * 1.3; x.beginPath(); x.ellipse(sp.x + Math.cos(a) * 3.6, sp.y + Math.sin(a) * 3.6, 1.6, 0.6, a, 0, 6.283); x.fill(); }   // pamuk gibi tüycükler
     x.globalAlpha = 1;
     x.fillStyle = '#ffffff'; drTwinkle(x, sp.x, sp.y, 6.5 * tw, 0.9 * sp.a);
+    }
   }
   if (BOLUM_NO === 2) drGece(x, tm);
   if (gun) { drGunDogumu(x, tm, 0); D.wingSO = true; }
