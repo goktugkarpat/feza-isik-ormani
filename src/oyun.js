@@ -164,7 +164,7 @@ function begin() {
   DURUM = 'giris'; OLAY.emit('durum', DURUM);
   if (BOLUM_NO === 2 || BOLUM_NO === 3) {   // Bölüm 2/3: kısa uyku girişi (yeni sahne varsa; test bayrakları ?atla/?bolum= atlar, ?uyku zorlar) → ışıkla belirme
     const basla = () => { oyunaBasla(); omDevamGirisi(); };
-    if (typeof SAHNE !== 'undefined' && SAHNE && typeof SAHNE.secim === 'function' && typeof SAHNE.giris === 'function' && !Q.has('atla') && (!Q.has('bolum') || Q.has('uyku'))) { omZamanla(0.4, () => { omPerde.hedef = 0; omPerde.hiz = 0.8; }); try { SAHNE.giris(basla, { bolum: BOLUM_NO, kisa: true }); } catch (e) { omHata('SAHNE.giris', e); basla(); } }   // yenileme sonrası ilk ~0,4 sn koyu, sonra uyku sahnesi görünür (sahne bitince omDevamGirisi perdeyi kapatıp açar)
+    if (typeof SAHNE !== 'undefined' && SAHNE && typeof SAHNE.secim === 'function' && typeof SAHNE.giris === 'function' && !Q.has('atla') && (!Q.has('bolum') || Q.has('uyku'))) { omPerde.a = omPerde.hedef = 1; omPerdeBek = { t0: now, iyi: 0 }; try { SAHNE.giris(basla, { bolum: BOLUM_NO, kisa: true }); } catch (e) { omHata('SAHNE.giris', e); basla(); } }   // yenileme sonrası ilk ~0,4 sn koyu, sonra uyku sahnesi görünür (sahne bitince omDevamGirisi perdeyi kapatıp açar)
     else basla();
     return;
   }
@@ -1145,6 +1145,15 @@ function omDr(ad) {   // çağrı anında seçilir (dunya2.js / dunya3.js sonrad
 }
 // geçiş / giriş perdesi (ekran kararması): a 0..1, koyu gece mavisi
 const omPerde = { a: 0, hedef: 0, hiz: 0.5 };
+// Yenilemeden sonra uyku sahnesi perdenin ARKASINDA çizilmeye başlar; ilk kareler (önbellek kurma, GPU yükleme) yüzlerce ms takılabilir.
+// Perde sabit sürede değil, kareler düzene girince (en az 0,4 sn, art arda 4 akıcı kare; en geç 2,2 sn) açılır: takılma karanlıkta kalır.
+let omPerdeBek = null;
+function omPerdeBekle(raw) {
+  const B = omPerdeBek; if (!B) return;
+  B.iyi = (raw > 0 && raw < 0.034) ? B.iyi + 1 : 0;
+  const u = now - B.t0;
+  if ((u > 0.4 && B.iyi >= 4) || u > 2.2) { omPerde.hedef = 0; omPerde.hiz = 0.8; omPerdeBek = null; }
+}
 function omPerdeCiz(dt) {
   if (omPerde.a !== omPerde.hedef) {
     const d = omPerde.hiz * dt; omPerde.a = omPerde.a < omPerde.hedef ? Math.min(omPerde.hedef, omPerde.a + d) : Math.max(omPerde.hedef, omPerde.a - d);
@@ -1303,6 +1312,7 @@ function frame(ms) {
   if (omOyunT < 0) omOyunT = wt;
   omOyunT += dt; now = omOyunT;
   const t = omOyunT;
+  if (omPerdeBek) omPerdeBekle(raw);
   for (let i = omZamanlar.length - 1; i >= 0; i--) if (omZamanlar[i].t <= t) { const z = omZamanlar[i]; omZamanlar.splice(i, 1); omCagir('zamanla', z.fn); }
   if (omIsit) { const fI = globalThis[BOLUM_NO === 3 ? 'dn3Isit' : 'dn2Isit']; if (typeof fI !== 'function') omIsit = false; else { try { if (fI()) omIsit = false; } catch (e) { omIsit = false; omHataBildir('dnIsit', e); } } }   // Bölüm 2 önbelleklerini kareye yayarak (karanlık/uyku girişi altında) ısıt
   omCagir('readInput', readInput);

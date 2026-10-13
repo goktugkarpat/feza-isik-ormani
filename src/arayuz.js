@@ -227,7 +227,7 @@ const ARAYUZ = (() => {
     x.fillStyle = 'rgba(255,246,214,0.8)'; yildiz4(x, m + R * 0.62, m - R * 0.14, R * 0.08, 0.3); x.fill();
     return C[key] = { c, m };
   }
-  let basV = 0, basHiz = 0, dugmeA = 0, zipT = 0;
+  let basV = 0, basHiz = 0, dugmeA = 0, zipT = 0, uiKilitT = 0;
   function dugmeCiz(tm, dt, a) {
     const d = GIRDI.dugme, R = d.r * DPR, cx = d.x * DPR, cy = d.y * DPR;
     if (R <= 1) return;
@@ -881,7 +881,8 @@ const ARAYUZ = (() => {
     uiSarkiEl.a = clamp(uiSarkiEl.a + (uiSarkiEl.ist ? dt * 3 : -dt * 5), 0, 1); uiSarkiEl.ist = false;
     dene('ipucu', () => ipucuGuncelle(dt));
     zipT = Math.max(0, zipT - dt * 2.5);
-    dugmeA = clamp(dugmeA + (DURUM === 'oyun' && !P.ucus ? dt * 1.5 : -dt * 3), 0, 1);   // Bölüm 3 uçuşunda zıplama düğmesi yok
+    uiKilitT = P.kilit > 0 ? uiKilitT + dt : 0;   // kontrol yarım saniyeden uzun kilitliyse (sahne anı: ağaç, gökkuşağından kayış...) düğme işe yaramaz → gizle
+    dugmeA = clamp(dugmeA + (DURUM === 'oyun' && !P.ucus && uiKilitT < 0.5 ? dt * 1.5 : -dt * 3), 0, 1);   // Bölüm 3 uçuşunda zıplama düğmesi yok
     if (dugmeA > 0.005) { dene('parmak', () => parmakCiz(tm, dt)); dene('dugme', () => dugmeCiz(tm, dt, dugmeA)); }
     dene('ipucuCiz', () => ipucuCiz(tm));
     dene('bildirim', () => bildirimCiz(tm));

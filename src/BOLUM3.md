@@ -228,7 +228,7 @@ Düşmek: bulutların altı boşluk; düşen Feza'yı Pırıl geri taşır (mevc
   `esinti {w, h, kuyu}` · `gokkusagi` · `bulutKopru` (YALNIZ `ucusKapisi` türü yoksa) · `ucurtma {ip, renk}` · `kusSuru {n}` · `tuy`.
   Renkler `BU_GK` (gökkuşağı bantları `DN3_RB` varsa onu kullanır). bulutYuzen/bulutKopru `dn3Bulut` ile çizilir; bulutZip kendi pembe esnek sprite'ı.
 - **Gökkuşağı akışı**: başlama: Feza tepe üstünde (yerde) + bütün kuzucuklar renkli (kuzu türü yoksa hemen). t=0 `OLAY 'gokkusagiBasla'` (veri = nesne; `o.konumlar` = 7 {x,y}
-  = `o.yayX/o.yayY`, yarıçap R+115, 125°→35°, renkI sırasıyla) + `omDikkat('gokkusagi')`; t=2,4+i·0,42 bant i (`AU 'gokkusagiParca'` v=i, `OLAY 'gokkusagiParca' {o, renkI}`);
+  = `o.yayX/o.yayY`, yarıçap R+90, 112°→68° (dar: final kadrajına sığar), renkI sırasıyla) + `omDikkat('gokkusagi')` (kutu: önce yay tepesi ±330, kayışta Feza + iniş yeri; zMin 0.6); t=2,4+i·0,42 bant i (`AU 'gokkusagiParca'` v=i, `OLAY 'gokkusagiParca' {o, renkI}`);
   ≈5,8 sn `AU 'gokkusagiTamam'` + `OLAY 'gokkusagiParlak'`; +0,6 sn Feza yayın tepesine sıçrar → `AU 'kayma'`/`OLAY 'kayma'` → ≈2,3 sn kayış (`P.poz='kayma'`, `P.kaymaAci`)
   → iniş → 1,3 sn sonra `o.done=o.uyandi=true` + `OLAY 'gokkusagiTamam'`. `o.basladi` başlarken true. Işımalar WORLD3 isteğiyle ≈%50 kısık.
   Yedek: Feza tepedeyken Büyük Boşluk'un öbür yanında renklenmemiş kuzucuk kalırsa `TUR.al('kuzu').dokun(k)` uzaktan çağrılır (`k.uzaktan=true`).
@@ -341,3 +341,41 @@ Düşmek: bulutların altı boşluk; düşen Feza'yı Pırıl geri taşır (mevc
 - (CORE, 23:50) Akış/his cilası: (1) sonuç kartında "odaya dön" → ≈0,45 sn kararma, sonra yenileme (sabah odasından karanlık seçime sert kesme yok; ölçüm: parlaklık 195→13 yumuşak, seçim 0'dan açılıyor).
   (2) Düşerken kamera aşağıya ileri bakar (Feza ekranın dibine yapışmaz; 3 bölümde de). (3) Sonuç kartında tohum 14'ten fazlaysa yalnız toplananlar gösterilir
   (Bölüm 3'te 28 tohum var — LEVEL3: bilerek mi? kart yine düzgün). (4) Bölüm 3 dikey iPad (768×1024) uçuş ve kart kontrol edildi.
+
+## WORLD12 notları (dunya.js + dunya2.js; Bölüm 1-2 dünya cilası)
+- Yalnız kendi dosyalarım; dışa açık API değişmedi (draw*/dn2* imzaları, dn2Isit aynı). Önce/sonra ölçüm: aynı makinede, sabit konumlarda dünya çizimi kare başına ms (ortanca) eşit/biraz daha iyi.
+- Bölüm 2: toprak kesiti yeniden (renk lekeleri, çizgisiz katmanlar, ışık cepleri, gömülü yıldız taşları, kenar ışığı yalnız üst yüzeyde), göl kıyıları dik parlak duvar yerine suya gömülen eğim;
+  üç gölün her biri ayrı karakter (I mavi su çimeni, II pembe nilüfer bahçesi + yüzen taç yaprakları, III altın yosun + ışık kabarcıkları), su altı bitkileri, ay ışığı hüzmeleri,
+  ön planda 5 tür sarkık süs (yıldız çıngırağı, söğüt saçağı), kuzey ışığı alt kenarı merdivensiz (ve yarı maliyet).
+- Bölüm 1: gölcük söğütleri çiçekli (pembe salkım + suya süzülen taç yaprakları), açıklıktaki ağaç tepesinin kesitinde ağacın ışıyan kökleri, derin ışık kovukları, yüksek uçurum yüzlerinde raf mantarları.
+
+- **WORLD3 tur 3:** Gökkuşağı Tepesi bulutları sıcak altın-pembe paletle (`DN3_GCW`) boyanıyor; tepe ışığı ve bölge tonu normal karışımla mercan-altın (beyaz 'lighter' yıkama yok),
+  sabah gökyüzünün ufku daha doygun şeftali. Mağara (133–144): bileşen zinciri en çok örtüşen koşuyu izler (zemin sürer, tavan ayrı yüzen bulut: altı lila kabarık);
+  bir bulutun uç dışındaki şeffaflık maskesi yalnız kendi derinliğine kadar (alttaki zemini silmez; mağara altındaki açık paneller giderildi). Yan kabarcık sütunları 150 birimde biter.
+  Kontrol edildi: Gökyüzü Merdiveni, mağara, Bulut Kuşu boşluğu, Tüy Köprüsü, tepe.
+
+## LEVEL12 notları (bolum.js, bolum2.js, yildiz.js, takim.js, sarki.js — Bölüm 1-2 oynanış cilası)
+- Ölçüm: Playwright botları (düzgün + "dağınık çocuk": tereddüt, geri yürüme, geç/unutulan zıplama, dalgınlık), yatay 1024×768 ve dikey 768×1024.
+  Son durum: Bölüm 1 ve 2 baştan sona, 0 sıkışma, düşme 0 (bir çok-dağınık koşuda göl I'de 2). Oyun süresi bot için ≈2-3,5 dk (çocukta ≈5-7 dk).
+- **Bölüm 2 hızlı testte x≈260'ta kalma:** hata değil — `omDevamGirisi` açılışta `P.kilit = 4.2` (kamera sudan kıyıya iner, ışık toplanır). Testte ≥4,5 sn bekleyin.
+  CORE'a öneri (isteğe bağlı): çocuk açılışta ekrana basıyorsa kilit ~2,5 sn'de bitebilir.
+- **Düzeltildi (yildiz.js):** üstten geçilen taş/adalar Feza'yı yalnız yukarıdan düşerken yakalıyordu: kıyıdan (720) 716'daki ilk taşa ZIPLAMADAN yürüyen çocuk
+  taşın altından geçip suya düşüyordu (her göl girişinde, ada geçişlerinde). `ylBasamak`: yerde yürürken ≤17 birimlik basamağa görünmez küçük adım. Ada çarpışma genişliği w-14 → w-2
+  (taş-ada boşluğu 15 → 9). Artık üç göl de SAĞA zıplamadan yürünerek geçilebiliyor (geri dönüşte yalnız göl I'in 24'lük iniş zinciri zıplama ister).
+  CORE'a not: aynı "küçük basamak" fiziği `oyun.js moveY`'de genel olsaydı (ustten cisimler için ≤16 birim) bu yamaya gerek kalmazdı.
+- **Düzeltildi (yildiz.js):** dağınık çocuk göl II'deki ada yıldızını atlayınca üç büyük yıldızdan sonra `HEDEF()` atlanan yıldıza dönüyordu: Pırıl çocuğu ~200 kare geri götürüyordu.
+  Üç büyük yıldız yanınca uyanmamış yıldızlar `secmeli=true` olur → hedef doğrudan kaplumbağa (fırlatışta kalanlar zaten göğe çıkar).
+- **Düzeltildi (takim.js):** takımyıldızı etkinliği sürerken ekranın üst yarısına her dokunuş yutuluyordu (yürümek için yukarı basan çocuk kıpırdayamıyordu; bot 5 dk takıldı).
+  Artık yalnız noktaların (~1,7R) ve şekil çizgilerinin (~0,8R) yakınındaki ıskalar yutulur, Feza aynadan 330'dan uzaksa hiç.
+- **Geç yardım eli:** takim (≈4 sn boşta) ve sarki (≈5,5 sn boşta ya da aynı turda 2 yanlış) `ARAYUZ.elGoster` ile SIRADAKİ noktaya/çiçeğe dokunan el gösterir (dokuna dokuna bağlamak da olur).
+- Test notu: `python -m http.server` yük altında "ERR_CONNECTION_REFUSED" verip dosya yüklemeyebiliyor (yüklenmeyen yildiz.js → ilk yıldız uyanmaz, sahte "sıkışma").
+  Bot testlerinde `request_queue_size` büyük ThreadingHTTPServer + 127.0.0.1 kullanın.
+- SAHNE tur 2: Bölüm 3 kutlamasında beyaz ışık birikimi azaltıldı, 14 doygun gökkuşağı huzmesi normal karışımla çepeçevre döner. Bölüm 1 tam girişte gözler ağırlaşırken Feza'nın yüzüne yavaş yakın çekim (sonra Pırıl'a geçer). Bölüm 1 sabahında pencerede uzak tepede parlayan küçük Işık Ağacı. Seçim ekranında ≈12 sn'de bir Feza iç çekip Pırıl'a sokulur.
+- (CORE, 00:20) **Uyku girişi takılmaları (lead/SAHNE bulgusu) ölçüldü:**
+  · ≈9,7 sn'deki ≈50 ms kare: JS değil. CPU profili o karede ana iş parçacığını en çok ≈5 ms meşgul gösteriyor; Chrome izinde aynı anda 32-52 ms'lik GPU rasterleme
+    (`RasterDecoderImpl::DoEndRasterCHROMIUM`) var → oda→bulut erimesinin ağır üst üste çizimi (büyük saydam/gradyan katmanlar, 'lighter'). `dn2Isit`/`dn3Isit` değil (ısıtma ≈0,5-0,9 sn'de bitiyor).
+    Başsız Chrome yazılım GPU'su (SwiftShader) bunu abartır; iPad'de daha hafif olabilir. **SAHNE'ye öneri:** erime katmanlarını küçük ara tuvale çizip ölçekle, tam ekran 'lighter'/radyal gradyan sayısını azalt, kare başına yeni gradyan yaratma.
+  · Asıl büyük takılmalar sayfa açılışındaydı (Bölüm 2: 0,08 sn'de 281 ms, 0,35 sn'de 111 ms; Bölüm 3: 114 ms). CORE: uyku girişi perdesi artık sabit 0,4 sn'de değil,
+    kareler akıcılaşınca açılıyor (en az 0,4 sn, art arda 4 akıcı kare, en geç 2,2 sn) → bu takılmalar tam karanlıkta kalıyor (ölçüldü). `?bolum=N&uyku` test yolu da karanlıktan başlıyor.
+  · **WORLD'e (dunya2.js):** `dn2Isit` bir adımı ≈29 ms (Bölüm 2, ≈0,9 sn); Bölüm 2'de 1,34 sn'de perde açılırken 88 ms'lik bir kare daha var. Adımları ≤8 ms'ye bölmek iyi olur.
+- (CORE) Zıplama: en kısa dokunuşta da zıplama ≈2,6 kare (`OM.MIN_BASILI` 0,11 → 0,16; 102 birim, tam basış 120). Botla üç bölüm sona kadar oynandı (Bölüm 3: 7/7 kuzu, 2 düşüş — bot).

@@ -271,6 +271,7 @@ function kzPof(x, y, pal, buyuk) {   // ışıltılı "pof": bulut halkası + p�
 
 // ── sürü ──
 const kzSuru = [];       // renklenip peşe takılanlar (katılma sırasıyla)
+const kzTum = [];        // bütün kuzucuklar
 let kzRenkSira = 0, kzTohum = 0, kzYay = null, kzMeeT = 2, kzSon = -1, kzFxVar = false, kzUcVardi = false, kzEtkT = 4;
 const KZ_SLOT = [];
 const kzIz = [];         // Feza'nın yürüdüğü zemin izi {x, y, yer, bos}
@@ -315,6 +316,7 @@ function kzEngelKur() {
   kzEngel.length = 0;
   for (const n of NESNELER) {
     if (Math.abs(n.x - P.x) > 1100) continue;
+    if (n.tip === 'kuzu' && n.kz && (n.kz.durum === 'sarilma' || n.kz.durum === 'sevinc')) { kzEngel.push(n.kz.durum === 'sarilma' ? { x: n.kz.hx, y: n.y } : n); continue; }
     if ((n.tip === 'kuzu' && n.kz && n.kz.durum === 'uzgun') || n.tip === 'tohum' || n.tip === 'bulutSekil' || n.tip === 'ucusKapisi') kzEngel.push(n);
   }
 }
@@ -335,6 +337,16 @@ function kzSlotHesapla(dt) {
     if (kzSlotT > 0 && kzSlotN === n && Math.abs(P.x - kzSlotX) < 6 && Math.abs(P.y - kzSlotY) < 6 && P.f === kzSlotF) return;
     kzSlotT = 0.7; kzSlotX = P.x; kzSlotY = P.y; kzSlotF = P.f; kzSlotN = n;
   } else kzSlotT = 0;
+  // Feza yürüyen bir taşıyıcıdaysa (bulut kuşu, yüzen bulut): kuzucuklar arkasından küçük bulutlar gibi süzülerek eşlik eder
+  const U = typeof ustundeki !== 'undefined' ? ustundeki : null;
+  if (U && P.ground && U.cisim && (U.tip === 'bulutKus' ? U.durum !== 'uyku' : Math.abs(U.cisim.dx || 0) + Math.abs(U.cisim.dy || 0) > 0.05)) {
+    kzIzBos = true; kzSlotT = 0;
+    for (let i = 0; i < n; i++) {
+      const s = KZ_SLOT[i], yon = (U.cisim.dx || 0) < -0.05 ? -1 : (U.cisim.dx || 0) > 0.05 ? 1 : P.f;
+      s.x = P.x - yon * (78 + i * 40); s.y = P.y - 40 - (i % 2) * 30 + Math.sin(now * 2 + i) * 4; s.yer = false; s.var = true;
+    }
+    return;
+  }
   kzEngelKur();
   for (let i = 0; i < n; i++) KZ_SLOT[i].var = false;
   let i = 0, dMin = KZ_ILK;
@@ -422,6 +434,7 @@ TUR.kaydet('kuzu', {
     o.ry = 24; o.done = false;
     const yy = kzZeminBul(o.x, o.y, 40, 90); if (yy !== null) o.y = yy;
     const i = kzTohum++;
+    if (kzTum.indexOf(o) < 0) kzTum.push(o);
     o.kz = { durum: 'uzgun', t: Math.random() * 10, st: 0, seed: 300 + i * 53, renkI: -1, pal: null, sira: -1,
       f: Math.random() < 0.5 ? -1 : 1, yon: 0, yonH: 0, nefT: Math.random() * 4, icT: 2 + Math.random() * 6, ic: -1, titreT: 5 + Math.random() * 8, titre: -1,
       gokT: 3 + Math.random() * 7, gok: -1, umut: 0, umutMee: false, isT: 0,
@@ -444,6 +457,10 @@ function kzSaril(o) {
   k.renkI = kzRenkSira++ % KZ_RENK.length; k.pal = KZ_RENK[k.renkI]; k.sprRes = 0;
   k.durum = 'sarilma'; k.st = 0; k.yan = o.x >= P.x ? 1 : -1; k.x0 = o.x; k.pofT = false;
   k.f = -k.yan; k.yonH = -k.yan;
+  // aynı anda başka kuzucuk da sarılıyorsa: yan yana dursunlar (aynı yere sokulmasınlar)
+  const dolu = x => { for (const q of NESNELER) if (q !== o && q.tip === 'kuzu' && q.kz && q.kz.durum !== 'uzgun' && Math.abs(q.y - o.y) < 30 && (Math.abs(q.x - x) < 48 || (q.kz.durum === 'sarilma' && Math.abs(q.kz.hx - x) < 48))) return true; return false; };
+  k.hx = o.x;   // sarılma yeri dokunma anında sabitlenir (Feza yürümeye devam etse de kaymaz); doluysa biraz ötesi, o da doluysa yerinde
+  for (let m = 0; m < 4; m++) { const x = P.x + k.yan * (25 + m * 48); if (!dolu(x)) { k.hx = x; break; } }
   kzZipla(k, 4);
   OLAY.emit('kuzu', { o, renkI: k.renkI });
 }
@@ -540,7 +557,7 @@ function kzUzgun(o, k, dt) {
 // ── sarılma: ona sokulur → pof → renk dalgası ──
 function kzSarilma(o, k, dt) {
   const t = k.st, yan = k.yan;
-  const hedefX = P.x + yan * 25, yok = kzZeminBul(hedefX, o.y, 22, 22) === null || Math.abs(hedefX - k.x0) > 90;
+  const hedefX = k.hx !== undefined ? k.hx : P.x + yan * 25, yok = kzZeminBul(hedefX, o.y, 22, 22) === null || Math.abs(hedefX - k.x0) > 90;
   const gx = yok ? k.x0 + clamp(hedefX - k.x0, -30, 30) * 0.5 : hedefX;
   if (t < 0.32) {
     const u = smooth(t / 0.32);
@@ -550,7 +567,7 @@ function kzSarilma(o, k, dt) {
     k.rot = -yan * 0.14 * u;
   } else {
     k.hy = 0;
-    if (!yok) o.x = lerp(o.x, P.x + yan * 25, 1 - Math.exp(-dt * 8));
+    if (!yok) o.x = lerp(o.x, hedefX, 1 - Math.exp(-dt * 8));
     if (!k.pofT) {
       k.pofT = true; kzZipla(k, -5);
       kzSprAl(k);
@@ -597,7 +614,7 @@ function kzSevinc(o, k, dt) {
     if (k.hopN === 1) { k.hv = -350; k.takla = 0.0001; kzZipla(k, 4); kzMee(o, k, true); }
     else if (k.hopN === 2) { k.hv = -230; kzZipla(k, 3); }
     else {
-      k.durum = 'takip'; k.sira = kzSuru.length; kzSuru.push(o); k.ty = o.y; k.tx = o.x; k.bos = 1.5 + Math.random() * 2;
+      k.durum = 'takip'; k.sira = kzSuru.length; kzSuru.push(o); k.ty = o.y; k.tx = o.x; k.bos = 1.5 + Math.random() * 2; k.katT = now;
       if (kzYay) { const p = kzYay.konum[k.renkI % kzYay.konum.length]; k.durum = 'yay'; k.st = 0; k.yayVar = false; k.yx = p.x; k.yy = p.y; }   // gökkuşağı başlamıştı: hemen yerine
     }
   }
@@ -694,10 +711,10 @@ function kzYayKur(k, x0, y0, x1, y1, enAz) {
 function kzEngelArada(o, k, tx) {
   if (Math.abs(tx - o.x) < 24) return 0;
   if ((P.x - o.x) * (tx - P.x) > 0 && Math.abs(P.y - o.y) < 70 && Math.abs(P.x - o.x) < Math.abs(tx - o.x)) return 86;
-  for (const q of kzSuru) {
+  for (const q of kzTum) {
     if (q === o) continue;
     const z = q.kz;
-    if (z.hava || Math.abs(q.y - o.y) > 22) continue;
+    if (!z || z.durum === 'uzgun' || z.durum === 'ucus' || z.durum === 'yay' || z.hava || Math.abs(q.y - o.y) > 22) continue;
     const ara = (q.x - o.x) * (tx - q.x) > 0 && Math.abs(q.x - o.x) > 6;
     if (!ara) continue;
     const kendiGidiyor = Math.abs(z.tx - q.x) > 30 && Math.sign(z.tx - q.x) === Math.sign(tx - o.x);
@@ -721,7 +738,8 @@ function kzGit(o, k, dt, tx, ty, yer) {
   if (k.hava) {
     k.wy = lerp(k.wy, 0, 1 - Math.exp(-dt * 10));
     if (k.yayU < 1) {
-      if (Math.abs(tx - k.aex) + Math.abs(ty - k.aey) > 50) kzYayKur(k, o.x, o.y, tx, ty, k.aMin);
+      // hedef çok kaydıysa yayı yeniden kur (en sık 0,4 sn'de bir: sürekli yeniden kurulup yerinde donmasın); azsa ucu kaydır
+      if (Math.abs(tx - k.aex) + Math.abs(ty - k.aey) > 50 && now - (k.yayKurT || -9) > 0.4) { kzYayKur(k, o.x, o.y, tx, ty, k.aMin); k.yayKurT = now; }
       else { k.aex = tx; k.aey = ty; }
       const L = Math.hypot(k.aex - k.ax, k.aey - k.ay) + k.alift * 1.3 + 1;
       const v = clamp(240 + L * 1.2, 280, 950);
@@ -734,13 +752,14 @@ function kzGit(o, k, dt, tx, ty, yer) {
       if (Math.abs(vx) > 20) k.f = vx < 0 ? -1 : 1;
       k.rot = lerp(k.rot, clamp(vx / 2600, -0.28, 0.28) + clamp(vy / 3000, -0.15, 0.15) * k.f, 1 - Math.exp(-dt * 8));
       if (Math.random() < dt * 14) kzPuf(o.x - k.f * 20 * k.olc, o.y - 14 + (Math.random() - 0.5) * 10, -k.f * 20, 6, 0.8, 5 + Math.random() * 3, '#ffffff', 0.5);
-      if (k.yayU >= 1 && yer && Math.abs(ty - o.y) < 2) {   // indi
+      if (k.yayU >= 1 && yer && Math.abs(ty - o.y) < 2 && !kzYerdeBiri(o)) {   // indi (yerinde başka biri duruyorsa havada biraz bekler)
         k.hava = false; o.y = ty; k.rot = 0; kzZipla(k, 4.5); k.hv = -60; k.hy = -0.01;
         kzPuf(o.x - 14, o.y - 2, -28, -4, 0.6, 6); kzPuf(o.x + 14, o.y - 2, 28, -4, 0.6, 6);
       }
     } else {   // havada bekliyor (hedef havada): küçük bir bulut gibi süzülür
-      if (yer || Math.hypot(tx - o.x, ty - o.y) > 60) kzYayKur(k, o.x, o.y, tx, ty, 0);
-      else { o.x = lerp(o.x, tx, 1 - Math.exp(-dt * 3)); o.y = lerp(o.y, ty, 1 - Math.exp(-dt * 3)); }
+      const dolu = yer && kzYerdeBiri(o, tx, ty);
+      if ((yer && !dolu) || Math.hypot(tx - o.x, ty - o.y) > 90) kzYayKur(k, o.x, o.y, tx, ty, 0);
+      else { o.x = lerp(o.x, tx, 1 - Math.exp(-dt * 5)); o.y = lerp(o.y, ty - (dolu ? 44 : 0), 1 - Math.exp(-dt * 5)); }
       k.rot = lerp(k.rot, 0, 1 - Math.exp(-dt * 6));
       if (Math.random() < dt * 2) kzPuf(o.x + (Math.random() - 0.5) * 30, o.y + 2, 0, 10, 1, 5, '#ffffff', 0.4);
     }
@@ -755,9 +774,10 @@ function kzGit(o, k, dt, tx, ty, yer) {
   let mx = clamp(dx * 8 * dt, -maxv * dt, maxv * dt);
   if (Math.abs(mx) > 0.01) {   // öndeki arkadaşına binmesin: aynı yöne gidiyorsa arkasında sıraya girer
     const yn = Math.sign(mx);
-    for (const q of kzSuru) {
-      if (q === o || q.kz.hava || Math.abs(q.y - o.y) > 22) continue;
-      const ara = (q.x - o.x) * yn;
+    for (const q of kzTum) {
+      const z = q.kz;
+      if (q === o || !z || z.hava || (z.durum !== 'takip' && z.durum !== 'sarilma' && z.durum !== 'sevinc') || Math.abs(q.y - o.y) > 22) continue;
+      const ara = ((z.durum === 'sarilma' ? z.hx : q.x) - o.x) * yn;
       if (ara > 0 && ara < 60) mx = yn * Math.min(Math.abs(mx), Math.max(0, ara - 46));
     }
   }
@@ -777,6 +797,7 @@ function kzGit(o, k, dt, tx, ty, yer) {
     k.wy = -Math.abs(Math.sin(k.faz)) * 6 * (gidiyor ? Math.min(1, hiz / 150 + 0.35) : 0.5);
   } else k.wy = lerp(k.wy, 0, 1 - Math.exp(-dt * 12));
 }
+function kzYerdeBiri(o, x = o.x, y = o.y) { for (const q of kzTum) if (q !== o && q.kz && q.kz.durum !== 'uzgun' && !q.kz.hava && Math.abs(q.y - y) < 22 && Math.abs(q.x - x) < 40) return true; return false; }
 // Yerdeki iki kuzu birbirine binmesin: yumuşakça it (kenardan boşluğa taşırmadan); havadakiler görüntüde yana açılır
 function kzAyir(o, k, dt) {
   if (k.hava) {

@@ -242,7 +242,7 @@ function ylBasamak(o) {
   if (typeof ustundeki !== 'undefined' && ustundeki === o) return;
   const top = o.y - c.h, d = P.y - top; if (d <= 0.5 || d > YL_BASAMAK) return;
   const hw = c.w / 2, on = 17;   // ön kenar taşa ≤17 birim kalınca (taşlar arası ≤15 boşluk; Feza boşluğa düşmeden alınır)
-  if (P.x < o.x ? (P.vx < 40 || P.x + PW + on <= o.x - hw) : (P.vx > -40 || P.x - PW - on >= o.x + hw)) return;
+  if (P.x < o.x ? (P.vx < 5 || P.x + PW + on <= o.x - hw) : (P.vx > -5 || P.x - PW - on >= o.x + hw)) return;
   P.y = top; P.vy = 0;
 }
 // ───────────────────────── yildizTasi (suyun üstünde basılan taş) ─────────────────────────
@@ -581,6 +581,14 @@ function ylFirlat(o) {
 }
 function ylHayvanGuncelle(o, dt) {
   o.t += dt; o.aT += dt; o.nefT += dt;
+  // Üç büyük yıldız yandıysa geride atlanmış (uyanmamış) yıldızlar artık isteğe bağlı: Pırıl çocuğu bölümün başına geri çağırmasın,
+  // hedef doğrudan kaplumbağa olsun (fırlatışta kalan bütün yıldızlar zaten göğe yükselir). Bot ölçümü: dağınık çocuk göl II'deki
+  // ada yıldızını atlayınca Pırıl onu ~200 kare geriye götürüyordu (LEVEL12).
+  if (!o.atlandi && DURUM === 'oyun') {
+    let hepsi = true, var_ = false;
+    for (const n of NESNELER) if (n.tip === 'yildiz' && n.buyukIcin) { var_ = true; if (!n.done) { hepsi = false; break; } }
+    if (var_ && hepsi) { o.atlandi = true; for (const n of NESNELER) if (n.tip === 'yildiz' && !n.done) n.secmeli = true; }
+  }
   for (let i = o.orb.length - 1; i >= 0; i--) {
     const b = o.orb[i]; b.t += dt;
     if (b.t >= 1.15) {

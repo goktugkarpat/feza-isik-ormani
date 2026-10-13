@@ -90,9 +90,9 @@ function dn3Update(tm) {
 const DN3_SKYC = {
   at: [0, 0.26, 0.5, 0.7, 0.87, 1],
   A: ['#6a6ec4', '#9784d2', '#d596cb', '#ffa6ae', '#ffc199', '#ffdcac'],
-  B: ['#7f9fe4', '#a9ace6', '#e2b2da', '#ffc0bb', '#ffd5aa', '#ffecc4'],
+  B: ['#7f9fe4', '#a9ace6', '#e2b2da', '#ffb8b4', '#ffc898', '#ffdca8'],
   seaA: ['#ffd9b8', '#f7bccb', '#dcaad8', '#b79cd8'],
-  seaB: ['#ffe8cc', '#fbc9cc', '#e6b6de', '#c4abe2'],
+  seaB: ['#ffdcc0', '#fbc4c8', '#e6b2dc', '#c4abe2'],
 };
 const DN3_SK = { A: null, B: null, C: null, w: 0, h: 0, yh: 0, k: 0.5, cp: -1, bOk: false };
 let dn3NoiseP = null;
@@ -455,22 +455,26 @@ function dn3Background(tm) {
   dn3Shapes(tm);
   dn3Islands(tm, false);
   dn3DrawLayer(DN3_LAY[1], 1, tm);
-  dn3Rays(tm, 0.17 + 0.12 * reg.ucus + 0.1 * reg.tepe + 0.1 * fin);
+  dn3Rays(tm, (0.17 + 0.12 * reg.ucus + 0.1 * fin) * (1 - 0.4 * reg.tepe));
   dn3Birds(tm);
   dn3Islands(tm, true);
   dn3DrawLayer(DN3_LAY[2], 1, tm);
   g.globalCompositeOperation = 'lighter'; dn3Eg('#ffd8a8', DN3.sx, hy + 20 * S, W * 0.6, 120 * S, 0.22 + 0.1 * Math.sin(tm * 0.45)); g.globalCompositeOperation = 'source-over';   // güneşin bulut denizine vuran ışığı
   dn3DrawLayer(DN3_LAY[3], 1, tm);
   dn3DrawLayer(DN3_LAY[4], 1, tm);
-  if (reg.a > 0.01) { g.globalCompositeOperation = 'lighter'; dn3Eg(reg.hex, W * 0.5, hy + 60 * S, W * 0.8, 160 * S, 0.1 * reg.a); g.globalCompositeOperation = 'source-over'; }
+  if (reg.a > 0.01 && reg.tepe < 0.99) { g.globalCompositeOperation = 'lighter'; dn3Eg(reg.hex, W * 0.5, hy + 60 * S, W * 0.8, 160 * S, 0.1 * reg.a * (1 - reg.tepe)); g.globalCompositeOperation = 'source-over'; }
+  if (reg.tepe > 0.01) { dn3Eg('#ff9a86', W * 0.5, hy + 40 * S, W * 0.85, 240 * S, 0.2 * reg.tepe); dn3Eg('#ffb070', DN3.sx, hy, W * 0.5, 120 * S, 0.14 * reg.tepe); }   // Tepe: doygun mercan-altın ton (normal karışım; beyazlatmaz)
   if (fin > 0) { g.globalCompositeOperation = 'lighter'; dn3Eg('#fff0c8', W * 0.5, hy, W, H * 0.5, 0.08 * fin * (0.85 + 0.15 * Math.sin(tm * 1.3))); g.globalCompositeOperation = 'source-over'; }
 }
 
 // ═══════════ zemin: yumuşak bulut kütleleri (ızgara 1) ═══════════
 const DN3_GC = [[0, '#fffbf4'], [16, '#fff1ee'], [44, '#ffe2ea'], [86, '#f8d0e4'], [140, '#e6c4ec'], [190, '#d2baee'], [240, '#c2b0ea']];
 function dn3GA(d) { return d < 56 ? 1 : 1 - smooth(clamp((d - 56) / (DN3_DEPTH - 56), 0, 1)); }
-function dn3GColRGB(d) { let i = 0; while (i < DN3_GC.length - 2 && d > DN3_GC[i + 1][0]) i++; const a = DN3_GC[i], b = DN3_GC[i + 1], t = clamp((d - a[0]) / (b[0] - a[0]), 0, 1), A = hex(a[1]), B = hex(b[1]); return [lerp(A[0], B[0], t), lerp(A[1], B[1], t), lerp(A[2], B[2], t)]; }
-function dn3BuildGCol() { DN3.gcol = []; DN3.gcolO = []; for (let d = 0; d <= DN3_DEPTH; d += 5) { const c = dn3GColRGB(d); DN3.gcol.push(`rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${dn3GA(d).toFixed(3)})`); DN3.gcolO.push(`rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`); } }
+const DN3_GCW = [[0, '#fff4e4'], [16, '#ffe6d8'], [44, '#ffd2cc'], [86, '#f9bccb'], [140, '#ebb2d6'], [190, '#d8aadc'], [240, '#c8a4e0']];   // Gökkuşağı Tepesi: sıcak altın-pembe
+let dn3GPal = DN3_GC;
+const DN3_TP = ['#ffffff', '#fff7f2', '#fde4ec', '#ffe0a0'], DN3_TPW = ['#fff8ec', '#ffeadc', '#fcd2d2', '#ffc878'];   // üst lob: açık, gövde, kenar, kenar ışığı
+function dn3GColRGB(d) { const G = dn3GPal; let i = 0; while (i < G.length - 2 && d > G[i + 1][0]) i++; const a = G[i], b = G[i + 1], t = clamp((d - a[0]) / (b[0] - a[0]), 0, 1), A = hex(a[1]), B = hex(b[1]); return [lerp(A[0], B[0], t), lerp(A[1], B[1], t), lerp(A[2], B[2], t)]; }
+function dn3BuildGCol() { DN3.gcol = []; DN3.gcolO = []; DN3.gcolW = []; for (let d = 0; d <= DN3_DEPTH; d += 5) { dn3GPal = DN3_GC; let c = dn3GColRGB(d); DN3.gcol.push(`rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${dn3GA(d).toFixed(3)})`); DN3.gcolO.push(`rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`); dn3GPal = DN3_GCW; c = dn3GColRGB(d); DN3.gcolW.push(`rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`); } dn3GPal = DN3_GC; }
 const dn3GHex = d => { const c = dn3GColRGB(d); return '#' + ((1 << 24) | ((c[0] | 0) << 16) | ((c[1] | 0) << 8) | (c[2] | 0)).toString(16).slice(1); };
 function dn3BuildComps() {
   const runs = [];
@@ -478,7 +482,7 @@ function dn3BuildComps() {
   const comps = [];
   for (let c = 0; c < COLS; c++) for (const run of runs[c]) {
     if (run.u) continue; run.u = true; const cols = [[run.t, run.b]]; let cur = run, cc = c;
-    while (cc + 1 < COLS) { let best = null; for (const r2 of runs[cc + 1]) if (!r2.u && r2.t < cur.b && r2.b > cur.t && (!best || r2.t < best.t)) best = r2; if (!best) break; best.u = true; cols.push([best.t, best.b]); cur = best; cc++; }
+    while (cc + 1 < COLS) { let best = null, bo = 0; for (const r2 of runs[cc + 1]) { const ov = Math.min(r2.b, cur.b) - Math.max(r2.t, cur.t); if (!r2.u && ov > 0 && (!best || ov > bo)) { best = r2; bo = ov; } } if (!best) break; best.u = true; cols.push([best.t, best.b]); cur = best; cc++; }   // en çok örtüşen (mağarada tavan değil zemin devam etsin)
     comps.push(dn3MakeComp(c, cols, comps.length));
   }
   DN3.comps = comps;
@@ -507,35 +511,37 @@ function dn3MakeComp(c0, cols, id) {
   }
   for (const sd of [-1, 1]) { const ex = sd < 0 ? x0 : x1, s0 = sAt(ex + (sd < 0 ? 2 : -2)), b0 = bAt(ex + (sd < 0 ? 2 : -2));
     top.push({ x: ex - sd * 5, y: s0 + 9, r: 13 + R() * 3, rim: true });
-    for (let d = 14; d < b0 - s0 - 4; d += 16 + R() * 8) { const r = Math.max(12, 22 + R() * 9 - d * 0.04); back.push({ x: ex + sd * r * 0.4, y: s0 + d + 4, r, d }); } }
+    for (let d = 14; d < Math.min(150, b0 - s0 - 4); d += 16 + R() * 8) { const r = Math.max(9, 22 + R() * 9 - d * 0.09); back.push({ x: ex + sd * r * 0.4, y: s0 + d + 4, r, d }); } }
   for (let x = x0 + 6; x < x1 - 6; x += 15 + R() * 9) { const i = clamp(Math.round((x - x0) / 4), 0, N - 1), j = ci(x); if (!real[j]) continue; const r = 10 + R() * 8; back.push({ x, y: sb[i] - r * 0.4, r, d: sb[i] - st[i], bot: true }); }
   for (let x = x0 + 10; x < x1 - 10; x += 22 + R() * 14) { const r = 14 + R() * 20; hl.push({ x: x + R() * 8, y: sAt(x) + 18 + R() * 50, r, a: 0.16 + R() * 0.14 }); }
   top.sort((a, b) => a.y - b.y);
   let minT = 1e9, maxB = -1e9; for (let i = 0; i < N; i++) { minT = Math.min(minT, st[i]); maxB = Math.max(maxB, sb[i]); }
-  return { id, x0, x1, N, xs, st, sb, sf, path, top, back, hl, cr, minT, maxB: maxB + 16, sAt };
+  return { id, warm: dn3RegName((x0 + x1) / 2) === 'tepe', x0, x1, N, xs, st, sb, sf, path, top, back, hl, cr, minT, maxB: maxB + 16, sAt };
 }
 function dn3PaintTile(x, X0, X1) {
   const m0 = X0 - 70, m1 = X1 + 70;
   for (const C of DN3.comps) {
     if (C.x1 + 70 < X0 || C.x0 - 70 > X1) continue;
+    dn3GPal = C.warm ? DN3_GCW : DN3_GC; const GCO = C.warm ? DN3.gcolW : DN3.gcolO, TP = C.warm ? DN3_TPW : DN3_TP;
     const i0 = Math.max(0, Math.floor((m0 - C.x0) / 4)), i1 = Math.min(C.N - 1, Math.ceil((m1 - C.x0) / 4));
     // 1) alt kabarcıklar (yüzen blokların altı; gövdenin arkasında)
     for (const p of C.back) { if (!p.bot || p.x < m0 || p.x > m1) continue; const d = clamp(p.d, 0, DN3_DEPTH); dn3Puff(x, p.x, p.y, p.r, dn3GHex(Math.max(0, d - 10)), dn3GHex(Math.min(DN3_DEPTH, d + 20)), dn3GHex(Math.min(DN3_DEPTH, d + 50)), 1); }
     // 2) gövde: yüzeyi izleyen kaydırılmış opak çizgilerle derinlik rengi
     x.save(); x.clip(C.path); x.lineJoin = 'round'; x.lineCap = 'butt';
-    for (let k = DN3.gcolO.length - 1; k >= 0; k--) { const d = k * 5, u = smooth(clamp(d / 70, 0, 1)); x.strokeStyle = DN3.gcolO[k]; x.lineWidth = 7; x.beginPath(); for (let i = i0; i <= i1; i++) x.lineTo(C.xs[i], C.st[i] + (C.sf[i] - C.st[i]) * u + d); x.stroke(); }   // derinde basamak izleri yumuşasın
+    for (let k = GCO.length - 1; k >= 0; k--) { const d = k * 5, u = smooth(clamp(d / 70, 0, 1)); x.strokeStyle = GCO[k]; x.lineWidth = 7; x.beginPath(); for (let i = i0; i <= i1; i++) x.lineTo(C.xs[i], C.st[i] + (C.sf[i] - C.st[i]) * u + d); x.stroke(); }   // derinde basamak izleri yumuşasın
     for (const h of C.hl) { if (h.x < m0 || h.x > m1) continue; const rg = x.createRadialGradient(h.x + h.r * 0.2, h.y - h.r * 0.3, 0, h.x, h.y, h.r); rg.addColorStop(0, `rgba(255,255,255,${h.a})`); rg.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = rg; x.fillRect(h.x - h.r, h.y - h.r, h.r * 2, h.r * 2); }
     x.restore();
     // 3) uçlarda dışa taşan yan kabarcıklar (düz duvar olmasın)
     for (const p of C.back) { if (p.bot || p.x < m0 || p.x > m1) continue; const d = clamp(p.d, 0, DN3_DEPTH); dn3Puff(x, p.x, p.y, p.r, dn3GHex(Math.max(0, d - 20)), dn3GHex(Math.min(DN3_DEPTH, d + 10)), dn3GHex(Math.min(DN3_DEPTH, d + 60)), 1); }
     // 5) üst kabarcıklar: önce altın kenar diskleri, sonra mat pamuk loblar
-    for (const p of C.top) { if (p.x < m0 || p.x > m1 || !p.rim) continue; dn3Rim(x, p.x, p.y, p.r, '#ffe0a0', 0.9); }
-    for (const p of C.top) { if (p.x < m0 || p.x > m1) continue; if (p.d) dn3Puff(x, p.x, p.y, p.r, dn3GHex(Math.max(0, p.d * 0.5 - 10)), dn3GHex(Math.min(DN3_DEPTH, p.d * 0.6 + 8)), dn3GHex(Math.min(DN3_DEPTH, p.d * 0.7 + 30)), 1); else dn3Puff(x, p.x, p.y, p.r, '#ffffff', '#fff7f2', '#fde4ec', 1); }
+    for (const p of C.top) { if (p.x < m0 || p.x > m1 || !p.rim) continue; dn3Rim(x, p.x, p.y, p.r, TP[3], 0.9); }
+    for (const p of C.top) { if (p.x < m0 || p.x > m1) continue; if (p.d) dn3Puff(x, p.x, p.y, p.r, dn3GHex(Math.max(0, p.d * 0.5 - 10)), dn3GHex(Math.min(DN3_DEPTH, p.d * 0.6 + 8)), dn3GHex(Math.min(DN3_DEPTH, p.d * 0.7 + 30)), 1); else dn3Puff(x, p.x, p.y, p.r, TP[0], TP[1], TP[2], 1); }
     // 6) üst kenarda yumuşak sıcak ışıma
     x.globalCompositeOperation = 'lighter'; x.lineJoin = 'round'; x.lineCap = 'round';
     for (const [lw, a] of [[24, 0.04], [10, 0.06]]) { x.strokeStyle = `rgba(255,214,160,${a})`; x.lineWidth = lw; x.beginPath(); let pen = false; for (let i = i0; i <= i1; i++) { const fl = Math.abs(C.st[Math.min(C.N - 1, i + 1)] - C.st[Math.max(0, i - 1)]) < 3; if (fl) { pen ? x.lineTo(C.xs[i], C.st[i] - 8) : x.moveTo(C.xs[i], C.st[i] - 8); pen = true; } else pen = false; } x.stroke(); }   // yalnız düz yüzeylerde (basamak yüzünde dikey ışık şeridi olmasın)
     x.globalCompositeOperation = 'source-over';
   }
+  dn3GPal = DN3_GC;
   dn3FadeMask(x, X0, X1);
 }
 // alta doğru şeffaflaşma: düşük çözünürlüklü alfa maskesi (1 piksel = 4 birim), her sütunun kendi yüzeyine göre; destination-out ile uygulanır (bant/dikiş yok)
@@ -548,7 +554,7 @@ function dn3FadeMask(x, X0, X1) {
     if (C.x1 + 60 < xa || C.x0 - 60 > X1 + 60) continue;
     for (let i = 0; i < cw; i++) {
       const wx = xa + (i + 0.5) * U; if (wx < C.x0 - 52 || wx > C.x1 + 52) continue;
-      const k = clamp(Math.round((wx - C.x0) / 4), 0, C.N - 1), s0 = C.sf[k], b0 = (wx < C.x0 || wx > C.x1) ? s0 + DN3_DEPTH + 40 : C.sb[k] + 26;
+      const k = clamp(Math.round((wx - C.x0) / 4), 0, C.N - 1), s0 = C.sf[k], b0 = (wx < C.x0 || wx > C.x1) ? Math.min(s0 + DN3_DEPTH + 40, C.sb[k] + 40) : C.sb[k] + 26;   // uçların dışı: yalnız kendi gövdesinin derinliğine kadar (alttaki başka bulutu silmesin)
       if (b0 < s0 + 60) continue;
       const j0 = Math.max(0, Math.floor((s0 + 56 - G.y0) / U)), j1 = Math.min(ch - 1, Math.ceil((b0 - G.y0) / U));
       for (let j = j0; j <= j1; j++) { const d = G.y0 + (j + 0.5) * U - s0, a = 1 - dn3GA(d), o = (j * cw + i) * 4 + 3, v = Math.round(a * 255); if (v > D[o]) { D[o] = v; any = true; } }
@@ -696,12 +702,13 @@ function dn3Tepe(tm) {
   const B = dn3Bolum(); if (!B || !B.gokkusagi || !isFinite(B.gokkusagi.x)) return;
   const gx = B.gokkusagi.x, gy = isFinite(B.gokkusagi.y) ? B.gokkusagi.y : DN3.GREF; if (gx < cam.x - 700 || gx > cam.x + VW + 700) return;
   const fin = DN3.finT !== undefined ? smooth(clamp((now - DN3.finT) / 2, 0, 1)) : 0, a = ((0.35 + 0.65 * DN3.f) * (0.85 + 0.15 * Math.sin(tm * 0.9)) + fin * 0.3) * 0.55;
+  // doygun sıcak altın-pembe (beyaz yıkama yok): önce normal karışımla renk, sonra çok hafif ışık
+  dn3Eg('#ff9a7a', gx, gy - 200, 260 + 60 * fin, 380, 0.16 * a);
+  dn3Eg('#ffb060', gx, gy + 6, 300, 50, 0.22 * a);
   g.globalCompositeOperation = 'lighter';
-  dn3Eg('#ffe6a8', gx, gy - 260, 150 + 60 * fin, 420, 0.22 * a);   // gökten inen ışık sütunu
-  dn3Eg('#fff4d0', gx, gy - 120, 70 + 30 * fin, 220, 0.2 * a);
-  dn3Eg('#ffd890', gx, gy + 4, 280, 46, 0.3 * a);
+  dn3Eg('#ffb070', gx, gy - 240, 110 + 40 * fin, 380, 0.12 * a);   // gökten inen ışık sütunu (sıcak)
   for (let k = 0; k < 9; k++) { const u = (tm * (0.12 + k * 0.013) + k / 9) % 1, xx = gx + Math.sin(k * 2.3 + tm * 0.4) * (60 + k * 9), yy = gy - u * 320;
-    dn3Eg(k % 3 === 0 ? DN3_RB[k % 7] : '#fff4d0', xx, yy, 7 + (k % 3) * 3, 7 + (k % 3) * 3, 0.55 * Math.sin(u * Math.PI) * a); }
+    dn3Eg(k % 3 === 0 ? DN3_RB[k % 7] : '#ffc890', xx, yy, 7 + (k % 3) * 3, 7 + (k % 3) * 3, 0.5 * Math.sin(u * Math.PI) * a); }
   g.globalCompositeOperation = 'source-over';
 }
 

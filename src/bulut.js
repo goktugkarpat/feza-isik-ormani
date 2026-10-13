@@ -365,7 +365,8 @@ TUR.kaydet('gokkusagi', {
     o.tepeX0 = o.tepeX0 || o.x - 260; o.tepeX1 = o.tepeX1 || o.x + 260;
     o.evre = BU_GK_EVRE.bekle; o.t = 0; o.done = false; o.uyandi = false; o.basladi = false; o.bu = [0, 0, 0, 0, 0, 0, 0]; o.parla = 0; o.ghost = 0; o.bekleT = 0;
     o.yayX = []; o.yayY = []; o.yay = []; o.konumlar = o.yay;   // konumlar: kuzu.js'in okuduğu ad ({x,y}×7, renkI sırasıyla)
-    for (let i = 0; i < 7; i++) { const a = (125 - i * 15) * Math.PI / 180, p = buYay(o, o.R + 115, a); o.yayX.push(p.x); o.yayY.push(p.y); o.yay.push(p); }
+    // kuzucuklar yayın tepesine yakın, dar bir yayda (112°→68°, yarıçap R+90): final kamerasında büyük ve hep kadrajda kalsınlar
+    for (let i = 0; i < 7; i++) { const a = (112 - i * (44 / 6)) * Math.PI / 180, p = buYay(o, o.R + 90, a); o.yayX.push(p.x); o.yayY.push(p.y); o.yay.push(p); }
     // gökkuşağını zeminin üstüyle sınırlayan kırpma yolu (dünya sabit: bir kez)
     const c0 = Math.max(0, Math.floor((o.cx - o.R - 60) / T)), c1 = Math.min(COLS - 1, Math.floor((o.cx + o.R + 60) / T));
     const p = new Path2D(); p.moveTo(c0 * T, -3000); p.lineTo((c1 + 1) * T, -3000);
@@ -508,8 +509,14 @@ function buGkBasla(o) {
   if (typeof jumpPressed !== 'undefined') { try { jumpPressed = false; } catch (e) {} }
   try { OLAY.emit('gokkusagiBasla', o); } catch (e) {}
   if (typeof omDikkat === 'function') {
-    try { omDikkat('gokkusagi', 60, () => { omDkEkle(o.cx - o.R - 40, o.cy - o.R - 175, o.cx + o.R * 0.86, buYuzeyY(o.cx) + 4); }, 1, 0.48); } catch (e) {}
+    try { omDikkat('gokkusagi', 60, () => buGkKutu(o), 1, 0.6); } catch (e) {}
   }
+}
+function buGkKutu(o) {   // final kamerası: önce yayın tepesi + kuzucuklar (dar), kayışta Feza + önündeki iniş yeri
+  const ust = o.cy - o.R - 105, zemin = buYuzeyY(o.cx) + 4;
+  if (o.evre < BU_GK_EVRE.kay) { omDkEkle(o.cx - 330, ust, o.cx + 330, zemin); return; }
+  const son = o.ayak && o.ayak[1] ? o.ayak[1].x : o.cx + 480;
+  omDkEkle(Math.min(P.x - 160, o.cx - 300), Math.min(P.y - 170, ust + 20), Math.max(P.x + 200, son + 40), buYuzeyY(son) + 4);   // kuzucuk yayı da kadrajda (dar ekranda Feza öncelikli)
 }
 function buKuzuTopla(o) {   // geride kalmış kuzucukları (Büyük Boşluk'un öbür yanı) uzaktan renklendir: kuzu.js dokun() ile
   const h = TUR.al('kuzu'); if (!h || typeof h.dokun !== 'function') return;

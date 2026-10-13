@@ -3061,17 +3061,16 @@ function drawMotes(tm, zMin, zMax) {
 const DN_PETALS = (() => { const R = rng(21), a = []; for (let i = 0; i < 22; i++) a.push({ x: R() * 1400, y: R() * 700, ph: R() * 6.28, sp: 0.5 + R(), s: 0.6 + R() * 0.6, c: R() }); return a; })();
 // çiçekli söğütlerden suya süzülen pembe taç yaprakları (yalnız gölcük; dünya dönüşümünde, ucuz elips)
 function dnPondPetals(tm) {
-  let on = false; const vx0 = cam.x - 100, vx1 = cam.x + VW + 100;
+  const vx0 = cam.x - 100, vx1 = cam.x + VW + 100; let any = false;
   for (const w of DN_WILLOWS) { if (!w.pond || w.x1 < vx0 || w.x0 > vx1) continue;
-    if (!on) { g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S); on = true; }
-    const su = DN_GOL ? DN_GOLS.reduce((m, G) => Math.abs(G.x0 - w.x) < Math.abs(m.x0 - w.x) ? G : m, DN_GOLS[0]).su : w.base + 40;
+    if (w.su === undefined) { let b = null; for (const G of DN_GOLS) if (!b || Math.abs((G.x0 + G.x1) / 2 - w.x) < Math.abs((b.x0 + b.x1) / 2 - w.x)) b = G; w.su = b ? b.su : w.base + 40; }
     for (let i = 0; i < 12; i++) { const per = 7 + (i % 5) * 1.1, e = ((tm + i * 2.37 + w.ph) % per) / per, x0 = w.x + w.sd * (40 + (i * 67) % 330), y0 = w.base - 300 + (i * 41) % 110;
-      const x = x0 + w.sd * e * 60 + Math.sin(tm * 1.3 + i * 1.7) * 14, y = lerp(y0, su - 2, e), a = Math.min(1, e * 6) * Math.min(1, (1 - e) * 8);
-      if (x < vx0 || x > vx1 || a <= 0.02) continue;
-      g.save(); g.translate(x, y); g.rotate(tm * 1.6 + i); g.scale(1, 0.4 + 0.6 * Math.abs(Math.sin(tm * 2.2 + i))); g.globalAlpha = 0.85 * a; g.fillStyle = i % 3 ? '#ffc4e6' : '#fff0f8'; g.beginPath(); g.ellipse(0, 0, 3.6, 2, 0, 0, 6.283); g.fill(); g.restore();
-      if (i % 4 === 0) { g.globalCompositeOperation = 'lighter'; dglow('#ffb4dc', x, y, 7, 0.3 * a); g.globalCompositeOperation = 'source-over'; } }
+      const x = x0 + w.sd * e * 60 + Math.sin(tm * 1.3 + i * 1.7) * 14, y = lerp(y0, w.su - 2, e), a = Math.min(1, e * 6) * Math.min(1, (1 - e) * 8);
+      if (x < vx0 || x > vx1 || a <= 0.02) continue; any = true;
+      const r = tm * 1.6 + i, c = Math.cos(r) * S, sn = Math.sin(r) * S, sy = 0.4 + 0.6 * Math.abs(Math.sin(tm * 2.2 + i));
+      g.setTransform(c, sn, -sn * sy, c * sy, (x - cam.x) * S, (y - cam.y) * S); g.globalAlpha = 0.85 * a; g.fillStyle = i % 3 ? '#ffc4e6' : '#fff0f8'; g.beginPath(); g.ellipse(0, 0, 3.6, 2, 0, 0, 6.283); g.fill(); }
   }
-  g.globalAlpha = 1;
+  if (any) { g.globalAlpha = 1; g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S); }
 }
 function drawPetals(tm) {
   for (const LK of DN_LAKES) if (dnLakeVis(LK, 120)) { dnUseLake(LK); dnReflect(tm); dnWaterFx(tm); }
