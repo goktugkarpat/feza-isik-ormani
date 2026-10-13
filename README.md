@@ -6,6 +6,14 @@ Ormanın ışığı sönmüş, tüylü dostlar Pofuduklar uykuya dalmıştır. F
 Büyük Pofuduk'u neşelendirir ve Işık Ağacı'nı yeniden parlatır. Sabah Feza yatağında uyanır; Pırıl ona göz kırpar.
 Korkutucu hiçbir şey yoktur, kaybetmek yoktur. Feza okuma bilmediği için her şey Pırıl'ın sesiyle ve ışıklı ipuçlarıyla anlatılır.
 
+**Her gece başka bir rüya:** oyun açılınca Feza yatağında uyurken Pırıl'ın yanında rüya baloncukları belirir; Feza birine dokunur:
+1. **Işık Ormanı** (gece) — ışık çiçekleri, Pofuduklar, ışık şarkısı, Işık Ağacı.
+2. **Yıldız Gölü** (yıldızlı gece) — göle düşen yıldızlar göğe döner, takımyıldızı çizilir, Yıldız Kaplumbağası uyanır.
+3. **Bulut Ülkesi** (gün doğumu) — renklerini kaybetmiş 7 Bulut Kuzucuğuna sarılıp gökkuşağını geri getirmek,
+   zıplatan bulutlar, rüzgâr akımları, Bulut Kuşu, "Bulutlarda ne var?" (bulutu ovunca hayvan çıkar),
+   Pırıl'ın sırtında uçuş ve gökkuşağından kayarak iniş.
+Her rüya sabah Feza'nın yatağında uyanmasıyla biter; tamamlanan rüyanın baloncuğunda altın yıldız çıkar.
+
 ## Hikâye notu: Pofuduklar
 
 Pofuduklar ormanın ışığını karınlarında taşıyan tüylü orman dostlarıdır. Orman karanlığa gömülünce onların karnındaki ışık da sönmüş ve uykuya dalmışlar.

@@ -543,3 +543,41 @@ Bulgular (önem sırasıyla):
     üstten geçilen cisme (taş, nilüfer, bulut) değince sessizce üstüne çıkar (`omBasamak`; zıplatan cisimler hariç). `ylBasamak` kapalıyken de Bölüm 2 gölü yürüyerek geçiliyor; üç bölüm botla sona kadar, 0 düşüş.
   · Bölüm 2 kaplumbağa fırlatmasından sonra (1,4 sn+) inişte kaplumbağanın başı (`yildizBas`) kadraja eklenir. Bölüm 1 ışık nefesinden sonra nilüferler belirince 2,4 sn'lik bakış: nilüfer yolu + adacık (kilit yok).
   · **Tam akış (gerçek tıklamalarla, her bölüm):** seçim balonu → giriş → oyun (bot) → final → kart → "odaya dön" → seçim: Bölüm 1, 2, 3 hepsi geçti, kayıt doğru, konsol hatası 0.
+- (POF, Tur 4) **Final dans yerleşimi iki sıra:** ön sıra hep 46 aralıklı; sığmayanlar ön sıradakilerin arasına, belirgin geride ve küçük (derin 1,6) arka sıraya. Fenerleri yalnız
+  ön sıra asar, en çok 7 (`PF_FEN_EN`); havadakiler arası açılma 62. Ölçüm (1024×768 / 1180×820 / 1366×1024): havadaki iki Pofuduk arası en az 41 / 47 / 47; son fener ≈5,4 sn.
+  Uyanıştaki "buraya zıpla" ışık damlası sıcak ve küçük. Yatmadan önce Büyük Pofuduk'a zıplayınca ağaca fırlatma oyun içinde doğrulandı (zıplatti → agac).
+  Bölüm 1 tam bot (bot2 tohum 34): final, 0 düşme, takılma yok, konsol hatası 0.
+
+## QA turu 2 (00:45, MINI3)
+Aynı betikler kullanıldı. QA = `C:\Users\gktgk\AppData\Local\Temp\claude\C--Users-gktgk-Dropbox-Game-Development\d0282e08-f18e-4d64-9193-13a89766a60d\scratchpad\mini3\qa`; ekran görüntüleri `QA/t2/<koşu>/` altında.
+Yeni betikler:
+- `QA/akis.py`: tam akış (seçim → giriş → oyun → final → kart → odaya dön).
+- `QA/cap.py`, `QA/rampa.py`: belirli bir x'ten sonra her saniye ekran görüntüsü.
+- `QA/bot.py`: sayfa kendini yenilerse botu yeniden kurar.
+
+Genel sonuç:
+- Bütün koşular finale ve sonuç kartına ulaştı: düzgün bot Bölüm 1/2/3'te yatay ve dikey; dağınık bot Bölüm 3'te yatay ve dikey.
+- Konsol hatası 0. Görülen tek hata, aynı anda 8 tarayıcı açıkken test sunucusunun verdiği `ERR_CONNECTION_REFUSED`. Bu durumda index.html'in kendini yenileme yedeği çalıştı ve oyun kendini toparladı; iyi.
+- Tam akış (Bölüm 3, yatay) temiz: seçim → baloncuk → kısa giriş (Pırıl "Bu gece bulutlara…") → oyun → final → kart ("Gökkuşağı geldi!", 7 kuzucuk, 3 yıldız) → "odaya dön" → seçim ekranı. Bölüm 3 baloncuğunda altın yıldız var. Görüntü: `QA/t2/akis3_yatay/`.
+
+### Turu 1'in 5 kritik maddesi
+1. **Gökkuşağı rampası: DÜZELDİ.** Yatay ve dikeyde kayma boyunca saniye saniye bakıldı; dikdörtgen kesik yok, rampa yumuşak bulutlara gömülüyor. Görüntü: `QA/t2/rampa_y/`, `QA/t2/rampa_d/`.
+2. **Cümle kesilmeleri: BÜYÜK ÖLÇÜDE DÜZELDİ.** Kesmeler artık cümle sonunda oluyor. `p_b_kuzu`, "…çok üzgün." dedikten sonra (≈3,1 sn) `p_b_kuzu_ilk` ile susuyor; çocuk zaten sarılmış olduğu için doğal. `p_y_hayvan_uyan` "Günaydın, Yıldız Kaplumbağası!"dan sonra kesiliyor. Kalan tek sorun: **[SES/POF] `p_buyuk` 7,8 sn'lik cümle, 2,7 sn'de ("Vay, Büyük Pofuduk!"tan hemen sonra) `p_buyuk_goz` ile kesiliyor.** Böylece "üç çiçeğe dokun" talimatı hiç duyulmuyor. Bot çiçeğe çok hızlı ulaştığı için oldu; çocuk da yakındaki çiçeğe hızlı dokunursa olur. `QA/t2/b1_duz_yatay/log.json` (78,2 → 80,9 sn).
+3. **Rüzgâr Yolu / düşüş: DÜZELDİ.** Dağınık bot Bölüm 3'te yatay ve dikeyde **0 kez** düştü (`p_kurtar` hiç çalmadı; turu 1'de 7 kez). Bölüm 3 bitti: yatay 225 sn, dikey 196 sn.
+4. **HEDEF tür atlama: DÜZELDİ (kodda doğrulandı).** `oyun.js` HEDEF içinde `if (!TUR.al(o.tip)) return false`. Kapı türü yoksa gökkuşağına yedek yol, kuzu türü yoksa `kuzuTop` = 0. Ayrıca index.html yüklenemeyen script'te sayfayı kendisi yeniliyor; bu, testte gerçekten devreye girdi.
+5. **`p_b_giris`: DÜZELDİ.** Kısa girişte açılıştan 2,4 sn sonra çalıyor, ekran açılmış oluyor (Bölüm 2 ile aynı). `?atla` ile de 2,4 sn'de söyleniyor. Görüntü: `QA/t2/uyku3_y/`.
+- Ek: [SAHNE] seçim ekranındaki alt başlık artık tam görünüyor (`QA/t2/secim_y/`). [UCUS] dikey uçuşta Pırıl ekranın ortasında, kuzucuk treni de görünüyor (`QA/t2/b3_duz_dikey/003*`).
+
+### Yeni bulgular (önem sırasıyla)
+1. **[CORE] Bölüm 3: uçuştan önce atlanan kuzucuk, uçuştan sonra da HEDEF olarak kalıyor (geriyi gösteriyor).**
+   - Ne oldu: dağınık bot x=5580'deki kuzucuğu atlayıp uçuş kapısına girdi; uçuş başladı (kapı buna izin veriyor, sorun değil). Kuzucuk sonra kendiliğinden yetişip renklendi ve sayaç 7/7'ye ulaştı.
+   - Sorun: inişten sonra Feza x=18357'deyken `HEDEF()` hâlâ `kuzu@5580`'i döndürüyordu, yani uçuş boşluğunun gerisini. Pırıl'ın yol göstermesi ya da ipucu bu hedefe yönelirse çocuk geri çağrılır ama geri dönülemez.
+   - Öneri: uçuş bittiyse (`ucusBitti`) `BOLUM.ucus.x0` gerisindeki kuzucuklar hedef olmasın, ya da kuzucuk uçuşta yetişince hemen `done` olsun.
+   - Kayıt: `QA/t2/b3_daginik_dikey/log.json` (kareler 121,8 sn ve 162,1 sn), görüntü `008_oyun_162s_x18357.png`.
+2. **[SES/POF] `p_buyuk` talimatı yarıda kesiliyor** (yukarıda, madde 2). Öneri: `p_buyuk_goz` en az ilk iki cümle bitene kadar beklesin, ya da `p_buyuk` kısalsın ("Büyük Pofuduk'u uyandırmak için üç çiçeğe dokun!").
+3. **[CORE] Dikey ekranda finalde Feza sağ kenara çok yakın.** Gökkuşağından kayıp indikten sonra Feza ekranın sağ kenarına ≈40 px mesafede kalıyor (rampa ve kuzucuklar kadrajda). Görüntü: `QA/t2/rampa_d/09…11*.png`. Bot sağa yürümeye devam ettiği için biraz abartılı; yine de final kadrajı Feza'yı biraz daha içeri alabilir.
+4. **[POF] Büyük Pofuduk "üstüme zıpla" işareti 1 sn aralıklı görüntülerde yakalanmadı.** Bot uyanır uyanmaz zıpladığı için işaretin göründüğü süre çok kısa; doğrulanamadı, çocuk gibi bekleyerek bakılmalı. Görüntü: `QA/t2/b1_buyuk_y/05…09*.png`.
+5. **[LEVEL3] Uçurtma ipi Feza'nın önünden geçiyor** (ip Feza'nın bacaklarının üstüne çiziliyor; ip arkada olmalı). Görüntü: `QA/t2/kus_y/10_oyun_x9352.png`.
+6. [Bilgi, iyi] Bulut Kuşu geçidi, kuzucuk sürüsü (havada süzülerek eşlik ediyor, Feza'nın önünü kapatmıyor), nilüfer yolunu gösteren kamera bakışı (`QA/t2/b1_nilufer_y/`), Büyük Pofuduk uyanışı ve ağaç finali: sorun görülmedi. Feza Bölüm 3'te artık rahatça seçiliyor (koyu saç + kontur).
+7. [Bilgi] Pofuduk fener uçuşu (Bölüm 1 sabah finali) ve Feza'nın tepki animasyonları 1 sn aralıklı görüntülerle değerlendirilemedi; o an için ayrı, sık çekimli bir kayıt gerekiyor.
+8. [Bilgi] Performans (headless masaüstü; iPad'i temsil etmez): `OYUN.kareMs` p99 en çok 2,7-8,6 ms, en kötü kare 12 ms. Dağınık koşularda biraz daha yüksek; 8 tarayıcı aynı anda çalışıyordu.
