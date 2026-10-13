@@ -117,6 +117,7 @@ Düşmek: bulutların altı boşluk; düşen Feza'yı Pırıl geri taşır (mevc
 - **Tur 3:** Feza'ya yakınken Pırıl'ın gövdesine bağlı `lighter` ışıklar (hâle, ay/gün doğumu ışığı, kuyruk ucu, kanat kökü; gece kanat tüyleri de) uzaklığa göre
   %35'e kadar kısılır ve küçülür (`DR_YK`; Feza'yı soldurmaz). Ara sahne pozlarının hâlesi küçültüldü (90→66, 0,3→0,22). Yeni `otur` modu: Feza oturunca Pırıl
   sırtının olduğu yana konar, kanatlarını toplar, ona dönük oturur, arada sevgiyle ona eğilir, onunla birlikte esneyebilir; Feza kalkınca havalanır.
+- **Tur 4:** Bölüm 1 karanlık gölde ışık nefesi bitince Pırıl ilk nilüfere (Feza'nın gideceği yönde, en yakın) kısa bir yol gösterme uçuşu yapar: ışıltılı iz, nilüferde nabız halkası, "gel" jesti, Feza'ya döner (ses yok). İkinci gölde tur ve jest daha kısa.
 
 ## FEZA notları
 - **`P.ucus` doluyken** `drawFeza` ve `drawFezaKontur` hiçbir şey çizmez (erken dönüş; hâle/kontur/gölge dahil). `fezaUpdate` çalışmaya devam eder;
@@ -144,6 +145,9 @@ Düşmek: bulutların altı boşluk; düşen Feza'yı Pırıl geri taşır (mevc
 - Tur 2: bölüme göre bekleme hareketi (el sallama/oturma dışındaki her bekleme seçiminde ≈%40): Bölüm 1 'toz' (süzülen ışık tozunu gözle izler, sekip yakalar, avucuna bakar, açınca sevinir),
   Bölüm 2 'yansima' (ellerini dizine koyup suda yıldız yansımasına bakar, el sallar), Bölüm 3 'pat' (bulutu okşar). Koşudan durunca kısa denge kaybı (kollar çırpar, öne sallanır,
   hızlı duruşta minik toz); kalkışın ilk ≈55 ms'si dizler bükük basık "itme" (gecikme yok, çömelme hissi).
+- Tur 3 tepkiler: Pırıl konuşurken (`OLAY 'konusma'` kim:'p') ona bakar (durunca baş da döner); Pofuduk yakında uyanınca "oo" + kıkırdama (gözler ^ ^, omuzlar sarsılır, el ağza);
+  Pırıl'ın kurtarmasından sonra yere konunca "ohh" rahatlama (yarı kapalı gözler, nefes verir, el göğse, sonra gülümser); takip eden kuzucuk/Pofuduk arkadaysa koşarken
+  5-9 sn'de bir gözleriyle dönüp bakıp gülümser. Çiçek (uzanma + şaşkın yüz + sevinç) ve yıldız göğe yükselirken başını kaldırıp izleme zaten vardı.
 - **Bölüm 2'deki soluk görünüm nedeni: feza.js'in kendisiydi** (dunya2/oyun.js katmanları tek tek kapatılarak ölçüldü, hiçbiri değiştirmiyordu): Bölüm 2 tonunda Feza'nın
   üstüne %34 şeftali + %7 krem düz dolgu basılıyordu; saç/göz kontrastını eritiyordu. %15 / %3'e indirildi, dış krem kontur 0,42→0,32, hâle 0,2→0,14. Başka sahibe iş yok.
 - Not: istenen referans fotoğraf (`Game Development/images/16.webp`) diskte yok (klasör bulunamadı); benzerlik için fotoğraf gelirse yeniden bakılabilir.
@@ -262,6 +266,12 @@ Düşmek: bulutların altı boşluk; düşen Feza'yı Pırıl geri taşır (mevc
   Kemerden geçince kısa "vınnn" hızlanması (+%40, ≈1 sn) + kemer jöle gibi esner + rüzgâr çizgileri parlar/uzar. Rüzgâr çizgileri 3 paralaks katmanı.
   Işık izi artık 7 renkli GÖKKUŞAĞI KURDELESİ (kuzucuklar onun üstünde uçuyor) + izde göz kırpan yıldızlar. Ölçüm (masaüstü Chrome): ucus.js çizimi ≈0,8-1 ms/kare
   (çoğu pirilCizPoz+fezaCizPoz). Tümleşik test: 6 kuzucuk kuyrukta → iniş → 7. kuzucuk → `gokkusagiBasla` → `gokkusagiTamam` → `final`, hata 0.
+- **Tur 3:** Dikey ekran (`ucDar()` = (W/H)/1,33, 0,5..1): ışık izi kısalır (90 → ×dar nokta), gökteki hayvanlar küçülür, `P.ucus.kuyruk.yon = -ucDar()`
+  (**POF:** `yon`'un BÜYÜKLÜĞÜ kuzucuk aralığı çarpanı olarak kullanılıyor — `kzUcus` `yon * (24 + sira*42)`; bunu `Math.sign` ile değiştirmeyin ya da dikeyde kendiniz sıklaştırın).
+  Yeni yerleşimde (koridor 13060–18200, sütun 454 bulut sütunu) iniş yeri ilk düz zeminin +5 sütunu (Pırıl'ın kuyruğu sütuna değmez); iniş yolu
+  `ucZeminUst` ile zeminin/sütunun üstünde tutulur. 834×1194, 768×1024 ve 1180×820'de iniş temiz (ekran görüntüleriyle doğrulandı).
+  Son ≈5 sn: `SES.soyle('p_b_tepe')` ("İşte Gökkuşağı Tepesi!..." — LEVEL3'ün `b_tepe` tetikleyicisi sonra tekrar etmez), Pırıl sevinci (`D.bkSev`),
+  Feza kol kaldırır, hız %78'e iner, tepede altın ışık işareti (ekran dışındaysa sağ kenarda o yönde parlar).
 
 ## MINI3 notları (sekil.js — "Bulutlarda ne var?")
 - Tür `bulutSekil` (`nesne('bulutSekil', c, zeminY, {sira:0|1})`). Bulut merkezi `o.x + 27`, zeminden 198 birim yukarıda (`SKL_YUK`), yarıçap `SKL_R`=108. Önek `skl*` (`sk*` sarki.js'te dolu).
@@ -365,6 +375,8 @@ Düşmek: bulutların altı boşluk; düşen Feza'yı Pırıl geri taşır (mevc
 - Tur 2: açılış büyüsü (B1 ilk ~70 sütun: kubbeden süzülen ışık huzmeleri, huzmelerde dönen toz, yere düşen ışık havuzu, yerden yükselen ışık tohumları; B2 ilk ~70 sütun: göle düşen kayan yıldızlar daha sık + çimenden yükselen yıldız tozu),
   renklenme ödülü (B1 çiçek açınca / B2 yıldız uyanınca ≈3 sn: yerde iki yana koşan ışık, genişleyen halka, yükselen kıvılcımlar; B2'de uyanan yıldızın ≈500 birim çevresindeki bitkiler kalıcı olarak daha parlak),
   ikinci taş kemer kaldırıldı (kaplumbağanın arkasında kalabalık yapıyordu). Açılış bölgesi kare maliyeti ≈+0,1 ms ama bölümün en ucuz yeri; en pahalı kareler değişmedi.
+- LEVEL12 önerileri: ışık çiçeği (tür 'cicek', dunya.js) 1,5× büyük çizilir (dokunma yarıçapı değişmedi); açılışta altı taç yaprak ≈1,3 sn'de tomurcuktan dışa açılır, ışık sütunu daha parlak ve içinde yükselen kıvılcımlar var.
+  Işık tohumu (tür 'tohum', dunya.js; her bölümde aynı tür) ≈1,45× büyük, daha geniş ışık havuzu, ≈2 sn'de bir keskin yıldız pırıltısı.
 
 - **WORLD3 tur 3:** Gökkuşağı Tepesi bulutları sıcak altın-pembe paletle (`DN3_GCW`) boyanıyor; tepe ışığı ve bölge tonu normal karışımla mercan-altın (beyaz 'lighter' yıkama yok),
   sabah gökyüzünün ufku daha doygun şeftali. Mağara (133–144): bileşen zinciri en çok örtüşen koşuyu izler (zemin sürer, tavan ayrı yüzen bulut: altı lila kabarık);
@@ -510,3 +522,24 @@ Bulgular (önem sırasıyla):
   - **CORE (oyun.js) — karanlık göl:** Pırıl'ın ışık nefesi ve nilüferlerin belirişi çok güzel; ama nilüferler belirdikten sonra kamera Feza'nın yanında sabit, nilüfer yolu sağda ekran dışına uzanıyor, adacık/karşı kıyı görünmüyor.
     'aydinlat' sonrası ~2 sn kısa bir dikkat (nilüferler + adacık) yolu gösterir. Işık Ağacı'nın yanışı ve final kalabalığı (Pofuduklar, Büyük Pofuduk) görkemli; değişiklik önerim yok (yalnız Büyük Pofuduk Feza'nın önüne biniyor: POF notu yukarıda).
   - **PIRIL (piril.js):** nefes anında Feza kıyıda Pırıl'dan uzak duruyor; nefes bittikten sonra Pırıl'ın bir kez nilüfere doğru "hadi" uçuşu (kısa yol gösterme) ilk zıplamayı kolaylaştırır.
+- (POF, Tur 3) **Büyük Pofuduk "üstüme zıpla" işareti** (Bölüm 1): uyanıştan ≈0,9 sn sonra (renk patlamasının ardından) başının/perçeminin üstünde zıplayan, tepede göz kırpan altın yıldız +
+  Feza'dan başına doğru yay çizen, üstünden ışık akan noktacıklar (Feza aşağıdayken). Feza üstüne çıkınca / fırlayınca / ağaç yanınca söner. Uyanıp henüz yatmadan
+  (eskiden "katı" ve geri itiyordu) üstüne zıplayan Feza da artık ağaca fırlatılır.
+- (POF, Tur 3) **Final yerleşimi:** Büyük Pofuduk finalde %74 boya iner ve düzlüğün en soluna (kenardan biraz taşarak) konar; küçük dansçılar onun gövdesinden ≥16 uzakta
+  dizilir (Feza'nın ve Pırıl'ın üstüne binmez). Dar düzlükte küçükler sağda sıkışık durur (aralık en az 30); fener uçuşunda havadaki iki Pofuduk arası en az ≈21–26
+  (kalkan/inen yerde komşular). Hapşırık ve dans kare dizileri gözden geçirildi; değişiklik gerekmedi.
+- (CORE, Tur 3 — 02:00)
+  · **Bölüm 2 kısa girişte ≈1,35 sn'deki 100 ms kare:** Feza'nın uyku sahnesindeki İLK çizimi (`shFeza` → `fezaCizPoz` 'ayakta'). JS 0,5 ms; süre GPU'da.
+    `fezaCizPoz` 1,2-1,6 sn arası susturulunca takılma Feza'nın ilk göründüğü kareye kayıyor (doğrulandı). Perde arkasında aynı poz/ölçekle önceden çizdirmek gidermedi (geri alındı).
+    Bölüm 3'te yok. **FEZA/SAHNE'ye:** Bölüm 2'de Feza ilk çizildiğinde GPU'yu yoran şey (büyük ara tuval/gölge/yeni gradyanlar?) bulunmalı; ya da SAHNE Feza'yı ilk karelerden (perde koyuyken) çizmeye başlasın.
+  · **POF'un "Pofuduk'a basınca yüzün önünde beyaz parlama" bulgusu: CORE'du, düzeltildi.** pofuduk.js'in uyanışta eklediği büyük halka (`ripples`) oyun.js `drawFx`'te
+    doğduğu anda ≈11 birim kalınlıkta çizildiği için Pofuduk'un yüzünün önünde dolu beyaz disk gibi görünüyordu. Artık halka genişledikçe belirir, çizgisi yarıçapın ≈%18'ini geçmez, renk sıcak (rgb 255,222,196).
+    Kalan küçük beyaz pırıltı (Pofuduk'un tepesinde, ≈30 px) Pofuduk çizimi / parçacıklar / Feza / Pırıl kapalıyken de duruyor → oyun.js değil (POF: pofuduk.js'in kendi parıltısı olabilir).
+  · **QA 4 (modül yüklenemezse kilit):** `HEDEF`/`omHedefMi` türü TUR'da olmayan nesneyi atlıyor; `kuzuTop`/`yildizTop` türü yoksa 0. `ucusKapisi` türü yoksa kapı yok sayılır ve hedef
+    bulut.js'in yedek köprüsüne (`bulutKopru`, geçilmemiş en yakın basamak) geçer; 'gokkusagi' türü yoksa tepeye varınca final. Ayrıca index.html: bir script yüklenemezse sayfa bir kez
+    (oturumda en çok 2) kendini yeniler, seçilen bölüm korunur. Test: ucus.js engelli → yedek köprüyle sona kadar, final; bulut.js'i bir kez engelleme → otomatik yenileme, tam yüklenir.
+  · **QA 7:** üstteki sayaç sırası uzun dizilerde ekranın ≈%60'ını geçmez (aralık/simge orantılı küçülür). **QA 8:** dikey ekranda uçuşta Feza yatayda ≈%37 (yatayda %30).
+  · **LEVEL12 (a):** Bölüm 2/3 açılışında çocuk dokunursa kilit ≈2,5 sn'de biter (ölçüldü: dokunuşla 2,6 sn, dokunmadan 4,3 sn). **(b)** Genel küçük basamak: yerde yürürken ön ayak ≤16 birim yukarıdaki
+    üstten geçilen cisme (taş, nilüfer, bulut) değince sessizce üstüne çıkar (`omBasamak`; zıplatan cisimler hariç). `ylBasamak` kapalıyken de Bölüm 2 gölü yürüyerek geçiliyor; üç bölüm botla sona kadar, 0 düşüş.
+  · Bölüm 2 kaplumbağa fırlatmasından sonra (1,4 sn+) inişte kaplumbağanın başı (`yildizBas`) kadraja eklenir. Bölüm 1 ışık nefesinden sonra nilüferler belirince 2,4 sn'lik bakış: nilüfer yolu + adacık (kilit yok).
+  · **Tam akış (gerçek tıklamalarla, her bölüm):** seçim balonu → giriş → oyun (bot) → final → kart → "odaya dön" → seçim: Bölüm 1, 2, 3 hepsi geçti, kayıt doğru, konsol hatası 0.

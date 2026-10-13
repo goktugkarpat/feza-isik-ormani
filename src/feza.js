@@ -1007,7 +1007,7 @@ function fezaInit() {
   P.a_tadaT = 9; P.a_fromL = false; P.a_ledge = 0; P.a_ledgeW = 0; P.a_ledgeOx = 0; P.a_stepN = 0;
   P.a_takeP = 1; P.a_getup = 0; P.a_edgeX = 0; P.a_hipV = 0; P.a_tasW = 0; P.a_ikW = 0; P.a_ikSrc = null; P.a_ikLast = null;
   P.a_hw = 0; P.a_yaw = 0; P.ik = null;
-  P.a_kAci = 0; P.a_kSide = P.f || 1; P.a_kpx = P.x; P.a_kpy = P.y; P.a_wasKay = false; P.a_hug = 0; P.a_esW = 0; P.a_esL = null; P.a_kenar = false; P.a_brkT = 9; P.a_brkK = 0;   // Bölüm 3: kayma eğimi/yönü, kuzucuğa sarılma
+  P.a_kAci = 0; P.a_kSide = P.f || 1; P.a_kpx = P.x; P.a_kpy = P.y; P.a_wasKay = false; P.a_hug = 0; P.a_esW = 0; P.a_esL = null; P.a_kenar = false; P.a_brkT = 9; P.a_brkK = 0; P.a_dinT = 0; P.a_ohBek = 0; P.a_ohT = 9; P.a_arkT = 0; P.a_ark = 0; P.a_arkG = 1; P.a_arkN = 4; P.a_surD2 = 1;   // Bölüm 3: kayma eğimi/yönü, kuzucuğa sarılma
   P.a_cl = 0; P.a_clv = 0; P.a_ax = 0; P.a_pvx = P.vx; P.a_brk = 0; P.a_spPrev = 0; P.a_gd = 99; P.a_pre = 0; P.a_sur = 0; P.a_surK = 0; P.a_surD = 1; P.a_sacT = 1; P.a_sacX = 0; P.a_sacY = 0; P.a_dj = 0; P.a_skyT = 0; P.a_skyK = 0; P.a_skyW = 0; P.a_lf = 0; P.a_pry = P.ry ?? P.y;
   // final kutlaması
   P.a_finT = 0; P.a_finClk = 0; P.a_finBar0 = -1; P.a_finBar = -1; P.a_finKind = 0; P.a_finDir = 1; P.a_finHand = 1; P.a_finPet = -1;
@@ -1040,7 +1040,10 @@ if (typeof OLAY !== 'undefined') {
   OLAY.on('hayvanUyandi', hayvanSev); OLAY.on('hayvanFirlat', () => { if (P.a_pose) P.a_sur = 0; });
   OLAY.on('aydinlat', () => saskin(2, 1.6));
   OLAY.on('gokkusagiBasla', () => { saskin(2, 2.4); gok(3.2, 1); });   // Bölüm 3: gökyüzünde gökkuşağı belirirken başını kaldırıp hayranlıkla bakar
-  OLAY.on('uyandi', o => { if (o && o.tip === 'pofuduk' && P.ground && Math.abs(o.x - P.x) < 240) saskin(3, 0.9); });
+  OLAY.on('uyandi', o => { if (o && o.tip === 'pofuduk' && P.ground && Math.abs(o.x - P.x) < 240) { saskin(5, 1.5); P.a_surD2 = Math.sign(o.x - P.x) || P.f; } });   // kısa "oo", sonra kıkırdama
+  // Pırıl konuşurken ona bakar (yürürken yalnız gözler)
+  OLAY.on('konusma', e => { if (P.a_pose && e && e.kim === 'p') P.a_dinT = clamp((+e.sure || 2) + 0.3, 0.8, 4.5); });
+  OLAY.on('kurtarildi', () => { if (P.a_pose) P.a_ohBek = 1; });   // Pırıl taşıyıp bırakınca "ohh" rahatlama
   OLAY.on('carpti', o => { if (!P.a_pose || !o) return; if (P.a_push <= 0) P.a_bump = 1; P.a_push = 0.2; });
   OLAY.on('kurtarildi', () => { if (!P.a_pose) return; P.a_carryT = 0; P.a_fromL = false; P.a_oy = -50; P.a_sit = 0; P.a_act = ''; });
 }
@@ -1561,10 +1564,49 @@ function fezaUpdate(dt) {
       T.gx = lerp(T.gx, 0.7, w); T.gy = lerp(T.gy, -0.45, w); T.mRound = lerp(T.mRound, 0.6, w); T.mOpen = lerp(T.mOpen, 0.45, w);
       T.mSmile = lerp(T.mSmile, 0.7, w); T.brow = lerp(T.brow, 0.8, w); T.lid = lerp(T.lid, 1.12, w);
       if (st === 'idle') { T.la1 = lerp(T.la1, 0.7, w); T.la2 = lerp(T.la2, 1.2, w); T.hOpen = 0; }
+    } else if (k === 5 && u > 0.28) {   // Pofuduk uyandı: "oo"dan sonra kıkırdar – gözler ^ ^, omuzlar kıkır kıkır sarsılır, el ağza
+      const gg = Math.abs(Math.sin(P.a_t * 17)) * w;
+      T.happy = 1; T.mSmile = 1; T.mOpen = lerp(T.mOpen, 0.35 + 0.25 * gg, w); T.mRound = 0; T.brow = lerp(T.brow, 0.4, w);
+      T.shr = lerp(T.shr, 0.35 + 0.3 * gg, w); T.bob -= 0.6 * gg; T.head = lerp(T.head, 0.06 + 0.05 * gg, w); T.lean = lerp(T.lean, 0.05, w);
+      if (st === 'idle') { T.la1 = lerp(T.la1, 1.55, w); T.la2 = lerp(T.la2, 1.7, w); T.hOpen = 0; }
     } else {
       T.lean = lerp(T.lean, -0.06, w); T.mRound = lerp(T.mRound, 0.7, w); T.mOpen = lerp(T.mOpen, 0.5, w); T.mSmile = lerp(T.mSmile, 0.5, w);
       T.brow = lerp(T.brow, 0.9, w); T.lid = lerp(T.lid, 1.12, w); T.head = lerp(T.head, -0.08, w);
     }
+  }
+  // Pırıl konuşuyor: ona bakar (durunca baş da döner, kaşlar hafif kalkık, gülümser); başka bir hareket sürüyorsa yalnız gözler
+  P.a_dinT = Math.max(0, P.a_dinT - dt);
+  if (P.a_dinT > 0 && (st === 'idle' || st === 'run') && !cheer && !fin) {
+    const w = smooth(clamp(P.a_dinT / 0.3, 0, 1)) * (act || P.a_sur > 0 ? 0.6 : 1);
+    T.gx = lerp(T.gx, gpx, w); T.gy = lerp(T.gy, gpy, w);
+    if (st === 'idle' && !act) { T.head = lerp(T.head, -gpy * 0.18, w); T.brow = lerp(T.brow, 0.3, w); T.mSmile = lerp(T.mSmile, 0.95, w); }
+  }
+  // uzun düşüşten kurtarıldı: yere konunca "ohh" – derin nefes verir, omuzlar düşer, el göğse, sonra gülümser
+  if (P.a_ohBek && gr && !carry) { P.a_ohBek = 0; P.a_ohT = 0; }
+  P.a_ohT += dt;
+  if (P.a_ohT < 1.5 && st === 'idle' && !cheer) {
+    const u = P.a_ohT, w = smooth(clamp(u / 0.2, 0, 1)) * smooth(clamp((1.5 - u) / 0.35, 0, 1)), ex = smooth(clamp((u - 0.15) / 0.5, 0, 1));
+    kmin = kmax = 12;
+    T.shr = lerp(T.shr, lerp(0.5, -0.4, ex), w); T.breath = lerp(T.breath, lerp(1.5, -1.2, ex), w); T.lean = lerp(T.lean, 0.06 * ex, w); T.head = lerp(T.head, lerp(-0.12, 0.1, ex), w);
+    T.mRound = lerp(T.mRound, u < 0.9 ? 0.8 : 0, w); T.mOpen = lerp(T.mOpen, u < 0.9 ? 0.32 : 0.25, w); T.mSmile = lerp(T.mSmile, u < 0.9 ? 0.5 : 1, w);
+    T.lid = lerp(T.lid, u < 0.9 ? 0.45 : 1, w); T.brow = lerp(T.brow, u < 0.9 ? 0.5 : 0.25, w);
+    T.la1 = lerp(T.la1, 0.75, w); T.la2 = lerp(T.la2, 1.9, w); T.hOpen = 0;   // el göğüste
+  }
+  // arkasından gelen kuzucuklara / Pofuduklara arada bir dönüp bakar (yürürken gözler + baş hafif, gülümser)
+  P.a_arkT -= dt;
+  if (P.a_arkT <= 0) {
+    P.a_arkT = 0.5; P.a_ark = 0;
+    if (gr && sp > 30 && typeof NESNELER !== 'undefined' && (P.a_t > P.a_arkN)) {
+      for (let i = 0; i < NESNELER.length; i++) {
+        const o = NESNELER[i], f = (o.tip === 'kuzu' && o.kz && o.kz.durum === 'takip') || (o.tip === 'pofuduk' && o.uyandi);
+        if (f && (o.x - P.x) * P.a_side < -30 && (o.x - P.x) * P.a_side > -260 && Math.abs(o.y - P.y) < 120) { P.a_arkG = 0; P.a_arkN = P.a_t + 5 + Math.random() * 4; break; }
+      }
+    }
+  }
+  if (P.a_arkG < 1) {
+    P.a_arkG += dt / 0.9;
+    const w = Math.sin(clamp(P.a_arkG, 0, 1) * Math.PI);
+    if ((st === 'run' || st === 'idle') && !act && !cheer) { T.gx = lerp(T.gx, -1, w); T.gy = lerp(T.gy, 0.3, w); T.head = lerp(T.head, 0.06, w); T.mSmile = lerp(T.mSmile, 1, w); T.mOpen = lerp(T.mOpen, 0.35, w); T.brow = lerp(T.brow, 0.3, w); }
   }
   // çiçek açtı / tohum bulundu: önce uzanır, sonra kollar havada sevinir
   if (cheer && st !== 'carry' && st !== 'flip' && st !== 'launch') {

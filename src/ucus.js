@@ -79,7 +79,7 @@ function ucInisYeri(o) {
     for (let c = c0; c < Math.min(COLS - 3, c0 + 40); c++) {
       let ok = true;
       for (let k = 0; k < 4; k++) if (topOf(c + k) >= ROWS || Math.abs(topOf(c + k) - topOf(c)) > 1) { ok = false; break; }
-      if (ok) { const cc = c + 2; return { x: cc * T + T / 2, y: topOf(cc) * T }; }
+      if (ok) { const cc = c + 5; return { x: cc * T + T / 2, y: topOf(cc) * T }; }
     }
   }
   const GK = typeof BOLUM !== 'undefined' && BOLUM && BOLUM.gokkusagi;
@@ -87,6 +87,15 @@ function ucInisYeri(o) {
   return { x: K.x1 + 120, y: K.yAlt + 40 };
 }
 
+// dar (dikey) ekran: iz/kuyruk/kuzucuk treni ve gökteki hayvanlar kısalır (Feza'nın solunda az yer var)
+function ucDar() { return clamp((W / Math.max(H, 1)) / 1.33, 0.5, 1); }
+// [xa, xb] aralığındaki en yüksek zemin üstü (dünya y; zemin yoksa +∞) — iniş yolu bulut sütunlarının içinden geçmesin
+function ucZeminUst(xa, xb) {
+  if (typeof topOf !== 'function' || typeof ROWS === 'undefined') return 1e9;
+  let m = 1e9;
+  for (let c = Math.max(0, Math.floor(xa / T)), c1 = Math.min(COLS - 1, Math.floor(xb / T)); c <= c1; c++) { const t = topOf(c); if (t < ROWS) m = Math.min(m, t * T); }
+  return m;
+}
 function ucIcerik(o) {
   const K = o.K, b = ucBant(o), r = rng(4242), L = K.x1 - K.x0;
   const yM = (b.ust + b.alt) / 2 - 30, yH = b.alt - b.ust;   // Feza'nın gövdesi P.y'nin ~30 üstünde
@@ -157,7 +166,7 @@ function ucVayCiz(o, tm) {
     const hedefF = 0.4 + (i / Math.max(1, n - 1)) * 0.36;
     const fx = lerp(1.3, hedefF, gel) - git * (hedefF + 0.5);
     const fy = 0.22 + (i % 2) * 0.08 + Math.sin(tm * 0.8 + i * 1.7) * 0.02;
-    const R = (ad === 'balina' ? 96 : 74) * (0.7 + 0.3 * gel);
+    const R = (ad === 'balina' ? 96 : 74) * (0.7 + 0.3 * gel) * lerp(0.62, 1, (ucDar() - 0.5) * 2);
     const x = cam.x + VW * fx, y = cam.y + vh * fy;
     if (x < cam.x - R * 2 || x > cam.x + VW + R * 2) continue;
     const tt = t % 3.9, amp = smooth(clamp(Math.min(tt, 3.9 - tt) / 0.5, 0, 1));
@@ -274,7 +283,11 @@ function ucAdim(o, dt, girdi) {
       const K = o.K, V = o.V;
       // yatay: yumuşakça sabit hıza çıkar (parmak yalnız yüksekliği seçer)
       o.boost = Math.max(0, (o.boost || 0) - dt * 0.9);
-      const hz = V * (1 + 0.4 * ucEase(o.boost));   // kemerden geçince kısa "vınnn" hızlanması
+      // son ≈5 sn: Gökkuşağı Tepesi ufukta → "İşte Gökkuşağı Tepesi!", Pırıl sevinir, Feza kolunu kaldırır, yavaşlayıp süzülme
+      const yaklas = Math.min(K.x1, o.ix.x - 520) - 5 * V, yu = clamp((o.dx - yaklas) / (5 * V), 0, 1);
+      if (yu > 0 && !o.yaklasti) { o.yaklasti = true; ucSoyle('p_b_tepe'); o.sevT = 1.8; if (typeof D !== 'undefined') D.bkSev = 1; ucSfx('isiltiTamam'); }
+      o.yak = yu;
+      const hz = V * (1 + 0.4 * ucEase(o.boost)) * lerp(1, 0.78, ucEase(yu));   // kemerden geçince kısa "vınnn" hızlanması
       o.vx += (hz - o.vx) * (1 - Math.exp(-dt * 0.9));
       o.dx += o.vx * dt;
       // dikey hedef: parmağın yüksekliği (Feza'nın gövdesi parmağa gelsin) / klavye / otomatik pilot
@@ -319,6 +332,8 @@ function ucAdim(o, dt, girdi) {
     const h = (p0, v0, p1, v1) => { const u2 = u * u, u3 = u2 * u; return (2 * u3 - 3 * u2 + 1) * p0 + (u3 - 2 * u2 + u) * v0 * sur + (-2 * u3 + 3 * u2) * p1 + (u3 - u2) * v1 * sur; };
     const ox = o.dx, oy = o.dy;
     o.dx = h(o.i0x, o.ivx, x1, 0); o.dy = h(o.i0y, o.ivy, y1, 0);
+    const ust = ucZeminUst(o.dx - 95, o.dx + 85) - UC_AYAK * UC_OLC - 6;   // gövde (kuyruk dahil) zeminin/sütunun üstünde kalsın
+    if (o.dy > ust) o.dy = lerp(o.dy, ust, u < 0.98 ? 1 : 0);
     if (dt > 0) { o.vx = (o.dx - ox) / dt; o.vy = (o.dy - oy) / dt; }
     o.kanat += dt * UC_KANAT_HZ * lerp(1, 1.8, ucEase((u - 0.6) / 0.4));   // yere yaklaşırken kanatlar hızlanır (fren)
     o.rot += (lerp(clamp(o.vy / 1100, -0.22, 0.22), -0.12, ucEase((u - 0.55) / 0.35)) * (u < 0.95 ? 1 : 0) - o.rot) * (1 - Math.exp(-dt * 5));
@@ -374,11 +389,11 @@ function ucGorsel(o, dt) {
     const m = ucMerkez(o), s = o.olc, c = Math.cos(o.rot), si = Math.sin(o.rot);
     const tx = m.x + (UC_KUYRUK.x * c - UC_KUYRUK.y * si) * s, ty = m.y + (UC_KUYRUK.x * si + UC_KUYRUK.y * c) * s;
     if (!o.kuyruk) o.kuyruk = { x: 0, y: 0, yon: -1 };   // kuzu.js: peşteki kuzucuklar kuyruk ucunun arkasına dizilir
-    o.kuyruk.x = tx; o.kuyruk.y = ty;
+    o.kuyruk.x = tx; o.kuyruk.y = ty; o.kuyruk.yon = -ucDar();   // yon'un büyüklüğü = kuzucuk aralığı çarpanı (dikey ekranda sık dizilir)
     o.izT += dt;
     if (ucusta && o.izT > 1 / 40) {
       o.izT = 0;
-      o.iz[o.izI * 2] = tx; o.iz[o.izI * 2 + 1] = ty; o.izI = (o.izI + 1) % UC_IZ_N; o.izN = Math.min(UC_IZ_N, o.izN + 1);
+      o.iz[o.izI * 2] = tx; o.iz[o.izI * 2 + 1] = ty; o.izI = (o.izI + 1) % UC_IZ_N; o.izN = Math.min(Math.round(UC_IZ_N * ucDar()), o.izN + 1);
     } else if (!ucusta && o.izN > 0 && o.izT > 1 / 40) { o.izT = 0; o.izN--; }
     // kanatlardan dökülen pırıltılar
     if (ucusta && Math.random() < dt * 18) {
@@ -663,6 +678,18 @@ function ucIpucu(o, tm) {
   g.globalAlpha = 1;
 }
 
+// inişe hazırlık: Gökkuşağı Tepesi'nde altın ışık (ekran dışındaysa sağ kenarda o yönde parlar) — "işte orada!"
+function ucTepeIsik(o, tm) {
+  const GK = typeof BOLUM !== 'undefined' && BOLUM && BOLUM.gokkusagi; if (!GK || !isFinite(GK.x)) return;
+  const a = ucEase(o.yak) * (o.faz === 'ucus' || o.faz === 'inis' ? 1 : 0), vh = H / S;
+  if (a < 0.02) return;
+  const p = 0.75 + 0.25 * Math.sin(tm * 3);
+  const x = Math.min(GK.x, cam.x + VW - 20), y = clamp(GK.y - 120, cam.y + 60, cam.y + vh - 80);
+  dglow('#ffc23a', x, y, 190 * p, 0.55 * a); dglow('#ffe9a0', x, y, 90, 0.8 * a); dglow('#ffffff', x, y, 34, 0.9 * a);
+  ucYildiz(x, y, 22 * p, tm * 0.5, a, '#ffd23a', '#c07a2a', 0.3); ucYildiz(x - 2, y - 3, 9 * p, tm * 0.5, a, '#ffffff', null, 0.3);
+  for (let i = 0; i < 6; i++) { const u = (tm * 0.4 + i / 6) % 1; ucYildiz(x + Math.sin(i * 2.3 + tm) * 40, y + 60 - u * 160, 7, tm + i, Math.sin(u * Math.PI) * a, UC_YILDIZ[i % 7], null, 0.3); }
+}
+
 // görünür alan (dünya)
 function ucGor() { return { x0: cam.x - 120, x1: cam.x + VW + 120 }; }
 
@@ -701,6 +728,7 @@ TUR.kaydet('ucusKapisi', {
     const v = ucGor();
     if (o.faz === 'bekle' && !o.done) ucKapiCiz(o, tm);
     if (o.vay) ucVayCiz(o, tm);
+    if (o.yak > 0 && o.faz !== 'bitti') ucTepeIsik(o, tm);
     for (const k of o.kemer) if (k.x > v.x0 - 200 && k.x < v.x1 + 200) ucKemerCiz(k, tm, false);
     for (const bl of o.bulut) if (bl.x > v.x0 - 200 && bl.x < v.x1 + 200) ucBulutCiz(bl, tm);
     ucIskCiz(o, tm, v.x0, v.x1);

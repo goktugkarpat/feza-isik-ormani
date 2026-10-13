@@ -859,8 +859,7 @@ function dnBloomWave(tm) {
     if (x0 + R < cam.x - 100 || x0 - R > cam.x + VW + 100) continue;
     if (!on) { g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S); g.globalCompositeOperation = 'lighter'; on = true; }
     const gy0 = dnTopY(x0);
-    g.strokeStyle = hue[0]; g.lineWidth = 2.4; g.globalAlpha = 0.22 * fa; g.beginPath(); g.ellipse(x0, gy0 - 4, R, R * 0.22, 0, 0, 6.283); g.stroke();
-    g.strokeStyle = '#ffffff'; g.lineWidth = 1.2; g.globalAlpha = 0.3 * fa; g.beginPath(); g.ellipse(x0, gy0 - 4, R * 0.96, R * 0.2, 0, 0, 6.283); g.stroke(); g.globalAlpha = 1;
+    // (halka çizilmez: çiçeğin kendi yer halkası var; burada yalnız yerde koşan ışık ve kıvılcımlar)
     for (const sd of [-1, 1]) for (let j = 0; j < 6; j++) {   // yüzeyde koşan ışık + iz
       const xx = x0 + sd * R * (1 - j * 0.06), yy = dnTopY(xx) - 3; dglow(j ? hue[j % 2] : '#ffffff', xx, yy, (j ? 24 : 36) - j * 1.5, (j ? 0.5 : 0.9) * fa * (1 - j * 0.12)); if (j === 0) dglow(hue[0], xx, yy - 10, 60, 0.25 * fa); }
     for (let i = 0; i < 16; i++) {   // dalganın geçtiği yerden yükselen kıvılcımlar
@@ -2398,8 +2397,9 @@ function dnFlower(fl, tm) {
     g.strokeStyle = `rgba(255,226,160,${0.55 * (1 - k)})`; g.lineWidth = 3 * (1 - k) + 0.5;
     g.beginPath(); g.ellipse(x, y + 1, rr, rr * 0.13, 0, 0, 6.283); g.stroke();
     dnEG('#fff2cc', x, y + 1, rr, rr * 0.16, 0.25 * (1 - k));
-    const sh = dnShaft('#ffe6b0'); g.globalAlpha = 0.55 * Math.sin(Math.min(1, e / 2.4) * Math.PI);
-    g.drawImage(sh, x - 40, y - 420, 80, 440); g.globalAlpha = 1;
+    const sh = dnShaft('#ffe6b0'), ca = Math.sin(Math.min(1, e / 2.4) * Math.PI); g.globalAlpha = Math.min(1, 0.85 * ca);
+    g.drawImage(sh, x - 48, y - 460, 96, 480); g.globalAlpha = Math.min(1, 0.7 * ca); g.drawImage(sh, x - 16, y - 440, 32, 460); g.globalAlpha = 1;
+    for (let i = 0; i < 8; i++) { const q = clamp((e - i * 0.08) / 1.6, 0, 1); if (q <= 0 || q >= 1) continue; dglow(i % 2 ? '#ffe6a0' : '#ffffff', x + Math.sin(i * 2.4) * 10 * q, y - 20 - q * (180 + i * 22), 5, 0.9 * Math.sin(q * Math.PI)); }   // sütunda yükselen kıvılcımlar
     dglow('#ffffff', hx, hy, 90 * (1 - k), 0.6 * (1 - k));
   }
   g.globalCompositeOperation = 'source-over';
@@ -2419,6 +2419,14 @@ function dnFlower(fl, tm) {
     for (let i = 0; i < 3; i++) { const a = tm * 1.6 + i * 2.094; dglow('#c8fbff', hx + Math.cos(a) * 16, hy - 4 + Math.sin(a) * 7, 5, 0.8 * b); }
     g.globalCompositeOperation = 'source-over';
   }
+  if (e >= 0 && e < 1.9) {   // açılış: altı taç yaprak tomurcuktan dışa doğru görünür biçimde açılır (≈1,3 sn), sonra sprite'a devreder
+    const q = smooth(clamp(e / 1.3, 0, 1)), fa = 1 - smooth(clamp((e - 1.2) / 0.7, 0, 1));
+    g.save(); g.translate(hx, hy);
+    for (let i = 0; i < 6; i++) { const an = lerp(-Math.PI / 2 + (i - 2.5) * 0.14, -Math.PI / 2 + i * Math.PI / 3, q), L = 7 + 15 * q;
+      g.save(); g.rotate(an); g.globalAlpha = 0.95 * fa; g.fillStyle = i % 2 ? '#ffe2a0' : '#fff6dc'; g.beginPath(); g.ellipse(L * 0.55, 0, L * 0.6, 3 + 3.5 * q, 0, 0, 6.283); g.fill();
+      g.fillStyle = '#ffffff'; g.globalAlpha = 0.6 * fa; g.beginPath(); g.ellipse(L * 0.5, -0.6, L * 0.32, 1.2 + q, 0, 0, 6.283); g.fill(); g.restore(); }
+    g.globalAlpha = fa; g.fillStyle = '#fff2c0'; g.beginPath(); g.arc(0, 0, 3 + 2 * q, 0, 6.283); g.fill(); g.restore(); g.globalAlpha = 1;
+  }
   if (o > 0.01) {   // açık çiçek (önbellekli sprite, döner; açılırken esneyerek büyür)
     const spr = dnFlowerSprite(), sz = 70 * (0.3 + 0.7 * o) * (1 + pulse * 0.03 + pop);
     g.save(); g.translate(hx, hy); g.rotate(tm * 0.15 + x + (1 - o) * 1.5); g.scale(1, 0.92); g.globalAlpha = Math.min(1, o * 1.5);
@@ -2431,7 +2439,7 @@ function dnFlower(fl, tm) {
 TUR.kaydet('cicek', {
   kur(o) { o.open = 0; o.bt = -1; },
   guncelle(o, dt) { o.open = lerp(o.open || 0, o.done ? 1 : 0, 1 - Math.exp(-dt * 2.6)); if (o.done && o.bt < 0) o.bt = now; },
-  ciz(o, tm) { dnFlower(o, tm); },
+  ciz(o, tm) { g.save(); g.translate(o.x, o.y); g.scale(1.5, 1.5); g.translate(-o.x, -o.y); dnFlower(o, tm); g.restore(); },   // çiçek 1,5× (çocuğun ilk büyük ödülü okunur olsun)
 });
 
 // ── ışık tohumu: değerli, minik altın tohum; alınca Pırıl'a uçar (TUR 'tohum') ──
@@ -2468,13 +2476,16 @@ TUR.kaydet('tohum', {
     if (o.x < cam.x - 80 || o.x > cam.x + VW + 80) return;
     const bob = Math.sin(tm * 2 + o.ph) * 4, x = o.x, y = o.y - 24 + bob, br = 0.5 + 0.5 * Math.sin(tm * 3 + o.ph);
     g.globalCompositeOperation = 'lighter';
-    dnEG('#ffd890', x, o.y, 30, 5, 0.35 + br * 0.15);   // altında minik ışık havuzu
+    dnEG('#ffd890', x, o.y, 40, 6, 0.4 + br * 0.15);   // altında minik ışık havuzu
     const sh = dnShaft('#ffe6b0'); g.globalAlpha = 0.18 + br * 0.1; g.drawImage(sh, x - 9, y - 150, 18, 160); g.globalAlpha = 1;   // yukarı uzanan ince ışık ipucu
     for (let i = 0; i < 3; i++) { const a = tm * 2.2 + i * 2.094 + o.ph; dglow(i ? '#fff2cc' : '#ffffff', x + Math.cos(a) * 15, y + Math.sin(a) * 6, 3.5, 0.75); }
     g.globalCompositeOperation = 'source-over';
-    dnSeedAt(x, y, 1 + br * 0.06, Math.sin(tm * 1.3 + o.ph) * 0.25, 1, tm);
+    dnSeedAt(x, y, 1.45 + br * 0.08, Math.sin(tm * 1.3 + o.ph) * 0.25, 1, tm);   // daha büyük (koyu gövdeler arasında seçilsin)
+    const tw = (tm * 0.45 + o.ph) % 1, fl = tw < 0.12 ? Math.sin(tw / 0.12 * Math.PI) : 0;   // ≈2 sn'de bir keskin pırıltı
     g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.6 + br * 0.4;
-    g.drawImage(dnStar('#fff2cc'), x - 2 - 14, y - 5 - 14, 28, 28); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+    g.drawImage(dnStar('#fff2cc'), x - 3 - 20, y - 7 - 20, 40, 40);
+    if (fl > 0) { const r = 26 + fl * 30; g.globalAlpha = fl; g.drawImage(dnStar('#ffffff'), x - r, y - r, r * 2, r * 2); dglow('#ffe6a0', x, y, 50 + fl * 30, 0.35 * fl); }
+    g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
   },
   cizOn(o, tm) {   // alınma: yükselir, parlar, kavis çizerek Pırıl'a uçar
     if (o.al < 0 || o.al >= 1) return;

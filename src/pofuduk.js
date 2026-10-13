@@ -43,7 +43,7 @@ const PF_MINDER_GUC = 1100;
 const PF_BRX = 100, PF_BRY = 100;        // Büyük Pofuduk (cisim en fazla 200 geniş)
 const PF_BUYUK_GUC = 1360;
 const PF_BUYUK_YAT = 0.3;
-const PF_FIN_OLC = 0.8;           // finalde Büyük Pofuduk'un boyu (sahnede Feza'yı ve dansçıları ezmesin)            // uyanınca çökme miktarı (0: dimdik top · 1: yassı minder)
+const PF_FIN_OLC = 0.74;           // finalde Büyük Pofuduk'un boyu (sahnede Feza'yı ve dansçıları ezmesin)            // uyanınca çökme miktarı (0: dimdik top · 1: yassı minder)
 
 // ── sprite önbelleği ──
 let pfRes = 0, pfResH = -1, pfZMax = 0;
@@ -840,7 +840,7 @@ function pfKarinIsik2(o, tm, cy) {   // Bölüm 2: sönükken soluk mavi-mor kar
     if (si > 0.05) dglow('#fffbe6', o.x, cy, 18 + 14 * si, si * 0.55 + sv * 0.25);
     if (yakin) {
       const b = Math.abs(Math.sin(tm * 3.2)), by = o.y - 98 - 16 * b;
-      dglow('#cfd8ff', o.x, by, 26, 0.5); dglow('#ffffff', o.x, by, 9, 0.9);
+      dglow('#cfd8ff', o.x, by, 20, 0.45); dglow('#f4f0ff', o.x, by, 6, 0.8);
       dglow('#cfd8ff', o.x, by + 16, 12, 0.35 * (1 - b)); dglow('#cfd8ff', o.x, by + 28, 8, 0.2 * (1 - b));
     }
   } else if (p.durum !== 'uyaniyor' || p.bloom > 0 || (o.sarkiIsik || 0) > 0.05) {
@@ -869,7 +869,7 @@ function pfKarinIsik(o, tm) {
     if (si > 0.05) dglow('#fffbe6', o.x, cy, 18 + 14 * si, si * 0.55 + sv * 0.25);
     if (yakin) {
       const b = Math.abs(Math.sin(tm * 3.2)), by = o.y - 98 - 16 * b;
-      dglow('#fff2b8', o.x, by, 26, 0.55); dglow('#ffffff', o.x, by, 9, 0.9);
+      dglow('#ffd9a0', o.x, by, 20, 0.5); dglow('#fff3d6', o.x, by, 6, 0.8);   // sıcak, küçük
       dglow('#fff2b8', o.x, by + 16, 12, 0.35 * (1 - b)); dglow('#fff2b8', o.x, by + 28, 8, 0.2 * (1 - b));
     }
   } else if (p.durum !== 'uyaniyor' || p.bloom > 0 || (o.sarkiIsik || 0) > 0.05) {
@@ -891,7 +891,7 @@ function pfUyandir(o, sessiz) {
   if (!sessiz) {
     if (o.tur === 'yol') { P.vy = -620; P.ground = false; }
     else if (o.tur === 'minder') { P.vy = -880; P.ground = false; P.dj = true; }
-    pfPirilti(o.x, o.y - 30, 10, ['#ffffff', p.pal.i, '#fff3b0'], 170, 0.7, 9);
+    pfPirilti(o.x, o.y - 30, 10, ['#fff3d6', p.pal.i, '#fff3b0'], 170, 0.7, 7);
     if (BOLUM_NO === 2) pfPirilti(o.x, o.y - 24, 14, ['#fff2b8', '#cfe0ff', '#ffd0ec', '#ffffff'], 210, 1.2, 10);   // yıldız tozu
     if (typeof AU !== 'undefined') { AU.sfx('boing', 1); AU.sfx('bloom'); }
     OLAY.emit('uyandi', o);
@@ -1532,7 +1532,7 @@ function pfSahne(F) {
   // düzlük dar ise sol kenardan biraz taşar. Yer hiç yoksa sağ uç; o da yoksa yerinde kalır (null).
   // finalde Büyük Pofuduk biraz küçülür (PF_FIN_OLC) ve Feza'dan (ve yanındaki dansçılardan) uzak durur: sahne kalabalık olmasın
   const agacX = typeof TREE !== 'undefined' && TREE ? TREE.x : fx + 40, hb = PF_BRX * PF_FIN_OLC;
-  let bx = Math.min(Lr + hb + 8, fx - 230, agacX - 210);
+  let bx = Math.min(Lr + hb - 24, fx - 230, agacX - 210);   // düzlüğün en soluna (kenardan biraz taşabilir): dansçılara yer kalsın
   if (bx < Lr + hb - 30) bx = Rr - fx >= 330 ? Math.max(fx + 230, Rr - hb - 8) : fx - Lr >= 120 ? Lr + hb - 30 : null;
   F.bx = bx;
   if (bx !== null && bx !== undefined) { if (bx < fx) L = Math.max(L, bx + hb + 16); else R = Math.min(R, bx - hb - 16); }
@@ -1540,20 +1540,26 @@ function pfSahne(F) {
   // aralarında hep aynı mesafe (üst üste binme yok). Bir yana sığmayan öbür yana geçer; hiç sığmazsa aralık daralır.
   const G0 = 50;                                    // Feza'nın merkezinden ilk dansçıya
   const capOf = (sp, yon) => Math.max(0, Math.floor(((yon < 0 ? fx - L : R - fx) - G0) / sp) + 1);
-  let sp = 46, cL = capOf(sp, -1), cR = capOf(sp, 1);
-  while (cL + cR < n && sp > 30) { sp -= 2; cL = capOf(sp, -1); cR = capOf(sp, 1); }
+  // Ön sıra hep 46 aralıklı (üst üste binme yok); sığmayanlar ön sıradakilerin ARASINA, biraz geride ve küçük bir arka sıraya
+  const sp = 46, cL = capOf(sp, -1), cR = capOf(sp, 1);
   let nL = Math.min(cL, Math.ceil(n / 2)), nR = Math.min(cR, n - nL);
   nL = Math.min(cL, n - nR); nR = Math.min(cR, n - nL);
   const yer = [];
-  for (let j = 0; j < nL; j++) yer.push(fx - G0 - j * sp);
-  for (let j = 0; j < nR; j++) yer.push(fx + G0 + j * sp);
-  for (let j = 0; yer.length < n; j++) yer.push(clamp(fx + (j % 2 ? -1 : 1) * (G0 + 14 + j * 9), L, R));   // çok dar: (olmamalı)
-  yer.sort((a, b) => a - b);
-  F.yer = yer.map(x => ({ x, y: pfYerBul(x, y, 30) ?? y, sira: 0, derin: 0 }));
-  const uz = F.yer.slice().sort((a, b) => Math.abs(a.x - fx) - Math.abs(b.x - fx));
-  // hafif yay: Feza'nın yanındakiler önde, dıştakiler azıcık geride (yalnız çizimde biraz yukarı + küçük; zemin aynı)
+  for (let j = 0; j < nL; j++) yer.push({ x: fx - G0 - j * sp, arka: 0 });
+  for (let j = 0; j < nR; j++) yer.push({ x: fx + G0 + j * sp, arka: 0 });
+  if (yer.length < n) {
+    const ad = [];
+    for (let j = 0; j < Math.max(nL, nR) + 1; j++) for (const yn of [-1, 1]) { const x = fx + yn * (G0 + sp * (j + 0.5)); if (x >= L && x <= R) ad.push(x); }
+    ad.sort((a, b) => Math.abs(a - fx) - Math.abs(b - fx));
+    for (let j = 0; j < ad.length && yer.length < n; j++) yer.push({ x: ad[j], arka: 1 });
+  }
+  for (let j = 0; yer.length < n; j++) yer.push({ x: clamp(fx + (j % 2 ? -1 : 1) * (G0 + 14 + j * 9), L, R), arka: 1 });   // çok dar: (olmamalı)
+  yer.sort((a, b) => a.x - b.x);
+  F.yer = yer.map(q => ({ x: q.x, y: pfYerBul(q.x, y, 30) ?? y, sira: 0, derin: 0, arka: q.arka }));
+  const uz = F.yer.slice().sort((a, b) => (a.arka - b.arka) || (Math.abs(a.x - fx) - Math.abs(b.x - fx)));
+  // hafif yay: Feza'nın yanındakiler önde, dıştakiler azıcık geride; arka sıra belirgin geride ve küçük (yalnız çizim; zemin aynı)
   const yanN = Math.max(1, Math.max(nL, nR) - 1);
-  uz.forEach((s, k) => { s.sira = k; s.derin = smooth(clamp((Math.round((Math.abs(s.x - fx) - G0) / sp)) / yanN, 0, 1)); });
+  uz.forEach((s, k) => { s.sira = k; s.derin = s.arka ? 1.6 : smooth(clamp((Math.round((Math.abs(s.x - fx) - G0) / sp)) / yanN, 0, 1)) * 0.8; });
   return F;
 }
 function pfDans(o, p, dt) {
@@ -1604,12 +1610,14 @@ function pfDans(o, p, dt) {
 // (yollar kesişmez). Yan yana dansçılar art arda değil aralıklı kalkar; havadakiler birbirine yaklaşırsa yumuşakça açılır.
 const PF_FENER_ADAY = [];
 for (let r = 0; r < 3; r++) for (let x = -330 + r * 15; x <= 330; x += 45) if (Math.abs(x) > 28) PF_FENER_ADAY.push(x, -200 - r * 30 - (Math.abs(x) % 2) * 6);
-const PF_FEN_YUK = 1.1, PF_FEN_AS = 0.5, PF_FEN_DON = 1.1, PF_FEN_ARA = 52;
+const PF_FEN_YUK = 1.1, PF_FEN_AS = 0.5, PF_FEN_DON = 1.1, PF_FEN_ARA = 62;
+const PF_FEN_EN = 7;   // en çok bu kadar fener (hepsi ≈6 sn'de, final beyazlamadan önce asılsın)
 function pfFenerKur(F) {
-  const L = F.kucuk.slice().sort((a, b) => {
+  const L = F.kucuk.filter(o => { const s = F.yer && F.yer[o.pf.dansI]; return !s || !s.arka; }).sort((a, b) => {
     const sa = F.yer && F.yer[a.pf.dansI], sb = F.yer && F.yer[b.pf.dansI];
     return (sa ? sa.sira : 99) - (sb ? sb.sira : 99);
   });
+  L.length = Math.min(L.length, PF_FEN_EN);
   // kalkış sırası: 0,1,4,5,8,9,… sonra 2,3,6,7,… (komşular aynı anda havada olmasın)
   const L2 = L.filter((o, k) => (k >> 1) % 2 === 0).concat(L.filter((o, k) => (k >> 1) % 2 === 1));
   const n = L2.length, ara = n > 1 ? Math.min(0.42, 3.4 / (n - 1)) : 0;
