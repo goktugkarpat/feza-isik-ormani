@@ -85,7 +85,8 @@ function drSfx(k, v) { if (typeof AU !== 'undefined' && AU && AU.sfx) { try { AU
 function drFree() { return D.mode === 'follow' || D.mode === 'orbit'; }
 function drBusy() { return D.mode === 'firlat' || D.mode === 'push' || D.mode === 'tasi' || D.mode === 'dalis' || D.mode === 'nefes' || D.mode === 'yardim' || D.mode === 'sakli'; }
 function drPlaying() { return DURUM === 'oyun' && P.fade <= 0 && !(P.kilit > 0); }
-function drGlow(x, col, px, py, r, a) { x.globalAlpha = a; x.drawImage(glow(col), px - r, py - r, r * 2, r * 2); x.globalAlpha = 1; }
+let DR_YK = 1;   // Feza'ya yakınken Pırıl'ın gövdesine bağlı 'lighter' ışıkların çarpanı (Feza'yı soldurmasın); drawDragon ayarlar
+function drGlow(x, col, px, py, r, a) { if (DR_YK < 1) { a *= DR_YK; r *= 0.7 + 0.3 * DR_YK; } x.globalAlpha = a; x.drawImage(glow(col), px - r, py - r, r * 2, r * 2); x.globalAlpha = 1; }
 
 // ── olaylar (oyun.js çağırır) ──
 function dragonPush() {     // havada ikinci zıplama: Pırıl hızla süzülüp Feza'nın ayaklarının altından iter
@@ -548,7 +549,15 @@ function stepDragon(dt) {
   const fzSit = P.a_sit || 0, fzYawn = P.a_act === 'yawn' && (P.a_actT || 0) > 0.75;
   if (!fzSit) D.sitYawn = false;
   if (!fzYawn && P.idle < 0.5) D.feYawn = false;
-  if (DURUM === 'oyun' && D.yawnT < 0 && (drFree() || (D.mode === 'ilgi' && D.ik !== 'takla'))) {
+  D.oturCd = (D.oturCd || 0) - dt;
+  if (playing && drFree() && fzSit > 0.85 && P.ground && D.oturCd <= 0 && D.talkT <= 0) {   // Feza oturdu: yanına konup o da otursun
+    D.oturCd = 3;
+    for (const sd of [-(P.f || 1), P.f || 1]) {   // önce sırtının olduğu yan (bacakları öbür yanda uzanır)
+      const ox = P.x + sd * 32, sy = drSurfaceAt(ox, P.y - 30);
+      if (sy !== null && Math.abs(sy - P.y) < 3 && drStandOk(ox, sy)) { drMode('otur'); D.otX = ox; D.otY = sy; D.otOk = false; break; }
+    }
+  }
+  if (DURUM === 'oyun' && D.yawnT < 0 && (drFree() || D.mode === 'otur' || (D.mode === 'ilgi' && D.ik !== 'takla'))) {
     if (fzSit > 0.7 && !D.sitYawn) { D.sitYawn = true; D.yawnT = 0; if (D.mode === 'ilgi') drMode('follow'); }
     else if (fzYawn && !D.feYawn) { D.feYawn = true; D.yawnT = 0; if (D.mode === 'ilgi') drMode('follow'); }
     else if (!D.yawned && P.idle > 14 && !fzSit) { D.yawned = true; D.yawnT = 0; }
@@ -965,6 +974,21 @@ function stepDragon(dt) {
       }
       D.lookAt.x = bx; D.lookAt.y = by; D.lookAtT = 0.2;
     }
+  } else if (D.mode === 'otur') {     // Feza'nın yanına konar, kanatlarını toplar, ona dönük oturur; arada başını yaslar gibi eğer
+    const gy = D.otY - 15;
+    D.ft = Math.sign(P.x - D.otX) || 1; D.faceHold = 0.15;
+    if (!D.otOk) {
+      tx = D.otX; ty = gy - 3; k = 45; damp = 12; flapW = 4.5;
+      if (Math.hypot(D.x - tx, D.y - ty) < 5 || D.modeT > 1.6) { D.otOk = true; D.modeT = 0; D.sSq.v -= 2.6; D.sCr.v += 3; D.sEr.v += 3; burst(D.otX, D.otY - 2, 5, ['#ffffff', '#e8d8ff'], 40, 0.5, 4); }
+    } else {
+      const kk = 1 - Math.exp(-dt * 8), nx = lerp(D.x, D.otX, kk), ny = lerp(D.y, gy, kk);
+      D.vx = (nx - D.x) / dt; D.vy = (ny - D.y) / dt; D.x = nx; D.y = ny; direct = true; flapW = 1.2;
+      const c = D.modeT % 7;
+      D.expr = c > 3 && c < 4.6 ? 'happy' : 'normal'; D.exprT = 0.3;
+      D.tiltWant = c > 3 && c < 4.6 ? -0.1 * Math.sin((c - 3) / 1.6 * Math.PI) : 0;   // Feza'ya doğru sevgiyle eğilir
+      D.lookAt.x = P.x; D.lookAt.y = P.y - 52; D.lookAtT = 0.2;
+    }
+    if (fzSit < 0.4 || !playing) { drMode('follow'); D.vy = -170; D.oturCd = 6; D.sSq.v += 2; }
   } else if (D.mode === 'alkis') {     // Feza'nın yanında önüne dönüp alkışlar ("bravo!"), sonra yanına döner
     const u = D.modeT, sd = D.alkSide;
     tx = P.x + sd * 46; ty = P.y - 104 + Math.sin(u * 5) * 3; k = 50; damp = 11; flapW = 4.2;
@@ -1028,14 +1052,14 @@ function stepDragon(dt) {
   }
   // Feza'nın yüzünü asla kapatmasın: başının üstündeki bölgeye inerse yumuşakça yukarı itilir
   // (itme hamlesi, taşıma, dalış ve zıplama turu kendi yollarını bilir)
-  if (P.fade <= 0 && D.mode !== 'push' && D.mode !== 'tasi' && D.mode !== 'yardim' && D.mode !== 'dalis' && D.mode !== 'yay') {
+  if (P.fade <= 0 && D.mode !== 'push' && D.mode !== 'tasi' && D.mode !== 'yardim' && D.mode !== 'dalis' && D.mode !== 'yay' && D.mode !== 'otur') {
     const hx = Math.abs(D.x - P.x), minY = P.y - 104 + clamp((hx - 20) / 22, 0, 1) * 70;
     if (D.y > minY && D.y < P.y + 10) { D.y = lerp(D.y, minY, 1 - Math.exp(-dt * 14)); if (D.vy > 0) D.vy *= Math.exp(-dt * 10); }
   }
 
   // esneme (Feza boş durunca): ağız ağır ağır açılır, gözler kapanır, kanatlar gerinir
   if (D.yawnT >= 0) {
-    if (!drFree()) D.yawnT = -1;
+    if (!drFree() && D.mode !== 'otur') D.yawnT = -1;
     else {
       D.yawnT += dt; const t = D.yawnT;
       D.yawn = t < 0.55 ? smooth(t / 0.55) : t < 1.25 ? 1 : Math.max(0, 1 - smooth((t - 1.25) / 0.45));
@@ -1106,6 +1130,9 @@ function stepDragon(dt) {
   D.glide = lerp(D.glide, glideW, 1 - Math.exp(-dt * 5));
   D.ph += dt * D.flapRate * 6.283 * (1 - D.glide * 0.75);
   D.bob = Math.sin(D.ph - 0.7) * 2.2 * (1 - D.glide) - D.hop;
+  D.otW = lerp(D.otW || 0, D.mode === 'otur' && D.otOk ? 1 : 0, 1 - Math.exp(-dt * 6));   // oturuş: inip kalkma yerine nefes, kanatlar toplanır
+  if (D.otW > 0.001) { D.bob = D.bob * (1 - D.otW) + Math.sin(D.t * 1.8) * 0.35 * D.otW; }
+  D.wingA = 1 - 0.6 * D.otW;
 
   // göz/baş: Feza'ya ya da ilgi çeken şeye
   const sx = D.face;
@@ -1336,7 +1363,7 @@ function drTuySprite() {   // gündüz ışık tüyü (256×64; elips, lila→na
   return (drTuyC = c);
 }
 function drawWing(x, far, tm) {   // ışıktan kanat: yarı saydam, lavanta-nane, yumuşak üç tüy
-  const A = D.wingA * (far ? 0.55 : 1); if (A < 0.01) return;
+  const A = D.wingA * (far ? 0.55 : 1) * (D.wingSO ? 1 : 0.55 + 0.45 * DR_YK); if (A < 0.01) return;
   const w = Math.sin(D.ph + (far ? 0.35 : 0));
   let ang = lerp(-0.95, 0.62, (w + 1) / 2);
   ang = lerp(ang, -0.28 + Math.sin(tm * 3) * 0.06, D.glide);
@@ -2101,11 +2128,15 @@ function drawDragon(tm) {
     x.fillStyle = '#ffffff'; drTwinkle(x, sp.x, sp.y, 6.5 * tw, 0.9 * sp.a);
     }
   }
+  // Feza'ya yakınlık: gövde ortası Feza'nın gövdesine (ayak − 32) yaklaştıkça hâle ve ışıltılar kısılır, küçülür (en az %35)
+  { const fv = P.fade > 0.5 ? 0 : 1, dd = Math.hypot((D.x - P.x) * 0.9, D.y + D.bob - (P.y - 32));
+    DR_YK = lerp(1, clamp((dd - 22) / 78, 0.35, 1), fv); }
   if (BOLUM_NO === 2) drGece(x, tm);
   if (gun) { drGunDogumu(x, tm, 0); D.wingSO = true; }
   drBody(x, tm);
   if (gun) { D.wingSO = false; drGunDogumu(x, tm, 1); }
   if (BOLUM_NO === 2) { x.globalCompositeOperation = 'lighter'; drGlow(x, '#5a6cff', D.x, D.y - 4, 26, 0.08); x.globalCompositeOperation = 'source-over'; }   // gövdeye ortam tonu (mor-mavi)
+  DR_YK = 1;
 
   // ışık nefesi: yumuşak koni + parçacıklar
   if (D.blowM > 0.01 || D.nf.length) {
@@ -2224,7 +2255,7 @@ function pirilCizPoz(ctx, x, y, olcek, poz, tm, u) {
     drPozTailCurl(1, 0, tm);
   }
   ctx.save(); ctx.translate(x, y); ctx.scale(olcek, olcek);
-  if (halo > 0.01) { const op = ctx.globalCompositeOperation; ctx.globalCompositeOperation = 'lighter'; drGlow(ctx, '#b88aff', 0, 0, 90, 0.3 * halo); drGlow(ctx, '#ffe0ff', 0, 0, 30, 0.18 * halo); ctx.globalCompositeOperation = op; }
+  if (halo > 0.01) { const op = ctx.globalCompositeOperation; ctx.globalCompositeOperation = 'lighter'; drGlow(ctx, '#b88aff', 0, 0, 66, 0.22 * halo); drGlow(ctx, '#ffe0ff', 0, 0, 24, 0.14 * halo); ctx.globalCompositeOperation = op; }   // ara sahnede Feza'nın yanında: soldurmayacak kadar
   const pl = D.plush, sik = poz === 'pelus_sik' ? (u === undefined ? 0.7 : clamp(u, 0, 1)) : 0, br = Math.sin(tm * 1.7) * 0.012 * pl;
   if (pl > 0.02) { ctx.save(); ctx.translate(0, 14); ctx.scale(1 + br + sik * 0.07, 1 - br - sik * 0.08); ctx.rotate(-sik * 0.05); ctx.translate(0, -14); }   // peluş: nefes alır, sarılınca ezilir
   drBody(ctx, tm, front);

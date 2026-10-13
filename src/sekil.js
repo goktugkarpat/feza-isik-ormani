@@ -258,7 +258,7 @@ function sklCanlan(o) {
   const k = o.skl, ad = sklHayvan(o);
   sklDur(o, 'canlan'); k.canT = 0;
   sklSfx('sekilCanlan', SKL_HAYVAN.indexOf(ad));
-  OLAY.emit('sekil', { o, hayvan: ad, i: k.i });
+  if (!k.terk) OLAY.emit('sekil', { o, hayvan: ad, i: k.i });   // Feza gittiyse (kendiliğinden dönüşüm) olay yok: ses.js "Buldun!" demesin
   for (let i = 0; i < SKL_N; i++) k.jv[i] += 2.6 + k.d[i] * 1.5;   // bütün kabarıklar sevinçle titrer
   k.halka.push({ x: k.cx, y: k.cy, l: 0.5, l0: 0.5, b: 3 }, { x: k.cx, y: k.cy, l: 0.75, l0: 0.75, b: 4 });   // büyük ışık halkaları
   for (let i = 0; i < 26; i++) { const a = Math.random() * 6.283, s = 80 + Math.random() * 160; k.pk.push({ x: k.cx + Math.cos(a) * SKL_R * 0.6, y: k.cy + Math.sin(a) * SKL_R * 0.4, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 40, l: 0.9 + Math.random() * 0.6, m: 1.5, c: i % 3 ? '#fff4c8' : SKL_GOK[i % 6], r: 3 + Math.random() * 3 }); }

@@ -98,6 +98,7 @@ const SES = (() => {
     "p_b_sekil4": "Bak, bu sensin Feza!",
     "p_b_ucus": "Hadi Feza, bin sırtıma! Uçuyoruz!",
     "p_b_ucus2": "Yaşasın, uçuyoruz! Parlayan ışıltıları topla!",
+    "p_b_selam": "Bak Feza! Bulut arkadaşlarımız bize el sallıyor!",
     "p_b_tepe": "İşte Gökkuşağı Tepesi! Kuzucuklar da seninle geldi. Hadi, en tepeye çık!",
     "p_b_bitti": "Gökkuşağı geri geldi! Ne kadar da güzel!",
     "a_b_final1": "Yedi Bulut Kuzucuğu gökyüzünde yan yana dizilmiş ve kocaman bir gökkuşağı olmuş. Feza ile Pırıl, gökkuşağından kayarak inmişler.",
@@ -141,6 +142,7 @@ const SES = (() => {
     if (k === 'p_b_kuzu_ilk') return { oncelik: 2, acil: 1, omur: 6, konu: null };
     if (k === 'p_b_ucus') return { oncelik: 2, acil: 1, omur: 8, konu: null };
     if (k === 'p_b_ucus2') return { oncelik: 2, acil: 0, omur: 8, konu: null };
+    if (k === 'p_b_selam') return { oncelik: 2, acil: 1, omur: 5, konu: null };   // uçuşta bulut hayvanları geçerken (anlık: geç kalırsa atılır)
     if (/^p_b_sekil/.test(k)) return { oncelik: 2, acil: 1, omur: k === 'p_b_sekil1' ? 12 : 8, konu: null };
     if (/^p_dost/.test(k)) return { oncelik: 1, acil: 0, omur: 3, konu: null };   // uzun sessizlikte küçük dostça söz
     return { oncelik: 2, acil: 0, omur: 20, konu: null };   // konuşma tetikleyicilerinin talimatları
@@ -212,7 +214,8 @@ const SES = (() => {
     p_b_kuzu: () => !(typeof SAYAC !== 'undefined' && SAYAC && SAYAC.kuzu > 0) && !sesKuzuN,
     p_b_tepe: () => !sesGokBasladi,
     p_b_ucus: () => !sesUcusBitti,
-    p_b_ucus2: () => sesUcusta(),
+    p_b_ucus2: () => sesUcusta() && !(sesSonCal.p_b_selam != null && sesSaat() - sesSonCal.p_b_selam < 8),   // selam az önce söylendiyse uçuş cümlesi atlanır
+    p_b_selam: () => sesUcusta() && !(sesSonCal.p_b_ucus2 != null && sesSaat() - sesSonCal.p_b_ucus2 < 4),
     p_b_sekil1: s => !sesIleride('b_sekil1', 10, s),
     p_dost1: () => sesDostUygun(), p_dost2: () => sesDostUygun(), p_dost3: () => sesDostUygun(),
     p_dost_orman: () => sesDostUygun(), p_dost_yildiz: () => sesDostUygun(), p_dost_bulut: () => sesDostUygun(),

@@ -387,6 +387,7 @@ const DN3_SHP = [
   [['e', 0, 0, 92, 58, 0], ['c', 82, -48, 44], ['e', 66, -128, 15, 46, -0.22], ['e', 102, -122, 15, 44, 0.28], ['c', -92, -12, 22], ['c', -44, 46, 26], ['c', 44, 48, 24], ['c', -30, -44, 40], ['c', 20, -50, 38]],   // tavşan
   [['e', 0, 0, 150, 58, 0], ['c', 90, -24, 52], ['c', 20, -40, 50], ['c', -60, -30, 44], ['e', -168, -36, 44, 16, -0.6], ['e', -170, 6, 44, 15, 0.5], ['c', 116, -96, 11], ['c', 100, -116, 14], ['c', 128, -118, 12], ['c', 112, -138, 10]],   // balina
   [['c', 0, 24, 80], ['c', 0, -70, 56], ['c', -44, -116, 23], ['c', 44, -116, 23], ['c', -78, 0, 30], ['c', 78, 0, 30], ['c', -40, 92, 30], ['c', 40, 92, 30]],   // ayıcık
+  [['c', -50, 0, 48], ['c', 0, -20, 56], ['c', 50, 0, 48], ['c', -20, 30, 46], ['c', 30, 30, 44], ['c', 0, -60, 40], ['e', 98, -30, 34, 26, 0.2], ['e', 74, -52, 12, 22, -0.9], ['e', -40, 78, 10, 26, 0], ['e', 30, 80, 10, 26, 0]],   // kuzucuk
 ];
 const dn3ShpC = [];
 function dn3ShapeSpr(i) {
@@ -397,11 +398,16 @@ function dn3ShapeSpr(i) {
   x.save(); x.clip(P2); const lg = x.createRadialGradient(80, -110, 0, 80, -110, 260); lg.addColorStop(0, 'rgba(255,255,255,0.8)'); lg.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = lg; x.fillRect(-230, -200, 460, 340); x.restore();
   return dn3ShpC[i] = { c, w, h, oy: h * 0.58 };
 }
+const DN3_SHI = [   // hayal bulutu örnekleri: [şekil, parallax yeri, ölçek, yükseklik (H oranı), bölge anahtarı]
+  [0, 300, 0.5, 0.36, 'sekil'], [1, 1200, 0.56, 0.44, 'sekil'], [2, 2100, 0.5, 0.33, 'sekil'],
+  [3, 400, 0.3, 0.3, 'cayir'], [3, 560, 0.24, 0.27, 'cayir'], [3, 1500, 0.28, 0.34, 'cayir'], [3, 2300, 0.26, 0.29, 'cayir'],
+];
 function dn3Shapes(tm) {
-  const R = DN3.reg, a = 0.1 + 0.6 * R.sekil; if (a < 0.02) return; const span = 2700;
-  for (let i = 0; i < 3; i++) {
-    const wx = (((i * 900 + 300 - cam.x * 0.035 - (DN3.drift || 0) * 3) % span) + span) % span - 500; if (wx > VW + 300) continue;
-    const sp = dn3ShapeSpr(i), s = (0.62 + 0.12 * i) * S, sx = wx * S, sy = DN3.hy - (0.3 + 0.1 * ((i * 7) % 3)) * H + Math.sin(tm * 0.3 + i * 2) * 6 * S + DN3.dyS * 0.04;
+  const R = DN3.reg, span = 2700;
+  for (let i = 0; i < DN3_SHI.length; i++) {
+    const I = DN3_SHI[i], wgt = R[I[4]] || 0, a = (I[4] === 'sekil' ? 0.1 + 0.5 * wgt : 0.06 + 0.6 * wgt); if (a < 0.02) continue;
+    const wx = (((I[1] - cam.x * 0.035 - (DN3.drift || 0) * 3) % span) + span) % span - 500; if (wx > VW + 300) continue;
+    const sp = dn3ShapeSpr(I[0]), s = I[2] * S, sx = wx * S, sy = DN3.hy - I[3] * H + Math.sin(tm * (I[4] === 'cayir' ? 0.9 : 0.3) + i * 2) * (I[4] === 'cayir' ? 4 : 6) * S + DN3.dyS * 0.04;
     g.globalAlpha = a * (0.85 + 0.15 * Math.sin(tm * 0.5 + i)); g.drawImage(sp.c, sx - sp.w * s / 2, sy - sp.oy * s, sp.w * s, sp.h * s);
   }
   g.globalAlpha = 1;
@@ -497,7 +503,7 @@ function dn3MakeComp(c0, cols, id) {
   for (let j = 0; j + 1 < n; j++) {   // iç basamaklar: dikey yüzü kabarcıklarla ört (düz kutu duvarı olmasın)
     const ta = tops[j], tb = tops[j + 1]; if (Math.abs(ta - tb) < T * 0.5) continue;
     const bx = (c0 + j + 1) * T, dir = ta < tb ? 1 : -1, hiT = Math.min(ta, tb), loT = Math.max(ta, tb);
-    for (let y = hiT + 12; y < loT + 4; y += 15 + R() * 6) { const r = 14 + R() * 8; top.push({ x: bx + dir * r * 0.3 - dir * 4, y, r, rim: dir > 0 && R() < 0.5, d: y - hiT }); }
+    for (let y = hiT + 14; y < loT + 4; y += 19 + R() * 10) { const r = 15 + R() * 11; top.push({ x: bx + dir * (r * 0.25 + (R() - 0.5) * 12) - dir * 6, y: y + (R() - 0.5) * 6, r, rim: dir > 0 && R() < 0.35, d: y - hiT + 16 }); }
   }
   for (const sd of [-1, 1]) { const ex = sd < 0 ? x0 : x1, s0 = sAt(ex + (sd < 0 ? 2 : -2)), b0 = bAt(ex + (sd < 0 ? 2 : -2));
     top.push({ x: ex - sd * 5, y: s0 + 9, r: 13 + R() * 3, rim: true });
@@ -527,7 +533,7 @@ function dn3PaintTile(x, X0, X1) {
     for (const p of C.top) { if (p.x < m0 || p.x > m1) continue; if (p.d) dn3Puff(x, p.x, p.y, p.r, dn3GHex(Math.max(0, p.d * 0.5 - 10)), dn3GHex(Math.min(DN3_DEPTH, p.d * 0.6 + 8)), dn3GHex(Math.min(DN3_DEPTH, p.d * 0.7 + 30)), 1); else dn3Puff(x, p.x, p.y, p.r, '#ffffff', '#fff7f2', '#fde4ec', 1); }
     // 6) üst kenarda yumuşak sıcak ışıma
     x.globalCompositeOperation = 'lighter'; x.lineJoin = 'round'; x.lineCap = 'round';
-    for (const [lw, a] of [[24, 0.04], [10, 0.06]]) { x.strokeStyle = `rgba(255,214,160,${a})`; x.lineWidth = lw; x.beginPath(); for (let i = i0; i <= i1; i++) x.lineTo(C.xs[i], C.st[i] - 8); x.stroke(); }
+    for (const [lw, a] of [[24, 0.04], [10, 0.06]]) { x.strokeStyle = `rgba(255,214,160,${a})`; x.lineWidth = lw; x.beginPath(); let pen = false; for (let i = i0; i <= i1; i++) { const fl = Math.abs(C.st[Math.min(C.N - 1, i + 1)] - C.st[Math.max(0, i - 1)]) < 3; if (fl) { pen ? x.lineTo(C.xs[i], C.st[i] - 8) : x.moveTo(C.xs[i], C.st[i] - 8); pen = true; } else pen = false; } x.stroke(); }   // yalnız düz yüzeylerde (basamak yüzünde dikey ışık şeridi olmasın)
     x.globalCompositeOperation = 'source-over';
   }
   dn3FadeMask(x, X0, X1);
@@ -664,7 +670,7 @@ function dn3BuildDeco() {
   for (const C of DN3.comps) {
     for (let x = C.x0 + 14; x < C.x1 - 14; x += 9 + R() * 12) {
       // yüzeyin üstü boş olmalı (bir hücre yukarısı)
-      const c = Math.floor(x / T), tr = Math.round(C.sAt(x) / T); if (tr - 1 >= 0 && grid[tr - 1] && grid[tr - 1][c]) continue;
+      const c = Math.floor(x / T), tr = Math.round(C.sAt(x) / T); if (tr - 1 >= 0 && grid[tr - 1] && grid[tr - 1][c]) continue; if (Math.abs(C.sAt(x + 10) - C.sAt(x - 10)) > 6) continue;   // basamak yüzüne süs konmaz
       const RP = DN3_REGP[dn3RegName(x)] || DN3_REGP[''], y = C.sAt(x) + 3, pick = a => a[Math.floor(R() * a.length)], u = R();
       let k = null, s = 0.8 + R() * 0.45;
       if (u < RP.r) k = 'r'; else if (u < RP.r + RP.f) k = 'f'; else if (u < RP.r + RP.f + RP.t) k = 't'; else if (u < RP.r + RP.f + RP.t + RP.s) k = 's'; else if (u < RP.r + RP.f + RP.t + RP.s + RP.w) k = 'w';
@@ -730,6 +736,19 @@ function dn3Motes(tm, zMin, zMax) {
     const fc = dn3Foc(x * S, y * S), fq = zMin >= 0.75 ? fc * fc : fc;
     if (m.bk) { const r = 16 + m.z * 12; dn3Eg(col, x, y, r, r, (0.05 + tw * 0.04) * fc); continue; }
     const r = (2 + m.z * 3.4) * (0.6 + tw * 0.6); dn3Eg(col, x, y, r, r, (0.2 + tw * 0.35) * fq);
+  }
+  // rüzgâr yolu: hafif kıvrılan hava sarmalları (Ghibli tarzı rüzgâr kıvrımı)
+  if (wind > 0.05 && zMin >= 0.75) {
+    g.strokeStyle = '#ffffff'; g.lineCap = 'round'; g.lineWidth = 1.6;
+    for (let i = 0; i < 4; i++) {
+      const span = VW + 500, x0 = ((tm * (55 + i * 12) + i * 337 - cam.x * 0.6) % span + span) % span - 250, y0 = ((i * 0.27 + 0.12) % 1) * vh * 0.7 + Math.sin(tm * 0.6 + i) * 14 - cam.y * 0.1 % 1;
+      const a = wind * 0.32 * Math.sin(clamp((x0 + 250) / span, 0, 1) * Math.PI) * dn3Foc(x0 * S, y0 * S); if (a < 0.02) continue;
+      g.globalAlpha = a; g.beginPath(); g.moveTo(x0 - 140, y0 + 10);
+      g.bezierCurveTo(x0 - 90, y0 + 14, x0 - 40, y0 + 6, x0, y0);   // gelen kuyruk
+      for (let k = 0; k <= 24; k++) { const th = k / 24 * 5.2, r = 22 * (1 - k / 30); g.lineTo(x0 + Math.sin(th) * r, y0 - r + Math.cos(th) * r); }
+      g.stroke();
+    }
+    g.globalAlpha = 1;
   }
   // rüzgâr yolu ve uçuşta: ince, hızlı akan hava çizgileri
   const wa = Math.max(wind * 0.8, fly); if (wa > 0.02) {

@@ -143,7 +143,8 @@ TUR.kaydet('bulutYuzen', {
   },
   guncelle(o, dt) {
     o.t += dt;
-    const p = (o.t / o.sure) % 1, tri = p < 0.5 ? p * 2 : 2 - p * 2, u = smooth(clamp((tri - 0.14) / 0.72, 0, 1));
+    const p = (o.t / o.sure) % 1, tri = p < 0.5 ? p * 2 : 2 - p * 2;
+    const u = o.gorunum === 'tuy' ? 0.5 - 0.5 * Math.cos(p * BU_PI2) : smooth(clamp((tri - 0.14) / 0.72, 0, 1));   // tüy: durmadan yumuşak salınım
     const nx_ = o.x0 + o.ax * u, ny = o.y0 - o.ay * u + 4;
     o.cisim.dx = nx_ - o.x; o.cisim.dy = ny - o.y; o.x = nx_; o.y = ny;
     o.yon = lerp(o.yon, dt > 0 ? clamp((o.cisim.dx + o.cisim.dy) / Math.max(dt, 1e-3) / 60, -1, 1) : 0, 1 - Math.exp(-dt * 6));
@@ -153,6 +154,7 @@ TUR.kaydet('bulutYuzen', {
   },
   ciz(o, tm) {
     const w = o.w, ust = o.y - 4 + o.sz * 0.5;
+    if (o.gorunum === 'tuy') { buDevTuy(o, ust + Math.sin(tm * 1.8 + (o.faz || 0) * 6.28) * 3 + o.sz * 1.6, tm); return; }   // görsel salınım + basınca esneme
     g.globalCompositeOperation = 'lighter';
     dglow('#ffd2a0', o.x, ust + 16, w * 0.7, 0.2);
     g.globalCompositeOperation = 'source-over';
@@ -166,6 +168,98 @@ TUR.kaydet('bulutYuzen', {
     else buBulutCiz(buBulut(w, 22, 'yuzen', o.seed), o.x, ust, w, 1, 1);
   },
 });
+
+// Tüy Köprüsü'nün dev tüyü (bulutYuzen gorunum:'tuy'): üstü düz yürüme yüzeyi; sap üstte, yumuşak yelpaze altta, rüzgârda uç kıpırtısı
+const BU_TUY_P = [['#fff4f8', '#ffc9de', '#e79ac0'], ['#f8f2ff', '#dccbff', '#a990e0'], ['#fff8ec', '#ffdcb4', '#e6a87c']];
+function buDevTuy(o, ust, tm) {
+  const w = o.w, c = BU_TUY_P[(o.renk || 0) % 3], x0 = o.x - w / 2, x1 = o.x + w / 2, sal = Math.sin(tm * 2.1 + o.ph), egim = sal * 0.03;
+  g.globalCompositeOperation = 'lighter'; dglow(c[1], o.x, ust + 10, w * 0.6, 0.18); g.globalCompositeOperation = 'source-over';
+  g.save(); g.translate(o.x, ust); g.rotate(egim); g.translate(-o.x, -ust);
+  // alt yelpaze (yumuşak, dalgalı kenar)
+  const gr = g.createLinearGradient(0, ust - 4, 0, ust + 26); gr.addColorStop(0, c[0]); gr.addColorStop(0.6, c[1]); gr.addColorStop(1, c[2]);
+  g.fillStyle = gr; g.beginPath(); g.moveTo(x0 - 6, ust + 1);
+  const n = 7;
+  for (let i = 0; i <= n; i++) { const u = i / n, xx = x0 + u * w, d = 10 + 12 * Math.sin(u * Math.PI) + Math.sin(tm * 3 + i * 1.3 + o.ph) * 1.5; g.quadraticCurveTo(xx - w / n * 0.5, ust + d + 5, xx, ust + d); }
+  g.quadraticCurveTo(x1 + 10, ust + 6, x1 + 14 + sal * 3, ust - 2);
+  g.lineTo(x0 - 6, ust - 3); g.closePath(); g.fill();
+  // üst yelpaze (ince, yürüme yüzeyinin hemen üstünde)
+  g.fillStyle = c[0]; g.beginPath(); g.moveTo(x0, ust); g.quadraticCurveTo(o.x, ust - 9, x1 + 12, ust - 3); g.lineTo(x1 + 12, ust); g.closePath(); g.fill();
+  // yelpaze çizgileri
+  g.strokeStyle = 'rgba(255,255,255,0.7)'; g.lineWidth = 1.1;
+  for (let i = 1; i < 9; i++) { const xx = x0 + i * w / 9; g.beginPath(); g.moveTo(xx, ust); g.quadraticCurveTo(xx - 6, ust + 9, xx - 14, ust + 6 + 12 * Math.sin(i / 9 * Math.PI)); g.stroke(); }
+  // sap
+  g.strokeStyle = c[2]; g.lineWidth = 2.6; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(x0 - 18, ust + 6); g.quadraticCurveTo(x0, ust - 1, o.x, ust - 1); g.lineTo(x1 + 14 + sal * 3, ust - 2); g.stroke();
+  g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 1; g.beginPath(); g.moveTo(x0, ust - 2); g.lineTo(x1, ust - 2.5); g.stroke();
+  g.restore();
+}
+
+// ───────────────────────── bulutKus: uykucu bulut kuşu (Feza sırtına basınca uyanır, karşıya uçar, Feza inince geri döner) ─────────────────────────
+// {w, ax (karşıya mesafe), ay (yay yüksekliği), sure (tek yön sn)}; y = sırtın (yürüme yüzeyi) başlangıç y'si. Durum: uyku → git → karsi → don → uyku.
+// OLAY 'bulutKus' (o) uyanıp kalkarken.
+TUR.kaydet('bulutKus', {
+  kur(o) {
+    o.w = o.w || 170; o.x0 = o.x; o.y0 = o.y; o.ax = o.ax || 400; o.ay = o.ay || 60; o.sure = o.sure || 5.5;
+    o.y = o.y0 + 4; o.cisim = { w: o.w - 16, h: 4, tip: 'ustten', aktif: true, dx: 0, dy: 0 };
+    o.durum = 'uyku'; o.t = 0; o.u = 0; o.bekle = 0; o.bos = 0; o.uyanik = 0; o.kanat = 0; o.sz = 0; o.on = false; o.seed = 17; o.yonK = 1;
+  },
+  guncelle(o, dt) {
+    const st = buUst(o);
+    if (o.durum === 'uyku') {
+      if (st) { o.bekle += dt; if (o.bekle > 0.45) { o.durum = 'git'; o.t = 0; buSfx('bulutZip', 0.4); OLAY.emit('bulutKus', o); burst(o.x + o.w * 0.4, o.y - 30, 10, BU_R_ZIP, 90, 0.8, 5); } }
+      else o.bekle = 0;
+    } else if (o.durum === 'git' || o.durum === 'don') {
+      o.t += dt; const v = clamp(o.t / o.sure, 0, 1), e = v * v * (3 - 2 * v);
+      o.u = o.durum === 'git' ? e : 1 - e;
+      if (v >= 1) { if (o.durum === 'git') { o.durum = 'karsi'; o.bos = 0; } else { o.durum = 'uyku'; o.bekle = 0; } }
+    } else if (o.durum === 'karsi') {
+      if (st) o.bos = 0; else { o.bos += dt; if (o.bos > 2.5) { o.durum = 'don'; o.t = 0; } }
+    }
+    const nx_ = o.x0 + o.ax * o.u, ny = o.y0 - o.ay * Math.sin(Math.PI * o.u) + 4;
+    o.cisim.dx = nx_ - o.x; o.cisim.dy = ny - o.y; o.x = nx_; o.y = ny;
+    const ucuyor = o.durum === 'git' || o.durum === 'don';
+    o.uyanik = lerp(o.uyanik, o.durum === 'uyku' && !st ? 0 : 1, 1 - Math.exp(-dt * 4));
+    o.kanat += dt * (ucuyor ? 5.5 : 1.2);
+    if (o.durum === 'don') o.yonK = -1; else if (o.durum !== 'karsi') o.yonK = 1;
+    if (st && !o.on) burst(P.x, o.y - 6, 6, ['#ffffff', '#ffe6f0'], 60, 0.7, 5);
+    o.on = st; o.sz = lerp(o.sz, st ? 3 : 0, 1 - Math.exp(-dt * 9));
+    if (ucuyor && buEkranda(o.x, 100) && Math.random() < dt * 12) parca(o.x - o.yonK * o.w * 0.5, o.y + 10, -o.yonK * 40, 10, 0.8, '#ffffff', 6 + Math.random() * 4);
+  },
+  ciz(o, tm) {
+    const w = o.w, ust = o.y - 4 + o.sz * 0.5, f = o.yonK, ua = o.uyanik, nefes = Math.sin(tm * (ua > 0.5 ? 3 : 1.4)) * (ua > 0.5 ? 1 : 2);
+    const kan = Math.sin(o.kanat) * (ua > 0.5 ? 1 : 0.15);
+    g.globalCompositeOperation = 'lighter'; dglow('#ffe2ee', o.x, ust + 18, w * 0.7, 0.2); g.globalCompositeOperation = 'source-over';
+    g.save(); g.translate(o.x, ust); g.scale(f, 1);
+    buKusKanat(-w * 0.05, 8, w * 0.32, -0.5 - kan * 0.6, 0.85);   // arka kanat
+    g.fillStyle = '#f4e8ff';                                      // kuyruk tutamı
+    g.beginPath(); g.ellipse(-w * 0.52, 2, 18, 9, -0.4 + Math.sin(tm * 2) * 0.1, 0, BU_PI2); g.fill();
+    g.beginPath(); g.ellipse(-w * 0.55, 10, 15, 7, 0.2, 0, BU_PI2); g.fill();
+    g.restore();
+    buBulutCiz(buBulut(w, 26, 'kopru', o.seed), o.x, ust, w, 1, 1 + nefes * 0.012);   // gövde: kabarık bulut (sırtı yürüme yüzeyi)
+    g.save(); g.translate(o.x, ust); g.scale(f, 1);
+    const bx = w * 0.46, by = -10 + nefes * 0.5;                 // baş (önde, biraz yukarıda)
+    const hg = g.createRadialGradient(bx - 6, by - 8, 2, bx, by, 26); hg.addColorStop(0, '#ffffff'); hg.addColorStop(0.7, '#f3e6ff'); hg.addColorStop(1, '#d9c4f2');
+    g.fillStyle = hg; g.beginPath(); g.arc(bx, by, 24, 0, BU_PI2); g.fill();
+    g.fillStyle = '#ffffff'; g.beginPath(); g.arc(bx - 4, by - 22, 7, 0, BU_PI2); g.arc(bx + 5, by - 24, 6, 0, BU_PI2); g.fill();   // tepe tüyü
+    g.fillStyle = '#ffb870'; g.beginPath(); g.moveTo(bx + 20, by - 1); g.quadraticCurveTo(bx + 34, by + 2, bx + 21, by + 7); g.closePath(); g.fill();   // gaga
+    g.fillStyle = 'rgba(255,150,190,0.45)'; g.beginPath(); g.ellipse(bx + 6, by + 8, 6, 3.5, 0, 0, BU_PI2); g.fill();   // yanak
+    g.strokeStyle = '#6a4a7a'; g.fillStyle = '#4a3458'; g.lineWidth = 2; g.lineCap = 'round';
+    if (ua < 0.5) { g.beginPath(); g.arc(bx + 8, by - 3, 4.5, 0.2, Math.PI - 0.2); g.stroke(); }   // uyurken kapalı göz
+    else { const kirp = (tm % 3.2) < 0.12 ? 0.2 : 1; g.beginPath(); g.ellipse(bx + 8, by - 3, 3.6, 4.4 * kirp, 0, 0, BU_PI2); g.fill(); g.fillStyle = '#ffffff'; g.beginPath(); g.arc(bx + 9.2, by - 4.6, 1.3, 0, BU_PI2); g.fill(); }
+    buKusKanat(w * 0.08, 12, w * 0.3, -0.35 - kan * 0.8, 1);     // ön kanat
+    g.restore();
+    if (ua < 0.5) {   // uykuda: süzülen minik kabarcıklar (yazı yok)
+      for (let i = 0; i < 3; i++) { const u = ((tm * 0.45 + i / 3) % 1), zx = o.x + f * (w * 0.5 + 10 + u * 26), zy = ust - 34 - u * 50; g.globalAlpha = Math.max(0, Math.sin(u * Math.PI) * 0.7 * (1 - ua * 2)); g.fillStyle = '#ffffff'; g.beginPath(); g.arc(zx, zy, 3 + u * 5, 0, BU_PI2); g.fill(); g.strokeStyle = '#e2cff5'; g.lineWidth = 1; g.stroke(); }
+      g.globalAlpha = 1;
+    }
+  },
+});
+function buKusKanat(x, y, L, aci, a) {   // bulut ponponlarından kanat (orijin = kanat kökü), aci < 0 yukarı
+  g.save(); g.translate(x, y); g.rotate(aci); g.globalAlpha = a;
+  for (let i = 0; i < 4; i++) { const u = i / 3, r = 13 - i * 2; g.fillStyle = i % 2 ? '#f6eeff' : '#ffffff'; g.beginPath(); g.arc(-u * L * 0.9, -u * 6, r, 0, BU_PI2); g.fill(); }
+  g.strokeStyle = 'rgba(190,160,220,0.5)'; g.lineWidth = 1.2; g.beginPath(); g.arc(-L * 0.9, -6, 7, 0.5, 3.6); g.stroke();
+  g.globalAlpha = 1; g.restore();
+}
 
 // ───────────────────────── esinti: yukarı taşıyan yumuşak hava akımı ─────────────────────────
 function buEsintiSprite(w, h) {

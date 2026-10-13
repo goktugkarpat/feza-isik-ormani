@@ -16,7 +16,8 @@ const UC_KUYRUK = { x: -40, y: 1 };    // kuyruk ucu (ışık izi buradan çıka
 const UC_SURE = 34;                    // hedef uçuş süresi (sn), hız koridor uzunluğundan çıkar
 const UC_KANAT_HZ = 1.15;              // büyük Pırıl'ın kanat çırpma sıklığı
 const UC_RENK = ['#ff8fa8', '#ffb877', '#ffe17a', '#9be89a', '#8cc8ff', '#9aa6ff', '#d4a2ff'];   // gökkuşağı (pastel)
-const UC_IZ_N = 64;
+const UC_IZ_N = 90;
+let UC_KURDELE = null;   // ışık izi kurdelesinin 7 rengi (ilk çizimde hazırlanır)
 const UC_YILDIZ = ['#ff6f8e', '#ff9a4a', '#ffcf2e', '#6fd86a', '#55aaff', '#6f7cff', '#b77bff'];   // toplanan yıldızlar (doygun: aydınlık gökte seçilsin)
 const UC_AYAK = 13;                    // binek pozunda ayak tabanı gövde ortasının bu kadar altında (×olcek)
 
@@ -140,7 +141,7 @@ function ucVayGuncelle(o, dt, mx) {
   if (!o.vay) { if (o.bagli && o.faz === 'ucus' && mx > o.vayX) { o.vay = { t: 0, liste: ucVayListe(), giris: [] }; } return; }
   const V = o.vay; V.t += dt;
   V.liste.forEach((ad, i) => {
-    if (!V.giris[i] && V.t > 0.4 + i * 0.9) { V.giris[i] = true; const ix = typeof SKL_HAYVAN !== 'undefined' ? SKL_HAYVAN.indexOf(ad) : i; ucSfx('sekilCanlan', ix < 0 ? i : ix); if (i === 0 && typeof dragonHappy === 'function') { try { dragonHappy(o); } catch (e) {} } o.sevT = 1.3; }
+    if (!V.giris[i] && V.t > 0.4 + i * 0.9) { V.giris[i] = true; const ix = typeof SKL_HAYVAN !== 'undefined' ? SKL_HAYVAN.indexOf(ad) : i; ucSfx('sekilCanlan', ix < 0 ? i : ix); if (i === 0) { ucSoyle('p_b_selam'); if (typeof dragonHappy === 'function') { try { dragonHappy(o); } catch (e) {} } } o.sevT = 1.3; }
   });
 }
 let ucVayBuf = null;
@@ -397,7 +398,7 @@ function ucGorsel(o, dt) {
       for (const k of o.kemer) {
         if (!k.gecti && m.x > k.x && m.x - k.x < 120 && Math.abs(fy + 10 - k.y) < k.ry * 0.8) {
           k.gecti = true; k.parla = 1; o.sevT = 1.3; o.boost = 1; k.zipV = 3.5;
-          ucSfx('kemer'); ucSfx('isiltiTopla', 7);
+          ucSfx('kemer');
           for (let i = 0; i < 18; i++) { const a = i / 18 * 6.283; parca(k.x + Math.cos(a) * k.rx, k.y + Math.sin(a) * k.ry, Math.cos(a) * 60 - 40, Math.sin(a) * 60, 1.2, UC_RENK[i % 7], 8); }
           OLAY.emit('ucusKemer', { o, k });
         }
@@ -509,19 +510,30 @@ function ucKuslarCiz(o, tm) {   // yanlarında uçan beyaz-pembe kuşçuklar
 }
 function ucIzCiz(o, tm) {
   const n = o.izN; if (n < 2) return;
+  if (!UC_KURDELE) UC_KURDELE = UC_YILDIZ.map(c => mixHex(c, '#ffffff', 0.3));
   g.globalCompositeOperation = 'lighter';
   for (let k = 0; k < n; k += 2) {
     const j = (o.izI - 1 - k + UC_IZ_N * 4) % UC_IZ_N, u = k / UC_IZ_N;
     const x = o.iz[j * 2], y = o.iz[j * 2 + 1] + Math.sin(tm * 3 + k * 0.4) * 3 * u;
-    dglow(UC_RENK[(k >> 2) % 7], x, y, 26 * (1 - u * 0.5), 0.42 * (1 - u));
+    dglow(UC_RENK[(k >> 2) % 7], x, y, 26 * (1 - u * 0.5), 0.22 * (1 - u));
   }
-  g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = '#fff5ff';
-  for (let k0 = 0; k0 < n - 1; k0 += 8) {   // 8'li parçalar: kare başına az çizim çağrısı
-    const u = k0 / UC_IZ_N, k1 = Math.min(n - 1, k0 + 8);
-    g.globalAlpha = 0.5 * (1 - u); g.lineWidth = 5 * (1 - u) + 1;
-    g.beginPath();
-    for (let k = k0; k <= k1; k++) { const j = (o.izI - 1 - k + UC_IZ_N * 4) % UC_IZ_N; if (k === k0) g.moveTo(o.iz[j * 2], o.iz[j * 2 + 1]); else g.lineTo(o.iz[j * 2], o.iz[j * 2 + 1]); }
-    g.stroke();
+  g.globalCompositeOperation = 'source-over';
+  // gökkuşağı kurdelesi: 7 ince renkli iplik, kuyruktan uzaklaştıkça hafifçe açılır ve solar (aydınlık gökte de seçilsin diye source-over)
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  const KS = 16;
+  for (let st = 0; st < 7; st++) {
+    g.strokeStyle = UC_KURDELE[st]; g.lineWidth = 3.8;
+    const of = (st - 3) * 3.3;
+    for (let k0 = 0; k0 < n - 1; k0 += KS) {
+      const u = k0 / UC_IZ_N, k1 = Math.min(n - 1, k0 + KS);
+      g.globalAlpha = 0.75 * (1 - u) * (1 - u);
+      g.beginPath();
+      for (let k = k0; k <= k1; k++) {
+        const j = (o.izI - 1 - k + UC_IZ_N * 4) % UC_IZ_N, uu = k / UC_IZ_N, yy = o.iz[j * 2 + 1] + of * (1 + uu * 1.6) + Math.sin(tm * 3 - k * 0.35) * 4 * uu;
+        if (k === k0) g.moveTo(o.iz[j * 2], yy); else g.lineTo(o.iz[j * 2], yy);
+      }
+      g.stroke();
+    }
   }
   g.globalAlpha = 1;
   for (let k = 3; k < n; k += 5) {   // izde göz kırpan minik yıldızlar

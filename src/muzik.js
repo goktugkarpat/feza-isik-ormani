@@ -832,7 +832,7 @@ const AU = (() => {
     if (bic === 1 && k > 0.25) { const t2 = akTon(ak, ak.bas + 31, 8); for (let i = 0; i < 6; i++) arp(t2[(7 - i) % t2.length], t + 0.6 + i * 0.18, 0.022, 0.5 - i * 0.18, 1.8); }
     if (k > 0.7) { const t3 = akTon(ak, ak.bas + 36, 6); for (let s = 0; s < 8; s++) if (s % 2 === 0 || rnd() < 0.5) arp(t3[[0, 2, 1, 3, 2, 4, 3, 5][s]], t + s * S8 + 0.15, 0.013 * sm(0.7, 1, k), (s - 3.5) * 0.12, 1.0); }
     // güneş pırıltıları: akora uyan yüksek cam notalar (kuzucuk ve gökkuşağıyla sıklaşır)
-    const kn = Math.round(0.4 + 2.4 * k + 3 * dr + rnd() * 0.8);
+    const kn = Math.round(0.4 + 2.2 * k + 1.8 * dr + rnd() * 0.8);
     if (kn > 0) { const cand = akTon(ak, 86, 8, true); for (let i = 0; i < kn; i++) cam(NOTE(sec(cand)), t + 0.1 + rnd() * 2.1, 0.0075 + 0.006 * k, 1.2 + rnd(), rnd() * 1.6 - 0.8, null, rnd() < 0.5); }
     // gün doğumu: uzakta ara ara kuşlar (çok kısık)
     if (rnd() < 0.14 + 0.08 * k) { const tk = t + 0.3 + rnd() * 1.8, p = rnd() < 0.5 ? -0.6 : 0.6; kus(tk, p); if (rnd() < 0.4) kus(tk + 0.4, p); }
@@ -846,7 +846,7 @@ const AU = (() => {
     if (k > 0.55) { bas(ak.bas + 12, t + 4 * S8, 0.045, 'nabiz'); if (k > 0.85) bas(ak.bas + 19, t + 6 * S8, 0.025, 'pizz'); }
     if (k > 0.85) for (let s = 0; s < 8; s += 2) gur(t + s * S8, 0.07, 'highpass', 6500, 9500, 0.8, 0.003 * (s % 4 ? 0.7 : 1.2), 0.08 * (s % 4 ? 1 : -1), 0, B.zil);
     // gökkuşağı doruğu / kuzucuk anı: her akorda yükselen yedi renkli çan şelalesi + geniş akor
-    if ((dr > 0.5 || oz) && bic === 0) {
+    if ((dr > 0.5 || oz) && bic === 0 && (pi % 2 === 0 || oz)) {   // iPad: şelale her ikinci akorda (ses sayısı)
       const g = Math.max(dr, 0.55);
       GOK7.forEach((m, i) => cam(NOTE(m + 12), t + 0.15 + i * 0.1, 0.022 * g, 2.8, -0.7 + i * 0.23, null, i > 4));
       if (dr > 0.5) kabar([ak.bas + 12, ak.bas + 19, ak.pad[2], ak.pad[3] + 12, ak.pad[1] + 24], t + 0.1, 1.4, 1.2, 1.9, 0.018 * dr, null, true);

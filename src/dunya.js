@@ -998,17 +998,27 @@ function dnWillowPaint(w, which, lq) {
   const C = (k, al) => dcAt(k, lq, al);
   if (!which) {
     x.save(); x.translate(1.5, -1.5); x.fillStyle = C('rim', 0.22); x.fill(w.crownB); x.restore();
-    x.fillStyle = w.pond ? mixc(dcol('mid', lq), '#c080d0', 0.22, 0.92) : C('mid', 0.92); x.fill(w.crownB);
+    x.fillStyle = w.pond ? mixc(dcol('mid', lq), '#c080d0', 0.34, 0.92) : C('mid', 0.92); x.fill(w.crownB);
     x.save(); x.translate(2.2 * -w.sd, -1); x.fillStyle = C('rim', 0.4); for (const q of w.parts) x.fill(q); x.fill(w.crown); x.restore();
     const tg = x.createLinearGradient(0, w.base - 420, 0, w.base); tg.addColorStop(0, C('near', 1)); tg.addColorStop(1, C('mid', 1));
     x.fillStyle = tg; for (const q of w.parts) x.fill(q); x.fill(w.crown);
+    if (w.pond) dnPondBlossoms(x, w, lq, false);
   } else {
     for (let pass = 0; pass < 2; pass++) {
       const col = pass ? C('near', 1) : C('mid', 0.85); x.strokeStyle = col; x.fillStyle = col; x.lineWidth = pass ? 1.4 : 1;
       for (const v of w.vines) { if (v[5] !== pass) continue; x.beginPath(); x.moveTo(v[0], v[1]); x.lineTo(v[0], v[1] + v[2]); x.stroke(); x.fill(v[6]); }
     }
+    if (w.pond) dnPondBlossoms(x, w, lq, true);
   }
   w[key + 'L'] = lq; w[key + 'S'] = sc; w[key + 'X'] = X0; w[key + 'Y'] = Y0; w[key + 'W'] = X1 - X0; w[key + 'H'] = Y1 - Y0;
+}
+// gölcük söğütleri çiçekli (pembe-beyaz salkımlar): ana gölün koyu söğütlerinden açıkça ayrılsın
+function dnPondBlossoms(x, w, lq, onVines) {
+  const R = rng(919 + Math.round(w.x) + (onVines ? 7 : 0)), cols = ['#ffb4dc', '#ffd0ea', '#f8c0ff', '#fff0f6'], a = 0.55 + 0.35 * clamp(lq, 0, 1);
+  const bloom = (cx, cy, r) => { for (let k = 0; k < 5; k++) { const an = k * 1.2566 + R() * 0.4, px = cx + Math.cos(an) * r * 0.55, py = cy + Math.sin(an) * r * 0.55; x.fillStyle = dnRgba(cols[Math.floor(R() * 4)], a); x.beginPath(); x.arc(px, py, r * 0.55, 0, 6.283); x.fill(); }
+    x.fillStyle = dnRgba('#fff6c8', a); x.beginPath(); x.arc(cx, cy, r * 0.28, 0, 6.283); x.fill(); };
+  if (!onVines) { for (const v of w.vines) { if (R() < 0.35) continue; for (let k = 0, n = 2 + Math.floor(R() * 3); k < n; k++) bloom(v[0] + (R() - 0.5) * 34, v[1] - 6 - R() * 22, 3.2 + R() * 2.6); } }
+  else for (const v of w.vines) { for (let u = 0.08 + R() * 0.1; u < 0.95; u += 0.16 + R() * 0.14) if (R() < 0.7) bloom(v[0] + (R() - 0.5) * 6, v[1] + v[2] * u, 2.2 + R() * 1.6); }
 }
 function dnDrawWillows(tm, vx0, vx1, bio) {
   const lq = Math.round(light * 20) / 20, sc = DN_WSC();
@@ -1577,7 +1587,7 @@ function dnBuildLake(G, gi) {
   }
   const maxD = clamp(DN_LH - G.su - 40, 40, 110), ph = R() * 6;
   const dist = x => { let d = Math.min(x - G.x0, G.x1 - x); for (let dnK17 = 0, dnE17, a, b; dnK17 < solid.length && (dnE17 = solid[dnK17], a = dnE17[0], b = dnE17[1], true); dnK17++) d = Math.min(d, x < a ? a - x : x > b ? x - b : -1); return d; };
-  const bedY = x => { const d = dist(x); if (d < 0) return G.su - 4; const k = smooth(clamp(d / 135, 0, 1)); return G.su + 8 + (maxD - 8) * k + (Math.sin(x * 0.031 + ph) * 4 + Math.sin(x * 0.083) * 2) * k; };
+  const bedY = x => { const d = dist(x); if (d < 0) return G.su - 4; const k = smooth(clamp(d / 200, 0, 1)); return G.su + 8 + (maxD - 8) * k + (Math.sin(x * 0.031 + ph) * 4 + Math.sin(x * 0.083) * 2) * k; };
   DN_BEDP = new Path2D(); DN_BEDLINE = new Path2D();
   DN_BEDP.moveTo(G.x0 - 18, DN_LH + 400);
   for (let x = G.x0 - 18; x <= G.x1 + 18; x += 8) { const y = bedY(clamp(x, G.x0, G.x1)); DN_BED.push([x, y]); DN_BEDP.lineTo(x, y); if (x === G.x0 - 18) DN_BEDLINE.moveTo(x, y); else DN_BEDLINE.lineTo(x, y); }
@@ -2863,7 +2873,7 @@ function dnBedPaint(G, lq) {
   }
   x.globalCompositeOperation = 'lighter';
   x.strokeStyle = dcAt('bio', lq, 0.12); x.lineWidth = 4; x.stroke(DN_BEDLINE);
-  x.strokeStyle = dcAt('rim', lq, 0.28); x.lineWidth = 1; x.stroke(DN_BEDLINE);
+  x.strokeStyle = dcAt('rim', lq, 0.2); x.lineWidth = 1; x.stroke(DN_BEDLINE);
   x.save(); x.clip(DN_BEDP);
   x.strokeStyle = dnSoil(0, Math.min(1, lq + 0.3), 0.22); x.lineWidth = 26; x.stroke(DN_BEDLINE);
   x.strokeStyle = dnSoil(0, Math.min(1, lq + 0.3), 0.25); x.lineWidth = 10; x.stroke(DN_BEDLINE);
@@ -3049,9 +3059,24 @@ function drawMotes(tm, zMin, zMax) {
 }
 // ── karakterlerden sonra: göl yansıması + ışıltılı yapraklar (Gris dokunuşu) ──
 const DN_PETALS = (() => { const R = rng(21), a = []; for (let i = 0; i < 22; i++) a.push({ x: R() * 1400, y: R() * 700, ph: R() * 6.28, sp: 0.5 + R(), s: 0.6 + R() * 0.6, c: R() }); return a; })();
+// çiçekli söğütlerden suya süzülen pembe taç yaprakları (yalnız gölcük; dünya dönüşümünde, ucuz elips)
+function dnPondPetals(tm) {
+  let on = false; const vx0 = cam.x - 100, vx1 = cam.x + VW + 100;
+  for (const w of DN_WILLOWS) { if (!w.pond || w.x1 < vx0 || w.x0 > vx1) continue;
+    if (!on) { g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S); on = true; }
+    const su = DN_GOL ? DN_GOLS.reduce((m, G) => Math.abs(G.x0 - w.x) < Math.abs(m.x0 - w.x) ? G : m, DN_GOLS[0]).su : w.base + 40;
+    for (let i = 0; i < 12; i++) { const per = 7 + (i % 5) * 1.1, e = ((tm + i * 2.37 + w.ph) % per) / per, x0 = w.x + w.sd * (40 + (i * 67) % 330), y0 = w.base - 300 + (i * 41) % 110;
+      const x = x0 + w.sd * e * 60 + Math.sin(tm * 1.3 + i * 1.7) * 14, y = lerp(y0, su - 2, e), a = Math.min(1, e * 6) * Math.min(1, (1 - e) * 8);
+      if (x < vx0 || x > vx1 || a <= 0.02) continue;
+      g.save(); g.translate(x, y); g.rotate(tm * 1.6 + i); g.scale(1, 0.4 + 0.6 * Math.abs(Math.sin(tm * 2.2 + i))); g.globalAlpha = 0.85 * a; g.fillStyle = i % 3 ? '#ffc4e6' : '#fff0f8'; g.beginPath(); g.ellipse(0, 0, 3.6, 2, 0, 0, 6.283); g.fill(); g.restore();
+      if (i % 4 === 0) { g.globalCompositeOperation = 'lighter'; dglow('#ffb4dc', x, y, 7, 0.3 * a); g.globalCompositeOperation = 'source-over'; } }
+  }
+  g.globalAlpha = 1;
+}
 function drawPetals(tm) {
   for (const LK of DN_LAKES) if (dnLakeVis(LK, 120)) { dnUseLake(LK); dnReflect(tm); dnWaterFx(tm); }
   dnFallingLeaves(tm);
+  dnPondPetals(tm);
   const a0 = clamp((light - 0.25) * 2, 0, 1) * (0.7 + 0.3 * DNR.aciklik) + dnBlaze * 0.5;
   if (a0 <= 0) return;
   g.setTransform(S, 0, 0, S, 0, 0);

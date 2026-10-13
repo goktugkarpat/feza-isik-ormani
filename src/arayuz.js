@@ -639,7 +639,9 @@ const ARAYUZ = (() => {
     const say = v => Math.max(0, Math.min(40, Math.floor(v || 0)));
     const satir = [];
     for (const [tur, n, top0] of [['kuzu', SAYAC.kuzu, SAYAC.kuzuTop], ['yildiz', SAYAC.yildiz, SAYAC.yildizTop], ['cicek', SAYAC.cicek, SAYAC.cicekTop], ['pofuduk', SAYAC.pofuduk, SAYAC.pofudukTop], ['tohum', SAYAC.tohum, SAYAC.tohumTop]]) {
-      const dolu = say(n), top = Math.max(dolu, say(top0));
+      const dolu = say(n);
+      let top = Math.max(dolu, say(top0));
+      if (tur === 'tohum' && top > 14) top = dolu;   // çok sayıda isteğe bağlı tohum: kart gri yuvalarla dolmasın, yalnız toplananlar (hep olumlu)
       if (dolu <= 0) continue;
       const ns = Math.ceil(top / UI_SATIR_EN), per = Math.ceil(top / ns);
       for (let k = 0, kalan = top, kd = dolu; k < ns; k++) { const m = Math.min(per, kalan), ofs = top - kalan; kalan -= m; const d = Math.min(m, kd); kd -= d; satir.push({ tur, n: m, dolu: d, yeniTur: k === 0, grupN: ns, ofs }); }
@@ -798,7 +800,7 @@ const ARAYUZ = (() => {
         g.globalCompositeOperation = 'lighter';
         if (q < 1.1) parilti(cx + boy * 0.3, y - boy * 0.3, boy * 0.6 * Math.sin(uiSeg(q, 0, 1.1) * Math.PI), 1);
         g.globalCompositeOperation = 'source-over';
-        simgeCiz(sat.tur === 'kuzu' ? 'kuzu' + (i + (sat.ofs || 0)) : sat.tur, true, cx, y + zip, boy * 1.15, Math.min(1, q * 3), Math.max(0.01, sc));
+        simgeCiz(sat.tur === 'kuzu' ? 'kuzu' + (i + (sat.ofs || 0)) : sat.tur, true, cx, y + zip, boy * (sat.tur === 'kuzu' ? 1.3 : 1.15), Math.min(1, q * 3), Math.max(0.01, sc));
       }
     });
     // üç büyük yıldız kendi satırında (hep olumlu); üstünde ince altın ayraç
@@ -846,12 +848,16 @@ const ARAYUZ = (() => {
   OLAY.on('dokunus', v => {
     if (DURUM !== 'son' || !son || !tekrarYer) return;
     if (!v || v.x == null || Math.hypot(v.x - tekrarYer.x, v.y - tekrarYer.y) < tekrarYer.r) {
-      try {   // odaya dön: seçim ekranı (başlık sayfası); ?bolum/?atla düşer, ?sessiz gibi test bayrakları kalır
+      if (son.cikis) return; son.cikis = true;
+      // aydınlık sabah odasından karanlık seçim ekranına sert kesme olmasın: önce ≈0,45 sn'de gece mavisine kararır, sonra yenilenir
+      let bekle = 0;
+      try { if (typeof omPerde !== 'undefined' && omPerde) { omPerde.hedef = 1; omPerde.hiz = 2.4; bekle = 480; } } catch (e) {}
+      setTimeout(() => { try {   // odaya dön: seçim ekranı (başlık sayfası); ?bolum/?atla düşer, ?sessiz gibi test bayrakları kalır
         sessionStorage.removeItem('fezaIsikSec'); sessionStorage.removeItem('fezaGecis');
         const q = new URLSearchParams(location.search); q.delete('bolum'); q.delete('atla'); q.delete('nogecis');
         const qs = q.toString().replace(/=(&|$)/g, '$1');   // değersiz bayraklar (?sessiz) "sessiz=" olmasın
         location.replace(location.pathname + (qs ? '?' + qs : ''));
-      } catch (e) { try { location.reload(); } catch (e2) {} }
+      } catch (e) { try { location.reload(); } catch (e2) {} } }, bekle);
     }
   });
 

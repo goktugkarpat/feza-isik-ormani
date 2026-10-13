@@ -182,7 +182,8 @@ let ustundeki = null;   // Feza'nın üstünde durduğu nesne
 const OM = {   // ayar sabitleri
   STEP: 1 / 120, KOS: 250, ZIPLA: 730, CIFT: 650, YERCEKIM: 2200, DUSUS: 1.25, BIRAK: 2.1, MAXDUS: 950,
   IVME: 1700, FREN: 2300, DONUS: 3400, HAVA_IVME: 1300, HAVA_FREN: 800,
-  COYOTE: 0.15, TAMPON: 0.2, MIN_BASILI: 0.11, TEPE: 0.6, KOSE: 13, KENAR: 12, PAY: 6,
+  COYOTE: 0.15, TAMPON: 0.2, MIN_BASILI: 0.16,   // MIN_BASILI: 5 yaşın kısa dokunuşunda da zıplama ≈2,6 kare (0,11'de ≈2,3)
+  TEPE: 0.6, KOSE: 13, KENAR: 12, PAY: 6,
 };
 let omStandY = 0;   // üstünde durulan cismin son üst y'si / x'i (taşıma için)
 let omStandX = 0;
@@ -889,6 +890,13 @@ function stepCam(dt, snap) {
   let ty = omC.tabanY - VHg * lerp(0.76, 0.82, pfy) + omZ.yo, st = P.ground ? 0.42 : 0.5;
   if (py - ty < ust) { ty = py - ust; st = 0.2; }
   if (py - ty > alt) { ty = py - alt; st = 0.14; }
+  // düşerken aşağıya ileri bakış: hızlı düşüşte kamera geride kalıp Feza'yı ekranın dibine (sert sınıra) itmesin; nereye ineceği görünsün
+  const dusK = (!P.ground && !P.ucus && !(P.fade > 0) && !snap) ? clamp((P.vy - 250) / 450, 0, 1) : 0;
+  omC.dus = snap ? 0 : lerp(omC.dus || 0, dusK, 1 - Math.exp(-dt * (dusK > (omC.dus || 0) ? 6 : 3)));
+  if (omC.dus > 0.001) {
+    const tyD = py - VHg * 0.66 + Math.min(Math.max(P.vy, 0) * 0.1, VHg * 0.12);
+    if (tyD > ty) { ty = lerp(ty, tyD, omC.dus); st = Math.min(st, lerp(st, 0.16, omC.dus)); }
+  }
   if (omZ.agacW > 0 && TREE) ty = Math.min(ty, lerp(ty, Math.max(TREE.y - OM_AGAC_TAC - 40, omC.tabanY - VHg * 0.86), omZ.agacW));   // ağacın tacı görünsün
   // dikkat çerçevesi: kutunun ortasına bak; kutu sığmadıysa özne öncelikli, ama Feza ekranda kalır
   const dw = omDk.w > 0 ? smooth(omDk.w) : 0;

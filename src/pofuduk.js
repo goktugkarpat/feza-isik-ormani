@@ -1419,7 +1419,18 @@ function pfGit(o, p, dt, tx, ty, yer, bos) {
   }
   p.rot = lerp(p.rot, 0, 1 - Math.exp(-dt * 10));
   p.gy = lerp(p.gy, 0, 1 - Math.exp(-dt * 10));
-  const mx = clamp(dx * 9 * dt, -340 * dt, 340 * dt);
+  let mx = clamp(dx * 9 * dt, -340 * dt, 340 * dt);
+  if (p.durum === 'takip' && Math.abs(mx) > 0.01) {   // öndeki arkadaşına binmesin: aynı yöne yürüyorsa arkasında sıraya girer
+    const yn = Math.sign(mx);
+    for (const q of pfKuyruk) {
+      if (q === o || q.pf.sihir || q.pf.durum !== 'takip' || Math.abs(q.y - o.y) > 22) continue;
+      const ara = (q.x - o.x) * yn;
+      if (ara > 0 && ara < 56) mx = yn * Math.min(Math.abs(mx), Math.max(0, ara - 42));
+    }
+    // uzun süre arkada sıkışırsa (yeri arkadaşının ötesinde): pırıltılı yayla üstünden süzülür
+    p.engelT = Math.abs(mx) < 0.05 && Math.abs(dx) > 40 ? (p.engelT || 0) + dt : 0;
+    if (p.engelT > 0.7) { p.engelT = 0; p.sihir = true; p.jv = 0; pfYayKur(p, o.x, p.yt + p.jy, tx, ty); p.alift = Math.max(p.alift, 70); p.jy = 0; pfZipla(p, 3.5); }
+  }
   o.x += mx;
   if (Math.abs(mx) > 0.05) p.f = mx < 0 ? -1 : 1;
   const hiz = Math.abs(mx) / Math.max(dt, 1e-4), gidiyor = hiz > 25;
@@ -1589,7 +1600,7 @@ function pfDans(o, p, dt) {
 // (yollar kesişmez). Yan yana dansçılar art arda değil aralıklı kalkar; havadakiler birbirine yaklaşırsa yumuşakça açılır.
 const PF_FENER_ADAY = [];
 for (let r = 0; r < 3; r++) for (let x = -330 + r * 15; x <= 330; x += 45) if (Math.abs(x) > 28) PF_FENER_ADAY.push(x, -200 - r * 30 - (Math.abs(x) % 2) * 6);
-const PF_FEN_YUK = 1.25, PF_FEN_AS = 0.5, PF_FEN_DON = 1.1, PF_FEN_ARA = 52;
+const PF_FEN_YUK = 1.1, PF_FEN_AS = 0.5, PF_FEN_DON = 1.1, PF_FEN_ARA = 52;
 function pfFenerKur(F) {
   const L = F.kucuk.slice().sort((a, b) => {
     const sa = F.yer && F.yer[a.pf.dansI], sb = F.yer && F.yer[b.pf.dansI];
@@ -1597,8 +1608,8 @@ function pfFenerKur(F) {
   });
   // kalkış sırası: 0,1,4,5,8,9,… sonra 2,3,6,7,… (komşular aynı anda havada olmasın)
   const L2 = L.filter((o, k) => (k >> 1) % 2 === 0).concat(L.filter((o, k) => (k >> 1) % 2 === 1));
-  const n = L2.length, ara = n > 1 ? Math.min(0.5, 4 / (n - 1)) : 0;
-  F.fener = L2.map((o, k) => ({ o, tS: 1.4 + k * ara, durum: 0, t: 0, lx: 0, ly: 0, ust: 0, on: -1, ph: k * 1.7, col: o.pf.pal, x0: 0, y0: 0, x1: 0, y1: 0, ox: 0, oy: 0, sol: 0 }));
+  const n = L2.length, ara = n > 1 ? Math.min(0.42, 3.4 / (n - 1)) : 0;
+  F.fener = L2.map((o, k) => ({ o, tS: 1.0 + k * ara, durum: 0, t: 0, lx: 0, ly: 0, ust: 0, on: -1, ph: k * 1.7, col: o.pf.pal, x0: 0, y0: 0, x1: 0, y1: 0, ox: 0, oy: 0, sol: 0 }));
 }
 function pfFenerSx(F, f) { const s = F.yer && F.yer[f.o.pf.dansI]; return s ? s.x : f.o.x; }
 function pfFenerYer(F, e) {
@@ -1643,7 +1654,7 @@ function pfFenerGuncelle(F, dt) {
       if (f === e || f.durum < 1 || f.durum > 3 || !f.o) continue;
       if (Math.abs(f.o.x - e.o.x) < 72 || (f.durum < 3 && Math.abs(f.lx - e.lx) < 44) || (f.durum === 3 && Math.abs(f.lx - e.lx) < 70)) { bos = false; break; }
     }
-    if (!bos && F.t < e.tS + 1.6) continue;
+    if (!bos && F.t < e.tS + 1.2) continue;
     e.durum = 1; e.t = 0; e.x0 = e.o.x; e.y0 = e.o.y; p.fen = e;
     pfZipla(p, 4); pfPirilti(e.o.x, e.o.y - 10, 6, [p.pal.i, '#ffffff', '#fff3b0'], 120, 0.6, 7, -Math.PI / 2, 1.8);
   }

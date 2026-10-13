@@ -48,7 +48,7 @@ function kzPalHazir(p, gri) {   // yüz, kulak içi, bacak, tırnak renkleri (bi
   p.bac = kzMix(p.f, p.d, 0.2);
   p.tir = kzMix(p.d, '#5a4a6a', 0.45);
   p.bac2 = kzMix(p.bac, p.d, 0.25);   // uzaktaki bacaklar
-  p.kul = kzMix(p.f, p.a, gri ? 0.3 : 0.4);   // kulak dışı
+  p.kul = kzMix(p.f, p.a, gri ? 0.5 : 0.45);   // kulak dışı
   p.kulK = kzRgba(p.d, 0.45);
 }
 kzPalHazir(KZ_GRI, true);
@@ -467,7 +467,7 @@ function kzGuncelle(o, dt) {
     case 'yay': kzYayda(o, k, dt); break;
   }
   k.yon = lerp(k.yon, k.yonH, 1 - Math.exp(-dt * 8));
-  const olcH = k.durum === 'uzgun' || k.durum === 'sarilma' ? 1 : KZ_OLC;
+  const olcH = k.durum === 'uzgun' || k.durum === 'sarilma' ? 1 : k.durum === 'ucus' ? 0.72 : KZ_OLC;
   k.olc = lerp(k.olc, olcH, 1 - Math.exp(-dt * 3));
   if (k.meeT > 0) { k.agiz = 'mee'; k.agizB = Math.sin(Math.PI * clamp(1 - k.meeT / 0.55, 0, 1)); }
   // gölge için alttaki zemin
@@ -596,7 +596,10 @@ function kzSevinc(o, k, dt) {
     kzPuf(o.x - 16, o.y - 2, -30, -6, 0.6, 6); kzPuf(o.x + 16, o.y - 2, 30, -6, 0.6, 6);
     if (k.hopN === 1) { k.hv = -350; k.takla = 0.0001; kzZipla(k, 4); kzMee(o, k, true); }
     else if (k.hopN === 2) { k.hv = -230; kzZipla(k, 3); }
-    else { k.durum = 'takip'; k.sira = kzSuru.length; kzSuru.push(o); k.ty = o.y; k.tx = o.x; k.bos = 1.5 + Math.random() * 2; }
+    else {
+      k.durum = 'takip'; k.sira = kzSuru.length; kzSuru.push(o); k.ty = o.y; k.tx = o.x; k.bos = 1.5 + Math.random() * 2;
+      if (kzYay) { const p = kzYay.konum[k.renkI % kzYay.konum.length]; k.durum = 'yay'; k.st = 0; k.yayVar = false; k.yx = p.x; k.yy = p.y; }   // gökkuşağı başlamıştı: hemen yerine
+    }
   }
 }
 
@@ -636,7 +639,7 @@ function kzTakip(o, k, dt) {
     const e = smooth(clamp((2.4 - Math.max(0, k.otla - 0.4)) / 0.35, 0, 1)) * smooth(clamp(k.otla / 0.35, 0, 1));
     k.bas = lerp(k.bas, e, 1 - Math.exp(-dt * 8));
     k.cigne += dt;
-    agiz = e > 0.5 && Math.sin(k.cigne * 13) > 0 ? 'o' : 'cigne'; ac = lerp(ac, 0.35, e); bakY = 0.8 * e; bakX = k.f * 0.5 * e;
+    agiz = e > 0.5 && Math.sin(k.cigne * 13) > 0 ? 'o' : 'cigne'; if (e > 0.5) mutlu = 1; bakY = 0.8 * e; bakX = k.f * 0.5 * e;
     if (e > 0.6 && Math.random() < dt * 3) { const mx = o.x + k.yon * KZ_BW * 0.4 * k.olc + k.f * 8; kzPuf(mx, o.y - 3, k.f * 6, -14, 0.9, 3.5, '#ffffff', 0.7); }
     if (k.otla <= 0) { k.otla = 0; k.mutluT = 0.8; }
   } else k.bas = lerp(k.bas, 0, 1 - Math.exp(-dt * 6));
@@ -817,7 +820,7 @@ function kzUcus(o, k, dt) {
   let tx, ty;
   if (U && U.kuyruk && typeof U.kuyruk.x === 'number') {   // ucus.js isterse kuyruk ucunu verir: {x, y, yon}
     const yon = U.kuyruk.yon || -1;
-    tx = U.kuyruk.x + yon * (24 + k.sira * 30); ty = U.kuyruk.y + Math.sin(k.t * 2.2 + k.sira * 0.9) * 7;
+    tx = U.kuyruk.x + yon * (24 + k.sira * 30); ty = U.kuyruk.y + (k.sira % 2 ? -5 : 4) + Math.sin(k.t * 2.2 + k.sira * 0.9) * 5;
   } else {
     const h = kzUcIzNokta(110 + k.sira * 30); tx = h.x; ty = h.y + 22 + Math.sin(k.t * 2.2 + k.sira * 0.9) * 7;
   }
@@ -832,7 +835,7 @@ function kzUcus(o, k, dt) {
   k.rot = lerp(k.rot, clamp(k.vy / 1600, -0.3, 0.3) * k.f, 1 - Math.exp(-dt * 6));
   k.mutlu = lerp(k.mutlu, 1, 1 - Math.exp(-dt * 8)); k.agiz = 'acik'; k.agizB = 0.6; k.kulA = lerp(k.kulA, -0.45, 1 - Math.exp(-dt * 6));
   k.bakX = k.f * 0.6; k.bakY = 0; k.parla = lerp(k.parla, 0.4, 1 - Math.exp(-dt * 3));
-  kzAyir(o, k, dt);
+  k.ox = lerp(k.ox, 0, 1 - Math.exp(-dt * 6)); k.oy = lerp(k.oy, 0, 1 - Math.exp(-dt * 6));   // kuyrukta sık dizilirler (ayırma yok)
   if (Math.random() < dt * 10) kzPuf(o.x - k.f * 22, o.y - 18 + (Math.random() - 0.5) * 8, -k.f * 40, 4, 0.7, 5 + Math.random() * 3, '#ffffff', 0.45);
 }
 
@@ -1023,13 +1026,13 @@ function kzKafa(k, c, s, rU, tm) {
   // kulaklar (başın arkasında): yana doğru uzanır; üzgünken aşağı sarkar, mutluyken dik
   for (let sg = -1; sg <= 1; sg += 2) {
     const dirX = sg * s - c * 0.95, ad = Math.abs(dirX);
-    const L = KZ_HW * 0.62 * clamp(ad * 0.85 + 0.3, 0.5, 1.05);
-    const bx = sg * hw * 0.62 * s - c * hw * 0.25, by = -hh * 0.42;
+    const L = KZ_HW * 0.52 * clamp(ad * 0.85 + 0.3, 0.55, 1.05);
+    const bx = sg * hw * 0.66 * s - c * hw * 0.2, by = -hh * 0.36;
     const dr = clamp(k.kulA + k.kul * sg * 0.7 + Math.sin(tm * 1.7 + sg + k.seed) * 0.03, -0.7, 1.45);
     const ang = dirX >= 0 ? dr : Math.PI - dr;
     const ca = Math.cos(ang), sa = Math.sin(ang);
     g.save(); g.translate(bx + ca * L * 0.46, by + sa * L * 0.46); g.rotate(ang);
-    g.fillStyle = basU >= 0.5 ? k.pal.kul : KZ_GRI.kul; g.beginPath(); g.ellipse(0, 0, L * 0.52, KZ_HW * 0.15, 0, 0, 6.283); g.fill();
+    g.fillStyle = basU >= 0.5 ? k.pal.kul : KZ_GRI.kul; g.beginPath(); g.ellipse(0, 0, L * 0.52, KZ_HW * 0.13, 0, 0, 6.283); g.fill();
     g.strokeStyle = basU >= 0.5 ? k.pal.kulK : KZ_GRI.kulK; g.lineWidth = 0.7; g.stroke();
     g.fillStyle = icCol; g.globalAlpha = 0.85; g.beginPath(); g.ellipse(L * 0.06, 0.4, L * 0.34, KZ_HW * 0.075, 0, 0, 6.283); g.fill();
     g.globalAlpha = 1; g.restore();

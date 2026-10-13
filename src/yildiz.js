@@ -233,6 +233,18 @@ TUR.kaydet('yildiz', {
   },
 });
 
+// Yürüyerek küçük basamak çıkma (≤16 birim): üstten geçilen cisimler (taş, ada) Feza'yı ancak üstünden düşerken yakalar; kıyıdan (720)
+// 716'daki ilk taşa ZIPLAMADAN yürüyen çocuk taşın altından geçip suya düşüyordu (bot ölçümü, LEVEL12). Yerde yürürken ayaklar taşın
+// üst yüzünün biraz altındaysa ve gövde taşın üstüne girdiyse Feza yumuşakça taşın üstüne alınır (görünmez küçük adım).
+const YL_BASAMAK = 17;
+function ylBasamak(o) {
+  const c = o.cisim; if (!c || !c.aktif || !P.ground || P.fade > 0 || DURUM !== 'oyun') return;
+  if (typeof ustundeki !== 'undefined' && ustundeki === o) return;
+  const top = o.y - c.h, d = P.y - top; if (d <= 0.5 || d > YL_BASAMAK) return;
+  const hw = c.w / 2, on = 17;   // ön kenar taşa ≤17 birim kalınca (taşlar arası ≤15 boşluk; Feza boşluğa düşmeden alınır)
+  if (P.x < o.x ? (P.vx < 40 || P.x + PW + on <= o.x - hw) : (P.vx > -40 || P.x - PW - on >= o.x + hw)) return;
+  P.y = top; P.vy = 0;
+}
 // ───────────────────────── yildizTasi (suyun üstünde basılan taş) ─────────────────────────
 let ylZ = null;   // zincir adı → taşlar (soldan sağa)
 function ylZincirKur() {
@@ -314,6 +326,7 @@ TUR.kaydet('yildizTasi', {
       if (!ac && dx < 150 && P.y < o.y + 90) ac = true;   // yedek: yakına gelen bir Feza (adadan, minderden...) ayakta kalabilsin
       if (ac) ylTasAc(o);
     }
+    ylBasamak(o);
     const gh = (!o.aktif && Math.abs(P.x - o.x) < 760) ? 1 : 0;   // Feza zincire yaklaşınca bütün zincir silik görünür
     o.ghost = lerp(o.ghost, gh, 1 - Math.exp(-dt * 3));
     if (o.aktif) o.acik = Math.min(1, o.acik + dt / 0.5);
@@ -397,13 +410,14 @@ function ylAdaSprite(w, seed) {
 TUR.kaydet('yildizAda', {
   kur(o) {
     const w = o.w || 260;
-    o.cisim = { w: w - 14, h: 2, tip: 'ustten', aktif: true, dx: 0, dy: 0 };
+    o.cisim = { w: w - 2, h: 2, tip: 'ustten', aktif: true, dx: 0, dy: 0 };
     o.ph = (o.x * 0.007) % 6.28; o.seed = 11 + Math.floor(o.x / 13) % 40; o.sz = 0; o.on = false; o.parla = 0;
     const rs = rng(o.seed * 3 + 1); o.kris = []; o.cic = [];
     for (let i = 0; i < 5; i++) o.kris.push({ x: (rs() - 0.5) * (w * 0.62), y: 20 + rs() * 22, l: 14 + rs() * 22, c: ['#7ff0ff', '#ffb8e6', '#bfa8ff', '#9fffd8'][i % 4], ph: rs() * 6.28 });
     for (let i = 0; i < 7; i++) o.cic.push({ x: (rs() - 0.5) * (w - 50), c: ['#ffe9a8', '#bff4ff', '#ffc8e6'][i % 3], ph: rs() * 6.28 });
   },
   guncelle(o, dt) {
+    ylBasamak(o);
     const st = typeof ustundeki !== 'undefined' && ustundeki === o;
     if (st && !o.on) { o.parla = 1; ylSuHalka(o.x, ylSu() - 2, true); burst(o.x + (P.x - o.x), o.y - 4, 8, ['#bff4ff', '#ffffff'], 70, 0.8, 5); }
     o.on = st; o.sz = lerp(o.sz, st ? 2.5 : 0, 1 - Math.exp(-dt * 8)); o.parla = Math.max(0, o.parla - dt * 0.8);

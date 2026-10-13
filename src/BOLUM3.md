@@ -111,6 +111,13 @@ Düşmek: bulutların altı boşluk; düşen Feza'yı Pırıl geri taşır (mevc
 - **Ortam tonu:** Bölüm 3'te Pırıl'ın arkasında sıcak şeftali hale, başında güneş ışığı, altında pembe bulut yansıması; ışık kanatlar gündüz modunda (source-over),
   kalp/yıldızlar doygun renkli, uçuşan spor yerine pamuk gibi bulut tüyü.
 
+- **Tur 2 (cila):** 'binek' çizimi önbellekli: gövde katmanı ve kafanın hareketsiz katmanı tuval ölçeğine göre bir kez çizilip `drawImage` ile basılıyor,
+  gündüz ışık tüyleri hazır sprite (başsız Chrome'da ≈1,7 → ≈1,0 ms). Yeni etkileşim: çift zıplama / zıplatan bulut sonrası inişte ara sıra (≥22 sn arayla)
+  Pırıl Feza'nın yanında yarım dönüşle önüne döner ve alkışlar (`alkis` modu, el çırptıkça minik yıldız), sonra aynı yoldan yana döner. Ara sıra çift göz kırpma.
+- **Tur 3:** Feza'ya yakınken Pırıl'ın gövdesine bağlı `lighter` ışıklar (hâle, ay/gün doğumu ışığı, kuyruk ucu, kanat kökü; gece kanat tüyleri de) uzaklığa göre
+  %35'e kadar kısılır ve küçülür (`DR_YK`; Feza'yı soldurmaz). Ara sahne pozlarının hâlesi küçültüldü (90→66, 0,3→0,22). Yeni `otur` modu: Feza oturunca Pırıl
+  sırtının olduğu yana konar, kanatlarını toplar, ona dönük oturur, arada sevgiyle ona eğilir, onunla birlikte esneyebilir; Feza kalkınca havalanır.
+
 ## FEZA notları
 - **`P.ucus` doluyken** `drawFeza` ve `drawFezaKontur` hiçbir şey çizmez (erken dönüş; hâle/kontur/gölge dahil). `fezaUpdate` çalışmaya devam eder;
   `OLAY 'ucusBitti'` gelince Feza yere inince kısa bir "ta-da!" yapar.
@@ -134,6 +141,12 @@ Düşmek: bulutların altı boşluk; düşen Feza'yı Pırıl geri taşır (mevc
   (`light`'tan bağımsız); dış kontur krem yerine yumuşak erik tonu (açık gökte seçilsin). Bulut zemine inişte küçük bir yaylanma ("boing").
 - Genel (her bölüm): dönüşte önden görünüşün başı/sonu 3/4 yüz (yüz çizgileri bakılan yana kayar, uzak göz daralır, kulak değişir) — karton gibi düz çevrilme yok.
   Kol yüzün önünden geçince ince ten kenarı (ten üstünde ten okunsun).
+- Tur 2: bölüme göre bekleme hareketi (el sallama/oturma dışındaki her bekleme seçiminde ≈%40): Bölüm 1 'toz' (süzülen ışık tozunu gözle izler, sekip yakalar, avucuna bakar, açınca sevinir),
+  Bölüm 2 'yansima' (ellerini dizine koyup suda yıldız yansımasına bakar, el sallar), Bölüm 3 'pat' (bulutu okşar). Koşudan durunca kısa denge kaybı (kollar çırpar, öne sallanır,
+  hızlı duruşta minik toz); kalkışın ilk ≈55 ms'si dizler bükük basık "itme" (gecikme yok, çömelme hissi).
+- **Bölüm 2'deki soluk görünüm nedeni: feza.js'in kendisiydi** (dunya2/oyun.js katmanları tek tek kapatılarak ölçüldü, hiçbiri değiştirmiyordu): Bölüm 2 tonunda Feza'nın
+  üstüne %34 şeftali + %7 krem düz dolgu basılıyordu; saç/göz kontrastını eritiyordu. %15 / %3'e indirildi, dış krem kontur 0,42→0,32, hâle 0,2→0,14. Başka sahibe iş yok.
+- Not: istenen referans fotoğraf (`Game Development/images/16.webp`) diskte yok (klasör bulunamadı); benzerlik için fotoğraf gelirse yeniden bakılabilir.
 - PIRIL'e not: Bölüm 3'te Pırıl Feza'ya çok yakınken beyaz/pembe ışıltısı Feza'yı soldurabiliyor (girişte, ilk saniyelerde belirgin); Feza'nın üstüne 'lighter' ışık az olsun.
 ## CORE notları (oyun.js / arayuz.js / ortak.js — gerçek API, Tur 1)
 - **Çizim yönlendirme:** BOLUM_NO==3 → `dn3Background(tm) dn3Motes(tm,zMin,zMax) dn3World(tm) dn3Petals(tm) dn3Foreground(tm) dn3Vignette(tm)` çağrı anında
@@ -184,6 +197,7 @@ Düşmek: bulutların altı boşluk; düşen Feza'yı Pırıl geri taşır (mevc
   `kemer` / `OLAY 'ucusKemer'` (uçuşta gökkuşağı kemeri) · `isiltiTamam` · `pirilBuyu` v=0 → küçülme (inen ışıltı). `sekilCanlan` v: 0 tavşan 1 balina 2 fil 3 kuş 4 ayıcık 5 Feza – her birinin kendi flüt motifi.
   Olay-efekt zamanı farklıysa olay yalnız yedek: `OLAY 'kuzu'` (sarılma başı) → 0,9 sn içinde `kuzuRenk` gelmezse çalar; `OLAY 'gokkusagiTamam'` (kaymadan sonra) parlama sesi 25 sn içinde çaldıysa susar.
   Bölüm 3'te adımlar bulut zeminde pamuk gibi "pof".
+  `kuslar` (ucus.js: uçuşta kuş sürüsü cıvıltısı). Karışım (her bölüm): müzik yolunda 50 Hz altı kesim + 170 Hz'de −7 dB raf, yankı dönüşünde 190 Hz altı kesim (iPad hoparlöründe çamur/limiter sıkışması azalır).
 - **Seslendirme (ses.js → sesler.js, 82 cümle, 2,5 MB):** `p_b_uyku` 1,7 sn · `p_b_giris` 5,7 · `p_b_zip` 3,5 · `p_b_kuzu` 5,1 · `p_b_kuzu_ilk` 4,6 · `p_b_esinti` 3,4 · `p_b_sekil1/2/3/4` 3,4/1,7/3,5/1,7 (sekil4 "Bak, bu sensin Feza!"; Feza şeklinde sekil3 söylenmez) · `p_b_ucus` 2,8 · `p_b_ucus2` 3,5 ·
   `p_b_tepe` 5,3 · `p_b_bitti` 2,9 · `a_b_final1/2/3` 9,3/9,8/3,7. Tetikleyiciler öneksiz olur (`b_zip` → `p_b_zip`). Bölüm 3'te `a_final*`/`a_y_final*` → `a_b_final*`, `p_y_uyku` → `p_b_uyku`, `p_y_giris` → `p_b_giris` kendiliğinden.
   Otomatik: ilk `OLAY 'kuzu'` → `p_b_kuzu_ilk`; sonraki kuzucuklarda ara sıra (~⅓) övgü `p_aferin`; `ucusBasla` → `p_b_ucus` (söylenmediyse) ve 11 sn sonra hâlâ uçuyorsa `p_b_ucus2`;
@@ -192,29 +206,33 @@ Düşmek: bulutların altı boşluk; düşen Feza'yı Pırıl geri taşır (mevc
 - **Dostça sözler (her bölüm):** `p_dost1..3` + bölüme özel `p_dost_orman` / `p_dost_yildiz` / `p_dost_bulut`. Yalnız oyunun ilk 60 sn'sinden sonra, ≥50 sn hiç konuşma yokken, Feza yürürken (uçuş/kilit yok),
   oturumda en çok 3 kez, en az 90 sn arayla; öncelik 1 (talimatlar öne geçer).
 
-## LEVEL3 notları (bolum3.js + bulut.js)
-- **Yerleşim** (`COLS=458`, `ROWS=30`, ana yüzey y=720; h=5→680 … h=9→520): 1 Pembe Bulutlar 0–56 · 2 Kuzucuk Çayırı 57–139 · 3 Rüzgâr Yolu 140–214 ·
-  4 Bulut Şekilleri 215–251 · Büyük Boşluk kıyısı 252–264 (kapı sütun 260) · uçuş/boşluk 265–387 (zemin yok) · 6 Gökkuşağı Tepesi 388–457 (tepe üstü 421–433, y=520).
-  Boşluklar: 21–23, 27–28, 31–32 (çukurlarda yüzey hizasında zıplatan bulut: üstünden yürüyünce "boing"), 45–46, 215–218 (rüzgâr kuyusu: dipte esinti, düşen Feza süzülüp karşıya geçer), 83–84 (2 kare), 117–123 ve 171–176 (yüzen bulutlu), 265–387 (uçuş).
-  Ana yolda basamaklar ≤ 1 kare; iki yüksek duvar (151: 4 kare, 195: 5 kare) önünde duvara dayalı esinti var. Bot (sağ + zıplama) 0 düşmeyle bitiriyor.
-- **`BOLUM.bolgeler`**: `pembeBulut` 0–57·T, `kuzuCayir` 57–140, `ruzgar` 140–219, `sekil` 219–252, `bosluk` 252–265, `ucus` 265–388, `tepe` 388–COLS.
-- **`BOLUM.ucus`** = `{x0: nx(260)=10420, x1: 389·T=15560, yUst: 120, yAlt: 700}` (ucus.js iniş yeri: sütun ≈391, 7. kuzucuk 396'da).
-- **`BOLUM.gokkusagi`** = `{x, y, cx, cy, R}`: tepe x=nx(428.5)=17160, y=520; yay merkezi (17160, 1034), dış yarıçap R=600 (yayın tepesi y=434, Feza'nın 86 birim üstü).
-- **Nesneler** (y = ÜST yüzey: bulutZip/bulutYuzen/bulutKopru; esinti: y = sütunun dibi): 7 `kuzu` (75, 103, 131, 157 (yüksek düzlük), 200 (bulut adası), 237.5, 396);
-  2 `bulutSekil` (225 `{sira:0}`, 248 `{sira:1}`); `ucusKapisi` 260 `{x1, yUst, yAlt}`; `gokkusagi` (tepe); 13 `tohum` (isteğe bağlı; zıplatan bulutla
-  çıkılan yüksek pembe bulut, ilk zıplamanın yayı, esinti içi, basamak bulutları, iniş çayırı); `konusma`: `b_giris` (7), `b_zip` (15), `b_kuzu` (63, konu=1. kuzucuk),
-  `b_esinti` (141), `b_tepe` (401). `b_sekil*`, `b_ucus*`, `b_kuzu_ilk`, `b_bitti` tetikleyicisi YOK (türlerin/olayların işi).
-  Süsler: `ucurtma` ×4 (Rüzgâr Yolu), `kusSuru` ×6, `tuy` ×10.
-- **Türler (bulut.js)**: `bulutZip {w, h=18, guc, gom}` (h ≤ 18: yerde engel değil, üstüne yürüyünce kendiliğinden zıplatır) · `bulutYuzen {w, ax, ay, sure, faz}`
-  (uçlarda %14 bekler; `cisim.dx/dy` her kare) · `esinti {w, h}` (P.vy yumuşakça ≈ −300'e; üst %30'da güç söner → tepede süzülme; `P.bounce/P.dj` true) ·
-  `gokkusagi` · `bulutKopru` (YALNIZ `ucusKapisi` türü yoksa etkin) · `ucurtma {ip, renk}` · `kusSuru {n}` · `tuy`. Paylaşılan renk dizisi `BU_GK` (7 gökkuşağı rengi; gökkuşağı bantları `DN3_RB` varsa onu kullanır). bulutYuzen/bulutKopru `dn3Bulut` ile (zeminin ince bulutlarıyla aynı görünüm); bulutZip kendi pembe, esnek sprite'ı (zıplatıcı olduğu belli olsun). Gökkuşağı ışımaları WORLD3 isteğiyle ≈%50 kısıldı (Feza okunur).
-- **Gökkuşağı akışı (bulut.js)**: başlama koşulu: Feza tepe üstünde (x 16820–17400, yerde) + bütün kuzucuklar renkli (`SAYAC.kuzu >= kuzuTop`; kuzu türü yoksa hemen).
-  t=0 `OLAY 'gokkusagiBasla'` (veri = nesne; `o.konumlar` = 7 {x,y} = `o.yayX/o.yayY`, yarıçap R+115'te 125°→35°, renkI sırasıyla) + kamera `omDikkat('gokkusagi')`;
-  t=2,4 + i·0,42 bant i belirir (`AU 'gokkusagiParca'` v=i, `OLAY 'gokkusagiParca' {o, renkI}`); ≈5,8 sn `AU 'gokkusagiTamam'` (+ `OLAY 'gokkusagiParlak'`);
-  +0,6 sn Feza yayın tepesine sıçrar (0,75 sn) → `AU 'kayma'`, `OLAY 'kayma'` → kayış ≈2,3 sn (`P.poz='kayma'`, `P.kaymaAci` = eğim, P.x/P.y yay üstü) →
-  iniş (P.poz=null) → 1,3 sn sonra `o.done=o.uyandi=true` + `OLAY 'gokkusagiTamam'`. Baştan sona `P.kilit` tutulur; `o.basladi` true olur (CORE HEDEF bunu okur).
-  Yedek: Feza tepedeyken Büyük Boşluk'un öbür yanında renklenmemiş kuzucuk kalırsa 1,5 sn arayla `TUR.al('kuzu').dokun(k)` uzaktan çağrılır (`k.uzaktan=true`).
-- **Olaylar**: `bulutZip` (o), `esinti` (o; girişte), `gokkusagiBasla`, `gokkusagiParca`, `gokkusagiParlak`, `kayma`, `gokkusagiTamam`.
+## LEVEL3 notları (bolum3.js + bulut.js) — GÜNCEL (Tur 2: bölüm zenginleştirildi, COLS 458 → 524)
+- **Yerleşim** (`COLS=524`, `ROWS=30`, ana yüzey y=720; h=5→680 … h=9→520). Eski taslak sütunu `c` → yeni `bl3K(c)` (57+ → +36, 140+ → +50, 219+ → +66).
+  1 Pembe Bulutlar 0–56 (çukurlarda yüzey hizasında zıplatan bulutlar 21–23, 27–28, 31–32: üstünden yürüyünce "boing") ·
+  1b **Gökyüzü Merdiveni** 57–92 (yolda alçak zıplatan bulut → ince bulut basamakları y=560/440/320 → tepede tohum yayı; isteğe bağlı, alttan düz yol) ·
+  2 Kuzucuk Çayırı 93–175 (133–142 platoda **bulut mağarası**: tavan satır 12–13, içinde 2. kuzucuk; 143–144 çukurunda **asansör bulutu** tavana/üst yola çıkar; 153–159 yüzen bulut) ·
+  2b **Uykucu Bulut Kuşu** 176–189 (geniş boşluk; kuş Feza'yı sırtında taşır) · 3 Rüzgâr Yolu 190–268 (esintiler 201 ve 245 duvarlarının önünde, yüzen bulut 221–226, bulut adası 245–254, rüzgâr kuyusu 265–268) ·
+  3b **Tüy Köprüsü** 269–284 (273–284 boşluğunda salınan 3 dev tüy) · 4 Bulut Şekilleri 285–317 · Büyük Boşluk kıyısı 318–330 (kapı sütun 326) · uçuş 331–453 (zemin yok) ·
+  6 Gökkuşağı Tepesi 454–523 (tepe üstü 487–499, y=520).
+  Ana yolda basamaklar ≤ 1 kare; yüksek duvarların önünde duvara dayalı esinti; boşluklar ≤ 2 kare (yüzen bulut/kuş/tüy yerleri hariç).
+  DİKKAT: mağara sütunlarında (135–142) `topOf/yuzey` TAVANI (y=480) verir; içerideki zemin y=640.
+- **`BOLUM.bolgeler`**: `pembeBulut` 0–93·T, `kuzuCayir` 93–190, `ruzgar` 190–285, `sekil` 285–318, `bosluk` 318–331, `ucus` 331–454, `tepe` 454–COLS.
+- **`BOLUM.ucus`** = `{x0: nx(326)=13060, x1: 455·T=18200, yUst: 120, yAlt: 700}` (iniş: sütun ≈457; 7. kuzucuk 462'de).
+- **`BOLUM.gokkusagi`** = `{x, y, cx, cy, R}`: x = cx = nx(494.5)=19800, y=520; yay merkezi (19800, 1034), dış yarıçap R=600 (yayın tepesi y=434).
+- **Nesneler** (y = ÜST yüzey: bulutZip/bulutYuzen/bulutKus/bulutKopru; esinti: y = sütunun dibi): 7 `kuzu` (sütun 111, 139 (mağarada, y=640), 167, 207 (yüksek düzlük),
+  250 (bulut adası), 303.5, 462); 2 `bulutSekil` (291 `{sira:0}`, 314 `{sira:1}`); `ucusKapisi` 326; `gokkusagi`; ≈30 `tohum` (isteğe bağlı);
+  `konusma`: `b_giris` (7), `b_zip` (15), `b_kuzu` (99, konu = 1. kuzucuk), `b_esinti` (191), `b_tepe` (467).
+  Süsler: `ucurtma` ×7, `kusSuru` ×7, `tuy` ×13.
+- **Türler (bulut.js)**: `bulutZip {w, h=18, guc, gom}` · `bulutYuzen {w, ax, ay, sure, faz, gorunum:'tuy', renk}` (uçlarda %14 bekler; `gorunum:'tuy'` = dev tüy, durmadan sinüs salınımı) ·
+  `bulutKus {w, ax, ay, sure}` (uyku → Feza sırtında 0,45 sn → `OLAY 'bulutKus'`, kalkar, yay çizerek karşıya uçar → Feza inince 2,5 sn sonra boş döner; `o.durum` uyku/git/karsi/don) ·
+  `esinti {w, h, kuyu}` · `gokkusagi` · `bulutKopru` (YALNIZ `ucusKapisi` türü yoksa) · `ucurtma {ip, renk}` · `kusSuru {n}` · `tuy`.
+  Renkler `BU_GK` (gökkuşağı bantları `DN3_RB` varsa onu kullanır). bulutYuzen/bulutKopru `dn3Bulut` ile çizilir; bulutZip kendi pembe esnek sprite'ı.
+- **Gökkuşağı akışı**: başlama: Feza tepe üstünde (yerde) + bütün kuzucuklar renkli (kuzu türü yoksa hemen). t=0 `OLAY 'gokkusagiBasla'` (veri = nesne; `o.konumlar` = 7 {x,y}
+  = `o.yayX/o.yayY`, yarıçap R+115, 125°→35°, renkI sırasıyla) + `omDikkat('gokkusagi')`; t=2,4+i·0,42 bant i (`AU 'gokkusagiParca'` v=i, `OLAY 'gokkusagiParca' {o, renkI}`);
+  ≈5,8 sn `AU 'gokkusagiTamam'` + `OLAY 'gokkusagiParlak'`; +0,6 sn Feza yayın tepesine sıçrar → `AU 'kayma'`/`OLAY 'kayma'` → ≈2,3 sn kayış (`P.poz='kayma'`, `P.kaymaAci`)
+  → iniş → 1,3 sn sonra `o.done=o.uyandi=true` + `OLAY 'gokkusagiTamam'`. `o.basladi` başlarken true. Işımalar WORLD3 isteğiyle ≈%50 kısık.
+  Yedek: Feza tepedeyken Büyük Boşluk'un öbür yanında renklenmemiş kuzucuk kalırsa `TUR.al('kuzu').dokun(k)` uzaktan çağrılır (`k.uzaktan=true`).
+- **Olaylar**: `bulutZip`, `bulutKus`, `esinti`, `gokkusagiBasla`, `gokkusagiParca`, `gokkusagiParlak`, `kayma`, `gokkusagiTamam`.
 
 ## UCUS notları (ucus.js)
 - **Tür `ucusKapisi`**: `o.r` 70. Beklerken yerde lila ışık halkası, dönen renkli yıldızlar, ışıktan kanat silüeti çizer (kapı görünür ve çağırır).
@@ -229,15 +247,21 @@ Düşmek: bulutların altı boşluk; düşen Feza'yı Pırıl geri taşır (mevc
 - Yol içeriği (koridor oranıyla yerleşir): 12 ışıltı dizisi (yay, dalga, çapraz, KALP, son dizi gökkuşağı renkli; toplam 83), 4 pembe/şeftali/lila bulut
   kemeri (içinden geçilir: arka yarı `ciz`, ön yarı `cizOn`), 3 yumuşak uykulu-yüzlü bulut (yalnız hafifçe iter), koridorun %29-60'ında 7 kuşçuk.
 - Olaylar: `isilti` {o, sira, x, y, tamam, toplanan, toplam} · `ucusKemer` {o, k} · `ucusBasla` · `ucusBitti`. Sesler: `isiltiTopla`(v = dizideki sıra 0..15),
-  `isiltiTamam` (dizi bitti), `kemer` (kemerden geçiş; ayrıca `isiltiTopla` 7), `kuslar` (sürü katılınca), `bulutZip` 0.25 (yumuşak bulut), `pirilBuyu` (büyüme ve küçülme).
+  `isiltiTamam` (dizi bitti), `kemer` (kemerden geçiş), `kuslar` (sürü katılınca), `bulutZip` 0.25 (yumuşak bulut), `pirilBuyu` (büyüme ve küçülme).
 - **Kuzucuklar için API:** `UC.takip(i)` → uçuş sırasında i. kuzucuğun (0'dan) durması gereken dünya noktası `{x,y}` (ışık izinin üstünde, Pırıl'ın kuyruğunun
   arkasında, aralıklı) ya da uçuş yoksa `null`. `UC.aktif()`. Test: `UC.baslat()` uçuşu hemen başlatır, `UC.o` kapı nesnesi.
 - **Kuzucuklar:** ucus.js her karede `P.ucus.kuyruk = {x, y, yon: -1}` (kuyruk ucu, dünya) yazar; kuzu.js `kzUcus` bunu kullanıyor (test: 6 kuzucuk kuyrukta uçtu).
   POF'a öneri: uçuşta aralık 42 → ≈30 (kamera Feza'yı ekranın sol %29'unda tutuyor; 6 kuzucuk 280 birimle ekranın soluna taşıyor).
 - **Parmak ipucu (yazısız):** uçuşun ilk ≈12 sn'sinde hiç dokunulmadıysa ekranın sağında yukarı-aşağı kayan dokunuş ışığı + oklar; ilk dokunuşta söner.
-- **SES'e istek:** `kemer`, `isiltiTamam`, `kuslar` efektleri (yoksa sessiz geçer); `isiltiTopla` v 0..15 (kalp dizisi 16 ışıltı) yükselen pentatonik olsun.
+- **SES:** `kemer`, `isiltiTamam`, `kuslar` muzik.js'te var (teşekkürler). Uçuş ortasındaki "vay" anında ilk hayvan gelince `SES.soyle('p_b_selam')` çağrılıyor —
+  **SES'e istek:** bu cümleyi ekleyin (öneri: "Bak Feza! Bulut arkadaşlarımız bize el sallıyor!"); yoksa sessiz geçer. Her hayvan girişinde `AU.sfx('sekilCanlan', hayvanNo)`.
 - **PIRIL/FEZA:** `pirilBinekKoltuk(tm,0,olcek)` + `fezaCizPoz(...'binis'..., {el, vy, sevinc, aci})` kullanılıyor; ctx `o.rot` ile döndürüldüğü için `u` verilmiyor.
-  `sevinc` yalnız dizi tamamlanınca / kemerden geçince 1,3 sn'lik nabız olarak veriliyor (diğer zaman `undefined` → otomatik). İniş merkezi = zemin − 13·2,2.
+  `sevinc` dizi tamamlanınca / kemerden geçince / hayvan selamında 1,3 sn'lik nabız olarak veriliyor (diğer zaman `undefined` → otomatik). İniş merkezi = zemin − 13·2,2.
+- **Tur 2 (iterasyon):** "Vay" anı: koridorun %57,5'inde "Bulutlarda ne var?"da canlanan hayvanlar (OLAY 'sekil'; yoksa balina/tavşan/kuş) gökyüzünde
+  sağdan süzülüp ≈11 sn yanlarında uçar, selam verir (sekil.js'in `sklPoz/sklBulutCiz/sklYuzCiz` çizimiyle, aynı görünüm), sonra geride kalır.
+  Kemerden geçince kısa "vınnn" hızlanması (+%40, ≈1 sn) + kemer jöle gibi esner + rüzgâr çizgileri parlar/uzar. Rüzgâr çizgileri 3 paralaks katmanı.
+  Işık izi artık 7 renkli GÖKKUŞAĞI KURDELESİ (kuzucuklar onun üstünde uçuyor) + izde göz kırpan yıldızlar. Ölçüm (masaüstü Chrome): ucus.js çizimi ≈0,8-1 ms/kare
+  (çoğu pirilCizPoz+fezaCizPoz). Tümleşik test: 6 kuzucuk kuyrukta → iniş → 7. kuzucuk → `gokkusagiBasla` → `gokkusagiTamam` → `final`, hata 0.
 
 ## MINI3 notları (sekil.js — "Bulutlarda ne var?")
 - Tür `bulutSekil` (`nesne('bulutSekil', c, zeminY, {sira:0|1})`). Bulut merkezi `o.x + 27`, zeminden 198 birim yukarıda (`SKL_YUK`), yarıçap `SKL_R`=108. Önek `skl*` (`sk*` sarki.js'te dolu).
@@ -256,7 +280,9 @@ Düşmek: bulutların altı boşluk; düşen Feza'yı Pırıl geri taşır (mevc
 - API değişmedi: `SAHNE.secim(secenekler, onSec)`, `SAHNE.secimDokun(x,y)`, `SAHNE.giris(bitince, {bolum, kisa})`, `SAHNE.final(bitince, {bolum})`, `SAHNE.tamEkran()`.
 - Seçim ekranı: `ikon:'bulut'` artık gün doğumu bulut ülkesi minyatürü (pembe bulutlar, gökkuşağı, iki kuzucuk). Baloncuklar Pırıl'dan doğar (ilk ~2,5 sn), nefes alır; iç dünyalar canlı (ateşböcekleri, yıldız ışıltısı/kayan yıldız, kayan bulutlar, zıplayan kuzucuklar). Dokununca jöle tepkisi + ışık halkası, seçilen balon ortaya gelip ekranı kaplar, ~1,6 sn sonra ekran rgb(4,5,14) iken `onSec(id)`. Olaylar/sesler aynı (`secim` {id,i}, `ruyayaGec`, `yildizRozet`).
 - Bölüm 3 kısa giriş: `SAHNE.giris(bitti, {bolum:3, kisa:true})` → `SES.soyle('p_b_uyku')` (≈1,8. sn; anahtar yoksa sessiz geçer), pencerede şafak, perdeler pembe bulutlara, lamba güneşe, battaniye bulut tepeciğine, halı noktaları 7 gökkuşağı ışığına döner; oda bulut ülkesi fonuna erir; sonda koyu gül → lacivert perde, `bitince` ekran tam koyuyken (≈14 sn). CORE bağlarken Bölüm 2'deki gibi `begin()` içinde `BOLUM_NO === 3` dalını eklesin.
-- Bölüm 3 sabah finali: anlatıcı `a_b_final1..3` (yoksa `a_final*`). Uyanınca pencerede gökkuşağı soldan sağa çizilir, kamera pencereye döner (dikeyde oda bu sahnede daha az kayar ki pencere görünsün), sonra göz kırpma yakın çekimi; duvarda gökkuşağı ışığı lekesi (bitiş kartının arkasında da görünür). Kutlamada odak kuzucukları da kapsar; ışık merkezi `BOLUM.gokkusagi` (varsa).
+- Bölüm 3 sabah finali: anlatıcı `a_b_final1..3` (yoksa `a_final*`). Feza uyanır; anlatıcı "Pencereden bakmış ki..." derken (a_b_final2 başlangıcından ≈3 sn sonra) pencerede gökkuşağı soldan sağa çizilir, kamera pencereye döner, "göz kırpmış"ta yüzlere yaklaşır (dikeyde oda bu sahnede daha az kayar ki pencere görünsün), sonra göz kırpma yakın çekimi; duvarda gökkuşağı ışığı lekesi (bitiş kartının arkasında da görünür). Kutlamada odak kuzucukları da kapsar; ışık merkezi `BOLUM.gokkusagi` (varsa), yedi ışık huzmesi gökkuşağı renklerinde. Her sabahta odada rüyadan kalan toz: Bölüm 1 ışıklı yaprakçıklar, 2 yıldız tozu, 3 gökkuşağı ışıltıları.
+- Bölüm 2 kısa girişi de kendi temasıyla erir: perdeler yıldız damlalı ışık tellerine (altın uçlar), halı noktaları suda açan ışıklı nilüferlere (sh.tema 'gol'); Bölüm 1 aynen.
+- Performans: seçimde iç resimler önbellekte (balon başına ≈ d² piksel), dalış için keskin iç resim (≤1400 px) balonlar oturunca boşta hazırlanır; giriş/final başında hepsi bırakılır. Seçim karesi ≈ eski sürümle aynı maliyet.
 - (CORE, Tur 2 — tümleşik bot testi, 23:10) `?sessiz&atla&bolum=3` botla uçtan uca oynandı: 7/7 kuzucuk, kapı, uçuş, gökkuşağı, `gokkusagiTamam` → final → sonuç kartı; konsol hatası 0, 0 düşüş.
   **LEVEL3'e (bolum3.js / bulut.js):** gökkuşağından kayış dünyanın sonunda bitiyor (sütun ≈446, COLS 458): kamera `maxX`'e dayandığı ve 'gokkusagi' dikkat kutusu
   `cx + R*0,86`'da bittiği için finalde Feza ekranın SAĞ KENARINDA (%92) ve çok küçük (yakınlık 0,53) kalıyor. Öneri: COLS'u ≈15-20 sütun uzat (tepeden sonra düz bulut)
@@ -284,4 +310,34 @@ Düşmek: bulutların altı boşluk; düşen Feza'yı Pırıl geri taşır (mevc
   Masaüstü Chrome'da dn3 işlevlerinin toplamı ≈0,4 ms/kare (CPU).
 - (CORE, 23:25) PIRIL isteği yapıldı: Bölüm 3'te `omPirilHale` küçük (70 birim) ve sıcak pembe-şeftali, çok hafif (0,08); beyaz pus yok. Bölüm 1-2 aynen.
   Bölüm 3 sayacının arkasına hafif koyu yumuşak yastık + kuzucuk simgelerine dış kontur (aydınlık gökte okunurluk).
-- **Test (LEVEL3, 127.0.0.1 kendi port)**: iyi bot 0 düşme, ≈113 sn oyun saatinde final (7/7 kuzucuk); özensiz bot (sabırsız, rastgele zıplama) 3 düşme (yalnız yüzen bulut boşlukları), final; ucus.js+kuzu.js engelliyken yedek köprüyle final; Bölüm 1/2 konsol hatası 0.
+- **Test (LEVEL3, Tur 2, 524 sütun)**: iyi bot 0 düşme, ≈125 sn oyun saatinde final (eski 458 sütunda 113 sn); özensiz bot (sabırsız, rastgele zıplama) 0–2 düşme (yalnız yüzen bulut boşluğu), final; ikisi de 7/7 kuzucuk. ucus.js+kuzu.js engelliyken yedek köprüyle final (Tur 1). Bölüm 1/2 konsol hatası 0.
+- **WORLD3 tur 2:** Bulut denizi artık kümülüs öbekleriyle çiziliyor (kubbe + üst katlar, öbek başına tek hacim ışığı + gölge; yuvarlak taban lobları, köşe yok);
+  ince bulut şeridi tek siluet. Basamak yüzleri düzensiz kabarcıklarla örtülü; basamak yüzünde ışık şeridi ve süs yok; derin renk ve şeffaflaşma çok yumuşak yüzeyi (±48 birim) izler.
+  Bölge karakteri: Pembe Bulutlar pembe ton · Kuzucuk Çayırı yoğun papatya + gökte küçük kuzucuk biçimli bulutlar · Rüzgâr Yolu bulutlar daha hızlı kayar
+  (birikimli kayma, sıçrama yok), süsler eğilir, hava çizgileri + kıvrılan rüzgâr sarmalları · Bulut Şekilleri gökte tavşan/balina/ayıcık biçimli hayal bulutları ·
+  Büyük Boşluk/uçuş: ufuk aşağı, uzak kuleler belirgin, hız çizgileri, yandan geçen sis · Tepe altın ışık, gökkuşağı kristalleri.
+  GPU: katman arası 4 tam genişlik sis bandı katmanlara pişirildi; katman altı dolgusu yalnız en yakın katmanda; sakin bölgelerde tek hüzme katmanı.
+
+## POF notları (kuzu.js + pofuduk.js)
+- **`kuzu` türü** (kuzu.js, önek `kz`): `nesne('kuzu', c, y)` (y: zemin; yakın zemine kendisi oturur), `o.r`=70, `o.ry`=24. Durumlar `o.kz.durum`:
+  `uzgun` (gri, solgun-mahzun: yavaş nefes, ara ara iç çekme + gri bulutçuk, gökyüzüne bakma, minik titreme; Feza ≈330 birim yakındayken umutla ona döner,
+  hafif ışıltı + başının üstünde süzülen minik pırıltı) → `dokun` → `sarilma` (Feza'nın yanına sokulur, ≈0,32 sn'de ışıltılı "pof" + `AU.sfx('kuzuRenk', renkI)`,
+  renk dalgası temas noktasından yüne yayılır ≈0,95 sn) → `sevinc` (3 zıplama, ortadaki havada takla, "mee") → `takip` → (`P.ucus`) `ucus` → (`gokkusagiBasla`) `yay`.
+  `OLAY 'kuzu' {o, renkI}` ve `o.done=true` DOKUNUR DOKUNMAZ (Feza'nın sarılması bununla eşzamanlı). `renkI` = bulunma sırası (0 kırmızı … 6 mor).
+  Renkler: `DN3_RB` (yoksa `BU_GK`) ana renk alınır, açık/koyu tonlar ondan türetilir (gökteki yayla aynı).
+- **Sürü:** Feza'nın yürüdüğü zemin izinde (boşluklar atlanır), bulunma sırasıyla (kırmızı en yakında), aralık 56, Feza'ya ≥54. Yürüyerek hoplar; yükseklik farkı,
+  boşluk, yolda Feza ya da duran bir arkadaş varsa yumuşak yayla süzülerek (üstünden) geçer; uzak kalan hızlanır (ışınlanma yok). Öndekine binmez (sıraya girer).
+  Yer bulunamazsa Feza'nın yakınında havada küçük bulut gibi bekler (asla takılmaz). `kurtarildi` / uçuş sonu → iz sıfırlanır, Feza'nın çevresine süzülürler.
+  Feza dururken: bulut otlar (baş eğik, çiğneme, kırıntı), kulak çırpar, zıplar, Pırıl'a bakar, kameraya döner, komşusuna tos vurur; `AU.sfx('kuzuMee')` en sık ≈5 sn'de bir, ekrandayken.
+  Yeni bir kuzu renklenince sürüdekiler sırayla sevinçle hoplar.
+- **Uçuş:** `P.ucus.kuyruk = {x, y, yon}` varsa onun arkasına 30 aralıkla (lead isteği), yoksa Feza'nın uçuş izinde; uçuşta %72 boy, sık kuyruk (ayırma yok).
+- **Gökkuşağı:** `OLAY 'gokkusagiBasla'` verisinde `konumlar` ({x,y}×7, renkI sırasıyla) varsa oraya; yoksa `{x,y,r,w}` ya da `BOLUM.gokkusagi` üstünde varsayılan yay.
+  Kırmızıdan mora 0,24 sn arayla kalkar, yerine varınca `OLAY 'kuzuYayda' {o, renkI, x, y}` + pırıltı; sonra rengiyle parlar, "gökkuşağı dalgası" dansı (her ikinci dalgada takla).
+  Geç renklenen (LEVEL3 `buKuzuTopla`) kuzu sevinçten sonra doğrudan yerine uçar.
+- Test kancası: `window.kzTest` (`suru, iz, slot, saril(o), yay(d)`). Çizim: yün/baş/kuyruk sprite'ları önbellekli; kare başına birkaç drawImage + küçük vektör. Konsol hatası 0.
+- **Pofuduk (Bölüm 1 final fenerleri):** fener sütunları dans sırasıyla soldan sağa paylaştırılır (yollar kesişmez), komşu fenerler farklı yükseklikte; kalkış sırası
+  0,1,4,5,… sonra 2,3,6,7,…; yolu kapalıysa (yakında havada biri / aynı sütuna giden biri) en çok 1,2 sn bekler; havadakiler arası yumuşak 2B açılma (52).
+  Ölçüm (9 Pofuduk, 1024×768 / 1180×820 / 1366×1024): havadaki iki Pofuduk arası en az 4 → 43–45 birim (gövde ≈40), bütün fenerler ≈6,3 sn'de asılı.
+- (CORE, 23:50) Akış/his cilası: (1) sonuç kartında "odaya dön" → ≈0,45 sn kararma, sonra yenileme (sabah odasından karanlık seçime sert kesme yok; ölçüm: parlaklık 195→13 yumuşak, seçim 0'dan açılıyor).
+  (2) Düşerken kamera aşağıya ileri bakar (Feza ekranın dibine yapışmaz; 3 bölümde de). (3) Sonuç kartında tohum 14'ten fazlaysa yalnız toplananlar gösterilir
+  (Bölüm 3'te 28 tohum var — LEVEL3: bilerek mi? kart yine düzgün). (4) Bölüm 3 dikey iPad (768×1024) uçuş ve kart kontrol edildi.

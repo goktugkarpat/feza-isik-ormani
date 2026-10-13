@@ -14,7 +14,9 @@
    açık çiçeğin sıcak kenar ışığı, bakışta mikro sakkad, Pırıl hızla yakından geçerse gözle takip.
    OLAY 'adim' {x, y, hiz, inis?}: her ayak basışında (ses için).
    Dışa açık: P.a_elX, P.a_elY (ön elin dünya konumu; Pırıl taşırken tutar), P.a_state, fezaCizPoz (ara sahneler, en altta).
-   Çizim konumu P.rx/P.ry varsa onu kullanır. */
+   Çizim konumu P.rx/P.ry varsa onu kullanır.
+   Bölüm 3: P.ucus doluyken çizmez (ucus.js fezaCizPoz 'binis' ile çizer); P.poz === 'kayma' iken gökkuşağı kayma pozu; OLAY 'kuzu' → sarılma + sevinç;
+   esintide süzülme; bulut zeminde yaylanan iniş ve "bulutu okşama" beklemesi; gün doğumu ışığı (FZ_AMB3). Dönüşte 3/4 yüz (P.a_yaw). Ayrıntı: src/BOLUM3.md "FEZA notları". */
 'use strict';
 
 // ── renkler ──
@@ -886,9 +888,9 @@ function drawFeza(tm) {
   const b2 = typeof BOLUM_NO !== 'undefined' && BOLUM_NO === 2;
   if (b2) {   // Bölüm 2: gece-göl ortamının mavi-mor tonu ten ve pijamaya hafifçe karışır (gri/soluk kalmasın)
     x.globalCompositeOperation = 'source-atop'; x.globalAlpha = 0.03 * (1 - light * 0.6); x.fillStyle = '#6c5ee0'; x.fillRect(0, 0, px, px);
-    x.globalAlpha = 0.34 * (1 - light * 0.4); x.fillStyle = '#ffc99a'; x.fillRect(0, 0, px, px);   // pijama sıcak krem-pembe kalsın, ortamdan ayrışsın
+    x.globalAlpha = 0.15 * (1 - light * 0.4); x.fillStyle = '#ffc99a'; x.fillRect(0, 0, px, px);   // pijama sıcak krem-pembe kalsın, ortamdan ayrışsın (0,34 idi: her şeyi soluk şeftaliye boğuyordu, saç/göz kontrastı kayboluyordu)
     x.globalAlpha = 0.06 * (1 - light * 0.5); x.fillStyle = '#34358f'; x.fillRect(0, 0, px, px);   // soğuk mavi-mor gölge: beyaz patlamasın, ortamla birleşsin
-    x.globalAlpha = 0.07; x.fillStyle = '#fff4e6'; x.fillRect(0, 0, px, px);   // hafif krem aydınlatma: karartılmış sahnelerde de soluk kalmasın
+    x.globalAlpha = 0.03; x.fillStyle = '#fff4e6'; x.fillRect(0, 0, px, px);   // hafif krem aydınlatma: karartılmış sahnelerde de soluk kalmasın
     x.globalAlpha = 0.12 * (1 - light * 0.5); x.fillStyle = '#2a1f6a'; x.fillRect(0, px * 0.6, px, px * 0.4);   // alt yarı biraz daha koyu (suya/zemine doğru)
     x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
   }
@@ -923,12 +925,12 @@ function drawFeza(tm) {
   const gx0 = (bx - cam.x - SZ / 2) * S, gy0 = (by - cam.y - OY) * S;
   // okunurluk: (1) çok hafif sıcak-krem karakter hâlesi (yavaş nefesli), (2) ince açık-krem dış kenar + ince koyu-lacivert iç hat (yumuşak, çıkartma gibi değil)
   if (a > 0.05) {
-    const hv = (b2 ? 0.2 : 0.12) * (0.88 + 0.12 * Math.sin(tm * 1.9)) * (1 - Lf * 0.5) * a;
+    const hv = (b2 ? 0.14 : 0.12) * (0.88 + 0.12 * Math.sin(tm * 1.9)) * (1 - Lf * 0.5) * a;
     g.globalAlpha = hv; g.drawImage(fzHaloS2(), (bx - cam.x - 36) * S, (by - cam.y - 34 - 46) * S, 72 * S, 92 * S); g.globalAlpha = 1;
     const d1 = Math.max(1, 0.26 * S), d2 = d1 + Math.max(0.9, 0.27 * S);
     if (!fzO || fzO.width !== px) { if (!fzO) { fzO = document.createElement('canvas'); fzOX = fzO.getContext('2d'); } fzO.width = fzO.height = px; }
     fzRing(fzOX, fzO, d2, b3 ? '#a8668f' : '#fff1d6');   // Bölüm 3 (aydınlık gök): krem yerine yumuşak erik tonu dış kenar – açık zeminde de seçilsin
-    g.globalAlpha = a * (b2 ? 0.42 : b3 ? 0.24 : 0.32); g.drawImage(fzO, gx0, gy0);
+    g.globalAlpha = a * (b2 ? 0.32 : b3 ? 0.24 : 0.32); g.drawImage(fzO, gx0, gy0);
     fzRing(fzRX, fzR, d1, b3 ? '#3a1d3c' : '#0c1233');
     g.globalAlpha = a * (b3 ? 0.55 : 0.6); g.drawImage(fzR, gx0, gy0);
     fzKx = gx0; fzKy = gy0; fzKa = a; fzKb2 = b2;
@@ -968,7 +970,7 @@ const FZ_SEV_IK = [[-12.4, -25.5, 1], [12.4, -25.5, 1]];     // sevinirken eller
 const FZ_TADA_IK = [[-6.6, 1.6, 1], [6.6, 1.6, 1]];          // fırlatmadan sonra yere inince "ta-da!" (önden, değişir)
 const FZ_IKB = [[-6.6, 1.6, 0], [6.6, 1.6, 0]];              // o karede çizilen (karışmış) el hedefleri
 const FZ_SEQ = [[4, 'wave'], [9.5, 'yawn'], [15, 'stretch'], [20.5, 'sit'], [26, 'look'], [31, 'wave']];   // uzun beklemede sırayla
-const FZ_ACT = { wave: 2.8, yawn: 2.7, stretch: 2.5, look: 2.2, nod: 3.2, sway: 3.4, peek: 2.8 };
+const FZ_ACT = { wave: 2.8, yawn: 2.7, stretch: 2.5, look: 2.2, nod: 3.2, sway: 3.4, peek: 2.8, pat: 2.7, toz: 3.4, yansima: 3.0 };
 // ── final kutlaması: ağaç yandıktan sonra ağacın önünde sevinç döngüsü ──
 // önce ağaca hayranlıkla bakar (~1,5 sn), sonra önden kollar havada zıplar; müziğin ölçü başında dansa başlar.
 // Ölçüler (2,4 sn, Pofuduk'larla aynı vuruş): 0 dans (sek · sek · el çırp (önden) · önden geçerek dönüp öbür gruba),
@@ -1005,7 +1007,7 @@ function fezaInit() {
   P.a_tadaT = 9; P.a_fromL = false; P.a_ledge = 0; P.a_ledgeW = 0; P.a_ledgeOx = 0; P.a_stepN = 0;
   P.a_takeP = 1; P.a_getup = 0; P.a_edgeX = 0; P.a_hipV = 0; P.a_tasW = 0; P.a_ikW = 0; P.a_ikSrc = null; P.a_ikLast = null;
   P.a_hw = 0; P.a_yaw = 0; P.ik = null;
-  P.a_kAci = 0; P.a_kSide = P.f || 1; P.a_kpx = P.x; P.a_kpy = P.y; P.a_wasKay = false; P.a_hug = 0; P.a_esW = 0; P.a_esL = null; P.a_kenar = false;   // Bölüm 3: kayma eğimi/yönü, kuzucuğa sarılma
+  P.a_kAci = 0; P.a_kSide = P.f || 1; P.a_kpx = P.x; P.a_kpy = P.y; P.a_wasKay = false; P.a_hug = 0; P.a_esW = 0; P.a_esL = null; P.a_kenar = false; P.a_brkT = 9; P.a_brkK = 0;   // Bölüm 3: kayma eğimi/yönü, kuzucuğa sarılma
   P.a_cl = 0; P.a_clv = 0; P.a_ax = 0; P.a_pvx = P.vx; P.a_brk = 0; P.a_spPrev = 0; P.a_gd = 99; P.a_pre = 0; P.a_sur = 0; P.a_surK = 0; P.a_surD = 1; P.a_sacT = 1; P.a_sacX = 0; P.a_sacY = 0; P.a_dj = 0; P.a_skyT = 0; P.a_skyK = 0; P.a_skyW = 0; P.a_lf = 0; P.a_pry = P.ry ?? P.y;
   // final kutlaması
   P.a_finT = 0; P.a_finClk = 0; P.a_finBar0 = -1; P.a_finBar = -1; P.a_finKind = 0; P.a_finDir = 1; P.a_finHand = 1; P.a_finPet = -1;
@@ -1193,6 +1195,7 @@ function fezaUpdate(dt) {
     let a;
     if (P.a_seq < FZ_SEQ.length) { a = FZ_SEQ[P.a_seq++][1]; P.a_nextAct = P.a_seq < FZ_SEQ.length ? FZ_SEQ[P.a_seq][0] : P.a_idle + 7; }
     else { a = FZ_RAND_ACT[Math.floor(Math.random() * FZ_RAND_ACT.length)]; P.a_nextAct = P.a_idle + 6 + Math.random() * 4; }
+    if (!P.a_sit && !edge && a !== 'wave' && a !== 'sit' && Math.random() < 0.4 && typeof BOLUM_NO !== 'undefined') a = BOLUM_NO === 3 ? 'pat' : BOLUM_NO === 2 ? 'yansima' : 'toz';   // bölüme göre: bulutu okşar / sudaki yıldız yansımasına bakar / ışık tozu yakalar
     if (edge && !P.a_sit && a !== 'wave') a = 'sit';              // uçurum kenarında bir süre: kenara oturup ayaklarını sallar
     if (P.a_ledge && (a === 'stretch' || a === 'yawn')) a = 'nod';  // kenarda otururken önden poz yok
     if (P.a_sit && (a === 'sway' || a === 'peek')) a = 'look';
@@ -1234,7 +1237,7 @@ function fezaUpdate(dt) {
     P.a_ax += (clamp(fa, -3000, 3000) - P.a_ax) * (1 - Math.exp(-dt * 14));
     // fren: hızlı koşudan duruşta kısa bir "kayarak durma" duruşu
     P.a_spPrev = Math.max(sp, P.a_spPrev - 400 * dt);
-    if (gr && sp <= 5 && P.a_spPrev > 90 && P.a_skid <= 0 && P.a_push <= 0 && !fin) { P.a_brk = clamp(P.a_spPrev / 250, 0.35, 1); P.a_spPrev = 0; }
+    if (gr && sp <= 5 && P.a_spPrev > 90 && P.a_skid <= 0 && P.a_push <= 0 && !fin) { P.a_brk = clamp(P.a_spPrev / 250, 0.35, 1); P.a_brkT = 0; P.a_brkK = P.a_brk; P.a_spPrev = 0; if (P.a_brk > 0.75 && typeof burst === 'function') burst(P.x + P.a_side * 8, P.y - 2, 3, ['#e8dcff', '#ffffff'], 40, 0.45, 5); }
     else if (!gr || sp > 5) P.a_brk = 0;
     P.a_brk = Math.max(0, P.a_brk - dt / 0.36);
     // yere inmeye hazırlık: düşerken zemine yakınsa bacaklar uzanır, kollar dengeye açılır
@@ -1323,6 +1326,12 @@ function fezaUpdate(dt) {
       T.shr = 0.5; T.mRound = 1; T.mOpen = 0.7; T.mSmile = 0.1; T.brow = 1; T.lid = 1.15; T.gx = sl; T.gy = 0.9; T.head = 0.12 * sl;
       if (e > 1.5) { T.mRound = 0; T.mOpen = 0.35; T.mSmile = 1; T.brow = 0.3; T.lid = 0.8; }   // oh, kurtuldum
     }
+    P.a_brkT += dt;
+    if (P.a_brkT < 1.1 && st === 'idle' && !act && P.a_brk <= 0.01) {   // frenden sonra küçük denge kaybı: gövde öne sallanır, kollar çırpar, sonra oturur
+      const u = P.a_brkT - 0.26, k = P.a_brkK * Math.exp(-u * 3.6) * smooth(clamp(u / 0.06, 0, 1)), wv = Math.sin(u * 12);
+      T.lean += 0.2 * k * Math.max(wv, -0.4); T.hx += 1.0 * k * wv; T.la1 += 1.1 * k * (0.7 + wv); T.ba1 -= 1.0 * k * (0.7 - wv); T.hOpen = Math.max(T.hOpen, k);
+      T.lt1 += 0.12 * k * Math.max(0, wv); T.mRound = lerp(T.mRound, 0.6, k); T.mOpen = lerp(T.mOpen, 0.45, k); T.brow = lerp(T.brow, 0.6, k); kmin = kmax = 20;
+    }
     if (P.a_brk > 0.01 && st === 'idle' && !act) {   // koşudan duruş: kısa süre geri yaslanıp ön ayak uzanır, kollar dengeler
       const bk = smooth(clamp(P.a_brk * 1.6, 0, 1)); kmin = kmax = 20;
       T.lean = lerp(T.lean, -0.1, bk); T.hx = lerp(T.hx, -0.7, bk); T.head = lerp(T.head, 0.04, bk);
@@ -1369,6 +1378,35 @@ function fezaUpdate(dt) {
       T.la1 = lerp(T.la1, 0.55, w); T.la2 = lerp(T.la2, 1.1, w); T.ba1 = lerp(T.ba1, -0.5, w); T.shr = 0.3 * w;   // eller belde, öne eğilip merakla bakar
       T.lean = lerp(T.lean, 0.1, w); T.head = lerp(T.head, -0.1, w); T.gx = lerp(T.gx, 1, w); T.gy = lerp(T.gy, -0.1, w);
       T.lid = lerp(1, 0.85, w); T.brow = 0.5 * w; T.mRound = 0.4 * w; T.mOpen = 0.25 * w; T.mSmile = 0.6; T.hx += 0.4 * pk * w;
+    } else if (act === 'toz') {   // Bölüm 1: süzülen bir ışık tozunu gözüyle izler, uzanıp sekerek yakalar, avucunun içine bakar, açınca sevinir
+      const w = smooth(clamp(at / 0.35, 0, 1)) * smooth(clamp((3.4 - at) / 0.4, 0, 1));
+      const ex = Math.sin(at * 2.1) * 0.6 + 0.3, ey = -0.6 - 0.3 * Math.sin(at * 1.3);   // tozun bakıştaki yeri
+      const rch = smooth(clamp((at - 1.15) / 0.25, 0, 1)) * smooth(clamp((1.85 - at) / 0.2, 0, 1)), hop = Math.sin(clamp((at - 1.25) / 0.45, 0, 1) * Math.PI);
+      const cup = smooth(clamp((at - 1.75) / 0.2, 0, 1)) * smooth(clamp((3.0 - at) / 0.25, 0, 1)), opn = smooth(clamp((at - 2.55) / 0.2, 0, 1));
+      kmin = kmax = 16;
+      if (at < 1.2) { T.gx = lerp(T.gx, ex, w); T.gy = lerp(T.gy, ey, w); T.head = lerp(T.head, -0.2 - 0.06 * Math.sin(at * 1.3), w); T.mRound = 0.5 * w; T.mOpen = 0.35 * w; T.brow = 0.6 * w; }
+      T.la1 = lerp(T.la1, 2.05, rch); T.la2 = lerp(T.la2, 0.2, rch); T.ba1 = lerp(T.ba1, 1.9, rch); T.hOpen = Math.max(T.hOpen * (1 - cup), rch); T.arm = lerp(1, 1.12, rch);
+      T.bob -= 3.5 * hop; T.lt1 += 0.35 * hop; T.lt2 -= 0.6 * hop; T.bt2 -= 0.5 * hop; if (rch > 0.3) { T.gx = 0.6; T.gy = -0.9; T.head = -0.24; T.mOpen = 0.5; T.mRound = 0.3; }
+      T.la1 = lerp(T.la1, 0.62, cup); T.la2 = lerp(T.la2, 1.3 - 0.5 * opn, cup); T.ba1 = lerp(T.ba1, 0.58, cup); T.ba2 = lerp(T.ba2, 1.35 - 0.5 * opn, cup);
+      if (at < 1.2) T.head = lerp(T.head, -0.12 + 0.1 * Math.sin(at * 2.1), w);   // başıyla da izler
+      if (cup > 0.3) { T.head = lerp(T.head, 0.4, cup); T.gx = 0.8; T.gy = 0.95; T.lean = lerp(T.lean, 0.08, cup); T.mRound = 0.6 * (1 - opn); T.mOpen = 0.35 + 0.35 * opn; T.mSmile = lerp(0.6, 1, opn); T.happy = opn > 0.5 ? 1 : 0; T.hOpen = opn; }
+    } else if (act === 'yansima') {   // Bölüm 2: öne eğilip ellerini dizlerine koyar, aşağıda sudaki yıldızların yansımasına bakar, gülümser, el sallar
+      const w = smooth(clamp(at / 0.45, 0, 1)) * smooth(clamp((3.0 - at) / 0.45, 0, 1)), wv = at > 1.7 && at < 2.5 ? Math.sin(at * 11) : 0;
+      kmin = kmax = 11;
+      T.lean = lerp(T.lean, 0.32, w); T.hx = lerp(T.hx, -1.0, w); T.head = lerp(T.head, 0.3, w);
+      T.lt1 = lerp(T.lt1, 0.35, w); T.lt2 = lerp(T.lt2, -0.55, w); T.bt1 = lerp(T.bt1, 0.2, w); T.bt2 = lerp(T.bt2, -0.5, w);
+      T.la1 = lerp(T.la1, at > 1.6 && at < 2.6 ? 1.0 : 0.62, w); T.la2 = lerp(T.la2, at > 1.6 && at < 2.6 ? 0.45 + 0.3 * wv : 0.55, w); T.ba1 = lerp(T.ba1, 0.55, w); T.ba2 = lerp(T.ba2, 0.6, w); T.hOpen = at > 1.6 && at < 2.6 ? w : 0;
+      T.gx = lerp(T.gx, 0.7, w); T.gy = lerp(T.gy, 1, w); T.mRound = at < 1.3 ? 0.55 * w : 0; T.mOpen = 0.4 * w; T.mSmile = at < 1.3 ? 0.6 : 1; T.brow = 0.55 * w; T.lid = lerp(T.lid, 1.08, w);
+      if (at > 2.2 && at < 2.7) T.happy = 1;
+    } else if (act === 'pat') {   // Bölüm 3: çömelip yumuşacık bulut zemini iki eliyle pıt pıt okşar, kıkırdar
+      const w = smooth(clamp(at / 0.45, 0, 1)) * smooth(clamp((2.7 - at) / 0.5, 0, 1)), on = at > 0.55 && at < 2.15 ? 1 : 0;
+      const p1 = Math.max(0, Math.sin(at * 12)) * on, p2 = Math.max(0, Math.sin(at * 12 + 2.2)) * on;
+      kmin = kmax = 12;
+      T.lean = lerp(T.lean, 0.62, w); T.hx = lerp(T.hx, -1.8, w); T.bob = 0;
+      T.lt1 = lerp(T.lt1, 1.3, w); T.lt2 = lerp(T.lt2, -2.15, w); T.bt1 = lerp(T.bt1, 1.05, w); T.bt2 = lerp(T.bt2, -2.05, w);
+      T.la1 = lerp(T.la1, 0.95 + 0.3 * p1, w); T.la2 = lerp(T.la2, 0.15, w); T.ba1 = lerp(T.ba1, 0.85 + 0.3 * p2, w); T.ba2 = lerp(T.ba2, 0.2, w); T.hOpen = w; T.arm = lerp(1, 1.12, w);
+      T.head = lerp(T.head, -0.3, w); T.gx = lerp(T.gx, 0.7, w); T.gy = lerp(T.gy, 0.95, w); T.shr = lerp(T.shr, 0.3, w);
+      T.happy = at > 0.9 && at < 2.05 ? 1 : 0; T.mSmile = 1; T.mOpen = lerp(T.mOpen, 0.35 + 0.25 * Math.max(p1, p2), w); T.brow = 0.35 * w;
     } else if (act === 'nod') {   // uykulu baş düşmesi (otururken), sonra silkinip uyanır
       const w = clamp(at / 1.2, 0, 1), up = clamp((at - 2.3) / 0.25, 0, 1);
       kmin = kmax = at > 2.3 ? 20 : 5;
@@ -1450,8 +1488,8 @@ function fezaUpdate(dt) {
     T.air = 1; T.lt1 = 0.3 + 0.12 * Math.sin(t * 9); T.lt2 = -0.5; T.bt1 = -0.12 - 0.1 * Math.sin(t * 9 + 1); T.bt2 = -0.35;
     T.hOpen = 1; T.la1 = -2.15 + 0.3 * Math.sin(t * 13) * f; T.la2 = 0.5 + 0.2 * Math.sin(t * 11);
     T.ba1 = 1.35 + 0.2 * Math.sin(t * 13 + 2) * f; T.ba2 = 0.3; T.shr = 0.5;
-    T.lean = 0.05; T.head = -0.04; T.mRound = 1; T.mOpen = 0.65; T.mSmile = 0.2;
-    T.brow = 0.2 + 0.6 * f; T.lid = 1.12; T.gx = 0.5; T.gy = 0.7;
+    T.lean = 0.05; T.head = -0.04; T.mRound = 0.3 + 0.45 * f; T.mOpen = 0.62; T.mSmile = 0.95 - 0.35 * f;   // korku değil "vuuu!" heyecanı: ağız açık, gülümseme kalır
+    T.brow = 0.3 + 0.35 * f; T.lid = 1.12; T.gx = 0.5; T.gy = 0.7;
     const pw = smooth(P.a_pre);   // inişe hazırlık: bacaklar yere uzanır, kollar yana açılır, yüz sakinleşir
     if (pw > 0.01) {
       T.lt1 = lerp(T.lt1, 0.3, pw); T.lt2 = lerp(T.lt2, -0.2, pw); T.bt1 = lerp(T.bt1, -0.22, pw); T.bt2 = lerp(T.bt2, -0.2, pw);
@@ -1464,7 +1502,7 @@ function fezaUpdate(dt) {
     T.la1 = 0.7; T.la2 = 0.5; T.ba1 = 0.55; T.ba2 = 0.6; T.lean = 0.25; T.head = 0.3;
     T.happy = 1; T.mOpen = 0.9; T.mSmile = 1; T.brow = 0.3;
   }
-  if (P.a_getup > 0 && gr) { kmin = kmax = 6.5; T.lean += 0.15; }
+  if (P.a_getup > 0 && gr) { kmin = kmax = 6.5; T.lean += 0.15; }   // oturduğu yerden kalkarken acele etmeden
   // Bölüm 3 esinti: yukarı taşıyan rüzgârda süzülme – kollar kanat gibi açık, yavaşça çırpar; bacaklar gevşek sallanır; saç ve etek yukarı uçuşur
   P.a_esW += ((gr ? 0 : fzEsinti()) - P.a_esW) * (1 - Math.exp(-dt * 4));
   if (P.a_esW > 0.02 && (st === 'rise' || st === 'apex' || st === 'fall')) {
@@ -1475,7 +1513,7 @@ function fezaUpdate(dt) {
     T.mRound = lerp(T.mRound, 0, w); T.mOpen = lerp(T.mOpen, 0.7, w); T.mSmile = lerp(T.mSmile, 1, w); T.brow = lerp(T.brow, 0.5, w); T.gy = lerp(T.gy, -0.35, w); T.lid = lerp(T.lid, 1.05, w);
     if (w > 0.5 && (t % 3.2) < 1.5) T.happy = 1;
     kmin = kmax = 9;
-  }   // oturduğu yerden kalkarken acele etmeden
+  }
   // ── üst katmanlar ──
   // büyük şeylere hayranlıkla bakma (Büyük Pofuduk, Işık Ağacı)
   let aw = 0, agx = 0, agy = 0;
@@ -1701,6 +1739,10 @@ function fezaUpdate(dt) {
   R.la1 += 0.5 * cr; R.ba1 += 0.4 * cr; R.sx += 0.1 * cr; R.sy -= 0.08 * cr; R.lid *= 1 - 0.3 * cr;
   if (cr0 < 0) { R.sy -= 0.12 * cr0; R.sx += 0.08 * cr0; R.la1 -= 0.3 * cr0; R.ba1 -= 0.3 * cr0; }   // yaylanmanın yukarı evresi: diz bükülmeden hafif uzama, kollar kalkar
   R.sy += 0.08 * tk; R.sx -= 0.06 * tk; R.lt1 -= 0.6 * tk * R.lt1; R.lt2 *= 1 - 0.7 * tk;
+  if (P.a_take > 0.7 && !gr) {   // kalkışın ilk ~55 ms'si: dizler hâlâ bükük, gövde basık (itme) – gecikme yok, gövde zaten yükseliyor; çömelme hissi verir
+    const pu = (P.a_take - 0.7) / 0.3 * P.a_takeP;
+    R.lt1 += 0.55 * pu; R.lt2 -= 1.0 * pu; R.bt1 += 0.4 * pu; R.bt2 -= 0.9 * pu; R.sy -= 0.07 * pu; R.sx += 0.05 * pu; R.lean += 0.12 * pu; R.la1 -= 0.5 * pu; R.ba1 -= 0.4 * pu;
+  }
   P.a_dj = Math.max(0, P.a_dj - dt / 0.45);
   if (P.a_dj > 0) { const ud = 1 - P.a_dj, os = Math.sin(ud * Math.PI * 2.4) * Math.exp(-ud * 2.2); R.sy -= 0.11 * os; R.sx += 0.08 * os; }
   const bu = P.a_bump * P.a_bump;   // Pofuduk'a tosladı: kısa geri sekme
