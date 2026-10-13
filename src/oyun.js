@@ -745,7 +745,8 @@ function stepCam(dt, snap) {
   for (let i = 0; i < BOLUM.bolgeler.length; i++) { const b = BOLUM.bolgeler[i]; if (!(b.ad === 'aciklik' && omBuyuk && px > b.x0 - 4 * T)) continue;
     const hedefX = omBuyuk.uyandi && TREE ? (omBuyuk.x + TREE.x) / 2 : omBuyuk.x;
     const w = clamp((px - (b.x0 - 4 * T)) / (8 * T), 0, 1) * 0.32 * clamp(1 - (px - hedefX) / (8 * T), 0, 1);
-    if (w > 0) odak = lerp(odak, hedefX, w);
+    // çekiş Feza'yı sol kenara itmesin: en çok ekranın ~%28'ine kadar (geri dönüp kaçan çiçeği alacak yer kalsın)
+    if (w > 0) odak = Math.min(lerp(odak, hedefX, w), Math.max(odak, px + VW * 0.22));
   }
   // küçük ölü bölge (dururken minik oynamalar kamerayı kıpırdatmasın)
   if (snap) omC.odak = odak;

@@ -220,7 +220,7 @@ function drGuide(h0) {
   D.gx = gx; D.gy = gy; D.gO = h; D.gDir = Math.sign(gx - P.x) || P.f;
   drMode('yol'); D.yp = 0; D.guideCd = 28; D.wrongT = 0; D.yawnT = -1;
   D.expr = 'happy'; D.exprT = 0.6;
-  if (!h0 && D.t - D.yolSayT > 45) { D.yolSayT = D.t; drSay('p_yol', { oncelik: 0 }); }
+  if (!h0 && D.t - D.yolSayT > 45 && D.assistCd <= 0) { D.yolSayT = D.t; drSay('p_yol', { oncelik: 0 }); }   // az önce elinden tuttuysa "bu tarafa gel" demesin
   return true;
 }
 function drPulse(x, y, r, n) { for (let i = 0; i < n; i++) D.pulse.push({ x, y, r, t: -i * 0.45, life: 1.4 }); }
@@ -240,7 +240,9 @@ function drAssistTarget(px, py) {
   const h = drHedef(); if (!h) return null;
   const dir = Math.sign(h.x - px) || P.f;
   if (Math.abs(h.x - px) < 13 * T) {   // hedef yakınsa doğrudan onun yanına
-    for (const off of [-dir * 44, -dir * 84, dir * 44, 0]) {
+    // çiçekse önce dokunma menzilinin içine (r 34) koy: yardım işi bitirsin, bir adım dışarıda takılı kalmasın
+    const ici = h.tip === 'cicek' ? [-dir * 20, dir * 20, 0] : [];
+    for (const off of [...ici, -dir * 44, -dir * 84, dir * 44, 0]) {
       const x = h.x + off, y = drSurfaceAt(x, h.y - 20);
       if (y !== null && Math.abs(y - h.y) < 70 && drStandOk(x, y)) return { x, y };
     }

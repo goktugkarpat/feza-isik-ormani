@@ -124,7 +124,7 @@ const SES = (() => {
     return sesOnb[ad];
   }
   const sesBitmis = (k, tip) => { const o = sesSonraki(k, tip); return !!(o && (o.done || o.uyandi || o.lit)); };
-  let sesAsama = 0, sesBuyukZip = false, sesBuyukO;
+  let sesAsama = 0, sesBuyukZip = false, sesBuyukO, sesZipT = -1e9;
   const sesAydinG = {};   // aydınlanan göl grupları
   const sesBuyuk = () => { if (sesBuyukO === undefined) sesBuyukO = gN().find(n => n.tip === 'buyukPofuduk') || null; return sesBuyukO; };
   const sesBuyukAsama = () => { const b = sesBuyuk(); return Math.max(sesAsama, b && b.uyandi ? 3 : 0, (b && b.pf && b.pf.asama) || 0); };
@@ -144,6 +144,7 @@ const SES = (() => {
     p_buyuk_goz: () => sesBuyukAsama() < 2,
     p_buyuk_esne: () => sesBuyukAsama() < 3,
     p_buyuk_kalk: () => { const p = gP(), b = sesBuyuk(); return !sesBuyukZip && !(p && b && p.x > b.x + 2 * T && p.y < b.y - 4 * T); },
+    p_agac: () => { const p = gP(); return !!(p && p.ground) && sesSaat() - sesZipT > 2; },   // uçarken değil: tepede durup ağaca dokunmadıysa
   };
   // sert: çalan cümle sürebilir mi? · gecerli: sıradaki cümle şimdi başlayabilir mi? ('' = evet, yoksa neden)
   function sesSert(s) {
@@ -331,8 +332,13 @@ const SES = (() => {
   OLAY.on('aydinlat', g => { sesAydinG[g || 'gol'] = true; });
   OLAY.on('buyukAsama', v => { if (v && v.asama) sesAsama = Math.max(sesAsama, v.asama); });
   OLAY.on('uyandi', o => { if (o && o.tip === 'buyukPofuduk') sesAsama = 3; });
-  // Büyük Pofuduk Feza'yı tepeye fırlatınca "İşte Işık Ağacı! Koş, dokun!" hemen (tepedeki tetikleyici ağaca çok yakın)
-  OLAY.on('ziplatti', o => { if (o && o.tip === 'buyukPofuduk' && o.uyandi) { sesBuyukZip = true; if (!agacYandi()) soyle('p_agac'); } });
+  // Büyük Pofuduk Feza'yı tepeye fırlatınca yıldız izi onu çoğu zaman ağaca kendisi götürür: uçarken "ağaca dokun" deme.
+  // ~2 sn sonra hâlâ tepede durup ağaca dokunmadıysa söyle.
+  OLAY.on('ziplatti', o => {
+    if (!(o && o.tip === 'buyukPofuduk' && o.uyandi)) return;
+    sesBuyukZip = true; sesZipT = sesSaat();
+    setTimeout(() => { const p = gP(); if (!agacYandi() && p && p.ground && (typeof DURUM === 'undefined' || DURUM === 'oyun')) soyle('p_agac'); }, 2200);
+  });
   let sesHazir = false;
   OLAY.on('durum', d => {
     if (d === 'final' || d === 'son') sesSira = sesSira.filter(s => s.oncelik >= 3);   // oyun bitti: kalan ipuçları gereksiz
