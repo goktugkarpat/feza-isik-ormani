@@ -28,12 +28,12 @@ const SES = (() => {
     "a_giris1": "Bir varmış, bir yokmuş. Feza adında, küçük bir çocuk varmış. Her gece, en sevdiği oyuncağı Pırıl'a sarılıp uyurmuş.",
     "a_giris2": "Pırıl, mor renkli, minicik bir ejderhaymış. Bir gece Feza uykuya dalınca, Pırıl'ın gözleri yavaşça parlamaya başlamış.",
     "a_giris3": "Ve oda, yavaş yavaş, sihirli bir ormana dönüşmüş. Işık Ormanı'na!",
-    "p_uyan": "Feza, uyan! Ormanımızın ışığı sönmüş, bize yardım lazım!",
+    "p_uyan": "Feza, uyan! Ormanımızın ışığı sönmüş, Pofuduklar da uykuya dalmış! Bize yardım lazım!",
     "p_merhaba": "Hadi, şu parlayan çiçeğe gidelim! Parmağını ekranın o tarafına koy ve tut!",
     "p_zipla": "Zıplamak için, köşedeki yuvarlak düğmeye bas! Hop!",
     "p_cicek_ilk": "Yaşasın, çiçek açtı! Orman biraz aydınlandı. Hadi, öbür çiçekleri de bulalım!",
-    "p_uyuyor": "Bak, yolda bir Pofuduk uyuyor! Üstüne zıpla, onu uyandır!",
-    "p_uyandi": "Çok yaşa, Pofuduk! Günaydın! Artık yolumuz açık.",
+    "p_uyuyor": "Bak, bir Pofuduk uyuyor! Pofuduklar ışığı karınlarında taşırlar. Işığı sönünce uyuyup kalmışlar. Üstüne zıpla, ışığını uyandır!",
+    "p_uyandi": "Çok yaşa, Pofuduk! Işığı geri geldi! Orman da aydınlanıyor. Günaydın!",
     "p_karanlik": "Burası çok karanlık. Bekle, ben ışık üfleyeceğim!",
     "p_nilufer": "Bak, suyun üstünde nilüfer yaprakları çıktı! Zıplaya zıplaya, üstlerinden geç!",
     "p_karanlik2": "Bir gölcük daha! Hadi, ben yine ışık üfleyeyim!",
@@ -42,11 +42,14 @@ const SES = (() => {
     "p_ciftzipla": "Zıpla, havadayken düğmeye bir daha bas! Ben seni yukarı iterim!",
     "p_sakli": "Bak, yukarıda gizli bir yol var! Oradaki parlak tohumları toplayalım mı?",
     "p_tohum": "Gizli bir ışık tohumu buldun! Ne güzel parlıyor!",
-    "p_buyuk": "Vay, ne kocaman bir Pofuduk! Onu uyandırmak için, buradaki üç çiçeğe dokun!",
+    "p_buyuk": "Vay, Büyük Pofuduk! Işık Ağacı'nı o koruyor. Onu uyandırınca ağaç yanacak! Hadi, buradaki üç çiçeğe dokun!",
     "p_buyuk_goz": "Bak bak, bir gözünü açtı! Başka bir çiçek daha bul!",
     "p_buyuk_esne": "Esniyor! Son çiçeğe de dokun, uyansın!",
     "p_buyuk_kalk": "Uyandı! Hadi, üstüne zıpla, seni ağaca fırlatsın!",
     "p_agac": "İşte Işık Ağacı! Hadi Feza, koş, ağaca dokun!",
+    "p_sarki1": "Bu Pofuduk çok derin uyuyor. Ona ışık şarkısı söyleyelim!",
+    "p_sarki2": "Beni dinle, sonra sen çal.",
+    "p_sarki3": "Şarkını duydu! Işığı geri geldi.",
     "p_yol": "Feza, bu tarafa gel! Beni takip et!",
     "p_kurtar": "Tuttum seni! Bir daha deneyelim, sen yaparsın!",
     "p_yardim1": "Gel, sana yardım edeyim!",
@@ -54,7 +57,7 @@ const SES = (() => {
     "p_aferin1": "Aferin sana!",
     "p_aferin2": "Süpersin, Feza!",
     "p_aferin3": "Çok güzel gidiyorsun!",
-    "p_aferin4": "Bravo!",
+    "p_aferin4": "Çok şahane!",
     "p_aferin5": "İşte böyle!",
     "p_aferin6": "Sen gerçek bir kahramansın!",
     "p_aferin7": "Harikasın!",
@@ -62,12 +65,31 @@ const SES = (() => {
     "p_aferin9": "Ne kadar da cesursun!",
     "a_final1": "Feza ile Pırıl, Işık Ağacı'nı yeniden parlatmışlar. Bütün orman ışıl ışıl olmuş, Pofuduklar sevinçle dans etmiş.",
     "a_final2": "Sabah olunca, Feza yatağında gözlerini açmış. Pırıl da ona, tatlı tatlı göz kırpmış.",
-    "a_final3": "Ve her gece, yeni bir macera onları bekliyordu..."
+    "a_final3": "Ve her gece, yeni bir macera onları bekliyordu...",
+    "p_gecis": "Işık Ağacı yandı! Yıldızlar göle düşmüş. Hadi gidelim!",
+    "a_y_final1": "Bütün yıldızlar yerine dönmüş. Orman da gökyüzü de ışıl ışıl olmuş, Pofuduklar sevinçle dans etmiş.",
+    "a_y_final2": "Feza bütün gece yıldız toplamış. Sabah yatağında uyanmış, Pırıl da ona göz kırpmış.",
+    "a_y_final3": "Ve gökyüzündeki yıldızlar, her gece onları bekleyecekmiş...",
+    "p_y_giris": "Burası Yıldız Gölü. Sönük yıldızları bulup uyandıralım.",
+    "p_y_gol": "Bak, yıldız taşları! Üstlerine bas, yolu açılıyor.",
+    "p_y_yildiz": "Yıldız uyanıyor! Bak, göğe çıkıyor.",
+    "p_y_yildiz2": "Gökyüzü yıldızla doluyor. Çok güzel!",
+    "p_y_pofuduk": "Bu Pofuduklar da uyuyor. Üstlerine zıpla, ışıklarını uyandır!",
+    "p_y_hayvan": "Vay, Yıldız Kaplumbağası! Sırtındaki yıldızları yakarsak uyanacak. Hadi, hepsine dokun!",
+    "p_y_hayvan_uyan": "Günaydın, Yıldız Kaplumbağası! Hadi, hep birlikte göğe!",
+    "p_y_bitti": "Bütün yıldızlar yerinde! Orman da gökyüzü de ışık içinde.",
+"p_secim": "Bu gece nereye gidelim?",
+    "p_y_uyku": "Bu gece yıldızlara gidiyoruz!",
+    "p_takim1": "Yıldızları birleştirelim!",
+    "p_takim2": "Beni izle.",
+    "p_takim3": "Çok güzel! Gökyüzüne yeni bir resim çizdin.",
+    "p_y_sarki": "Bu Pofuduk yıldız şarkısı istiyor. Beni dinle, sonra sen çal!"
   }/*SESLER-SON*/;
 
   const sesSaat = () => performance.now() / 1000;
   const ovguMu = k => /^p_aferin/.test(k);
-  const anlatici = k => k.startsWith('a_') || k === 'p_uyan';
+  const SES_SAHNE = { p_uyan: 1, p_gecis: 1, p_y_giris: 1, p_y_bitti: 1, p_secim: 1, p_y_uyku: 1 };   // sahne cümleleri: öncelik 3, ağaç yandı/oyun bitti diye atılmaz
+  const anlatici = k => k.startsWith('a_') || !!SES_SAHNE[k];
   const sesKim = k => k.startsWith('a_') ? 'a' : 'p';
   // ── cümle bilgisi: oncelik (3 sahne · 2 oyun · 1 yönlendirme · 0 övgü), acil (2 araya girer · 1 olay tepkisi), ömür (sn), konu ──
   const KONU_SIRA = { p_buyuk: 1, p_buyuk_goz: 2, p_buyuk_esne: 3, p_buyuk_kalk: 4, p_agac: 5, p_karanlik: 1, p_nilufer: 2, p_karanlik2: 1, p_nilufer2: 2 };
@@ -83,6 +105,12 @@ const SES = (() => {
     if (k === 'p_buyuk') return { oncelik: 2, acil: 0, omur: 20, konu: 'buyuk' };
     if (k === 'p_nilufer') return { oncelik: 2, acil: 1, omur: 12, konu: 'gol' };
     if (k === 'p_karanlik') return { oncelik: 2, acil: 1, omur: 15, konu: 'gol' };
+    if (k === 'p_sarki1' || k === 'p_sarki2' || k === 'p_sarki3') return { oncelik: 2, acil: 1, omur: 12, konu: null };   // şarkı etkinliği (sarki.js; oturumda yalnız ilk başlangıçta / ilk başarıda)
+    if (k === 'p_takim1' || k === 'p_takim2') return { oncelik: 2, acil: 1, omur: 12, konu: null };
+    if (k === 'p_takim3') return { oncelik: 2, acil: 1, omur: 8, konu: null };
+    if (k === 'p_y_hayvan_uyan' || k === 'p_y_yildiz') return { oncelik: 2, acil: 1, omur: 8, konu: null };   // Bölüm 2 olay tepkileri
+    if (k === 'p_y_yildiz2') return { oncelik: 2, acil: 1, omur: 6, konu: null };
+    if (k === 'p_y_sarki') return { oncelik: 2, acil: 1, omur: 12, konu: null };
     if (k === 'p_cicek_ilk' || k === 'p_uyandi' || k === 'p_tohum') return { oncelik: 2, acil: 1, omur: 5, konu: null };
     return { oncelik: 2, acil: 0, omur: 20, konu: null };   // konuşma tetikleyicilerinin talimatları
   }
@@ -129,7 +157,7 @@ const SES = (() => {
   const sesBuyuk = () => { if (sesBuyukO === undefined) sesBuyukO = gN().find(n => n.tip === 'buyukPofuduk') || null; return sesBuyukO; };
   const sesBuyukAsama = () => { const b = sesBuyuk(); return Math.max(sesAsama, b && b.uyandi ? 3 : 0, (b && b.pf && b.pf.asama) || 0); };
   let sesZipladi = false; OLAY.on('ziplama', () => { sesZipladi = true; });
-  const agacYandi = () => !!(typeof TREE !== 'undefined' && TREE && TREE.done);
+  const agacYandi = () => (typeof BOLUM_NO !== 'undefined' && BOLUM_NO === 2) ? false : !!(typeof TREE !== 'undefined' && TREE && TREE.done);
   // her talimatın "hâlâ yerinde mi?" koşulu (çalma anında bakılır)
   const KOSUL = {   // s: sıradaki cümle (s.o = tetikleyen konuşma nesnesi, s.yer = göl grubu vb.)
     p_merhaba: s => !sesBitmis('p_merhaba', 'cicek') && !sesIleride('p_merhaba', 10, s),
@@ -140,6 +168,8 @@ const SES = (() => {
     p_minder: s => !sesBitmis('p_minder', 'cicek') && !sesIleride('p_minder', 14, s),
     p_ciftzipla: s => !sesBitmis('p_ciftzipla', 'cicek') && !sesIleride('p_ciftzipla', 13, s),
     p_sakli: s => !gN().some(n => n.tip === 'tohum' && n.done) && !sesIleride('p_sakli', 9, s),
+    p_y_pofuduk: s => { const o = (s.o && s.o.konu) || sesSonraki('y_pofuduk', 'pofuduk'), p = gP(); return !(o && (o.uyandi || (p && p.x > o.x + 3 * T))); },
+    p_y_hayvan: () => { const h = gN().find(n => n.tip === 'yildizHayvan'); return !(h && (h.hazir || h.bitti || h.firlat)); },
     p_buyuk: () => sesBuyukAsama() < 1,
     p_buyuk_goz: () => sesBuyukAsama() < 2,
     p_buyuk_esne: () => sesBuyukAsama() < 3,
@@ -171,7 +201,7 @@ const SES = (() => {
   // ── çözme / çalma ──
   const sesBuf = {}, sesCoz = {};
   let sesSira = [], sesCalan = null, sesKaynak = null, sesBitisZ = null;
-  const sesSoylendi = {}, sesSonCal = {}, SES_AYNI_ARA = 20, tekrarli = k => ovguMu(k) || k === 'p_yol' || k === 'p_kurtar' || /^p_yardim/.test(k);
+  const sesSoylendi = {}, sesSonCal = {}, SES_AYNI_ARA = 20, tekrarli = k => k === 'p_secim' || ovguMu(k) || k === 'p_yol' || k === 'p_kurtar' || /^p_yardim/.test(k);
   let sesSonBitis = -1e9, sesSonSure = 0, sesSonOvgu = -1e9, sesOvguGecmis = [], sesYardimN = 0;
   const kayit = [];
   const sesNot = (ne, k, neden) => { kayit.push([+sesSaat().toFixed(2), ne, k, neden || '']); if (kayit.length > 400) kayit.shift(); };
@@ -226,7 +256,14 @@ const SES = (() => {
     const g2 = typeof BOLUM !== 'undefined' && Array.isArray(BOLUM.gollar) && BOLUM.gollar[1], p = gP();
     return !!(g2 && p && p.x > g2.x0 - 16 * T && p.x < g2.x1 + 2 * T);
   }
+  const sesB2 = () => typeof BOLUM_NO !== 'undefined' && BOLUM_NO === 2;
+  let sesYildizBekle = false, sesYildizGec = false;
   function soyle(k, ops) {
+    const ko = k;   // çağıranın verdiği ad (konuşma tetikleyicisi anahtarı)
+    if (/^y_/.test(k) && LINES['p_' + k]) k = 'p_' + k;                      // Bölüm 2 tetikleyicileri: 'y_gol' → 'p_y_gol'
+    if (/^a_final\d$/.test(k) && sesB2() && LINES['a_y_' + k.slice(2)]) k = 'a_y_' + k.slice(2);   // Bölüm 2 final anlatıcısı
+    if (k === 'p_sarki1' && sesB2()) k = 'p_y_sarki';                       // Bölüm 2: yıldız şarkısı cümlesi
+    if (k === 'p_y_yildiz' && !sesYildizGec && !(typeof SAYAC !== 'undefined' && SAYAC.yildiz > 0)) { sesYildizBekle = true; return; }   // "yıldız uyanıyor": ilk yıldız gerçekten uyanınca (tetikleyici önceden de çağırabilir)
     if (k === 'p_aferin' || ovguMu(k)) k = sesOvguSec(k);
     if (k === 'p_yardim') k = 'p_yardim' + (1 + (sesYardimN++ % 2));
     if (!k || !LINES[k]) return;
@@ -237,7 +274,7 @@ const SES = (() => {
       else if (ops.oncelik <= 0 && !ovguMu(k)) { oncelik = Math.min(oncelik, 1); omur = Math.min(omur, 3); }
     }
     if (ovguMu(k) && t - sesSonOvgu < 12) { sesNot('at', k, 'övgü sık'); return; }
-    const o = (ops && ops.o) || (anlatici(k) || ovguMu(k) ? null : sesTetikBul(k));
+    const o = (ops && ops.o) || (anlatici(k) || ovguMu(k) ? null : sesTetikBul(ko) || (ko !== k ? sesTetikBul(k) : null));
     if ((k === 'p_karanlik' || k === 'p_nilufer') && sesIkinciGol(o, ops)) k = k + '2';   // ikinci gölcükte yeni cümle
     if ((sesCalan && sesCalan.k === k) || sesSira.some(s => s.k === k)) return;   // aynı cümle zaten sırada
     // talimatlar/tepkiler bir kez — ama tetikleyici nesne başına (iki göl, iki uyuyan Pofuduk), oyun başına değil
@@ -339,6 +376,29 @@ const SES = (() => {
     sesBuyukZip = true; sesZipT = sesSaat();
     setTimeout(() => { const p = gP(); if (!agacYandi() && p && p.ground && (typeof DURUM === 'undefined' || DURUM === 'oyun')) soyle('p_agac'); }, 2200);
   });
+  // Bölüm 2 olayları (yildiz.js): ilk yıldız uyanınca / birkaç yıldız yerleşince / hayvan uyanınca / gökyüzü dolunca Pırıl konuşur
+  let sesYerlesen = 0;
+  OLAY.on('yildiz', o => { if (sesYildizBekle && !(o && (o.hayvan || /hayvan/i.test(o.tip || '')))) { sesYildizBekle = false; sesYildizGec = true; soyle('p_y_yildiz'); } });
+  OLAY.on('yildizYerlesti', () => { if (++sesYerlesen === 5) soyle('p_y_yildiz2'); });
+  OLAY.on('hayvanHazir', () => soyle('p_y_hayvan_uyan'));
+  OLAY.on('hayvanUyandi', () => soyle('p_y_bitti', { oncelik: 3 }));
+  // seçim ekranı (DURUM 'baslik'): "Bu gece nereye gidelim?" ilk açılışta 1 kez; sonra yalnız ~25 sn hiç dokunulmazsa 1 kez daha
+  let sesSecimN = 0, sesSecimT = 0;
+  OLAY.on('secim', () => { sesSecimT = sesSaat(); });
+  OLAY.on('secimIlgi', () => { sesSecimT = sesSaat(); });   // boş dokunuş: yalnız sayaç sıfırlanır (ses çalmaz)
+  const sesSecimBasla = d => {
+    if (d !== 'baslik' || sesSecimN) return;
+    sesSecimN = 1; sesSecimT = sesSaat();
+    setTimeout(() => { if (typeof DURUM !== 'undefined' && DURUM === 'baslik') { soyle('p_secim'); sesSecimT = sesSaat(); } }, 1400);
+    const bekle = () => {
+      if (typeof DURUM === 'undefined' || DURUM !== 'baslik') return;
+      if (sesSaat() - sesSecimT >= 25 && !sesCalan && sesSecimN < 2) { sesSecimN = 2; soyle('p_secim'); return; }
+      setTimeout(bekle, 2000);
+    };
+    setTimeout(bekle, 3000);
+  };
+  OLAY.on('durum', sesSecimBasla);
+  setTimeout(() => sesSecimBasla(typeof DURUM !== 'undefined' ? DURUM : ''), 1500);   // 'durum' olayı kaçmışsa
   let sesHazir = false;
   OLAY.on('durum', d => {
     if (d === 'final' || d === 'son') sesSira = sesSira.filter(s => s.oncelik >= 3);   // oyun bitti: kalan ipuçları gereksiz

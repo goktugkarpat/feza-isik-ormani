@@ -1,7 +1,7 @@
 // İnternetsiz çalışma: ilk açılıştan sonra oyun (kod, gömülü sesler, simgeler) cihazda saklanır.
 // Dosya eklenirse SRC listesine ekle; önemli değişiklikte CACHE sürümünü artır.
-const CACHE = 'feza-isik-ormani-v1';
-const SRC = ['ortak', 'bolum', 'dunya', 'feza', 'piril', 'pofuduk', 'sahne', 'arayuz', 'muzik', 'ses', 'oyun'];
+const CACHE = 'feza-isik-ormani-v33';
+const SRC = ['ortak', 'bolum', 'dunya', 'feza', 'piril', 'pofuduk', 'sahne', 'arayuz', 'sarki', 'bolum2', 'dunya2', 'yildiz', 'takim', 'muzik', 'ses', 'oyun'];
 const CORE = ['./', './index.html', './sesler.js', './manifest.webmanifest', ...SRC.map(n => './src/' + n + '.js')];
 const ICONS = ['./icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];   // eksik simge kurulumu durdurmasın
 const FRESH = /(\/|index\.html)$/;   // sayfa önce ağ, diğer dosyalar önce önbellek

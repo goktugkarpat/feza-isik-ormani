@@ -819,9 +819,9 @@ function dnColourBloom() {
   for (const f of DN_FLW) {
     if (!f.done || !(f.bt >= 0)) continue;
     const hue = dnHueOf(f);
-    const e = now - f.bt, grow = smooth(clamp(e / 7, 0, 1)), r = (220 + 560 * grow) * S, x = (f.x - cam.x) * S, y = (f.y - 120 - cam.y) * S;
+    const e = now - f.bt, grow = smooth(clamp(e / 7, 0, 1)), kk = f.dnK || 1, r = (220 + 560 * grow) * S * kk, x = (f.x - cam.x) * S, y = (f.y - 120 - cam.y) * S;
     if (x < -r || x > W + r) continue;
-    const a = smooth(clamp(e / 2.5, 0, 1)) * (1 - dnBlaze * 0.6);
+    const a = smooth(clamp(e / 2.5, 0, 1)) * (1 - dnBlaze * 0.6) * (kk < 1 ? 0.8 : 1);
     if (!any) { g.globalCompositeOperation = 'soft-light'; any = true; }
     dglow(hue[0], x, y, r, 0.85 * a); dglow(hue[1], x + r * 0.35, y - r * 0.25, r * 0.6, 0.55 * a);
   }

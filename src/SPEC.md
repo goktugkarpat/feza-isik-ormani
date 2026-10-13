@@ -98,3 +98,17 @@ at screen/any transform (feet/centre at x,y) in a named pose, for sahne.js. Feza
 ## Feza cannot read (he is 5)
 Nothing may depend on text. Instructions come from Pırıl's voice and visual cues (animated hand hints, glowing trails, pulses).
 Subtitles are hidden unless `?altyazi` is in the URL. End screen and buttons use icons, not words.
+
+
+## Story note: Pofuduks (for narration and visuals)
+Pofuduks carry the forest's light in their bellies. When the forest went dark their light went out and they fell asleep (faint dim belly glow, "Zzz").
+Stomping tickles their light awake: sneeze, belly glows, a ring of light spreads and nearby plants/mushrooms regain colour (pofuduk.js `pfKarinIsik` + dunya.js bloom list `DN_FLW` with `dnK` radius factor), then they follow Feza carrying the light.
+Some sleep too deeply to be stomped awake: only the light song (sarki.js, optional mini-game; belly brightens with each correct note, full on success) wakes them.
+The Big Pofuduk is the eldest and guardian of the Light Tree: wake him and the tree lights.
+Voice lines carrying this story: `p_uyan`, `p_uyuyor`, `p_uyandi`, `p_buyuk`, `p_sarki1..3` (the song lines play once per session).
+
+## Bölüm 2 (Yıldız Gölü)
+`BOLUM_NO` (1|2) `index.html`'de belirlenir ve yalnız `bolum.js` ya da `bolum2.js` yüklenir; çizimler `oyun.js` içinde `omDr` ile `dunya.js` ya da `dunya2.js`'e yönlenir. Tüm sözleşme: `src/BOLUM2.md`.
+Test bayrakları: `?sessiz`, `?atla`, `?bolum=1|2`, `?nogecis`, `?altyazi`.
+
+Tur 3: başlık = seçim sahnesi; `OLAY` akışı: `SAHNE.secim(secenekler, onSec)` → `onSec(id)` (1: `begin()`, 2: sessionStorage 'fezaIsikSec'=2 + yenileme → `SAHNE.giris(bitti, {bolum:2, kisa:true})`). Bölüm bitince `finaleGec()` 'fezaIsikTamam'a bölüm no yazar. Bölüm 1→2 geçiş sinematiği kaldırıldı.

@@ -4,6 +4,7 @@
    Klasik script: üst düzey const/let/function'lar diğer dosyalarla ortak (ortak.js önce yüklenir). Özel adlar dr* ile başlar.
    Diğer modüller için dışa açık durum: D.tasiyor (Feza'yı taşıyor), D.pence {x,y} (pençelerin dünya konumu),
    D.mode, OLAY 'nefes' {asama:'basla'|'al'|'ver'|'bitti'}. */
+/* [MINI ekledi] Yalnız bir 'takim' modu dalı (stepDragon içinde 'dans' dalından önce): takim.js Takımyıldızı çiz mini oyunu için. Başka değişiklik yok. */
 'use strict';
 const DR_TAIL_N = 7, DR_TAIL_LEN = 3.2;   // peluştaki gibi orta boy, incelerek yassı küreğe biten kuyruk
 // renkler: Feza'nın gerçek peluşu (lila gövde, limon yeşili karın/kulak, koyu yeşil ibik, yeşil gözler)
@@ -33,7 +34,7 @@ function dragonInit() {
   D.lookAt = { x: 0, y: 0 }; D.lookAtT = 0; D.tiltWant = null; D.faceHold = 0; D.lockF = 0;
   // ışık nefesi, yol gösterme, tepkiler
   D.nf = []; D.nfQ = []; D.nfA = 0; D.iz = []; D.pulse = []; D.izT = 0;
-  D.guideCd = 18; D.yolSayT = -99; D.wrongT = 0; D.playCd = 10; D.yayCd = 0; D.kurtarT = -99;
+  D.guideCd = BOLUM_NO === 2 ? 5 : 18; D.yolSayT = -99; D.wrongT = 0; D.playCd = 10; D.yayCd = 0; D.kurtarT = -99;
   D.bayrak = {}; D.nCicek = 0; D.since = 0; D.praiseK = 0; D.praiseT = -99; D.wowO = null; D.gosterO = null; D.danceAfter = false;
   D.tasiyor = false; D.pence = { x: D.x, y: D.y + 12 };
   D.falls = []; D.assistCd = 0; D.stuckT = 0; D.jumps = 0; D.bestD = 1e9; D.bestH = null; D.yardim = false;
@@ -80,7 +81,7 @@ function drMode(m) { D.mode = m; D.modeT = 0; D.faceHold = 0; }   // yeni mod: z
 function drSay(k, opt) { if (typeof SES !== 'undefined' && SES && SES.soyle) { try { SES.soyle(k, opt); } catch (e) {} } }
 function drSfx(k, v) { if (typeof AU !== 'undefined' && AU && AU.sfx) { try { AU.sfx(k, v); } catch (e) {} } }
 function drFree() { return D.mode === 'follow' || D.mode === 'orbit'; }
-function drBusy() { return D.mode === 'push' || D.mode === 'tasi' || D.mode === 'dalis' || D.mode === 'nefes' || D.mode === 'yardim' || D.mode === 'sakli'; }
+function drBusy() { return D.mode === 'firlat' || D.mode === 'push' || D.mode === 'tasi' || D.mode === 'dalis' || D.mode === 'nefes' || D.mode === 'yardim' || D.mode === 'sakli'; }
 function drPlaying() { return DURUM === 'oyun' && P.fade <= 0 && !(P.kilit > 0); }
 function drGlow(x, col, px, py, r, a) { x.globalAlpha = a; x.drawImage(glow(col), px - r, py - r, r * 2, r * 2); x.globalAlpha = 1; }
 
@@ -96,7 +97,7 @@ function dragonPush() {     // havada ikinci zıplama: Pırıl hızla süzülüp
 }
 function dragonHappy(target) {   // çiçek açıldı / ağaç yandı (target: {x, y})
   dragonInit();
-  if (D.mode === 'tasi' || D.mode === 'dalis' || D.mode === 'nefes') return;
+  if (D.mode === 'tasi' || D.mode === 'dalis' || D.mode === 'nefes' || D.mode === 'ugurla' || D.mode === 'hayvanH') return;
   const tree = (typeof TREE !== 'undefined' && target === TREE);
   D.mode = 'happy'; D.modeT = 0; D.hphase = 0; D.yawnT = -1; D.beckonW = 0;
   // Feza'nın yüzünü kapatmasın: çiçeğin Feza'dan uzak tarafında dön
@@ -158,6 +159,30 @@ OLAY.on('buyukAsama', v => {
   // sonra sıradaki açılmamış çiçeği göster (Feza okuyamaz: görsel ipucu)
   if (v.asama < 3) D.gosterO = true;
 });
+// ── Bölüm 2: yıldız uğurlama, kaplumbağa heyecanı ──
+OLAY.on('yildiz', o => {
+  dragonInit(); if (!o || BOLUM_NO !== 2 || o.tip !== 'yildiz' || !isFinite(o.x) || !isFinite(o.y)) return;
+  D.ugO = o; D.guideCd = Math.max(D.guideCd, 14); D.since = 0;
+  if (D.mode === 'tasi' || D.mode === 'dalis' || D.mode === 'nefes' || D.mode === 'yardim' || D.mode === 'firlat' || o.zorla) return;   // fırlatış/yıldız dalgası: tek tek uğurlama yok
+  D.flare = 1; D.pulse.length = 0; D.ugPX = o.x; D.ugPY = o.y; drMode('ugurla'); D.beckonW = 0; D.yawnT = -1; D.expr = 'wow'; D.exprT = 0.5;
+});
+OLAY.on('yildizYerlesti', o => {
+  dragonInit(); if (BOLUM_NO !== 2) return;
+  if (D.mode === 'ugurla' && D.ugO === o) { D.ugBitti = true; }
+  else if (!drBusy() && !(o && o.zorla)) dragonHappy({ x: P.x, y: P.y - 90 });
+});
+OLAY.on('hayvanAsama', v => {
+  dragonInit(); if (!v || !v.o || !isFinite(v.o.x) || BOLUM_NO !== 2 || !(drFree() || D.mode === 'yol' || D.mode === 'ilgi')) return;
+  drMode('hayvanH'); D.ho = v.o; D.has = v.asama; D.expr = 'wow'; D.exprT = 0.8; drSparkle(D.x, D.y, 6, 80);
+});
+OLAY.on('hayvanFirlat', () => {   // Feza göğe fırlar: Pırıl yanında (üstünü örtmeden) yükselir, yıldız dalgasıyla sevinir
+  dragonInit(); if (BOLUM_NO !== 2 || D.mode === 'tasi' || D.mode === 'dalis') return;
+  drMode('firlat'); D.expr = 'wow'; D.exprT = 0.6; D.beckonW = 0; D.yawnT = -1; drSparkle(D.x, D.y, 10, 100);
+});
+OLAY.on('hayvanUyandi', () => {
+  dragonInit(); if (BOLUM_NO !== 2) return;
+  if (!drBusy()) { drMode('yay'); D.yayDur = 1.7; D.yayBig = true; D.yayDir = 1; D.ya0 = Math.atan2(D.y - (P.y - 40), D.x - P.x); D.expr = 'wow'; D.exprT = 0.4; drSparkle(D.x, D.y, 12, 110); }
+});
 OLAY.on('kurtarildi', () => { dragonInit(); if (D.mode !== 'tasi') drSayKurtar(); });
 OLAY.on('dustu', () => {
   dragonInit();
@@ -194,12 +219,20 @@ OLAY.on('aydinlat', grup => {   // başka yerden gelirse de nilüfer cümlesi (g
 // ── yol gösterme ──
 function drGoalOpen(o) {
   return (o.tip === 'cicek' && !o.done) || (o.tip === 'buyukPofuduk' && !o.uyandi) ||
-    (o.tip === 'agac' && !(typeof TREE !== 'undefined' && TREE && TREE.done)) || (o.tip === 'karanlik' && !o.lit);
+    (o.tip === 'agac' && !(typeof TREE !== 'undefined' && TREE && TREE.done)) || (o.tip === 'karanlik' && !o.lit) ||
+    (o.tip === 'yildiz' && !o.done && !o.secmeli) || (o.tip === 'yildizHayvan' && !o.uyandi && o.hazir);
 }
 function drHedef() {
   let h = null;
   try { if (typeof HEDEF === 'function') h = HEDEF(); } catch (e) {}
   for (const o of NESNELER) if (o.tip === 'karanlik' && !o.lit && o.x > P.x - 200 && (!h || o.x < h.x)) h = o;
+  if (BOLUM_NO === 2) {   // Yıldız Gölü: Feza'ya en yakın uyanmamış (zorunlu) yıldız; isteğe bağlı zor yıldızlar çağrılmaz
+    let b = null, bd = 1e9;
+    for (const o of NESNELER) if (o.tip === 'yildiz' && !o.done && !o.secmeli) { const d = Math.abs(o.x - P.x) + Math.abs(o.y - P.y) * 0.4 + (o.x < P.x - 200 ? 600 : 0); if (d < bd) { bd = d; b = o; } }
+    if (b) return b;
+    if (h && h.tip === 'yildiz' && h.secmeli) h = NESNELER.find(o => o.tip === 'yildizHayvan' && !o.uyandi) || null;
+    return h;
+  }
   // Büyük Pofuduk uyumuyorsa önce onun çiçekleri
   if (h && h.tip === 'buyukPofuduk') { let b = null; for (const o of NESNELER) if (o.buyukIcin && !o.done && (!b || Math.abs(o.x - P.x) < Math.abs(b.x - P.x))) b = o; if (b) h = b; }
   if (h && h.x < P.x - 450) {   // geride kalmış isteğe bağlı çiçek: öndekini seç
@@ -209,7 +242,7 @@ function drHedef() {
   return h;
 }
 function drGoalToward(sg) { for (const o of NESNELER) if (drGoalOpen(o) && (o.x - P.x) * sg > 0 && Math.abs(o.x - P.x) < 700) return true; return false; }
-function drGoalY(h) { return h.y - (h.tip === 'buyukPofuduk' ? 170 : h.tip === 'agac' ? 230 : h.tip === 'karanlik' ? 70 : 40); }
+function drGoalY(h) { return h.y - (h.tip === 'buyukPofuduk' ? 170 : h.tip === 'agac' ? 230 : h.tip === 'karanlik' ? 70 : h.tip === 'yildizHayvan' ? 190 : h.tip === 'yildiz' ? 46 : 40); }
 function drGuide(h0) {
   const h = h0 || drHedef(); if (!h) return false;
   let gx = h.x, gy = drGoalY(h);
@@ -223,6 +256,15 @@ function drGuide(h0) {
   if (!h0 && D.t - D.yolSayT > 45 && D.assistCd <= 0) { D.yolSayT = D.t; drSay('p_yol', { oncelik: 0 }); }   // az önce elinden tuttuysa "bu tarafa gel" demesin
   return true;
 }
+// İlk uyuyan Pofuduk: söz bittikten az sonra Pırıl Pofuduğa süzülüp karnındaki soluk ışığı gösterir (el yok; ışıltılı iz + nabız)
+OLAY.on('dokun:konusma', o => {
+  if (!o || o.anahtar !== 'p_uyuyor' || !o.konu || typeof omZamanla !== 'function') return;
+  omZamanla(1.2, () => {
+    dragonInit();
+    if (DURUM !== 'oyun' || o.konu.uyandi || D.bayrak.ilkPofGoster || !drFree()) return;
+    D.bayrak.ilkPofGoster = true; drGuide(o.konu);
+  });
+});
 function drPulse(x, y, r, n) { for (let i = 0; i < n; i++) D.pulse.push({ x, y, r, t: -i * 0.45, life: 1.4 }); }
 
 // ── takılınca yardım: hedefe doğru bir sonraki güvenli yere uçarak taşı ──
@@ -357,7 +399,9 @@ function drBreathParticles(dt, rate, mo, ang) {
 // ── davranış ──
 function stepDragon(dt) {
   dragonInit();
-  D.t += dt; D.modeT += dt;
+  if (!(dt > 1e-4) || !isFinite(dt)) return;   // dt=0 / NaN: hiçbir şeyi bozma
+  if (!isFinite(D.x) || !isFinite(D.y)) { D.x = P.x - 40; D.y = P.y - 100; D.vx = D.vy = 0; drResetTail(); }
+  D.t += dt; D.modeT += dt; if (D.flare > 0) D.flare = Math.max(0, D.flare - dt / 0.9);
   const wx = Math.sin(D.t * 0.71) * 9 + Math.sin(D.t * 1.93) * 3, wy = Math.sin(D.t * 1.31) * 5 + Math.sin(D.t * 0.53) * 4;
   let tx = P.x - P.f * 40 + wx, ty = P.y - 112 + wy;
   let k = 28, damp = 8.5, direct = false, hopW = 0, flapW = 0, rollW = 0;
@@ -386,7 +430,7 @@ function stepDragon(dt) {
       const dx = h.x - P.x, away = Math.abs(dx) > 280 && P.vx * Math.sign(dx) < -60;
       if (away && !drGoalToward(Math.sign(P.vx))) D.wrongT += dt; else D.wrongT = Math.max(0, D.wrongT - dt * 0.7);
       const far = Math.abs(dx) > 140 || Math.abs(drGoalY(h) + 40 - P.y) > 130;
-      if (D.guideCd <= 0 && far && (P.idle > 10 || D.wrongT > 4)) drGuide();
+      if (D.guideCd <= 0 && far && (P.idle > (BOLUM_NO === 2 ? 8 : 10) || D.wrongT > 4)) drGuide();
     }
   }
   if (playing && drFree() && !D.bayrak.merak) {   // Büyük Pofuduk'u ilk görüş: merakla yanına uç
@@ -702,6 +746,40 @@ function stepDragon(dt) {
     D.expr = D.modeT < 2.2 ? 'wow' : 'happy'; D.exprT = 0.3;
     rollW = Math.sin(D.modeT * 2.4) * 0.2;
     if (D.modeT > 3.0 || Math.abs(P.x - b.x) > 700) drMode('follow');
+  } else if (D.mode === 'ugurla') {    // uyanan yıldızı göğe uğurla: başını kaldır, onunla birlikte yüksel, sevin
+    const o = D.ugO, side = Math.sign(D.x - P.x) || 1, u = D.modeT;
+    const fl = (o.durum === 'ucuyor' || o.durum === 'yerlesti') && isFinite(o.x2), sx = fl ? o.x2 : o.x, sy = fl ? o.y2 : o.y - (o.rise || 0);
+    if (!D.ugBitti && u < 6) {   // yıldızın kıvrımlı uçuşunu izle: hemen arkasında (iz bırakarak), sonra gökte yerleşince sevin
+      const vx = sx - (D.ugPX == null ? sx : D.ugPX), dirS = Math.abs(vx) > 0.4 ? Math.sign(vx) : (Math.sign(sx - D.x) || side);
+      D.ugPX = lerp(D.ugPX == null ? sx : D.ugPX, sx, 1 - Math.exp(-dt * 6));
+      const lead = fl ? 1 : 0.55;
+      tx = clamp(sx - dirS * 42 * lead, cam.x + 70, cam.x + VW - 70); ty = clamp(sy + 38 * lead + 12 + Math.sin(u * 4) * 5, cam.y + 56, P.y - 100);
+      k = fl ? 44 : 26; damp = fl ? 9 : 8; flapW = 7; D.lookAt.x = sx; D.lookAt.y = sy; D.lookAtT = 0.25; D.ft = dirS; D.faceHold = 0.1;
+      D.expr = u < 0.5 ? 'wow' : 'happy'; D.exprT = 0.3; rollW = clamp(-dirS * (sy - D.y) / 300, -0.25, 0.25);
+      D.fxT -= dt; if (D.fxT < 0) { D.fxT = 0.2; drFx(D.x, D.y - 4, 'star'); }
+    } else {                          // yıldız yerleşti: sevinç sıçraması
+      D.ugT = (D.ugT || 0) + dt;
+      if (D.ugT < dt * 1.5) { drSparkle(D.x, D.y, 10, 110); drSfx('parilti', 0.5); }
+      tx = D.x + (P.x + side * 50 - D.x) * Math.min(1, D.ugT * 0.9); ty = D.y + (P.y - 140 - D.y) * Math.min(1, D.ugT * 0.9); k = 34; damp = 9; flapW = 7;
+      D.expr = 'happy'; D.exprT = 0.4; hopW = Math.abs(Math.sin(D.ugT * 9)) * 6 * Math.max(0, 1 - D.ugT / 0.8);
+      D.lookAt.x = sx; D.lookAt.y = sy; D.lookAtT = 0.2;
+      if (D.ugT > 1.5) { D.ugO = null; D.ugT = 0; D.ugBitti = false; drMode('follow'); for (let i = 0; i < 3; i++) drFx(D.x, D.y - 6, 'star'); if (Math.random() < 0.3) drPraise(); }
+    }
+    if (D.modeT > 7) { D.ugBitti = false; D.ugT = 0; drMode('follow'); }
+  } else if (D.mode === 'firlat') {    // Feza'nın fırlatışı: yanında yüksel, yukarı bak, sevin
+    const u = D.modeT, side = Math.sign(D.x - P.x) || 1;
+    tx = P.x + side * 62 + Math.sin(u * 3) * 8; ty = P.y - 40 + Math.sin(u * 4.4) * 8; k = 48; damp = 9; flapW = 7;
+    D.lookAt.x = P.x; D.lookAt.y = P.y - 400; D.lookAtT = 0.25; D.ft = -side; D.faceHold = 0.1;
+    D.expr = u < 0.8 ? 'wow' : 'happy'; D.exprT = 0.3; rollW = Math.sin(u * 5) * 0.15; hopW = Math.abs(Math.sin(u * 8)) * 4;
+    D.fxT -= dt; if (D.fxT < 0) { D.fxT = 0.18; drFx(D.x, D.y - 4, 'star'); }
+    if (u > 4.2 || DURUM !== 'oyun') drMode('follow');
+  } else if (D.mode === 'hayvanH') {   // Yıldız Kaplumbağası uyanırken: merak/heyecan
+    const o = D.ho, u = D.modeT, side = Math.sign(P.x - o.x) || -1;
+    tx = P.x + Math.sin(u * 3.5) * 14 + side * 10; ty = P.y - 150 + Math.sin(u * 5) * 6; k = 40; damp = 10; flapW = 7;
+    D.lookAt.x = o.x; D.lookAt.y = o.y - 150; D.lookAtT = 0.25; D.ft = Math.sign(o.x - D.x) || 1; D.faceHold = 0.1;
+    D.expr = u < 1.1 ? 'wow' : 'happy'; D.exprT = 0.3; rollW = Math.sin(u * 7) * 0.16; hopW = Math.abs(Math.sin(u * 8)) * 5;
+    if (Math.random() < dt * 14) drFx(D.x, D.y - 6, 'star');
+    if (u > 1.9 + 0.3 * (D.has || 1)) drMode('follow');
   } else if (D.mode === 'yay') {       // zıplatan Pofuduk: Feza'nın çevresinde sevinçle dön
     const a = D.ya0 + D.yayDir * D.modeT * (D.yayBig ? 7.5 : 8);
     const r = D.yayBig ? 90 : 80;
@@ -775,6 +853,38 @@ function stepDragon(dt) {
       if (u >= 1) { drMode('follow'); drFx(D.x, D.y - 10, 'star'); }
     }
     if (far && D.mode === 'ilgi') { drMode('follow'); D.sniff = 0; D.ikFx = false; D.nomO = 0; }
+  } else if (D.mode === 'sarki') {     // şarkı çiçekleri (sarki.js): çiçeklerin üstünde süzül, notaya göre hafifçe zıpla
+    const so = D.srk, y = so && typeof skPirilYer === 'function' ? skPirilYer(so) : null;
+    if (!y || DURUM !== 'oyun' || Math.abs(P.x - so.x) > 1000) drMode('follow');
+    else {
+      const kut = so.sk && so.sk.kut;
+      if (kut) {   // büyük kutlama: çiçeklerin üstünde sekiz çizerek dans, ara ara havada takla
+        const a = D.modeT * 2.0, u = (D.modeT % 2.6) / 2.6;
+        tx = so.x + Math.sin(a) * 160; ty = y.y - 10 + Math.sin(2 * a) * 38; k = 55; damp = 11; flapW = 6;
+        if (u < 0.35) spinW = smooth(u / 0.35) * 6.283 * (Math.sin(a) > 0 ? -1 : 1);
+        hopW = Math.abs(Math.sin(D.modeT * 8)) * 5;
+        D.fxT -= dt; if (D.fxT < 0) { D.fxT = 0.12; drFx(D.x, D.y - 4, Math.random() < 0.5 ? 'heart' : 'star'); }
+        D.ft = Math.sign(so.x - D.x) || D.ft; D.faceHold = 0.15; D.expr = 'happy'; D.exprT = 0.3;
+      } else {
+      tx = y.x + Math.sin(D.t * 1.1) * 10; ty = y.y + Math.sin(D.t * 2.3) * 5; k = 38; damp = 10; flapW = 3.2;
+      const sirada = so.sk && so.sk.durum === 'sira';
+      D.ft = Math.sign((sirada ? P.x : so.x) - D.x) || D.ft; D.faceHold = 0.15;
+      if (sirada) { tx = y.x - 40 + Math.sin(D.t * 1.1) * 6; ty = y.y + 14; D.tiltWant = 0.18 * Math.sin(D.t * 2.2); }   // "sıra sende": geri çekilir, Feza'ya bakıp başını sallar
+      D.expr = 'happy'; D.exprT = 0.3;
+      hopW = Math.max(0, D.srkVur || 0) * 24;
+      if (sirada) { D.lookAt.x = P.x; D.lookAt.y = P.y - 60; } else { D.lookAt.x = so.x; D.lookAt.y = so.y - 40; } D.lookAtT = 0.2;
+      }
+    }
+  } else if (D.mode === 'takim') {     // [MINI] takim.js: Takımyıldızı çiz – ay aynasının üstünde süzülür, gökyüzüne bakar (D.tkO, D.tkVur)
+    const to = D.tkO, y = to && typeof tkPirilYer === 'function' ? tkPirilYer(to) : null;
+    if (!y || DURUM !== 'oyun' || Math.abs(P.x - to.x) > 1000) drMode('follow');
+    else {
+      tx = y.x + Math.sin(D.t * 1.1) * 10; ty = y.y + Math.sin(D.t * 2.3) * 5; k = 38; damp = 10; flapW = 3.2;
+      if (D.tkKut) { const a = D.modeT * 2.0; tx = to.x + Math.sin(a) * 120; ty = y.y - 30 + Math.sin(2 * a) * 30; k = 55; damp = 11; flapW = 6; hopW = Math.abs(Math.sin(D.modeT * 8)) * 5; }
+      D.ft = Math.sign(to.x - D.x) || D.ft; D.faceHold = 0.15; D.expr = 'happy'; D.exprT = 0.3;
+      D.tkVur = Math.max(0, (D.tkVur || 0) - dt); hopW = Math.max(hopW, D.tkVur * 24);
+      D.lookAt.x = to.x; D.lookAt.y = to.y - 420; D.lookAtT = 0.2;
+    }
   } else if (D.mode === 'dans') {      // final: Feza'nın çevresinde sekiz çizen sevinç dansı
     const a = D.modeT * 2.6;
     tx = P.x + Math.sin(a) * 74; ty = P.y - 112 + Math.sin(2 * a) * 22; k = 60; damp = 12; flapW = 5.5;
@@ -791,11 +901,13 @@ function stepDragon(dt) {
   D.beckon = lerp(D.beckon, D.beckonW, 1 - Math.exp(-dt * 10));
   D.headRoll = lerp(D.headRoll, rollW, 1 - Math.exp(-dt * 6));
 
+  if (!isFinite(tx) || !isFinite(ty)) { tx = P.x - P.f * 40; ty = P.y - 112; if (D.mode !== 'follow') drMode('follow'); }   // hedef bozuksa (eksik nesne/olay verisi) güvenli takip
   if (!direct) {
     D.vx += ((tx - D.x) * k - D.vx * damp) * dt; D.vy += ((ty - D.y) * k - D.vy * damp) * dt;
     const sp = Math.hypot(D.vx, D.vy); if (sp > 1400) { D.vx *= 1400 / sp; D.vy *= 1400 / sp; }
     D.x += D.vx * dt; D.y += D.vy * dt;
   }
+  if (!isFinite(D.x) || !isFinite(D.y) || !isFinite(D.vx) || !isFinite(D.vy)) { D.x = P.x - 40; D.y = P.y - 100; D.vx = D.vy = 0; drResetTail(); }
   // ── ikincil hareket: ivmeden yaylara (ibik, kulak, kuyruk küreği gecikir ve seker) ──
   {
     const idt = 1 / Math.max(dt, 1e-3);
@@ -1057,6 +1169,7 @@ const DR_CREST_S = [5, -24, 3.4, -0.4, -25.6, 4.2, -5.6, -22.6, 3.9, 0, -20.5, 3
 const DR_SPINE_S = [-6.6, -3.6, 2.3, -8.9, 0.6, 2.1, -9.8, 5, 1.8];                                                     // sırt dikenleri
 const DR_TSP = [];   // kuyruk dikenleri (her karede yeniden doldurulur)
 function drawTail(x, tm) {
+  if (D.tail.some(q => !isFinite(q.x) || !isFinite(q.y))) drResetTail();
   const tl = D.tail, n = tl.length, C = DR_COL, L = [], R = [];
   for (let i = 0; i < n; i++) {
     const a = tl[Math.max(0, i - 1)], b = tl[Math.min(n - 1, i + 1)];
@@ -1615,8 +1728,40 @@ function drBack(x, tm, yaw) {
   x.restore();
 }
 
+// Bölüm 2 gece ortamı: ay kenar ışığı (soğuk mavi, üstten) + su yansıması (suyun üstündeyken)
+function drGece(x, tm) {
+  const bx = D.x, by = D.y;
+  x.globalCompositeOperation = 'lighter';
+  drGlow(x, '#8fb4ff', bx - D.fs * 4, by - 14, 46, 0.13);      // ay ışığı halesi
+  drGlow(x, '#d9c2ff', bx, by + 2, 30, 0.09 + 0.03 * Math.sin(tm * 2.1));
+  if (D.flare > 0.02) {                                         // yıldız uyanınca renk patlaması + halka
+    const u = 1 - D.flare;
+    drGlow(x, '#fff2a8', bx, by, 44 + 40 * u, 0.42 * D.flare);   // yumuşak parlama (halka yok)
+  }
+  const gl = typeof BOLUM !== 'undefined' && BOLUM.gollar;
+  if (gl) for (const q of gl) {
+    if (!q || bx < q.x0 || bx > q.x1 || by > q.su || q.su - by > 300) continue;
+    const h = q.su - by, a = Math.max(0, 1 - h / 300), sy = q.su + 3;
+    x.save(); x.translate(bx, sy); x.scale(1, 0.22);
+    drGlow(x, '#bcd4ff', 0, 0, 64 + 10 * Math.sin(tm * 2.4), 0.34 * a);
+    drGlow(x, '#ffffff', 0, 0, 22, 0.28 * a);
+    x.restore();
+    // yumuşak yansıma: ters, dalgalı mor gövde lekesi + yeşil ibik + ışık çizgileri
+    const ry = Math.min(60, 14 + h * 0.12), w = Math.sin(tm * 2.7) * 2;
+    x.save(); x.globalCompositeOperation = 'source-over';
+    x.globalAlpha = 0.22 * a; x.fillStyle = '#b28ae6'; x.beginPath(); x.ellipse(bx + w, sy + 6 + h * 0.18, 14, ry * 0.5, 0, 0, 6.283); x.fill();
+    x.fillStyle = '#2f8a2c'; x.globalAlpha = 0.16 * a; x.beginPath(); x.ellipse(bx - D.fs * 6 + w, sy + 4 + h * 0.1, 9, 6, 0, 0, 6.283); x.fill();
+    x.globalAlpha = 1; x.restore();
+    x.globalCompositeOperation = 'lighter'; x.strokeStyle = '#d4e4ff'; x.lineCap = 'round';
+    for (let i = 0; i < 4; i++) { const yy = sy + 3 + i * 5 + (tm * 8 + i * 3) % 3, ww = (20 - i * 3.5) * (0.8 + 0.2 * Math.sin(tm * 3 + i)); x.globalAlpha = 0.34 * a * (1 - i * 0.2); x.lineWidth = 1.6; x.beginPath(); x.moveTo(bx - ww + w, yy); x.lineTo(bx + ww + w, yy); x.stroke(); }
+    x.globalAlpha = 1;
+    break;
+  }
+  x.globalCompositeOperation = 'source-over';
+}
 function drawDragon(tm) {
   dragonInit();
+  if (!isFinite(D.x) || !isFinite(D.y)) return;
   const x = g;
   // yol gösterme: kalıcı noktalı ışık izi ve hedefte yumuşak nabız
   if (D.iz.length || D.pulse.length) {
@@ -1657,7 +1802,9 @@ function drawDragon(tm) {
     x.globalAlpha = 1;
     x.fillStyle = '#ffffff'; drTwinkle(x, sp.x, sp.y, 6.5 * tw, 0.9 * sp.a);
   }
+  if (BOLUM_NO === 2) drGece(x, tm);
   drBody(x, tm);
+  if (BOLUM_NO === 2) { x.globalCompositeOperation = 'lighter'; drGlow(x, '#5a6cff', D.x, D.y - 4, 26, 0.08); x.globalCompositeOperation = 'source-over'; }   // gövdeye ortam tonu (mor-mavi)
 
   // ışık nefesi: yumuşak koni + parçacıklar
   if (D.blowM > 0.01 || D.nf.length) {
@@ -1709,6 +1856,19 @@ function drPozTailCurl(curl, wave, tm) {   // önden pozlar: kuyruk sağ yandan 
     px += Math.cos(h) * DR_TAIL_LEN * 0.78; py += Math.sin(h) * DR_TAIL_LEN * 0.78;
   }
 }
+// Peluş kumaş dokusu (yalnız yakın çekim pozlarında): yumuşak kadife parlaması, kenar tüy ışığı, dikiş izleri
+function drPelusDoku(c, tm, pl) {
+  c.save(); c.globalAlpha = pl;
+  const op = c.globalCompositeOperation; c.globalCompositeOperation = 'lighter';
+  drGlow(c, '#efe0ff', -5, -20, 11, 0.16); drGlow(c, '#e8ffd0', 2, 4, 14, 0.07);   // başın üstünde kadife parlaması, karında hafif ışık
+  c.globalCompositeOperation = op;
+  // dikiş izleri: alın/yüz hattı, karın kenarı, kol ve bacak ekleri (kısa tireli çizgiler)
+  c.strokeStyle = 'rgba(255,248,255,0.55)'; c.lineWidth = 0.55; c.lineCap = 'round'; c.setLineDash([1.6, 1.5]);
+  c.beginPath(); c.arc(0.5, -4.5, 11.4, -2.55, -0.62); c.stroke();                       // kafa dikişi (alın üstünden kulaktan kulağa)
+  c.beginPath(); c.moveTo(-8.6, 13.8); c.quadraticCurveTo(0, 16.8, 8.6, 13.8); c.stroke();   // karın altı dikişi
+  c.setLineDash([]);
+  c.restore();
+}
 function pirilCizPoz(ctx, x, y, olcek, poz, tm, u) {
   dragonInit();
   for (const k of DR_POZ_KEYS) drPozSave[k] = D[k];
@@ -1729,8 +1889,8 @@ function pirilCizPoz(ctx, x, y, olcek, poz, tm, u) {
       const uu = (i + 1) / (DR_TAIL_N - 1), ang = Math.PI - 0.75 + uu * 1.7 + Math.sin(tm * 3.2 - uu * 3.2) * 0.32 * (0.4 + uu);
       p = { x: p.x + Math.cos(ang) * DR_TAIL_LEN, y: p.y + Math.sin(ang) * DR_TAIL_LEN };
     }
-  } else if (poz === 'uyaniyor') {
-    const v = u === undefined ? 0.6 : clamp(u, 0, 1);
+  } else if (poz === 'uyaniyor' || poz === 'sabah') {   // 'sabah': u 0→1 = canlı → peluş (parıltı söner, kanatlar solar, gözler kapanır)
+    const v = u === undefined ? 0.6 : (poz === 'sabah' ? 1 - clamp(u, 0, 1) : clamp(u, 0, 1));
     const eo = smooth(clamp((v - 0.1) / 0.35, 0, 1)), st = Math.sin(clamp((v - 0.35) / 0.55, 0, 1) * Math.PI);
     D.plush = 1 - smooth(clamp((v - 0.2) / 0.6, 0, 1)); D.glowA = smooth(clamp((v - 0.25) / 0.6, 0, 1)); halo = D.glowA;
     D.ph = 1.2 + st * 0.8 + tm * 6 * smooth(clamp((v - 0.6) / 0.4, 0, 1)); D.wingA = smooth(clamp((v - 0.45) / 0.35, 0, 1)); D.stretch = st;
@@ -1740,6 +1900,9 @@ function pirilCizPoz(ctx, x, y, olcek, poz, tm, u) {
     D.expr = v > 0.85 ? 'happy' : 'normal'; if (st > 0.5) D.yawn = (st - 0.5) * 1.4;
     D.lookY = 0.1;
     drPozTailCurl(lerp(1, 0.55, smooth(v)), smooth(v), tm);
+  } else if (poz === 'pelus_sik') {   // Feza'ya sarılı peluş: kolun altında hafif ezilmiş, yastık/kol sıkışması (opsiyonel u: sıkma 0..1, verilmezse 0.7)
+    D.plush = 1; D.glowA = 0; D.wingA = 0; D.ph = 1.2; D.headRoll = 0.3 + Math.sin(tm * 0.9) * 0.02; D.eyeOv = 'closed'; D.expr = 'normal';
+    drPozTailCurl(1, 0, tm);
   } else if (poz === 'goz_kirp') {
     D.plush = 1; D.glowA = 0; D.wingA = 0; D.ph = 1.2; D.headRoll = 0.16;
     D.eyeOv = 'open'; D.eyeOvR = 'happy'; D.expr = 'grin'; D.lookX = 0.15; D.lookY = 0.15;
@@ -1751,8 +1914,11 @@ function pirilCizPoz(ctx, x, y, olcek, poz, tm, u) {
   }
   ctx.save(); ctx.translate(x, y); ctx.scale(olcek, olcek);
   if (halo > 0.01) { const op = ctx.globalCompositeOperation; ctx.globalCompositeOperation = 'lighter'; drGlow(ctx, '#b88aff', 0, 0, 90, 0.3 * halo); drGlow(ctx, '#ffe0ff', 0, 0, 30, 0.18 * halo); ctx.globalCompositeOperation = op; }
+  const pl = D.plush, sik = poz === 'pelus_sik' ? (u === undefined ? 0.7 : clamp(u, 0, 1)) : 0, br = Math.sin(tm * 1.7) * 0.012 * pl;
+  if (pl > 0.02) { ctx.save(); ctx.translate(0, 14); ctx.scale(1 + br + sik * 0.07, 1 - br - sik * 0.08); ctx.rotate(-sik * 0.05); ctx.translate(0, -14); }   // peluş: nefes alır, sarılınca ezilir
   drBody(ctx, tm, front);
-  if (poz === 'uyaniyor' && D.wingA > 0.02 && D.wingA < 0.98) {   // ışık kanatlar parıltıyla belirir
+  if (pl > 0.02) { drPelusDoku(ctx, tm, pl); ctx.restore(); }
+  if ((poz === 'uyaniyor' || poz === 'sabah') && D.wingA > 0.02 && D.wingA < 0.98) {   // ışık kanatlar parıltıyla belirir
     ctx.fillStyle = '#fffbe8';
     for (let i = 0; i < 7; i++) {
       const a = i * 2.39 + tm * 1.7, r = 12 + (i % 3) * 6, tw = Math.sin(tm * 11 + i * 1.9);

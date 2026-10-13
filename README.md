@@ -6,6 +6,12 @@ Ormanın ışığı sönmüş, tüylü dostlar Pofuduklar uykuya dalmıştır. F
 Büyük Pofuduk'u neşelendirir ve Işık Ağacı'nı yeniden parlatır. Sabah Feza yatağında uyanır; Pırıl ona göz kırpar.
 Korkutucu hiçbir şey yoktur, kaybetmek yoktur. Feza okuma bilmediği için her şey Pırıl'ın sesiyle ve ışıklı ipuçlarıyla anlatılır.
 
+## Hikâye notu: Pofuduklar
+
+Pofuduklar ormanın ışığını karınlarında taşıyan tüylü orman dostlarıdır. Orman karanlığa gömülünce onların karnındaki ışık da sönmüş ve uykuya dalmışlar.
+Üstlerine zıplamak onları gıdıklayıp ışıklarını uyandırır: hapşırırlar, karınları parlar, çevrelerindeki mantarlar ve bitkiler renklenir, Feza'nın peşine takılıp ışığı birlikte taşırlar.
+Bazıları çok derin uyur; onlar yalnızca "ışık şarkısı"yla (şarkı çiçeklerinin ninnisi) uyanır. Büyük Pofuduk hepsinin büyüğü ve Işık Ağacı'nın bekçisidir; o uyanınca ağaç yanar.
+
 ## Nasıl açılır
 
 - **Bilgisayarda:** `index.html` dosyasına çift tıkla.
@@ -24,3 +30,17 @@ Korkutucu hiçbir şey yoktur, kaybetmek yoktur. Feza okuma bilmediği için her
 - Klavye (ebeveyn için): **oklar / A–D** yürür, **Boşluk / W / ↑** zıplar.
 
 Sessiz açmak için adrese `?sessiz` ekle; açılışı atlamak için `?atla`, altyazı için `?altyazi`.
+
+## Her gece başka bir rüya (Bölüm 1 ve 2)
+
+Oyun iki ayrı rüyadan oluşur: **Işık Ormanı** ve **Yıldız Gölü**. Açılışta Feza'nın yatağı görünür (seçim sahnesi); Feza hangi rüyaya gitmek istediğini seçer.
+Her rüya sabah finaliyle biter (Feza yatağında uyanır) ve sonuç kartındaki yatak simgesi seçim ekranına geri götürür. Bitirilen rüyalar cihazda saklanır, kilit yoktur.
+Yıldız Gölü'nde gökyüzündeki yıldızlar göle düşmüştür: Feza sönük yıldızları uyandırır, Pofuduklar yardım eder, en sonda Yıldız Kaplumbağası uyanır.
+
+- **Test:** adrese `?bolum=1` ya da `?bolum=2` ekle (seçim ekranını ve kısa uykuyu atlar; `?uyku` kısa uykuyu zorlar); `?atla` seçim ekranını da atlar; `?nogecis` eski test bayrağı.
+- **Ebeveyn:** seçim ekranında sol üst köşeye 3 sn basılı tut = kayıtları sıfırla.
+- Kayıt anahtarları: `fezaIsikTamam` (bitirilen bölümler), `fezaIsikSon`. Teknik ayrıntı: `src/BOLUM2.md`.
+
+## Performans
+
+iPad Pro (120 Hz ProMotion) dahil her ekranda oyun en çok 60 kare/sn çizer; oyun hızı her yenileme hızında aynıdır. Büyük ekranlarda çözünürlük otomatik uyarlanır.

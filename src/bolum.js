@@ -116,7 +116,6 @@ nesne('cicek', 74.5, yuzey(74), { r: 34 });
 nesne('pofuduk', 102.5, yuzey(102), { tur: 'yol' });
 nesne('cicek', 113.5, yuzey(113), { r: 34 });                   // iki çukur arasındaki tümsekte
 nesne('pofuduk', 120.5, yuzey(120), { tur: 'yol' });
-nesne('pofuduk', 134.5, yuzey(134), { tur: 'yol' });
 nesne('cicek', 142, yuzey(142), { r: 34 });                     // çayırın sonundaki set: göle bakan ödül
 // 3. Karanlık Göl
 const blKar1 = nesne('karanlik', 157, yuzey(157), { grup: 'gol', r: 70 });
@@ -146,13 +145,11 @@ blSoz(318, 'p_sakli', 70, 326);                                 // giriş dalı 
 nesne('tohum', 325.5, blDal(12), { r: 34 });                    // girişten görünen ikinci tohum
 nesne('tohum', 328, yuzey(328), { r: 50 });                     // ana yolda (herkes bulur): hemen üstteki dalda bir tohum daha görünür
 nesne('tohum', 339, blDal(9), { r: 34 });                       // saklı yolun tepesi
-nesne('cicek', 339, yuzey(339), { r: 34 });                     // ana yolda, küçük tümseğin üstü
 nesne('pofuduk', 351, yuzey(351), { tur: 'yol' });
 // 5b. Tepecik: basamaklı tırmanış, tepede çiçek, yumuşak iniş
 nesne('cicek', 374, yuzey(374), { r: 34 });
 // 6. Açıklık
 nesne('pofuduk', 397, yuzey(397), { tur: 'yol' });
-nesne('cicek', 404.5, yuzey(404), { r: 34 });                  // açıklığa girerken tümsekte küçük bir ödül
 const blBuyukSoz = blSoz(416, 'p_buyuk', 60, 430);              // ≈414,5'te tetiklenir = merkezinden ≈20 kare: oyun.js'in 'dikkat' kamerasıyla 4:3 iPad'de tam ekranda; ilk çiçeğe 8 kare var
 nesne('cicek', 423, yuzey(423), { r: 34, buyukIcin: true });     // tümseğin üstü (p_buyuk'tan hemen sonra)
 nesne('cicek', 425, blDal(14), { r: 34, buyukIcin: true });      // tümsekten dala
@@ -160,6 +157,11 @@ nesne('cicek', 430.5, yuzey(430), { r: 34, buyukIcin: true });   // Büyük Pofu
 blBuyukSoz.konu = nesne('buyukPofuduk', 434.6, yuzey(434), {});   // yuvasında; ağacın tepesine çıkan yolu kapatır
 nesne('konusma', 439, yuzey(439), { anahtar: 'p_agac', r: 70, gec: nx(449), konu: null });
 nesne('agac', 444, yuzey(444), { r: 90 });
+
+// Şarkı çiçekleri (sarki.js, isteğe bağlı mini etkinlik; sayaçlara girmez): üçer ışıklı çiçek, notalar D pentatonik (E5 A5 B5 gibi).
+// 1) Pofuduk Çayırı'nın düzlüğü (130–139): solundaki çukurda uyuyan Pofuduk (120,5) dansa kalkar. 2) Açıklığın girişi (387–392): sağındaki uyuyan Pofuduk (397).
+nesne('sarki', 133.4, yuzey(133), { notalar: [74, 78, 81], melodiler: [[0, 2], [0, 1, 2], [0, 2, 1, 2]] });
+nesne('sarki', 389.6, yuzey(389), { notalar: [76, 81, 86], melodiler: [[1, 2], [0, 2, 1], [2, 0, 1, 0]] });
 
 // Eski adlar (dunya.js uyumluluğu)
 const FLOWERS = NESNELER.filter(n => n.tip === 'cicek');

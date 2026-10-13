@@ -13,7 +13,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <title>Feza ve Pırıl: Işık Ormanı</title>
 <style>
-  html, body { margin: 0; height: 100%; background: #070a14; overflow: hidden; touch-action: none;
+  html, body { margin: 0; height: 100%; background: #050a18; overflow: hidden; touch-action: none;
     -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
   canvas { display: block; width: 100vw; height: 100vh; }
 </style>
@@ -21,13 +21,25 @@
 <body>
 <canvas id="c"></canvas>
 <script src="src/ortak.js"></script>
-<script src="src/bolum.js"></script>
+<script>
+  // Bölüm seçimi: ?bolum=N > başlıktan seçim bayrağı (sessionStorage) > 1. Yalnız biri yüklenir (ikisi aynı adları tanımlar).
+  var BOLUM_NO = 1;
+  try {
+    var bq = /[?&]bolum=(\d)/.exec(location.search);
+    BOLUM_NO = bq ? (+bq[1] === 2 ? 2 : 1) : (sessionStorage.getItem('fezaIsikSec') === '2' ? 2 : 1);   // başlık sayfası her zaman Bölüm 1; Bölüm 2 başlıktaki düğmeyle (oturum bayrağı)
+  } catch (e) {}
+  document.write('<script src="src/' + (BOLUM_NO === 2 ? 'bolum2' : 'bolum') + '.js"><\/script>');
+</script>
 <script src="src/dunya.js"></script>
 <script src="src/feza.js"></script>
 <script src="src/piril.js"></script>
 <script src="src/pofuduk.js"></script>
 <script src="src/sahne.js"></script>
 <script src="src/arayuz.js"></script>
+<script src="src/sarki.js"></script>
+<script src="src/dunya2.js"></script>
+<script src="src/yildiz.js"></script>
+<script src="src/takim.js"></script>
 <script src="src/muzik.js"></script>
 <script src="sesler.js"></script>
 <script src="src/ses.js"></script>

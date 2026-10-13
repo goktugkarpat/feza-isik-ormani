@@ -24,6 +24,16 @@ const PF_BUYUK = { a: '#f2bbea', l: '#fff4fd', d: '#ba7dc8', y: '#ff84b6', i: '#
 const PF_BUYUK_UYKU = { a: '#958fb9', l: '#ded8f3', d: '#555078', y: '#dea0cc', i: '#ae9eff' };
 
 // ── boyutlar ──
+// Bölüm 2 (Yıldız Gölü): gece göğüne uygun, hafifçe mavi-pembe-altın palet; uyku tüyü soluk mavi-mor
+const PF_UYKU2 = { a: '#8f9bc9', l: '#dfe4fb', d: '#515a8c', y: '#d9a4dc', i: '#8fa0ff' };
+const PF_RENK2 = [
+  { a: '#ffb8d8', l: '#fff0fa', d: '#cf78b6', y: '#ff80b8', i: '#ffd0ec' },   // pembe
+  { a: '#a8cdff', l: '#eef5ff', d: '#6286dc', y: '#ff9cc4', i: '#b8d8ff' },   // gece mavisi
+  { a: '#ffe29a', l: '#fffbe8', d: '#d9a84e', y: '#ff9a8a', i: '#fff0b0' },   // yıldız altını
+  { a: '#cfb8ff', l: '#f6f0ff', d: '#8f74dc', y: '#ff8cc6', i: '#e0d0ff' },   // leylak
+  { a: '#9fdcf0', l: '#effcff', d: '#58a8c8', y: '#ff98c0', i: '#bff0ff' },   // buz mavisi
+  { a: '#ffcaa8', l: '#fff3ea', d: '#dc8a76', y: '#ff8fa0', i: '#ffdcc0' },   // şeftali-altın
+];
 const PF_RX = 26, PF_RY = 23;            // küçük Pofuduk gövdesi (yarıçaplar)
 // Uyanık küçükler (geçit töreni + final dansı) Feza'nın yanında kaybolmasın diye biraz küçülür (yalnız çizim; cisimler aynı).
 // Uykudakiler, minder ve basamak oyun sırasında tam boy kalır (bölüm onlara göre).
@@ -775,7 +785,7 @@ TUR.kaydet('pofuduk', {
     const i = typeof o.renk === 'number' ? o.renk : pfRenkSira++;
     o.uyandi = false;
     o.cisim = { w: 52, h: 42, tip: o.tur === 'basamak' ? 'ustten' : 'kati', aktif: true, dx: 0, dy: 0 };
-    o.pf = { pal: PF_RENK[i % PF_RENK.length], seed: 101 + i * 37, t: Math.random() * 10, nefesT: Math.random() * 3.2,
+    o.pf = { pal: (BOLUM_NO === 2 ? PF_RENK2 : PF_RENK)[i % PF_RENK.length], seed: 101 + i * 37, t: Math.random() * 10, nefesT: Math.random() * 3.2,
       durum: 'uyku', uT: 0, bloom: 0, dik: 0, sq: 0, sqv: 0, sqH: 0, kul: 0, kulv: 0, tut: 0, tutv: 0,
       f: 1, jy: 0, jv: 0, wy: 0, gy: 0, yt: o.y, faz: 0, kirpT: 1 + Math.random() * 3, kirp: 0, bakX: 0, ff: 0,
       goz: 'uyku', agiz: 'o', agizB: 0, pati: 0, patiS: 0, ayak: 0, adim: 0, zT: 1 + Math.random() * 2, kab: 0, nefesN: 0,
@@ -805,19 +815,83 @@ TUR.kaydet('pofuduk', {
   ciz(o, tm) {
     if (pfFinal) { if (o.tur === 'minder') { pfYuvaCiz(o, false); pfYuvaCiz(o, true); } return; }   // finalde dansçılar pfFx'te çizilir
     pfKucukCiz(o, tm);
+    pfKarinIsik(o, tm);
   },
 });
 
+// Karındaki ışık (hikâye: Pofuduklar ormanın ışığını karınlarında taşır). Uykuda belli belirsiz soluk bir parıltı; Feza yaklaşınca
+// "buraya zıpla" diye üstte aşağı sekip duran bir ışık damlası. Uyanınca karın parlar, nabız gibi yanar.
+function pfKarinIsik2(o, tm, cy) {   // Bölüm 2: sönükken soluk mavi-mor karın; uyanınca karın yıldız gibi parlar + yıldız tozu
+  const p = o.pf, pu = 0.5 + 0.5 * Math.sin(tm * 2.2 + o.x * 0.01);
+  g.globalCompositeOperation = 'lighter';
+  { // zeminden ayrışsın: yerde ışık havuzu, geniş soluk halo ve ince kenar ışığı (yeşil bitkiler arasında kaybolmasın)
+    const uy = p.durum === 'uyku', ol = p.olc || 1, hh = Math.max(0.3, Math.min(1, (p.durum === 'uyaniyor' ? p.bloom : 1)));
+    const by = o.y + (p.jy || 0) + (p.wy || 0) - PF_RY * ol, k = uy ? 0.7 : 1.15;
+    dglow(uy ? '#8f9cff' : p.pal.i, o.x, by, (uy ? 74 : 92) + 8 * pu, (uy ? 0.2 : 0.3) * hh);
+    g.save(); g.translate(o.x, o.y + 1); g.scale(1, 0.22); dglow(uy ? '#9aa8ff' : '#ffe9b0', 0, 0, 62 * ol, (uy ? 0.28 : 0.42) * hh); g.restore();
+    dglow(uy ? '#a9b6ff' : '#fff4d0', o.x, by - 4, (uy ? 44 : 52) * ol, (uy ? 0.14 : 0.2) * hh);   // kenar parıltısı (yumuşak)
+  }
+  if (p.durum === 'uyku') {
+    const yakin = DURUM === 'oyun' && o.tur === 'yol' && Math.abs(P.x - o.x) < 520, nef = p.nef || 0, pb = 0.5 + 0.5 * Math.sin(tm * 3.2);
+    const si = o.sarkiIsik || 0, sv = o.sarkiVur || 0;
+    dglow('#7f8cff', o.x, cy, 46 + 40 * si, 0.24 + 0.1 * nef + (yakin ? 0.08 * pb : 0) + si * 0.7 + sv * 0.3);
+    dglow('#b8a4ff', o.x, cy + 2, 22, 0.22 + 0.1 * nef);
+    if (si > 0.05) dglow('#fffbe6', o.x, cy, 18 + 14 * si, si * 0.55 + sv * 0.25);
+    if (yakin) {
+      const b = Math.abs(Math.sin(tm * 3.2)), by = o.y - 98 - 16 * b;
+      dglow('#cfd8ff', o.x, by, 26, 0.5); dglow('#ffffff', o.x, by, 9, 0.9);
+      dglow('#cfd8ff', o.x, by + 16, 12, 0.35 * (1 - b)); dglow('#cfd8ff', o.x, by + 28, 8, 0.2 * (1 - b));
+    }
+  } else if (p.durum !== 'uyaniyor' || p.bloom > 0 || (o.sarkiIsik || 0) > 0.05) {
+    const b = Math.max(smooth(clamp(p.bloom, 0, 1)), o.sarkiIsik || 0), r = 0.5 + 0.5 * Math.sin(tm * 3 + o.x * 0.013);
+    dglow(p.pal.i, o.x, cy, 54 + 12 * pu, (0.3 + 0.12 * pu) * b);
+    dglow('#ffe9a8', o.x, cy, 24 + 4 * r, 0.3 * b);
+    dglow('#ffffff', o.x, cy, 9, 0.28 * b);
+    // yıldız parıltısı: karında dört köşeli ışık
+    const sz = (12 + 5 * r) * b;
+    g.globalAlpha = 0.6 * b; g.fillStyle = '#fffbe8'; g.beginPath();
+    for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 - Math.PI / 2, rr = (i % 2 ? 0.22 : 1) * sz; g.lineTo(o.x + Math.cos(a) * rr, cy + Math.sin(a) * rr * 1.0); }
+    g.closePath(); g.fill(); g.globalAlpha = 1;
+    if (b > 0.5 && DURUM === 'oyun' && Math.random() < 0.035) pfParca(0, o.x + (Math.random() - 0.5) * 28, cy + (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 36, -26 - Math.random() * 30, 1.3, 5 + Math.random() * 4, ['#fff2b8', '#cfe0ff', '#ffd0ec'][(Math.random() * 3) | 0]);   // yıldız tozu
+  }
+  g.globalCompositeOperation = 'source-over';
+}
+function pfKarinIsik(o, tm) {
+  const p = o.pf; if (!p || (o.tur === 'basamak' && p.boy > 0.2)) return;
+  const cy = o.y + (p.jy || 0) + (p.wy || 0) - 17 * (p.olc || 1);
+  if (BOLUM_NO === 2) { pfKarinIsik2(o, tm, cy); return; }
+  g.globalCompositeOperation = 'lighter';
+  if (p.durum === 'uyku') {
+    const yakin = DURUM === 'oyun' && o.tur === 'yol' && Math.abs(P.x - o.x) < 520, nef = p.nef || 0, pu = 0.5 + 0.5 * Math.sin(tm * 3.2);
+    const si = o.sarkiIsik || 0, sv = o.sarkiVur || 0;   // şarkı etkinliği: doğru notalar karnı parlatır (sarki.js)
+    dglow(p.pal.i, o.x, cy, 34 + 40 * si, 0.05 + 0.04 * nef + (yakin ? 0.07 * pu : 0) + si * 0.75 + sv * 0.3);
+    if (si > 0.05) dglow('#fffbe6', o.x, cy, 18 + 14 * si, si * 0.55 + sv * 0.25);
+    if (yakin) {
+      const b = Math.abs(Math.sin(tm * 3.2)), by = o.y - 98 - 16 * b;
+      dglow('#fff2b8', o.x, by, 26, 0.55); dglow('#ffffff', o.x, by, 9, 0.9);
+      dglow('#fff2b8', o.x, by + 16, 12, 0.35 * (1 - b)); dglow('#fff2b8', o.x, by + 28, 8, 0.2 * (1 - b));
+    }
+  } else if (p.durum !== 'uyaniyor' || p.bloom > 0 || (o.sarkiIsik || 0) > 0.05) {
+    const b = Math.max(smooth(clamp(p.bloom, 0, 1)), o.sarkiIsik || 0), pu = 0.5 + 0.5 * Math.sin(tm * 2.2 + o.x * 0.01);
+    dglow(p.pal.i, o.x, cy, 48 + 10 * pu, (0.26 + 0.12 * pu) * b);
+    dglow('#fffbe6', o.x, cy, 20, 0.35 * b);
+  }
+  g.globalCompositeOperation = 'source-over';
+}
 function pfOlcHedef(o, p) { return o.uyandi && (p.durum === 'takip' || p.durum === 'dans' || pfFinal) ? PF_OLC : 1; }
 function pfUyandir(o, sessiz) {
   const p = o.pf;
   if (o.uyandi) return;
   o.uyandi = true; p.durum = 'uyaniyor'; p.uT = 0; p.sessiz = sessiz;
+  // ışık geri geldi: karından yayılan halka + çevredeki bitkiler/mantarlar renklenir (dunya.js açılmış ışık çiçeği sistemi, daha küçük yarıçapla)
+  ripples.push({ x: o.x, y: o.y - 20, r: 0, life: 2.2 });
+  if (typeof DN_FLW !== 'undefined' && DN_FLW.indexOf(o) < 0) { o.done = true; o.bt = now + 1; o.dnK = 0.6; DN_FLW.push(o); }
   pfZipla(p, 7); p.kab = 0;
   if (!sessiz) {
     if (o.tur === 'yol') { P.vy = -620; P.ground = false; }
     else if (o.tur === 'minder') { P.vy = -880; P.ground = false; P.dj = true; }
     pfPirilti(o.x, o.y - 30, 10, ['#ffffff', p.pal.i, '#fff3b0'], 170, 0.7, 9);
+    if (BOLUM_NO === 2) pfPirilti(o.x, o.y - 24, 14, ['#fff2b8', '#cfe0ff', '#ffd0ec', '#ffffff'], 210, 1.2, 10);   // yıldız tozu
     if (typeof AU !== 'undefined') { AU.sfx('boing', 1); AU.sfx('bloom'); }
     OLAY.emit('uyandi', o);
   }
@@ -1170,6 +1244,7 @@ function pfEngelKur() {
 function pfYerUygun(x, y, kadar) {
   if (Math.abs(x - P.x) < 36 && Math.abs(y - P.y) < 56) return false;                  // Feza'nın içinde değil
   for (const n of pfEngel) if (Math.abs(n.x - x) < 50 && n.y - y < 60 && y - n.y < 110) return false;   // çiçek / tohum
+  if (typeof skYasak === 'function') { const z = skYasak(); if (z && x > z.x0 && x < z.x1) return false; }   // şarkı etkinliği (sarki.js): çiçek şeridi ve Feza'yla çiçekler arası boş kalsın
   if (typeof D !== 'undefined' && Math.abs(D.x - x) < 42 && D.y > y - 105 && D.y < y + 25) return false;  // Pırıl alçaktaysa
   for (let j = 0; j < kadar; j++) {
     const s = PF_SLOTLAR[j];
@@ -1262,12 +1337,35 @@ function pfSlotHesapla(dt) {
 }
 function pfSlotBul(i) { const s = PF_SLOTLAR[i]; return s && s.var ? s : null; }
 
+// Yön çevirme (sağ↔sol): eskiden gövde yatay ölçekle çizgiye kadar ezilip aynalanıyordu (karton gibi). Şimdi ~0,26 sn'lik bir dönüş:
+// gövde en çok %20 daralır (asla <0,8), ortasında "önden bakış" (gözler/yanaklar ortada, ff/bakX → 0) olur ve ayna işareti tam o anda
+// görünmez biçimde değişir; dönerken hafif yükselir/uzar, dönüş yönüne yaslanır, kulaklar gecikmeli savrulur. Hepsi tuval çiziminde.
+const PF_DON_SN = 0.26;
+function pfDonUygula(p, cz) {
+  const hedef = (cz.don || 1) < 0 ? -1 : 1, mag = Math.abs(cz.don || 1);
+  let dt = now - (p.dnT === undefined ? now : p.dnT); p.dnT = now; dt = clamp(dt, 0, 0.1);
+  if (p.dnY === undefined) { p.dnY = hedef; p.dnU = 0; p.dnH = hedef; }
+  if (!p.dnU && hedef !== p.dnY) { p.dnU = 0.0001; p.dnH = hedef; }
+  if (p.dnU) {
+    p.dnU += dt / PF_DON_SN;
+    if (p.dnU >= 1) { p.dnU = 0; p.dnY = p.dnH; }
+    else if (p.dnU >= 0.5) p.dnY = p.dnH;
+  }
+  if (!p.dnU) { cz.don = p.dnY * mag; return; }
+  const c = Math.sin(p.dnU * Math.PI), cc = c * c;   // 0 → 1 (tam önden) → 0
+  cz.don = p.dnY * mag * (1 - 0.2 * c);
+  cz.ff *= 1 - c; cz.bakX *= 1 - c;
+  cz.sy *= 1 + 0.07 * c; cz.sx *= 1 - 0.03 * c;
+  cz.y -= 5 * c;
+  cz.rot += p.dnH * 0.08 * Math.sin(p.dnU * Math.PI * 2);
+  cz.kul += -p.dnH * 0.45 * Math.sin(p.dnU * Math.PI * 1.6);
+}
 function pfDonGuncelle(p, dt) {   // olduğu yerde bir tur (havada) — yatay ölçek cos ile
   if (p.donH) { p.donT = (p.donT || 0) + dt * 2.4; if (p.donT >= 1) { p.donT = 0; p.donH = 0; } }
   const yon = p.f;
-  p.don = yon * (p.donH ? Math.cos(p.donT * Math.PI * 2) : 1);
-  if (Math.abs(p.don) < 0.15) p.don = 0.15 * Math.sign(p.don || 1);
-  p.ff = lerp(p.ff, p.f * 0.4 * Math.min(1, Math.abs(p.don)), 1 - Math.exp(-dt * 8));
+  // neşeli "tur" zıplaması: gövde artık çizgiye ezilmez; hafifçe daralıp genişleyen (≥0,8) bir sallanış + yön çevirme (pfDonUygula) olarak oynar
+  p.don = yon * (p.donH ? 1 - 0.2 * Math.sin(p.donT * Math.PI * 2) * Math.sin(p.donT * Math.PI * 2) : 1);
+  p.ff = lerp(p.ff, p.f * 0.4, 1 - Math.exp(-dt * 8));
 }
 // Yay (süzülme) yolu: başlangıç → hedef, kontrol noktası ikisinin de üstünde; yol üstünde zemin varsa yay yükseltilir
 function pfKatiMi(x, y) { const tx = Math.floor(x / T), ty = Math.floor(y / T); return ty >= 0 && ty < ROWS && (tx < 0 || tx >= COLS || grid[ty][tx] === 1); }
@@ -1673,7 +1771,7 @@ function pfKucukCiz2(o, p, cz, tm) {
   cz.sx = olc * p.bsx * (1 + sq) * (1 - nef * 0.02 * (uyku ? 1 : 0.5));
   cz.sy = olc * p.bsy * (1 - sq) * (1 + nef * 0.04 * (uyku ? 1 : 0.5)) * (uyku ? 0.95 : 1);
   cz.don = p.don || 1;
-  cz.seed = p.seed; cz.p0 = PF_UYKU; cz.p1 = p.pal; cz.bloom = p.bloom;
+  cz.seed = p.seed; cz.p0 = BOLUM_NO === 2 ? PF_UYKU2 : PF_UYKU; cz.p1 = p.pal; cz.bloom = p.bloom;
   cz.r = PF_RY; cz.gozO = 1;
   if (bas > 0.001) {   // uzayan basamak: kapsül gövde, yüz üstte
     cz.n = 2.7; cz.sw = PF_BAS_W; cz.h = PF_BAS_H; cz.w = lerp(PF_RX * 2, PF_BAS_W, bas); cz.gH = lerp(PF_RY * 2, PF_BAS_H, bas);
@@ -1695,6 +1793,7 @@ function pfKucukCiz2(o, p, cz, tm) {
   cz.yastik = o.tur === 'minder' ? (p.bsx - 1) / 0.24 * 0.8 : 0;
   cz.yuzSx = 1 / p.bsx; cz.yuzSy = lerp(1, 0.85, (1 - p.bsy) / 0.28) / p.bsy;
   cz.olc = olc;
+  pfDonUygula(p, cz);
   pfCiz(cz, tm);
 }
 

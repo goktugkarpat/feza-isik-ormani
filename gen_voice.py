@@ -46,12 +46,12 @@ _use_host(1)
 VOICE = "tr-TR-EmelNeural"
 STYLE = {            # prefix → (rate, pitch, volume)
     "a_": ("-18%", "-3Hz", "+0%"),
-    "p_": ("+6%", "+25Hz", "+0%"),   # +25 Hz: F0 ≈ 250 Hz, formants +15 % (a young girl); +38 Hz moved formants +26 % (chipmunk-ish)
+    "p_": ("-3%", "+16Hz", "+0%"),   # +16 Hz: F0 ≈ 230 Hz (measured; +25 Hz gave 245 Hz and a sharper tone): soft, cute, a little high, not shrill. Rate -3 %: unhurried and sweet.
 }
 DEFAULT = ("-5%", "+2Hz", "+0%")
 # Pırıl's "how to play" lines are said a touch slower than her happy chatter: Feza learns the controls from them.
 TEACH = {"p_merhaba", "p_zipla", "p_ciftzipla", "p_minder", "p_buyuk", "p_uyuyor", "p_sakli"}
-TEACH_RATE = "-2%"
+TEACH_RATE = "-6%"
 
 # How words should *sound* (subtitles keep the normal spelling). Regex → spoken form.
 # Avoid short capitalised words the engine may read as abbreviations ("Aa" was read as "Anadolu Ajansı").
@@ -83,6 +83,15 @@ TRIM = ("silenceremove=stop_periods=-1:stop_threshold=-40dB:stop_duration=0.1:st
         "loudnorm=I=-18:TP=-2:LRA=11")
 
 
+# Pırıl's lines get a gentle high-shelf cut (-2.5 dB above ~4.5 kHz) and a soft ceiling at 9.5 kHz before loudness matching:
+# sibilants and the "edge" of the pitched-up voice are rounded off; nothing robotic (the narrator's lines are untouched).
+TRIM_P = TRIM.replace("loudnorm", "treble=g=-2.5:f=4500,lowpass=f=9500,loudnorm")
+
+
+def trim_chain(key):
+    return TRIM_P if key.startswith("p_") else TRIM
+
+
 def style(key):
     for pre, st in STYLE.items():
         if key.startswith(pre):
@@ -105,7 +114,7 @@ def load_lines():
 
 def cache_path(key, text):
     rate, pitch, vol = style(key)
-    h = hashlib.md5(f"{VOICE}|{rate}|{pitch}|{vol}|{TRIM}|{spoken(text)}".encode("utf-8")).hexdigest()
+    h = hashlib.md5(f"{VOICE}|{rate}|{pitch}|{vol}|{trim_chain(key)}|{spoken(text)}".encode("utf-8")).hexdigest()
     return os.path.join(CACHE, h + ".mp3")
 
 
@@ -118,13 +127,13 @@ def duration(path):
         return 0.0
 
 
-def trim(raw, final):
+def trim(raw, final, key=""):
     """Cut leading/trailing silence and re-encode as small mono mp3. Falls back to the raw file without ffmpeg."""
     if not FFMPEG:
         shutil.move(raw, final)
         return
     tmp = final + ".tmp.mp3"
-    r = subprocess.run([FFMPEG, "-y", "-loglevel", "error", "-i", raw, "-af", TRIM,
+    r = subprocess.run([FFMPEG, "-y", "-loglevel", "error", "-i", raw, "-af", trim_chain(key),
                         "-ac", "1", "-ar", "24000", "-c:a", "libmp3lame", "-b:a", "48k", tmp])
     if r.returncode == 0 and os.path.exists(tmp) and os.path.getsize(tmp) > 800:
         os.replace(tmp, final)
@@ -145,7 +154,7 @@ async def record(key, text, sem):
                 await edge_tts.Communicate(spoken(text), VOICE, rate=rate, pitch=pitch, volume=vol).save(raw)
                 if os.path.getsize(raw) < 1000:
                     raise RuntimeError("empty audio")
-                trim(raw, final)
+                trim(raw, final, key)
                 return True
             except Exception as e:  # network hiccup / rate limit: back off and retry
                 if os.path.exists(raw):
