@@ -31,23 +31,26 @@ const bl3Blok = (a, b, r0, r1) => { for (let x = a; x <= b; x++) for (let y = r0
 
 // ── Zemin profili ──
 // 1. Pembe Bulutlar (0–56): uyanış bulutu, düzlük; 21–23, 27–28, 31–32 çukurlarında yüzey hizasında zıplatan bulutlar ("boing" zinciri); 45–46 küçük boşluk
-for (const [a, b, h] of [[0, 2, 8], [3, 20, 4], [24, 26, 4], [29, 30, 4], [33, 34, 4], [35, 38, 5], [39, 44, 4], [47, 56, 4]]) bl3Z(a, b, h);
+for (const [a, b, h] of [[0, 2, 8], [3, 20, 4], [24, 26, 4], [29, 30, 4], [33, 34, 4], [35, 38, 5], [39, 44, 4], [45, 46, 2], [47, 56, 4]]) bl3Z(a, b, h);   // 45–46: sığ çukur (düşülmez)
 // 1b. Gökyüzü Merdiveni (57–92): altta düz yol; zıplatan bulutlarla basamak basamak göğe çıkan ince bulutlar (isteğe bağlı, tohumlar)
 ground(57, 73, 4); ground(74, 77, 5); ground(78, 92, 4);
 // 2. Kuzucuk Çayırı (93–175): 119–120 küçük boşluk; 133–142 platoda BULUT MAĞARASI (içinde kuzucuk; tavanı üst yol), 143–144 asansör çukuru;
 //    153–159 yüzen bulutlu boşluk
-for (const [a, b, h] of [[57, 68, 5], [69, 82, 4], [85, 92, 4], [93, 96, 5], [97, 106, 6], [109, 112, 5], [113, 116, 4], [124, 139, 4]]) bl3Z(a, b, h);
+for (const [a, b, h] of [[57, 68, 5], [69, 82, 4], [83, 84, 2], [85, 92, 4], [93, 96, 5], [97, 106, 6], [109, 112, 5], [113, 116, 4], [117, 123, 1], [124, 139, 4]]) bl3Z(a, b, h);   // 117–123: yüzen bulutun altı yumuşak çukur
 ground(bl3K(107), bl3K(108), 5);                       // mağara çıkışındaki çukur: asansör bulutu burada dinlenir (yüzeyi platoyla aynı hizada)
 bl3Blok(bl3K(99), bl3K(106), 12, 13);                  // mağara tavanı (alt yüzü y=560; içeride 80 birim boşluk), üstü y=480 yürünür
-// 2b. 176–189: geniş boşluk; uykucu bulut kuşu Feza'yı sırtında karşıya taşır
+// 2b. 176–189: bulut çukuru (y=840, 3 kare derin); uykucu bulut kuşu Feza'yı sırtında karşıya taşır. Kuşu beklemeden atlayan çocuk düşmez:
+//     çukurun dibine iner, sağ uçtaki zıplatan bulut onu karşı kıyıya fırlatır (sıkışma yok).
+ground(176, 189, 1);
 // 3. Rüzgâr Yolu (190–268): esinti → yüksek düzlük → yüzen bulut → esinti → bulut adası → iniş → rüzgâr kuyusu (265–268)
-for (const [a, b, h] of [[140, 150, 4], [151, 162, 8], [163, 170, 6], [177, 186, 6], [187, 194, 4], [195, 204, 9], [205, 208, 7], [209, 214, 5]]) bl3Z(a, b, h);
+for (const [a, b, h] of [[140, 150, 4], [151, 162, 8], [163, 170, 6], [171, 176, 3], [177, 186, 6], [187, 194, 4], [195, 204, 9], [205, 208, 7], [209, 214, 5]]) bl3Z(a, b, h);
 // 3b. Tüy Köprüsü (269–284): rüzgârda salınan üç dev tüy (yüzen platform), uçurtmalar
 ground(269, 272, 4);
 // 4. Bulut Şekilleri (285–317) · Büyük Boşluk kıyısı (318–330, kapı 326) · 5. uçuş (331–453, zemin yok)
 for (const [a, b, h] of [[219, 235, 4], [236, 239, 5], [240, 264, 4]]) bl3Z(a, b, h);
 // 6. Gökkuşağı Tepesi (454–523): iniş çayırı, basamaklar, tepe (h=9, 487–499), kaydırak inişi
 for (const [a, b, h] of [[388, 402, 4], [403, 407, 5], [408, 412, 6], [413, 416, 7], [417, 420, 8], [421, 433, 9], [434, 437, 7], [438, 441, 5], [442, 457, 4]]) bl3Z(a, b, h);
+ground(454, 454, 10);   // iniş çayırının sol ucunda kabarık bulut sütunu (6 kare, çift zıplamayla da aşılmaz): uçuştan sonra geri yürüyen Feza Büyük Boşluk'a düşmesin
 // ── İnce bulutlar (üstten geçilir) — isteğe bağlı sürpriz yerleri ──
 for (const [a, b, r] of [[42, 47, 12], [126, 129, 15], [132, 136, 13], [229, 232, 15]]) plat(bl3K(a), bl3K(b), r);
 for (const [a, b, r] of [[62, 66, 14], [68, 72, 11], [74, 80, 8], [83, 87, 12]]) plat(a, b, r);   // Gökyüzü Merdiveni basamakları (560 → 440 → 320, iniş 480)
@@ -94,13 +97,13 @@ const bl3X = (x, tip, y, o) => nesne(tip, Math.floor(x / T), y, Object.assign({ 
 const bl3Kuzu = (c, y) => nesne('kuzu', c, y === undefined ? yuzey(c) : y, {});
 
 // ════════ 1. Pembe Bulutlar ════════
-bl3Soz(7, 'b_giris', 80, 12);
+// (p_b_giris'i CORE açılışta, ekran açılınca söyler: burada tetikleyici YOK — çift olmasın)
 bl3Soz(15, 'b_zip', 70, 23);
 bl3X(nx(22), 'bulutZip', bl3H(4), { w: 120, h: 30, guc: 900, gom: true });          // çukurda, zeminle aynı hizada: üstünden geçerken kendiliğinden "boing"
 bl3X(nx(41), 'bulutZip', bl3H(4) - 18, { w: 104, guc: 1040 });               // yüksek pembe buluta çıkaran (alçak: üstünden yürüyünce de zıplatır)
-for (let i = 0; i < 3; i++) nesne('tohum', 43.5 + i * 1.6, bl3Sat(12) - 34 - Math.sin(i / 2 * Math.PI) * 26, { r: 46 });
+for (let i = 0; i < 2; i++) nesne('tohum', 44 + i * 2.2, bl3Sat(12) - 40, { r: 46 });   // yüksek pembe bulut
 for (const c of [27.5, 31.5]) bl3X(nx(c), 'bulutZip', bl3H(4), { w: 80, h: 30, guc: 860, gom: true });   // boing zinciri: iki küçük çukur, üstünden yürüyünce sek sek
-for (let i = 0; i < 4; i++) nesne('tohum', 26.5 + i * 2, yuzey(24) - 90 - Math.sin(i / 3 * Math.PI) * 40, { r: 44 });   // zincirin sekmelerinde
+for (const c of [28, 32]) nesne('tohum', c, yuzey(24) - 120, { r: 46 });   // boing zincirinin sekmelerinde
 
 // ════════ 1b. Gökyüzü Merdiveni ════════
 // Yolda alçak zıplatan bulut → 560'taki basamak → ucundaki zıplatan bulut → 440 → zıplatan bulut → 320 (tepe: tohum yayı + uçurtma).
@@ -108,8 +111,7 @@ for (let i = 0; i < 4; i++) nesne('tohum', 26.5 + i * 2, yuzey(24) - 90 - Math.s
 bl3X(nx(60), 'bulutZip', bl3H(4) - 18, { w: 96, guc: 1000 });
 bl3X(nx(66), 'bulutZip', bl3Sat(14) - 18, { w: 80, guc: 980 });
 bl3X(nx(72), 'bulutZip', bl3Sat(11) - 18, { w: 80, guc: 980 });
-for (let i = 0; i < 5; i++) nesne('tohum', 74.6 + i * 1.4, bl3Sat(8) - 40 - Math.sin(i / 4 * Math.PI) * 40, { r: 44 });
-nesne('tohum', 64, bl3Sat(14) - 40, { r: 44 }); nesne('tohum', 70, bl3Sat(11) - 40, { r: 44 });
+for (let i = 0; i < 3; i++) nesne('tohum', 75 + i * 2.2, bl3Sat(8) - 40 - Math.sin(i / 2 * Math.PI) * 30, { r: 46 });   // merdivenin tepesi
 nesne('ucurtma', 81, bl3Sat(8), { ip: 160, renk: 1 });
 
 // ════════ 2. Kuzucuk Çayırı ════════
@@ -118,22 +120,24 @@ bl3Soz(bl3K(63), 'b_kuzu', 80, bl3K(76), bl3K1);
 bl3Kuzu(bl3K(103), bl3H(6));                                                      // BULUT MAĞARASINDA saklı (tavanın altında; yol içinden geçer)
 // mağaranın çıkışındaki çukurda asansör bulutu: dinlenirken yüzeyi plato hizasında (üstünden yürünür), kalkınca tavana (üst yol) çıkar
 bl3X(bl3K(107) * T + 40, 'bulutYuzen', bl3H(6), { w: 80, ay: 172, sure: 6.5 });
-for (let i = 0; i < 4; i++) nesne('tohum', bl3K(100) + i * 1.8, bl3Sat(12) - 36, { r: 44 });   // mağara tavanında (üst yol)
-bl3X(bl3K(117) * T + 80, 'bulutYuzen', bl3H(4), { w: 160, ax: 120, sure: 5.2 });       // boşluk: kenardan kenara (uçlarda bekler)
+for (let i = 0; i < 2; i++) nesne('tohum', bl3K(100.5) + i * 3, bl3Sat(12) - 40, { r: 46 });   // mağara tavanında (üst yol, asansörle)
+bl3X(bl3K(117) * T + 80, 'bulutYuzen', bl3H(4), { w: 160, ax: 120, sure: 5.2 });       // çukurun üstünde kenardan kenara (uçlarda bekler)
+bl3X(nx(bl3K(122.5)), 'bulutZip', bl3H(1) - 18, { w: 80, guc: 1040 });               // çukurdan çıkış (yürüyünce kendiliğinden zıplatır)
 bl3X(nx(bl3K(126.5)), 'bulutZip', bl3H(4) - 18, { w: 96, guc: 980 });               // basamak bulutlarına (isteğe bağlı)
-nesne('tohum', bl3K(134), bl3Sat(13) - 30, { r: 46 });
 bl3Kuzu(bl3K(131));
 // 2b. Uykucu bulut kuşu (176–189 boşluğu): Feza sırtına basınca uyanır, karşıya uçar, Feza inince geri döner
 bl3X(176 * T + 85, 'bulutKus', bl3H(4), { w: 170, ax: 14 * T - 170, ay: 70, sure: 5.5 });
+bl3X(nx(188), 'bulutZip', bl3H(1) - 18, { w: 96, guc: 1040 });                    // çukurdan çıkış (yürüyünce kendiliğinden zıplatır)
 nesne('tohum', 183, bl3H(4) - 150, { r: 50 });                                   // uçuşun ortasında (kuşun sırtından alınır)
 
 // ════════ 3. Rüzgâr Yolu ════════
 bl3Soz(bl3K(141), 'b_esinti', 80, bl3K(149));
-bl3X(bl3K(151) * T - 55, 'esinti', bl3H(4), { w: 110, h: 250 });                 // yüksek düzlüğe taşır (duvar 4 kare; sütun duvara dayalı)
-nesne('tohum', bl3K(149.1), bl3H(4) - 150, { r: 44 }); nesne('tohum', bl3K(149.1), bl3H(4) - 215, { r: 44 });   // esintide süzülürken
+bl3X(bl3K(151) * T - 75, 'esinti', bl3H(4), { w: 150, h: 250 });                 // yüksek düzlüğe taşır (duvar 4 kare; sütun duvara dayalı)
+nesne('tohum', bl3K(149.1), bl3H(4) - 200, { r: 46 });   // esintide süzülürken
 bl3Kuzu(bl3K(157));
-bl3X(bl3K(171) * T + 70, 'bulutYuzen', bl3H(6), { w: 140, ax: 100, sure: 4.8 });   // yüzen bulutlu boşluk
-bl3X(bl3K(195) * T - 55, 'esinti', bl3H(4), { w: 110, h: 290 });                 // bulut adasına taşır (duvara dayalı)
+bl3X(bl3K(171) * T + 70, 'bulutYuzen', bl3H(6), { w: 140, ax: 100, sure: 4.8 });   // yüzen bulut (altı yumuşak çukur)
+bl3X(nx(bl3K(175.5)), 'bulutZip', bl3H(3) - 18, { w: 80, guc: 1040 });               // çukurdan çıkış
+bl3X(bl3K(195) * T - 75, 'esinti', bl3H(4), { w: 150, h: 290 });                 // bulut adasına taşır (duvara dayalı)
 bl3Kuzu(bl3K(200));
 bl3X(bl3K(217) * T, 'esinti', bl3H(4) + 100, { w: 160, h: 300, kuyu: true });     // rüzgâr kuyusu
 nesne('ucurtma', bl3K(145), bl3H(4), { ip: 250, renk: 0 });
@@ -144,11 +148,10 @@ nesne('tohum', bl3K(217), bl3H(4) - 150, { r: 46 });                            
 // 3b. Tüy Köprüsü: üç dev tüy rüzgârda salınır; üstlerinden yürüyerek geçilir (basınca esneyip ışıldar)
 for (let i = 0; i < 3; i++) bl3X(273 * T + 83 + i * 157, 'bulutYuzen', bl3H(4), { w: 160, sure: 3.4, faz: i * 0.33, gorunum: 'tuy', renk: i });   // yüzey yolla aynı hizada, aralar ≈9 birim (yürünür); salınım yalnız görsel
 nesne('ucurtma', 270, bl3H(4), { ip: 280, renk: 2 }); nesne('ucurtma', 286, bl3H(4), { ip: 240, renk: 0 });
-for (let i = 0; i < 3; i++) nesne('tohum', 275 + i * 4, bl3H(4) - 110 - (i % 2) * 30, { r: 46 });
+nesne('tohum', 279, bl3H(4) - 120, { r: 46 });   // tüy köprüsünün ortasında
 
 // ════════ 4. Bulut Şekilleri ════════
 nesne('bulutSekil', bl3K(225), yuzey(bl3K(225)), { sira: 0 });
-nesne('tohum', bl3K(230.5), bl3Sat(15) - 30, { r: 46 });
 bl3Kuzu(bl3K(237.5));                                                             // tümseğin üstünde
 nesne('bulutSekil', bl3K(248), yuzey(bl3K(248)), { sira: 1 });
 

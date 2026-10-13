@@ -583,9 +583,17 @@ function omFinalPlanla(sn) {   // bölüm sonu olayı (animasyonun SONU) → kı
 }
 OLAY.on('hayvanUyandi', () => omFinalPlanla(3));      // Bölüm 2'nin sonu: yıldız hayvanı uyandı, gökyüzü doldu
 OLAY.on('gokkusagiTamam', () => omFinalPlanla(2));    // Bölüm 3'ün sonu: gökkuşağı tamamlandı, kayış bitti
+// Yedek (zayıf ağda bir modül yüklenemediyse oyun sonsuza dek sürmesin): Bölüm 3'te 'gokkusagi' türü yoksa, kuzucuklar tamam
+// (ya da 'kuzu' türü de yoksa) ve Feza Gökkuşağı Tepesi'ne vardıysa sabah finaline geç.
+function omSonYedek() {
+  if (BOLUM_NO !== 3 || omFinalPlan || DURUM !== 'oyun' || P.ucus || !BOLUM.gokkusagi || TUR.al('gokkusagi')) return;
+  if (TUR.al('kuzu') && SAYAC.kuzu < SAYAC.kuzuTop) return;
+  if (Math.abs(P.x - BOLUM.gokkusagi.x) < 6 * T && P.ground) omFinalPlanla(2);
+}
 // Sıradaki ana hedef (Pırıl yol gösterirken kullanır): açılmamış çiçek, yolu kapatan uyuyan Pofuduk, karanlık nokta,
 // Büyük Pofuduk, ağaç. Çok geride (10 kareden fazla) kalan atlanmış hedefler, önde hedef varken sayılmaz.
 function omHedefMi(o) {
+  if (!TUR.al(o.tip)) return false;   // türünün dosyası yüklenemediyse (zayıf ağ) o nesne hedef olmaz: oyun takılı kalmasın
   switch (o.tip) {
     case 'cicek': return !o.done;
     case 'buyukPofuduk': return !o.uyandi;
@@ -596,13 +604,21 @@ function omHedefMi(o) {
     case 'pofuduk': return o.tur === 'yol' && !o.uyandi && o.y >= yuzey(Math.floor(o.x / T)) - 1;
     // Bölüm 3: renklenmemiş kuzucuk → (hepsi tamamsa) uçuş kapısı → gökkuşağı. Uçuş kapısının ötesindeki kuzucuk, uçuş bitmeden hedef olmaz.
     case 'kuzu': { if (o.done) return false; const k = omKapi(); return !(k && !omKapiBitti(k) && o.x > k.x); }
-    case 'ucusKapisi': return !omKapiBitti(o) && !NESNELER.some(n => n.tip === 'kuzu' && !n.done && n.x < o.x);
+    case 'ucusKapisi': return o === omKapi() && !omKapiBitti(o) && !NESNELER.some(n => n.tip === 'kuzu' && !n.done && n.x < o.x);
+    case 'bulutKopru': {   // uçuş türü yoksa (ucus.js yüklenemedi) Büyük Boşluk'un yedek köprüsü: geçilmemiş en yakın basamak hedef
+      if (!o.yedek) return false;
+      if (P.x > o.x + 30) o.gecildi = true;
+      return !o.gecildi && !NESNELER.some(n => n.tip === 'kuzu' && !n.done && n.x < o.x);
+    }
     case 'gokkusagi': { if (o.done || o.bitti || o.basladi) return false; const k = omKapi(); return !(k && !omKapiBitti(k)) && !NESNELER.some(n => n.tip === 'kuzu' && !n.done); }
   }
   return false;
 }
 let omKapiO;   // undefined: aranmadı
-function omKapi() { if (omKapiO === undefined) omKapiO = NESNELER.find(n => n.tip === 'ucusKapisi') || null; return omKapiO; }
+function omKapi() {   // uçuş kapısı (türü gerçekten yüklüyse; yoksa yedek köprü kullanılır ve kapı yok sayılır)
+  if (omKapiO === undefined) { const u = TUR.al('ucusKapisi'); omKapiO = (u && (typeof u.guncelle === 'function' || typeof u.dokun === 'function')) ? NESNELER.find(n => n.tip === 'ucusKapisi') || null : null; }
+  return omKapiO;
+}
 function omKapiBitti(k) { return omUcusBitti || !!(k && (k.bitti || k.done)); }
 function HEDEF() {
   if (omFinalPlan || P.ucus) return null;   // final yolda / uçuşta yol gösterme yok   // Bölüm 2: yıldız hayvanı uyandı, final yolda
@@ -973,12 +989,15 @@ function drawFx(tm, dt) {
     dglow(p.col, p.x, p.y, p.size * (0.6 + a), a * 0.6);
   }
   // halkalar: sabit renk + globalAlpha (her halkada yeni renk dizesi yok; görüntü aynı)
-  if (ripples.length) g.strokeStyle = 'rgb(255,226,240)';
+  if (ripples.length) g.strokeStyle = 'rgb(255,222,196)';   // sıcak (beyaz değil)
   for (let i = ripples.length - 1; i >= 0; i--) {
     const r = ripples[i]; r.life -= dt; r.r += dt * (r.small ? 160 : 260);
     if (r.life <= 0 || (!r.small && r.r > 420)) { ripples.splice(i, 1); continue; }
     if (r.r <= 0) continue;
-    g.globalAlpha = Math.min(0.5, r.life * 0.3) * (r.small ? 1 : 1 - r.r / 420); g.lineWidth = r.small ? 2 : 10 * (1 - r.r / 420) + 1;
+    // büyük halka doğarken (r küçük) kalın çizgi dolu beyaz disk gibi görünüp karakterin yüzünü örtmesin: genişledikçe belirir, çizgi yarıçapın ≈%18'ini geçmez
+    const dogus = r.small ? 1 : smooth(clamp(r.r / 90, 0, 1));
+    g.globalAlpha = Math.min(0.5, r.life * 0.3) * (r.small ? 1 : (1 - r.r / 420) * dogus); g.lineWidth = r.small ? 2 : Math.min(10 * (1 - r.r / 420) + 1, r.r * 0.18 + 1);
+    if (g.globalAlpha < 0.01) continue;
     g.beginPath(); g.arc(r.x, r.y, r.r, 0, 6.283); g.stroke();
   }
   g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
@@ -1333,6 +1352,7 @@ function frame(ms) {
   omCagir('nesneleriGuncelle', nesneleriGuncelle, dt);
   omCagir('omTasi', omTasi); P.rx = P.x; P.ry = P.y;
   omCagir('kayip', omKayipKontrol, dt);
+  omCagir('sonYedek', omSonYedek);
   omCagir('fezaUpdate', typeof fezaUpdate === 'function' ? fezaUpdate : null, dt);
   omCagir('stepDragon', typeof stepDragon === 'function' ? stepDragon : null, dt);
   omCagir('stepCam', stepCam, dt);

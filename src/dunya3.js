@@ -697,6 +697,29 @@ function dn3DrawDeco(tm) {
   }
 }
 
+// ═══════════ zemin ile önündeki nesnelerin buluşması (LEVEL3 gökkuşağı rampası için) ═══════════
+// dn3ZeminKirp(x0, x1): bulut zeminin GÖRÜNEN (yumuşatılmış, kabarık) yüzeyinin üstünü kapsayan Path2D (dünya koordinatı; boşluklarda aşağı iner).
+// dn3ZeminOn(x0, x1): aynı aralıkta zeminin üst kabarcık bandını (yüzeyin ~34 birim üstü / ~30 altı) önbellekli zemin parçalarından ÖNE yeniden çizer
+// (dünya dönüşümü kurulu olmalı). Kullanım (bulut.js gokkusagi): ciz'de clip(dn3ZeminKirp(...)) ile yay çiz, cizOn'da dn3ZeminOn(...) → yayın ayakları kabarık bulutun içine girer.
+const dn3ZK = new Map();
+function dn3ZeminKirp(x0, x1) {
+  if (!dn3Init()) return null; const key = Math.round(x0) + '_' + Math.round(x1); let p = dn3ZK.get(key); if (p) return p.k;
+  const k = new Path2D(), b = new Path2D(), deep = DN3.LH + 400; k.moveTo(x0, -3000); k.lineTo(x1, -3000);
+  const pts = []; for (let x = x1; x >= x0; x -= 4) { let y = deep; for (const C of DN3.comps) { if (x < C.x0 - 2 || x > C.x1 + 2) continue; const i = clamp(Math.round((x - C.x0) / 4), 0, C.N - 1); y = Math.min(y, C.st[i] + 14); } pts.push([x, y]); }
+  for (const q of pts) k.lineTo(q[0], q[1]); k.closePath();
+  for (const C of DN3.comps) { if (C.x1 < x0 || C.x0 > x1) continue; const a = Math.max(0, Math.floor((x0 - C.x0) / 4)), e = Math.min(C.N - 1, Math.ceil((x1 - C.x0) / 4)); if (e <= a) continue;
+    const mn = i => { let v = 1e9; for (let j = Math.max(0, i - 10); j <= Math.min(C.N - 1, i + 10); j++) v = Math.min(v, C.st[j]); return v; }, mx = i => { let v = -1e9; for (let j = Math.max(0, i - 10); j <= Math.min(C.N - 1, i + 10); j++) v = Math.max(v, C.st[j]); return v; };   // basamakta bant yüzü de kapsasın
+    b.moveTo(C.xs[a] - 30, mn(a) - 34); for (let i = a; i <= e; i++) b.lineTo(C.xs[i], mn(i) - 34); b.lineTo(C.xs[e] + 30, mn(e) - 34); b.lineTo(C.xs[e] + 30, mx(e) + 30); for (let i = e; i >= a; i--) b.lineTo(C.xs[i], mx(i) + 30); b.lineTo(C.xs[a] - 30, mx(a) + 30); b.closePath(); }
+  dn3ZK.set(key, { k, b }); return k;
+}
+function dn3ZeminOn(x0, x1) {
+  if (!dn3Ok() || !dn3Init() || !DN3.gc) return; dn3ZeminKirp(x0, x1); const Z = dn3ZK.get(Math.round(x0) + '_' + Math.round(x1)); if (!Z) return;
+  const G = dn3GGeo(), TW = DN3_TW, a = Math.max(Math.floor(Math.max(x0, cam.x) / TW), 0), e = Math.floor(Math.min(x1, cam.x + VW) / TW);
+  g.save(); g.clip(Z.b); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  for (let k = a; k <= e; k++) { const c = dn3GMake(k, G); g.drawImage(c.cv, c.pad, c.pad, c.cv.width - c.pad * 2, c.cv.height - c.pad * 2, k * TW, G.y0, TW, G.TH); }
+  g.restore();
+}
+
 // ═══════════ Gökkuşağı Tepesi: özel ışık (dünya dönüşümünde) ═══════════
 function dn3Tepe(tm) {
   const B = dn3Bolum(); if (!B || !B.gokkusagi || !isFinite(B.gokkusagi.x)) return;
@@ -712,6 +735,8 @@ function dn3Tepe(tm) {
   g.globalCompositeOperation = 'source-over';
 }
 
+let dn3ShadeC = null;
+function dn3ShadeSpr() { if (dn3ShadeC) return dn3ShadeC; const c = dn3ShadeC = dn3Cv(128, 154), x = c.getContext('2d'); x.translate(64, 77); x.scale(1, 1.2); const rg = x.createRadialGradient(0, 0, 0, 0, 0, 64); rg.addColorStop(0, 'rgba(96,58,128,0.55)'); rg.addColorStop(0.45, 'rgba(110,70,140,0.32)'); rg.addColorStop(1, 'rgba(140,96,170,0)'); x.fillStyle = rg; x.fillRect(-64, -64, 128, 128); return c; }
 // ═══════════ dn3World: zemin → şeritler → süsler (karakterlerin arkası) ═══════════
 function dn3World(tm) {
   if (!dn3Ok() || !dn3Init()) return; if (!isFinite(tm)) tm = 0;
@@ -720,6 +745,10 @@ function dn3World(tm) {
   dn3DrawGround();
   g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S); g.lineCap = 'round'; g.lineJoin = 'round';
   dn3DrawPlats(tm); dn3DrawDeco(tm); dn3Tepe(tm);
+  if (DN3F.on && !(typeof P !== 'undefined' && P.ucus)) {   // Feza'nın arkasında yumuşak mor-gül gölge alanı: açık bulutların üstünde karakter seçilsin (önbellekli sprite)
+    g.setTransform(1, 0, 0, 1, 0, 0); const sp = dn3ShadeSpr(); g.globalAlpha = 0.85; g.drawImage(sp, DN3F.x - 105 * S, DN3F.y - 125 * S, 210 * S, 250 * S); g.globalAlpha = 1;
+    g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S);
+  }
   g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
 }
 
@@ -864,7 +893,7 @@ function dn3Isit() {
     case 1: dn3SkyStep(); st.i++; break;
     case 2: { const L = DN3_LAY[st.sub]; if (L) { if (dn3LayStale(L)) dn3PaintLayer(L); st.sub++; } if (st.sub >= DN3_LAY.length) { st.i++; st.sub = 0; } break; }
     case 3: { const I = DN3_ISL[st.sub]; if (I) { dn3IslSpr(I.v, I.far); st.sub++; } if (st.sub >= DN3_ISL.length) { st.i++; st.sub = 0; } break; }
-    case 4: dn3SunSpr(); dn3RaySpr(0); dn3RaySpr(1); dn3SeedSpr(); st.i++; break;
+    case 4: dn3SunSpr(); dn3ShadeSpr(); dn3RaySpr(0); dn3RaySpr(1); dn3SeedSpr(); st.i++; break;
     case 5: dn3FgBake(); st.i++; break;
     case 6: dn3RbBuild(); if (st.sub < 7) { dn3RbBand(st.sub); st.sub++; } else { dn3RbComp(127); st.i++; st.sub = 0; } break;
     case 7: { const G = dn3GGeo(); if (!st.keys) { const a = Math.floor(cam.x / DN3_TW); st.keys = [a, a + 1, a + 2, a - 1].filter(k => k >= 0 && k * DN3_TW < COLS * T); }

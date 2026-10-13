@@ -213,13 +213,16 @@ TUR.kaydet('bulutKus', {
       o.u = o.durum === 'git' ? e : 1 - e;
       if (v >= 1) { if (o.durum === 'git') { o.durum = 'karsi'; o.bos = 0; } else { o.durum = 'uyku'; o.bekle = 0; } }
     } else if (o.durum === 'karsi') {
-      if (st) o.bos = 0; else { o.bos += dt; if (o.bos > 2.5) { o.durum = 'don'; o.t = 0; } }
+      const geride = P.x < o.x0 + o.w * 0.5 && Math.abs(P.x - o.x0) < 500;   // Feza başlangıç kıyısında bekliyor: hemen dön
+      if (st) o.bos = 0; else { o.bos += dt; if (o.bos > (geride ? 0.4 : 2.5)) { o.durum = 'don'; o.t = 0; } }
     }
+    o.davet = o.durum === 'uyku' && !st && Math.abs(P.x - (o.x0 - o.w * 0.5)) < 320 && P.x < o.x0 + o.w * 0.5;
     const nx_ = o.x0 + o.ax * o.u, ny = o.y0 - o.ay * Math.sin(Math.PI * o.u) + 4;
     o.cisim.dx = nx_ - o.x; o.cisim.dy = ny - o.y; o.x = nx_; o.y = ny;
     const ucuyor = o.durum === 'git' || o.durum === 'don';
-    o.uyanik = lerp(o.uyanik, o.durum === 'uyku' && !st ? 0 : 1, 1 - Math.exp(-dt * 4));
+    o.uyanik = lerp(o.uyanik, o.durum === 'uyku' && !st && !o.davet ? 0 : 1, 1 - Math.exp(-dt * 4));
     o.kanat += dt * (ucuyor ? 5.5 : 1.2);
+    o.gel = lerp(o.gel || 0, o.davet ? 1 : 0, 1 - Math.exp(-dt * 5));
     if (o.durum === 'don') o.yonK = -1; else if (o.durum !== 'karsi') o.yonK = 1;
     if (st && !o.on) burst(P.x, o.y - 6, 6, ['#ffffff', '#ffe6f0'], 60, 0.7, 5);
     o.on = st; o.sz = lerp(o.sz, st ? 3 : 0, 1 - Math.exp(-dt * 9));
@@ -227,7 +230,8 @@ TUR.kaydet('bulutKus', {
   },
   ciz(o, tm) {
     const w = o.w, ust = o.y - 4 + o.sz * 0.5, f = o.yonK, ua = o.uyanik, nefes = Math.sin(tm * (ua > 0.5 ? 3 : 1.4)) * (ua > 0.5 ? 1 : 2);
-    const kan = Math.sin(o.kanat) * (ua > 0.5 ? 1 : 0.15);
+    const kan = Math.sin(o.kanat) * (ua > 0.5 ? 1 : 0.15) * (1 - (o.gel || 0));
+    const gelK = (o.gel || 0) * (0.55 + 0.45 * Math.sin(tm * 6));   // "gel" el sallaması: ön kanat Feza'ya doğru kalkıp iner
     g.globalCompositeOperation = 'lighter'; dglow('#ffe2ee', o.x, ust + 18, w * 0.7, 0.2); g.globalCompositeOperation = 'source-over';
     g.save(); g.translate(o.x, ust); g.scale(f, 1);
     buKusKanat(-w * 0.05, 8, w * 0.32, -0.5 - kan * 0.6, 0.85);   // arka kanat
@@ -246,8 +250,13 @@ TUR.kaydet('bulutKus', {
     g.strokeStyle = '#6a4a7a'; g.fillStyle = '#4a3458'; g.lineWidth = 2; g.lineCap = 'round';
     if (ua < 0.5) { g.beginPath(); g.arc(bx + 8, by - 3, 4.5, 0.2, Math.PI - 0.2); g.stroke(); }   // uyurken kapalı göz
     else { const kirp = (tm % 3.2) < 0.12 ? 0.2 : 1; g.beginPath(); g.ellipse(bx + 8, by - 3, 3.6, 4.4 * kirp, 0, 0, BU_PI2); g.fill(); g.fillStyle = '#ffffff'; g.beginPath(); g.arc(bx + 9.2, by - 4.6, 1.3, 0, BU_PI2); g.fill(); }
-    buKusKanat(w * 0.08, 12, w * 0.3, -0.35 - kan * 0.8, 1);     // ön kanat
+    buKusKanat(w * 0.08, 12, w * 0.3, -0.35 - kan * 0.8 - gelK * 1.3, 1);     // ön kanat (davette arkaya, Feza'ya doğru sallanır)
     g.restore();
+    if ((o.gel || 0) > 0.05) {   // davet: sırtında yumuşak parıltı ("buraya bas")
+      g.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 3; i++) { const u = (tm * 0.8 + i / 3) % 1; buPirilti(o.x - f * w * 0.15 + (i - 1) * 34, ust - 8 - u * 26, 3 + 2 * Math.sin(u * Math.PI), Math.sin(u * Math.PI) * 0.8 * o.gel, tm + i); }
+      g.globalCompositeOperation = 'source-over';
+    }
     if (ua < 0.5) {   // uykuda: süzülen minik kabarcıklar (yazı yok)
       for (let i = 0; i < 3; i++) { const u = ((tm * 0.45 + i / 3) % 1), zx = o.x + f * (w * 0.5 + 10 + u * 26), zy = ust - 34 - u * 50; g.globalAlpha = Math.max(0, Math.sin(u * Math.PI) * 0.7 * (1 - ua * 2)); g.fillStyle = '#ffffff'; g.beginPath(); g.arc(zx, zy, 3 + u * 5, 0, BU_PI2); g.fill(); g.strokeStyle = '#e2cff5'; g.lineWidth = 1; g.stroke(); }
       g.globalAlpha = 1;
@@ -445,9 +454,11 @@ TUR.kaydet('gokkusagi', {
     if (!o.grad) {   // her bant için dikey sönüm (ayaklar bulutlara karışır) — dünya sabit, bir kez
       o.grad = [];
       const RB = (typeof DN3_RB !== 'undefined' && DN3_RB && DN3_RB.length >= 7) ? DN3_RB : BU_GK;   // dunya3.js'in gök gökkuşağıyla aynı renkler
-      for (let i = 0; i < 7; i++) { const gr = g.createLinearGradient(0, o.cy - o.R, 0, o.cy - o.R + 330); const A = hex(RB[i]), cs = 'rgba(' + A[0] + ',' + A[1] + ',' + A[2] + ','; gr.addColorStop(0, RB[i]); gr.addColorStop(0.55, RB[i]); gr.addColorStop(0.82, cs + '0.55)'); gr.addColorStop(1, cs + '0)'); o.grad.push(gr); }
+      const xL = o.ayak[0] ? o.ayak[0].x : o.cx - o.R * 0.5, xR = o.ayak[1] ? o.ayak[1].x : o.cx + o.R * 0.8, X0 = o.cx - o.R - 10, X1 = o.cx + o.R + 10, q = x => clamp((x - X0) / (X1 - X0), 0, 1);
+      for (let i = 0; i < 7; i++) { const gr = g.createLinearGradient(X0, 0, X1, 0); const A = hex(RB[i]), cs = 'rgba(' + A[0] + ',' + A[1] + ',' + A[2] + ',';
+        gr.addColorStop(0, cs + '0)'); gr.addColorStop(q(xL - 30), cs + '0)'); gr.addColorStop(q(xL + 110), RB[i]); gr.addColorStop(q(xR - 150), RB[i]); gr.addColorStop(q(xR + 6), cs + '0)'); gr.addColorStop(1, cs + '0)'); o.grad.push(gr); }
     }
-    g.save(); g.clip(o.kirp);
+    g.save();
     const bekle = o.evre === BU_GK_EVRE.bekle;
     if (bekle) buGkHayal(o, tm, 1);
     // dış hâle (yumuşak beyaz-altın)
@@ -455,7 +466,8 @@ TUR.kaydet('gokkusagi', {
     if (!bekle && o.bu[0] > 0) {
       g.globalCompositeOperation = 'lighter';
       g.globalAlpha = 0.05 + 0.06 * o.parla; g.strokeStyle = '#fff2dc'; g.lineWidth = o.bant * 7 + 50;
-      g.beginPath(); g.arc(o.cx, o.cy, o.R - o.bant * 3.5, Math.PI, Math.PI * (1 + o.bu[0])); g.stroke();
+      const aL = buAyakAci(o, 0), aR = buAyakAci(o, 1);
+      g.beginPath(); g.arc(o.cx, o.cy, o.R - o.bant * 3.5, aL, aL + (aR - aL) * o.bu[0]); g.stroke();
       g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
     }
     g.lineCap = 'butt';
@@ -473,7 +485,7 @@ TUR.kaydet('gokkusagi', {
       // parlak üst kenar (kaydırak yüzeyi) + ışıltılar
       g.globalCompositeOperation = 'lighter';
       g.strokeStyle = 'rgba(255,255,255,' + (0.18 * tumu + 0.15 * o.parla).toFixed(3) + ')'; g.lineWidth = 2.5;
-      g.beginPath(); g.arc(o.cx, o.cy, o.R - 1, Math.PI, BU_PI2); g.stroke();
+      g.beginPath(); g.arc(o.cx, o.cy, o.R - 1, buAyakAci(o, 0) + 0.12, buAyakAci(o, 1) - 0.08); g.stroke();
       for (const s of o.yildizlar) { const pu = 0.5 + 0.5 * Math.sin(tm * 2.6 + s.ph); if (pu < 0.55) continue; const p = buYay(o, s.r, s.a); buPirilti(p.x, p.y, 3 + 3 * pu, (pu - 0.5) * 0.8 * tumu, tm * 0.5 + s.ph); }
       g.globalCompositeOperation = 'source-over';
     }
@@ -493,8 +505,12 @@ TUR.kaydet('gokkusagi', {
     g.globalCompositeOperation = 'source-over';
   },
 });
+function buAyakAci(o, i) {   // yayın zeminden çıktığı (0) / zemine değdiği (1) noktanın canvas açısı (π..2π)
+  const q = o.ayak && o.ayak[i]; if (!q) return i ? BU_PI2 : Math.PI;
+  let a = Math.atan2(q.y - o.cy, q.x - o.cx); if (a < 0) a += BU_PI2; return a;
+}
 function buGkHayal(o, tm, kirpli) {   // başlamadan önce: yayın yerinde süzülen minik pırıltılar (hedef ipucu)
-  if (!kirpli) { g.save(); g.clip(o.kirp); }
+  if (!kirpli) g.save();
   g.globalCompositeOperation = 'lighter';
   for (let i = 0; i < 9; i++) {
     const a = Math.PI * (0.12 + 0.76 * ((i / 9 + tm * 0.03) % 1)), p = buYay(o, o.R - o.bant * 3.5, a), pu = 0.5 + 0.5 * Math.sin(tm * 2.2 + i * 1.7);

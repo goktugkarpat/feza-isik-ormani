@@ -159,15 +159,19 @@ function dn2PaintSky(c, kk, w, h, yh) {
     const rg = x.createRadialGradient(0, 0, 0, 0, 0, r); rg.addColorStop(0, `rgba(4,5,26,${0.2 * m})`); rg.addColorStop(1, 'rgba(4,5,26,0)'); x.fillStyle = rg; x.beginPath(); x.arc(0, 0, r, 0, 6.283); x.fill(); x.restore();
   }
   x.globalCompositeOperation = 'lighter';
+  // ufuk parıltısı
+  { const rg = x.createRadialGradient(w * 0.5, yh, 0, w * 0.5, yh, w * 0.7); rg.addColorStop(0, dn2Hx('#7ae0e8', 0.12 + 0.2 * kk)); rg.addColorStop(0.5, dn2Hx('#7a6ae0', 0.06 + 0.1 * kk)); rg.addColorStop(1, 'rgba(120,100,220,0)');
+    x.save(); x.translate(0, yh); x.scale(1, 0.45); x.translate(0, -yh); x.fillStyle = rg; x.fillRect(0, yh - w, w, w * 2); x.restore(); }
+  x.globalCompositeOperation = 'source-over';
+  // gradyanların piksel başına titreşimi büyütülünce kareli ızgara gibi görünmesin: GPU'da yarıya küçült + geri büyüt (okuma yok); toz ve hilal sonra (keskin kalsın)
+  dn2Blur2(x, w, h);
+  x.globalCompositeOperation = 'lighter';
   for (let i = 0; i < 1100; i++) {   // yıldız tozu
     let px, py; if (R() < 0.62) { const t = R(), q = mw(t), off = dn2Gs(3, R) * 0.09 * w; px = q[0] + 0.55 * off; py = q[1] - 0.83 * off; } else { px = R() * w; py = Math.pow(R(), 1.3) * yh * 0.98; }
     if (py > yh * 0.97 || px < 0 || px > w) continue;
     const s = (0.5 + Math.pow(R(), 4) * 1.4) * (w / 1000 + 0.5), a = (0.1 + R() * 0.5) * m * (py < yh * 0.9 ? 1 : 0.4);
     x.fillStyle = R() < 0.7 ? dn2Hx('#dce8ff', a) : dn2Hx('#ffe0c8', a); x.fillRect(px, py, s, s);
   }
-  // ufuk parıltısı
-  { const rg = x.createRadialGradient(w * 0.5, yh, 0, w * 0.5, yh, w * 0.7); rg.addColorStop(0, dn2Hx('#7ae0e8', 0.12 + 0.2 * kk)); rg.addColorStop(0.5, dn2Hx('#7a6ae0', 0.06 + 0.1 * kk)); rg.addColorStop(1, 'rgba(120,100,220,0)');
-    x.save(); x.translate(0, yh); x.scale(1, 0.45); x.translate(0, -yh); x.fillStyle = rg; x.fillRect(0, yh - w, w, w * 2); x.restore(); }
   x.globalCompositeOperation = 'source-over';
   // hilal: çok soluk
   const mx = w * 0.72, my = yh * 0.4, mr = w * 0.026;
@@ -177,6 +181,12 @@ function dn2PaintSky(c, kk, w, h, yh) {
   mt.globalCompositeOperation = 'destination-out'; mt.fillStyle = '#000'; mt.beginPath(); mt.arc(cc + mr * 0.55, cc - mr * 0.28, mr * 0.86, 0, 6.283); mt.fill();
   x.drawImage(mc, mx - cc, my - cc);
   dn2Dither(x, w, h, 0.016);
+}
+const dn2BlurC = dn2Cv(2, 2);
+function dn2Blur2(x, w, h) {   // 2x2 ortalama (yarı boyuta bilinear küçültme) + geri büyütme; tamamen GPU'da
+  const hw = Math.max(1, w >> 1), hh = Math.max(1, h >> 1); if (dn2BlurC.width !== hw || dn2BlurC.height !== hh) { dn2BlurC.width = hw; dn2BlurC.height = hh; }
+  const t = dn2BlurC.getContext('2d'); t.imageSmoothingEnabled = true; t.globalCompositeOperation = 'copy'; t.drawImage(x.canvas, 0, 0, hw * 2, hh * 2, 0, 0, hw, hh);
+  x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = 1; x.imageSmoothingEnabled = true; x.globalCompositeOperation = 'copy'; x.drawImage(dn2BlurC, 0, 0, w, h); x.restore();
 }
 function dn2SkyBuild() {
   const k = 0.5, w = Math.max(64, Math.round(W * k)), h = Math.round(0.85 * H * k);
@@ -1187,10 +1197,14 @@ function dn2Isit() {
     case 7: { const L = dn2StarList(); const cols = new Set(DN2_SC); for (const o of L) if (o.renk) cols.add(dn2Sat(o.renk, 1.7)); cols.add('#ffffff'); cols.add('#cfdcff'); const arr = [...cols]; for (let n = 0; n < 3 && st.sub < arr.length; n++, st.sub++) dn2StarSpr(arr[st.sub]); if (st.sub >= arr.length) { st.i++; st.sub = 0; } break; }
     case 8: for (const c of ['#a8bcff', '#eef3ff', '#dff4ff', '#ffe8c8', '#9fb4ff', '#8fe8e0', '#8aa0ff', '#7a8cff', '#a890ff', '#bcd0ff', '#d0e4ff', '#5a6ad8', '#cfdcff', '#b8c8ff']) glow(c); for (const c of DN2_MC) glow(c); for (const c of DN2_SC) glow(c); st.i++; break;
     case 9: dn2SkyComp(0); { const x = dn2Cv(2, 2).getContext('2d'); dn2Dither(x, 2, 2, 0.01); } st.i++; break;
-    case 10: {   // kaynak tuvallerin bekleyen çizim komutlarını / doku yüklemesini şimdi tetikle (küçük tuvale çiz + oku): ilk karede takılma olmasın
-      const sc = st.sc || (st.sc = dn2Cv(4, 4)), x = sc.getContext('2d', { willReadFrequently: true }); const touch = c => { if (c && c.width > 0) x.drawImage(c, 0, 0, 2, 2); };
-      const S_ = DN2_SK; if (st.sub === 0) { touch(S_.A); touch(S_.B); touch(S_.C); } else if (st.sub <= DN2_LAY.length) touch(DN2_LAY[st.sub - 1].cv); else if (st.sub === DN2_LAY.length + 1) { for (const k of DN2_FG.vine) touch(k.c); for (const k of DN2_FG.reed) touch(k.c); for (const k of DN2_FG.leaf) touch(k.c); } else { for (const c of DN2.gc.values()) touch(c.cv); for (const k in dn2DS) touch(dn2DS[k]); for (const k in dn2StarC) touch(dn2StarC[k]); for (const k in dn2AurC) touch(dn2AurC[k]); for (const k in dn2FS) touch(dn2FS[k]); touch(dn2RayC); for (const k in dn2LmC) touch(dn2LmC[k]); st.i++; }
-      x.getImageData(0, 0, 1, 1); st.sub++; break; }
+    case 10: {   // kaynak tuvallerin bekleyen çizim komutlarını / doku yüklemesini şimdi tetikle (küçük tuvale çiz + oku): ilk karede takılma olmasın.
+      // Her tuval ayrı dokunulur; adım başına ≈4 ms bütçe (bir adımda en az bir tuval) → kısa girişte uzun tek kare yok
+      const sc = st.sc || (st.sc = dn2Cv(4, 4)), x = sc.getContext('2d', { willReadFrequently: true });
+      if (!st.tl) { const S_ = DN2_SK, L = st.tl = [S_.A, S_.B, S_.C]; for (const l of DN2_LAY) L.push(l.cv); for (const k of DN2_FG.vine) L.push(k.c); for (const k of DN2_FG.reed) L.push(k.c); for (const k of DN2_FG.leaf) L.push(k.c);
+        for (const c of DN2.gc.values()) L.push(c.cv); for (const k in dn2DS) L.push(dn2DS[k]); for (const k in dn2StarC) L.push(dn2StarC[k]); for (const k in dn2AurC) L.push(dn2AurC[k]); for (const k in dn2FS) L.push(dn2FS[k]); L.push(dn2RayC); for (const k in dn2LmC) L.push(dn2LmC[k]); st.ti = 0; }
+      const t0 = performance.now();
+      do { const c = st.tl[st.ti++]; if (c && c.width > 0) { x.drawImage(c, 0, 0, 2, 2); x.getImageData(0, 0, 1, 1); } } while (st.ti < st.tl.length && performance.now() - t0 < 4);
+      if (st.ti >= st.tl.length) st.i++; break; }
     default: st.i++;
   }
   if (st.i >= 11) { DN2.prepDone = true; return true; }

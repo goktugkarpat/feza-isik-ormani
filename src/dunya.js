@@ -132,11 +132,16 @@ function dnStar(col) {
 }
 
 // ── kâğıt dokusu (Gris, çok hafif) ──
-const DN_GRAIN = (() => {
+const DN_GRAIN = (() => {   // yumuşak (düşük frekanslı) kâğıt lekeleri: piksel başına gürültü ⅓ çözünürlükten büyütülünce "kareli kâğıt" ızgarası gibi görünüyordu
   const c = document.createElement('canvas'); c.width = c.height = 256;
-  const x = c.getContext('2d'), d = x.createImageData(256, 256), R = rng(99);
-  for (let i = 0; i < d.data.length; i += 4) { const v = 110 + R() * 145; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 18 + R() * 26; }
-  x.putImageData(d, 0, 0); return c;
+  const x = c.getContext('2d'), R = rng(99);
+  const oct = (n, al) => { const t = document.createElement('canvas'); t.width = t.height = n + 1; const tx = t.getContext('2d'), d = tx.createImageData(n + 1, n + 1), v = [];
+    for (let i = 0; i < n * n; i++) v.push(110 + R() * 145);
+    for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) { const k = ((j % n) * n + (i % n)), o = (j * (n + 1) + i) * 4; d.data[o] = d.data[o + 1] = d.data[o + 2] = v[k]; d.data[o + 3] = 255; }
+    tx.putImageData(d, 0, 0); x.globalAlpha = al; x.imageSmoothingEnabled = true; x.drawImage(t, 0.5, 0.5, n, n, 0, 0, 256, 256); };   // kenarlar sarılır: döşenince dikiş yok
+  oct(32, 1); oct(64, 0.5); x.globalAlpha = 1;
+  x.globalCompositeOperation = 'destination-in'; x.fillStyle = 'rgba(0,0,0,0.17)'; x.fillRect(0, 0, 256, 256); x.globalCompositeOperation = 'source-over';
+  return c;
 })();
 let grainPat = null;   // oyun.js resize() sıfırlar
 
@@ -209,7 +214,13 @@ function dnPaintSky() {
   if (!dnSkyGrain) dnSkyGrain = x.createPattern(DN_GRAIN, 'repeat');
   x.globalAlpha = 0.1; x.globalCompositeOperation = 'overlay'; x.fillStyle = dnSkyGrain; x.fillRect(0, 0, w, h);
   x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
+  // tarayıcının gradyan titreşimi (piksel başına ±1) ⅓ çözünürlükten büyütülünce kareli ızgara gibi görünür: yarım piksel kaydırarak bir kez yumuşat
+  // (GPU'da, okuma yok): yarı boyuta küçült (2x2 ortalama) + geri büyüt → titreşim söner; gök zaten yumuşak, lekeler korunur
+  const hw = Math.max(1, w >> 1), hh = Math.max(1, h >> 1); if (dnSkyTmp.width !== hw || dnSkyTmp.height !== hh) { dnSkyTmp.width = hw; dnSkyTmp.height = hh; }
+  const tx = dnSkyTmp.getContext('2d'); tx.imageSmoothingEnabled = true; tx.globalCompositeOperation = 'copy'; tx.drawImage(dnSky, 0, 0, hw * 2, hh * 2, 0, 0, hw, hh);
+  x.imageSmoothingEnabled = true; x.globalCompositeOperation = 'copy'; x.drawImage(dnSkyTmp, 0, 0, w, h); x.globalCompositeOperation = 'source-over';
 }
+const dnSkyTmp = document.createElement('canvas');
 let dnSkyGrain = null;
 const DN_STARS = (() => { const R = rng(808), a = []; for (let i = 0; i < 120; i++) a.push({ x: R(), y: Math.pow(R(), 1.5) * 0.55, s: 0.5 + Math.pow(R(), 3) * 2.2, ph: R() * 6.28, sp: 0.6 + R() * 1.8, c: R() }); return a; })();
 // ay: yumuşak disk + hafif lekeler (önbellekli)

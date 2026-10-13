@@ -241,7 +241,7 @@ function ylBasamak(o) {
   const c = o.cisim; if (!c || !c.aktif || !P.ground || P.fade > 0 || DURUM !== 'oyun') return;
   if (typeof ustundeki !== 'undefined' && ustundeki === o) return;
   const top = o.y - c.h, d = P.y - top; if (d <= 0.5 || d > YL_BASAMAK) return;
-  const hw = c.w / 2, on = 17;   // ön kenar taşa ≤17 birim kalınca (taşlar arası ≤15 boşluk; Feza boşluğa düşmeden alınır)
+  const hw = c.w / 2, on = 3;   // ön kenar taşa değince (≤3); arka ayak hâlâ eski zeminde (boşluk ≤ 2·PW), Feza havada kalmadan alınır
   if (P.x < o.x ? (P.vx < 5 || P.x + PW + on <= o.x - hw) : (P.vx > -5 || P.x - PW - on >= o.x + hw)) return;
   P.y = top; P.vy = 0;
 }

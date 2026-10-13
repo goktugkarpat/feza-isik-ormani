@@ -211,7 +211,7 @@ Düşmek: bulutların altı boşluk; düşen Feza'yı Pırıl geri taşır (mevc
   1 Pembe Bulutlar 0–56 (çukurlarda yüzey hizasında zıplatan bulutlar 21–23, 27–28, 31–32: üstünden yürüyünce "boing") ·
   1b **Gökyüzü Merdiveni** 57–92 (yolda alçak zıplatan bulut → ince bulut basamakları y=560/440/320 → tepede tohum yayı; isteğe bağlı, alttan düz yol) ·
   2 Kuzucuk Çayırı 93–175 (133–142 platoda **bulut mağarası**: tavan satır 12–13, içinde 2. kuzucuk; 143–144 çukurunda **asansör bulutu** tavana/üst yola çıkar; 153–159 yüzen bulut) ·
-  2b **Uykucu Bulut Kuşu** 176–189 (geniş boşluk; kuş Feza'yı sırtında taşır) · 3 Rüzgâr Yolu 190–268 (esintiler 201 ve 245 duvarlarının önünde, yüzen bulut 221–226, bulut adası 245–254, rüzgâr kuyusu 265–268) ·
+  2b **Uykucu Bulut Kuşu** 176–189 (boşluk DEĞİL: 3 kare derin yumuşak bulut çukuru, zemin y=840; kuş Feza'yı sırtında taşır; kuşu beklemeden atlayan çukura iner, sağ uçtaki zıplatan bulut (188) karşı kıyıya atar — düşüş/sıkışma yok) · 3 Rüzgâr Yolu 190–268 (esintiler 201 ve 245 duvarlarının önünde, yüzen bulut 221–226, bulut adası 245–254, rüzgâr kuyusu 265–268) ·
   3b **Tüy Köprüsü** 269–284 (273–284 boşluğunda salınan 3 dev tüy) · 4 Bulut Şekilleri 285–317 · Büyük Boşluk kıyısı 318–330 (kapı sütun 326) · uçuş 331–453 (zemin yok) ·
   6 Gökkuşağı Tepesi 454–523 (tepe üstü 487–499, y=520).
   Ana yolda basamaklar ≤ 1 kare; yüksek duvarların önünde duvara dayalı esinti; boşluklar ≤ 2 kare (yüzen bulut/kuş/tüy yerleri hariç).
@@ -220,11 +220,11 @@ Düşmek: bulutların altı boşluk; düşen Feza'yı Pırıl geri taşır (mevc
 - **`BOLUM.ucus`** = `{x0: nx(326)=13060, x1: 455·T=18200, yUst: 120, yAlt: 700}` (iniş: sütun ≈457; 7. kuzucuk 462'de).
 - **`BOLUM.gokkusagi`** = `{x, y, cx, cy, R}`: x = cx = nx(494.5)=19800, y=520; yay merkezi (19800, 1034), dış yarıçap R=600 (yayın tepesi y=434).
 - **Nesneler** (y = ÜST yüzey: bulutZip/bulutYuzen/bulutKus/bulutKopru; esinti: y = sütunun dibi): 7 `kuzu` (sütun 111, 139 (mağarada, y=640), 167, 207 (yüksek düzlük),
-  250 (bulut adası), 303.5, 462); 2 `bulutSekil` (291 `{sira:0}`, 314 `{sira:1}`); `ucusKapisi` 326; `gokkusagi`; ≈30 `tohum` (isteğe bağlı);
-  `konusma`: `b_giris` (7), `b_zip` (15), `b_kuzu` (99, konu = 1. kuzucuk), `b_esinti` (191), `b_tepe` (467).
+  250 (bulut adası), 303.5, 462); 2 `bulutSekil` (291 `{sira:0}`, 314 `{sira:1}`); `ucusKapisi` 326; `gokkusagi`; 14 `tohum` (isteğe bağlı; yüksek pembe bulut 2, boing zinciri 2, merdiven tepesi 3, mağara tavanı 2, kuş yolu 1, esinti 1, kuyu 1, tüy köprüsü 1, tepe 1);
+  `konusma`: `b_zip` (15), `b_kuzu` (99, konu = 1. kuzucuk), `b_esinti` (191), `b_tepe` (467).
   Süsler: `ucurtma` ×7, `kusSuru` ×7, `tuy` ×13.
 - **Türler (bulut.js)**: `bulutZip {w, h=18, guc, gom}` · `bulutYuzen {w, ax, ay, sure, faz, gorunum:'tuy', renk}` (uçlarda %14 bekler; `gorunum:'tuy'` = dev tüy, durmadan sinüs salınımı) ·
-  `bulutKus {w, ax, ay, sure}` (uyku → Feza sırtında 0,45 sn → `OLAY 'bulutKus'`, kalkar, yay çizerek karşıya uçar → Feza inince 2,5 sn sonra boş döner; `o.durum` uyku/git/karsi/don) ·
+  `bulutKus {w, ax, ay, sure}` (uyku; Feza ≈320 birim yakınındayken uyanır, ön kanadıyla "gel" sallar, sırtında pırıltılar → Feza sırtında 0,45 sn → `OLAY 'bulutKus'`, kalkar, yay çizerek karşıya uçar → Feza inince 2,5 sn sonra (Feza başlangıç kıyısına dönmüşse 0,4 sn sonra) boş döner; `o.durum` uyku/git/karsi/don) ·
   `esinti {w, h, kuyu}` · `gokkusagi` · `bulutKopru` (YALNIZ `ucusKapisi` türü yoksa) · `ucurtma {ip, renk}` · `kusSuru {n}` · `tuy`.
   Renkler `BU_GK` (gökkuşağı bantları `DN3_RB` varsa onu kullanır). bulutYuzen/bulutKopru `dn3Bulut` ile çizilir; bulutZip kendi pembe esnek sprite'ı.
 - **Gökkuşağı akışı**: başlama: Feza tepe üstünde (yerde) + bütün kuzucuklar renkli (kuzu türü yoksa hemen). t=0 `OLAY 'gokkusagiBasla'` (veri = nesne; `o.konumlar` = 7 {x,y}
@@ -311,6 +311,16 @@ Düşmek: bulutların altı boşluk; düşen Feza'yı Pırıl geri taşır (mevc
 - (CORE, 23:25) PIRIL isteği yapıldı: Bölüm 3'te `omPirilHale` küçük (70 birim) ve sıcak pembe-şeftali, çok hafif (0,08); beyaz pus yok. Bölüm 1-2 aynen.
   Bölüm 3 sayacının arkasına hafif koyu yumuşak yastık + kuzucuk simgelerine dış kontur (aydınlık gökte okunurluk).
 - **Test (LEVEL3, Tur 2, 524 sütun)**: iyi bot 0 düşme, ≈125 sn oyun saatinde final (eski 458 sütunda 113 sn); özensiz bot (sabırsız, rastgele zıplama) 0–2 düşme (yalnız yüzen bulut boşluğu), final; ikisi de 7/7 kuzucuk. ucus.js+kuzu.js engelliyken yedek köprüyle final (Tur 1). Bölüm 1/2 konsol hatası 0.
+- **Test (LEVEL3, Tur 4)**: iyi bot ve özensiz bot 0 düşme, 7/7 kuzucuk, final; kuş yokken çukura yürüyen/atlayan Feza ≈5 sn'de karşı kıyıda (0 düşme). Final kadrajı yatay 1194×834 / dikey 834×1194'te doğrulandı (Tur 3).
+- **Tur 5 (QA turu 1 düzeltmeleri, LEVEL3):**
+  - **Gökkuşağı ↔ zemin anlaşması:** `gokkusagi` artık zemine göre KIRPILMAZ (eskiden ızgara karolarıyla kırpılıyordu → keskin dikdörtgen basamaklar). Yay, `ciz` katmanında (zeminden SONRA, Feza'dan ÖNCE)
+    tam çizilir; iki ucu yatay alfa geçişiyle söner (sol: yayın tepe düzlüğünden çıktığı nokta `o.ayak[0]` ≈ x 19480; sağ: iniş noktası `o.ayak[1]` ≈ x 20284, y 680) ve uçlarda yumuşak ışık bulutu var.
+    Yay bantları tepe düzlüğünün (y=520) üstüne biner: yani gökkuşağı tepenin ÖNÜNDE duran bir kaydıraktır. WORLD3: tepe bölgesinde (sütun 474–507) zemin ön yüzünü/üst kenarını
+    yayın ÜSTÜNE çizen bir ön plan katmanı olmasın (yoksa yay yine kesilir); zeminin kendi yumuşak bulut kenarı yayın altında kalabilir.
+  - **Kolaylık:** Bölüm 3'te uçuş boşluğu dışında DÜŞÜLECEK YER KALMADI: küçük boşluklar (45–46, 119–120) 2 kare derin sığ çukur (zıplayıp çıkılır);
+    yüzen bulut boşlukları yumuşak çukur (153–159 dibi y=840, 221–226 dibi y=760) + sağ uçta çıkış zıplatanı (158.5, 225.5); kuş geçidi çukuru (176–189, çıkış 188).
+    Rüzgâr Yolu esintileri genişledi (w 150, duvara dayalı).
+  - **`b_giris` tetikleyicisi kaldırıldı** (p_b_giris'i CORE açılışta söylüyor; çift olmasın). Tohum: 14.
 - **WORLD3 tur 2:** Bulut denizi artık kümülüs öbekleriyle çiziliyor (kubbe + üst katlar, öbek başına tek hacim ışığı + gölge; yuvarlak taban lobları, köşe yok);
   ince bulut şeridi tek siluet. Basamak yüzleri düzensiz kabarcıklarla örtülü; basamak yüzünde ışık şeridi ve süs yok; derin renk ve şeffaflaşma çok yumuşak yüzeyi (±48 birim) izler.
   Bölge karakteri: Pembe Bulutlar pembe ton · Kuzucuk Çayırı yoğun papatya + gökte küçük kuzucuk biçimli bulutlar · Rüzgâr Yolu bulutlar daha hızlı kayar
@@ -348,6 +358,9 @@ Düşmek: bulutların altı boşluk; düşen Feza'yı Pırıl geri taşır (mevc
   üç gölün her biri ayrı karakter (I mavi su çimeni, II pembe nilüfer bahçesi + yüzen taç yaprakları, III altın yosun + ışık kabarcıkları), su altı bitkileri, ay ışığı hüzmeleri,
   ön planda 5 tür sarkık süs (yıldız çıngırağı, söğüt saçağı), kuzey ışığı alt kenarı merdivensiz (ve yarı maliyet).
 - Bölüm 1: gölcük söğütleri çiçekli (pembe salkım + suya süzülen taç yaprakları), açıklıktaki ağaç tepesinin kesitinde ağacın ışıyan kökleri, derin ışık kovukları, yüksek uçurum yüzlerinde raf mantarları.
+- Bölüm 2 ufkunda bölgeye özgü uzak simgeler (yavaş paralaks + suda yansıma): başta uzaktaki Işık Ağacı, Pofuduk kıyılarında dev ışıklı mantarlar, çayırda ışık çiçeği tarlası, kaplumbağa kıyısında yıldız oymalı taş kemer.
+- "Kareli kâğıt" ızgarası giderildi (Chrome'da düşük çözünürlüklü gök tuvallerindeki gradyan titreşimi büyütülünce 3-4 px'lik ızgara oluyordu): gök tuvalleri GPU'da bir kez yumuşatılıyor (okuma yok); B1 kâğıt dokusu düşük frekanslı.
+- (Lead isteği) `dn2Isit()` adımları: gök adımı ≈5 ms (önceki 52 ms'lik getImageData kaldırıldı); son "dokunma" adımı tuval tuval, adım başına ≈4 ms bütçe. Headless'ta tek bir büyük tuvalin ilk yüklemesi hâlâ uzun sürebilir (bölünemez, eskiden de vardı).
 
 - **WORLD3 tur 3:** Gökkuşağı Tepesi bulutları sıcak altın-pembe paletle (`DN3_GCW`) boyanıyor; tepe ışığı ve bölge tonu normal karışımla mercan-altın (beyaz 'lighter' yıkama yok),
   sabah gökyüzünün ufku daha doygun şeftali. Mağara (133–144): bileşen zinciri en çok örtüşen koşuyu izler (zemin sürer, tavan ayrı yüzen bulut: altı lila kabarık);
@@ -379,3 +392,94 @@ Düşmek: bulutların altı boşluk; düşen Feza'yı Pırıl geri taşır (mevc
     kareler akıcılaşınca açılıyor (en az 0,4 sn, art arda 4 akıcı kare, en geç 2,2 sn) → bu takılmalar tam karanlıkta kalıyor (ölçüldü). `?bolum=N&uyku` test yolu da karanlıktan başlıyor.
   · **WORLD'e (dunya2.js):** `dn2Isit` bir adımı ≈29 ms (Bölüm 2, ≈0,9 sn); Bölüm 2'de 1,34 sn'de perde açılırken 88 ms'lik bir kare daha var. Adımları ≤8 ms'ye bölmek iyi olur.
 - (CORE) Zıplama: en kısa dokunuşta da zıplama ≈2,6 kare (`OM.MIN_BASILI` 0,11 → 0,16; 102 birim, tam basış 120). Botla üç bölüm sona kadar oynandı (Bölüm 3: 7/7 kuzu, 2 düşüş — bot).
+- (CORE, 00:50) Zıplama düğmesi kontrol 0,5 sn'den uzun kilitliyken (`P.kilit`: gökkuşağından kayış, ağaç, mini oyun daveti, Pırıl'ın yardım taşıması) yumuşakça gizlenir; kısa kilitlerde (≤0,5 sn) titremez.
+  Son gerileme: Bölüm 1 (15 çiçek), 2 (14 yıldız), 3 (7 kuzu) botla sona ulaşıyor, konsol hatası 0. Bölüm 3 bot düşüşleri yalnız sütun 186'da (uykucu bulut kuşu geçidi —
+  zıplayan bot kuşu beklemiyor; LEVEL3: çocuk da koşarak boşluğa atlayabilir, Pırıl kurtarıyor, istenirse kuşun sırtına ipucu). Bölüm 2 kısa girişinde ≈1,35 sn'de (perde %30 iken, ekran zaten çok koyu) 90-100 ms'lik bir kare kalıyor — JS değil, sahne/dünya ilk çizimi (SAHNE/WORLD).
+- (POF, Tur 2) **Tam bot** (LEVEL3 `bot.js`, iyi ×1 + özensiz ×3, COLS 524): 7/7 kuzucuk, final; takılan kuzucuk 0 (2,5 sn kımıldamadan yerinden >40 uzak), yerdeki iki kuzucuk arası en az 41–44, konsol hatası 0.
+  Feza bulut kuşunda / hareket eden bulutta (`ustundeki` bulutKus ya da dx/dy'li cisim) giderken sürü arkasından havada küçük bulutlar gibi süzülerek eşlik eder (Feza'ya ≈180 içinde), inince zemine süzülür.
+  Aynı anda renklenenler: sarılma yeri dokunma anında sabitlenir, doluysa 48 ötesi; sarılan/sevinen kuzucuklar yürüyenler için engel (üstünden süzülür, sırada bekler). Yay iniş yeri doluysa üstünde biraz bekler.
+  Yay yeniden kurma en sık 0,4 sn'de bir (sürekli kurulup havada donma hatası giderildi). Geç renklenen kuzucuk (gökkuşağı başladıktan sonra) doğrudan yerine uçar: doğrulandı.
+- (POF, Tur 2) Pofuduk geçit töreni: arkadaki öndekine binmez (sıraya girer; 0,7 sn sıkışırsa üstünden süzülür). Yürürken en yakın 25 → 32–35.
+
+## QA turu 1 (23:50, MINI3)
+Yöntem: Playwright, gerçek Chrome headless, `?sessiz`. İki bot vardı:
+- "düzgün" bot: HEDEF()'e doğru yürür; boşluk, duvar ya da yukarıda hedef varsa zıplar; düşerken çift zıplar.
+- "dağınık" bot (5 yaş gibi): rastgele yön seçer, durur, zıplar ve ekrana rastgele dokunur.
+
+Ekranlar: yatay 1194×834 ve dikey 834×1194. Her ~20 sn'de ekran görüntüsü alındı; `SES.soyle`/`OLAY` kaydı ve `OYUN.kareMs` ölçüldü.
+- Ekran görüntüleri: `QA/<koşu>/`. Burada QA = `C:\Users\gktgk\AppData\Local\Temp\claude\C--Users-gktgk-Dropbox-Game-Development\d0282e08-f18e-4d64-9193-13a89766a60d\scratchpad\mini3\qa`.
+- Betikler: `QA/bot.py` (botlar), `QA/giris.py` (seçim ekranı + kısa girişler), `QA/srv.py` (sağlam test sunucusu, port 8737).
+
+Sonuç: Bölüm 1, 2 ve 3 hem yatay hem dikeyde baştan sona bitti.
+- Düzgün bot süreleri (oyun zamanı): B1 ≈94 sn, B2 ≈96 sn, B3 ≈105-122 sn.
+- Dağınık bot B3'ü dikeyde 264 sn'de bitirip finale ulaştı.
+- Konsol hatası, sağlam sunucuyla 0.
+- Seçim ekranı (`?sessiz`) ve `&bolum=2|3&uyku` kısa girişleri hatasız.
+
+Bulgular (önem sırasıyla):
+
+1. **[LEVEL3/WORLD3] Gökkuşağı Tepesi'ndeki kayma rampası zemin karolarıyla kesiliyor.** Keskin köşeli, dikdörtgen beyaz basamaklar gökkuşağının üstüne biniyor; yumuşak bulut zeminine hiç benzemiyor. Final anının en görünür yeri.
+   - Görüntü: `QA/b3_duz_dikey/006_oyun_122s_x20490.png`, `QA/b3_duz_yatay/005_oyun_102s_x17844.png`.
+   - Tekrar: `?sessiz&atla&bolum=3`, tepeye gelince.
+
+2. **[SES] Pırıl cümleleri bir olayla yarıda kesiliyor.** Her koşuda aynı:
+   - `p_b_kuzu` (5,1 sn), ~2,5-3 sn sonra `p_b_kuzu_ilk` ile kesiliyor (B3 koşularının 3'ünde de).
+   - `p_y_hayvan_uyan` (4,1 sn), 1,4 sn'de `p_y_bitti` ile kesiliyor.
+   - `p_buyuk` (7,8 sn), son 0,6 sn'de `p_buyuk_kalk` ile kesiliyor.
+   - `p_uyuyor` (9,1 sn), dağınık botta 1,8 sn'de `p_uyandi` ile kesiliyor.
+   - Öneri: `p_b_kuzu_ilk` ilk kuzucukta `p_b_kuzu` bitene kadar kuyrukta beklesin (ya da `p_b_kuzu` kısaltılsın). Final dizisindeki cümleler birbirini beklesin.
+   - Kayıt: `QA/b3_duz_*/log.json` içindeki 'konusma' olayları.
+
+3. **[LEVEL3] Rüzgâr Yolu dağınık çocuk için zor.** Bölge: x≈6700-8300 (bulut adasındaki kuzucuk `kuzu@8300,560`, esinti, sütun 171-176 arası yüzen bulut boşluğu).
+   - Dağınık bot burada ≈140 sn kaldı ve 7 kez düştü; `p_kurtar` her seferinde aynı 3,5 sn'lik cümleyle 7 kez çaldı.
+   - Görüntü: `QA/b3_daginik_yatay/006…012*.png`.
+   - Öneri: boşluklar daraltılsın ya da esinti genişletilsin. [SES] `p_kurtar` daha seyrek ve çeşitli olsun.
+
+4. **[CORE] Bir modül yüklenemezse oyun kilitleniyor.**
+   - Ne oldu: yük altındaki test sunucusu birkaç script'i veremedi (`ERR_CONNECTION_REFUSED`), böylece `kuzu` ve `ucusKapisi` türleri hiç tanımlanmadı. `HEDEF()` türü olmayan nesneyi (renklenmeyen kuzucuk, açılmayan kapı) göstermeye devam etti ve oyun sonsuza dek bekledi.
+   - Görüntü: `QA/b3_duz_dikey_takil1/TAKIL_*.png` (Feza kapıda, Pırıl oturuyor, 500 sn).
+   - iPad'de service worker önbelleğiyle olası değil, ama ilk açılışta zayıf ağda olabilir.
+   - Öneri: `HEDEF` ve sayaçlar, `TUR.al(o.tip)` olmayan nesneyi yok saysın. Kapı türü yoksa doğrudan bir sonraki hedefe geçilsin.
+   - Diğer ajanlara not: `python -m http.server` aynı anda birkaç tarayıcı açılınca bağlantıyı reddediyor. `ThreadingHTTPServer` + `request_queue_size=256` kullanın (`QA/srv.py`). Gece görülen geçici "Unexpected end of input" / "Invalid or unexpected token" hataları büyük olasılıkla bu sunucudan ya da yarım yazılmış dosyalardan; oyun hatası değil.
+
+5. **[LEVEL3/SES] Bölüm 3 açılışında `p_b_giris`, ekran daha karanlıkken başlıyor.**
+   - Kısa girişte durum 'oyun' olur olmaz (açılıştaki ışık toplanırken) çalıyor. Bölüm 2'de `p_y_giris` 2,4 sn sonra, ekran açılınca çalıyor.
+   - Sebep: başlangıçtaki `b_giris` konuşma tetikleyicisi.
+   - Ayrıca `?atla` ile `p_b_giris` hiç söylenmiyor: `soyle` çağrılıyor ama 'konusma' olayı gelmiyor.
+   - Kayıt: `QA/s_uyku3_yatay/log.json`.
+
+6. **[FEZA/WORLD3] Bölüm 3'te Feza zor seçiliyor.** Açık renk pijaması pembe-beyaz bulut zeminde kayboluyor; dikey ekranda Feza ≈45 px.
+   - Görüntü: `QA/b3_duz_dikey/003_oyun_61s_x12078.png`, `QA/b3_duz_yatay/001_oyun_22s_x4627.png`.
+   - Öneri: Bölüm 3'te Feza'ya hafif koyu kontur/gölge eklensin ya da çevresindeki zemin hafifçe koyulaşsın (Bölüm 2'deki gibi).
+
+7. **[CORE/LEVEL3] Bölüm 3'te üstteki tohum çubuğu çok uzun.** `tohumTop` gece içinde 13'ten 28'e çıktı; çubuk ekranın üstünün büyük kısmını kaplıyor.
+   - Görüntü: `QA/b3_daginik_yatay/006_oyun_122s_x7250.png`.
+
+8. **[UCUS/CORE] Dikey ekranda uçuşta ve inişte Pırıl+Feza ile kuzucuk treni sol kenara çok yakın** (kuyruk ve kuzucuklar kesiliyor).
+   - Görüntü: `QA/b3_duz_dikey/005_oyun_101s_x18223.png`.
+
+9. **[SAHNE] Seçim ekranı yatayda orta baloncuk alt başlığa biniyor** ("başka"nın ş çengeli örtülüyor).
+   - Görüntü: `QA/s_secim_yatay/002_04.7s_baslik.png`.
+
+10. [Bilgi] Performans (headless masaüstünde ölçüldü, iPad'i temsil etmez): `OYUN.kareMs` ortalama 1,2-1,8 ms, p99 2-5 ms. Yalnız yükleme anında tek bir kare 16-85 ms sürüyor. Bölüm içinde ani yavaşlama görülmedi.
+
+11. [MINI3, düzeltildi] Feza bulut mini oyununu bırakıp gidince de `OLAY 'sekil'` yayınlanıyordu; ses.js de "Buldun! Bulut canlandı" diyordu. Artık bu durumda olay yayınlanmıyor.
+    - Ayrıca: Bölüm 3'te 2. bulut yeri (x 12580) uçuş kapısına (x 13060) yalnız 480 birim uzakta; sekil.js'in uzaklaşma eşiği 520. Yani bulut etkinliği kapının yanına kadar sürüyor. Sorun görülmedi.
+
+### WORLD3 ↔ LEVEL3 anlaşması: gökkuşağı rampası ile bulut zemin (QA turu 1, madde 1)
+- Sorun: `gokkusagi` yayı ızgara hücresi basamaklarıyla (`topOf` dikdörtgenleri) kırpılınca ya da kırpılmayınca zeminle sert dikdörtgen kesişimler oluşuyordu.
+- **dunya3.js sağlar** (dünya koordinatı, önbellekli, kare başına ucuz):
+  - `dn3ZeminKirp(x0, x1)` → Path2D: bulutun GÖRÜNEN yüzeyinin (yumuşatılmış, +14 birim) üstündeki bölge; boşluklarda aşağı iner.
+  - `dn3ZeminOn(x0, x1)` → zeminin üst kabarcık bandını (yüzeyin 34 üstü – 30 altı, basamak yüzleri dahil) önbellekli zemin parçalarından ÖNE yeniden çizer (dünya dönüşümü kurulu olmalı).
+- **LEVEL3 (bulut.js `gokkusagi`) kullanır** (`typeof` korumalı; yoksa eski davranış):
+  ```js
+  // ciz(o, tm) içinde, yayı çizmeden önce (o.kirp yerine):
+  const X0 = o.cx - o.R - 60, X1 = o.cx + o.R + 60;
+  g.save(); if (typeof dn3ZeminKirp === 'function') { const k = dn3ZeminKirp(X0, X1); if (k) g.clip(k); } else g.clip(o.kirp);
+  ... yay ... g.restore();
+  // cizOn(o, tm) başında (ışık bulutlarından önce):
+  if (typeof dn3ZeminOn === 'function') dn3ZeminOn(o.cx - o.R - 60, o.cx + o.R + 60);
+  ```
+  Sonuç: yayın ayakları kabarık bulutların İÇİNE girer (WORLD3 test sarmalayıcısıyla doğrulandı: yatay 1194×834 ve dikey 834×1194). Kayma sırasında Feza `cizOn`'dan önce çizildiği için zemin bandı Feza'yı örtmez
+  (Feza ayak altı bandın içinde kalırsa 1-2 piksel örtülebilir; gerekirse dn3ZeminOn yalnız kayma bitene dek çağrılmayabilir).
+- **Feza seçilebilirliği (QA madde 2, arka plan tarafı):** dn3World sonunda Feza'nın arkasına yumuşak mor-gül gölge alanı (önbellekli sprite, karede tek drawImage; uçuşta kapalı).
