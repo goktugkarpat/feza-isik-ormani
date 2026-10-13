@@ -16,4 +16,5 @@
   `yayinla.command` ilk seferde depoyu oluşturup GitHub Pages'ı açar.
 - Bölümler ("her gece başka bir rüya"): Bölüm 1 `bolum.js`, Bölüm 2 (Yıldız Gölü) `bolum2.js`; `index.html` `?bolum=N` > `sessionStorage 'fezaIsikSec'` > 1 ile birini yükler (`BOLUM_NO`); başlık sayfası hep Bölüm 1'dir ve seçim sahnesini (`SAHNE.secim`) gösterir; her bölüm sabah finaliyle biter, sonuç kartı "odaya dön" ile seçime döner. Kayıt: `fezaIsikTamam`, `fezaIsikSon`. Ayrıntı: `src/BOLUM2.md`. Test: `?bolum=N`, `?atla`.
 - Ebeveyn kısayolu: seçim ekranında sol üst köşe 3 sn = kayıtları sıfırla.
+- Cihaz profili (`OM_MASA`, `?cihaz=pc|tablet`): dokunmatikte yoğunluk en çok 1,5 ve 60 fps kilidi; masaüstünde monitörün gerçek çözünürlüğü ve en çok 120 fps.
 - 60 fps kilidi (ProMotion): `oyun.js` `omDongu` yenileme aralığını ölçer; 120 Hz'de her ikinci rAF'ta, 75-100 Hz ve 144 Hz+'ta zaman tabanlı çizer, 60 Hz ve altında hiç kare düşürmez. Fizik/animasyon gerçek zaman damgasıyla ilerler (hız her Hz'de aynı). Test kancaları: `OYUN.lim`, `OYUN.kareSay`, `OYUN.kareMs`.

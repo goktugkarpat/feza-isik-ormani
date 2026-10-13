@@ -901,6 +901,15 @@ function drawFx(tm, dt) {
 // sürede geri düşülen basamak bir süre (her seferinde iki katı) denenmez, ikinci kezde hiç: gidip gelme olmaz.
 // 12,9" iPad Pro gibi çok büyük ekranlar 1,75'ten başlar. ?dpr=x → sabit yoğunluk (test; uyarlama kapalı).
 // W, H, DPR, S, VW tek yerden kurulur: omBoyutla → omOlcek; sonra OLAY 'boyut' (modüller önbelleklerini yeniler).
+// Cihaz profili: dokunmatik (iPad, telefon) → yoğunluk en çok 1,5 (biraz yumuşak, serin ve pil dostu), en çok 60 kare/sn.
+// Masaüstü (dokunmatik yok, fare) → monitörün gerçek çözünürlüğü (devicePixelRatio, en çok 3), ekran izin verirse 120 kare/sn.
+// ?cihaz=pc | ?cihaz=tablet → profili zorla (test).
+const OM_MASA = (() => {
+  const z = Q.get('cihaz'); if (z === 'pc') return true; if (z === 'tablet') return false;
+  let ince = false; try { ince = matchMedia('(pointer: fine)').matches && !matchMedia('(any-pointer: coarse)').matches; } catch (_) { /* yoksay */ }
+  return ince && !(navigator.maxTouchPoints > 0);
+})();
+const OM_TABLET_TAVAN = 1.5, OM_MASA_TAVAN = 3;
 const OM_COZ = {
   BASAMAK: [2, 1.75, 1.5, 1.25],
   BUYUK_EKRAN: 5.2e6,   // fiziksel piksel ≥ bu (12,9" iPad Pro 2732×2048 = 5,6 MP) → 1,75'ten başla
@@ -921,10 +930,10 @@ function omCozLog(m) { const s = '[çözünürlük] ' + m; omCoz.log.push((now |
 function omCozSifirla() { omCoz.pT = omCoz.pN = omCoz.pAralik = omCoz.pJs = 0; omCoz.kotuN = omCoz.rahatN = 0; omCoz.bekleT = now + OM_COZ.BEKLE; omCoz.sonMs = -1; }
 // Basamak listesi ve başlangıç (resize'da da çağrılır; o anki basamak korunur)
 function omCozSec() {
-  omCoz.taban = Math.min(2, window.devicePixelRatio || 1);
+  omCoz.taban = Math.min(OM_MASA ? OM_MASA_TAVAN : OM_TABLET_TAVAN, window.devicePixelRatio || 1);
   if (omCoz.zorla) { omCoz.liste = [omCoz.zorla]; omCoz.i = 0; omCoz.dpr = omCoz.zorla; return; }
-  const L = OM_COZ.BASAMAK.filter(v => v <= omCoz.taban + 1e-6);
-  if (!L.length || L[0] < omCoz.taban - 1e-6) L.unshift(omCoz.taban);   // ör. DPR 1 ya da 1,6: o değerden başlar
+  const L = OM_COZ.BASAMAK.filter(v => v < omCoz.taban - 1e-6);   // taban her zaman ilk basamak (ör. 1, 1,5 ya da masaüstünde 2,25)
+  L.unshift(omCoz.taban);
   const once = omCoz.liste[omCoz.i];
   omCoz.liste = L;
   if (omCoz.ilk) {
@@ -933,7 +942,7 @@ function omCozSec() {
     try { if (screen && screen.width) px = Math.max(px, screen.width * screen.height); } catch (_) { /* yoksay */ }
     px *= omCoz.taban * omCoz.taban;
     omCoz.i = 0;
-    if (px >= OM_COZ.BUYUK_EKRAN) { const k = L.indexOf(1.75); if (k > 0) omCoz.i = k; }
+    if (!OM_MASA && px >= OM_COZ.BUYUK_EKRAN) { const k = L.indexOf(1.75); if (k > 0) omCoz.i = k; }
   } else {
     let k = 0; while (k < L.length - 1 && L[k] > once + 1e-6) k++;
     omCoz.i = k;
@@ -973,7 +982,7 @@ function omCozOlc(ms, js) {
   if (c.zorla || c.liste.length < 2 || !c.yenileme) return;
   if (DURUM !== 'oyun' || now < c.bekleT) return;
   if (c.bekleyen >= 0) { if (omCozSakin()) c.uygula = true; return; }   // karar verildi: sakin anı bekle (ölçme yok); değişim sonraki karenin başında (tuval silinmesin)
-  const y = Math.max(c.yenileme, 1000 / 60);   // hedef en az 60 fps: 120 Hz ekranda keskinlikten ödün verip 120 fps kovalamasın
+  const y = OM_MASA ? c.yenileme : Math.max(c.yenileme, 1000 / 60);   // tablet: hedef 60 fps · masaüstü: ekranın hızı (en çok 120)
   c.pAralik += Math.min(d, y * 4); c.pJs += js; c.pN++; c.pT += d / 1000;
   if (c.pT < OM_COZ.PENCERE) return;
   const ort = c.pAralik / c.pN, ortJs = c.pJs / c.pN;
@@ -1264,17 +1273,19 @@ function frame(ms) {
   if (P.x === omRX) P.x = omSimX; else omOncX = P.x;
   if (P.y === omRY) P.y = omSimY; else omOncY = P.y;
 }
-// ── 60 fps kilidi (ProMotion 120 Hz iPad Pro): oyun tek ana döngüde en çok 60 kare/sn çizer ──
+// ── 60 fps kilidi (dokunmatik cihazlar; ProMotion 120 Hz iPad Pro): oyun tek ana döngüde en çok 60 kare/sn çizer ──
 // Yenileme aralığı: son 60 rAF aralığının medyanı. ≥ ~71 Hz değilse (aralık ≥ 14 ms, yani 60 Hz ve altı) HİÇ kare düşürülmez.
 // ≥ ~105 Hz (aralık ≤ 9,5 ms: 120/144 Hz) → her ikinci rAF (sayaç tabanlı, jitter yok). Arası (75-100 Hz) → birikimli zaman sınırlayıcı.
 // Fizik/animasyon zamanı frame() içinde gerçek rAF zaman damgasından (atlanan kareler dahil) hesaplanır: oyun hızı her Hz'de aynıdır.
-const omLim = { buf: new Float32Array(60), n: 0, son: -1, aralik: 1000 / 60, mod: 1, par: 0, acc: 0, kare: 0, atla: 0, olc: new Float32Array(600), olcN: 0 };
+// Masaüstü profilinde (OM_MASA) kilit 120'dir: ≤ ~130 Hz ekranda her kare çizilir, 144 Hz+'ta zaman tabanlı en çok 120 kare/sn.
+const omLim = { buf: new Float32Array(60), n: 0, son: -1, aralik: 1000 / 60, mod: 1, par: 0, acc: 0, kare: 0, atla: 0, olc: new Float32Array(600), olcN: 0,
+  hedef: OM_MASA ? 1000 / 120 : 1000 / 60, masa: OM_MASA };
 function omLimGuncelle(d) {
   const L = omLim; L.buf[L.n++ % 60] = d;
   if (L.n >= 40 && L.n % 20 === 0) {
     const k = Math.min(L.n, 60), a = Array.prototype.slice.call(L.buf, 0, k).sort((x, y) => x - y), med = a[k >> 1];
     L.aralik = med;
-    const yeni = (med <= 9.5 && med >= 7.6) ? 2 : med >= 14 ? 1 : 3;   // 2: 105-130 Hz (120) her ikinci kare; <7,6 ms (144 Hz+) ve 75-100 Hz: zaman tabanlı   // 2: her ikinci kare · 1: hepsi · 3: birikimli
+    const yeni = L.masa ? (med >= 7.6 ? 1 : 3) : (med <= 9.5 && med >= 7.6) ? 2 : med >= 14 ? 1 : 3;   // 2: 105-130 Hz (120) her ikinci kare; <7,6 ms (144 Hz+) ve 75-100 Hz: zaman tabanlı   // 2: her ikinci kare · 1: hepsi · 3: birikimli
     if (yeni !== L.mod) { L.mod = yeni; L.acc = 0; }
   }
 }
@@ -1283,7 +1294,7 @@ function omDongu(ms) {
   const L = omLim, d = L.son < 0 ? 1000 / 60 : ms - L.son; L.son = ms;
   if (d > 0 && d < 250 && !document.hidden) omLimGuncelle(d);
   if (L.mod === 2) { L.par ^= 1; if (L.par) { L.atla++; return; } }
-  else if (L.mod === 3) { L.acc += d; if (L.acc < 15.2) { L.atla++; return; } L.acc = Math.min(L.acc - 1000 / 60, 1000 / 60); }
+  else if (L.mod === 3) { L.acc += d; if (L.acc < L.hedef * 0.912) { L.atla++; return; } L.acc = Math.min(L.acc - L.hedef, L.hedef); }
   L.kare++;
   if (omCoz.uygula) { omCoz.uygula = false; try { omCozUygula(); } catch (e) { omHataBildir('cozunurluk', e); } }
   const js0 = performance.now();
