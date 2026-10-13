@@ -401,11 +401,46 @@ function tkGokCiz(o, tm) {
     dglow('#ffffff', hx, hy, 18, a * 0.95); dglow(TK_AQUA, hx, hy, 46, a * 0.55);
   }
   g.globalCompositeOperation = 'source-over';
+  // 3b) tamamlama şöleni: arkada dönen ışık hüzmeleri, merkezden yayılan altın halkalar, şekil boyunca koşan ışık, göğe kayan yıldızlar
+  if (k.durum === 'dogru') tkSolen(k, nk, sq, tm, a);
   // 4) şeklin canlı versiyonu
   if ((k.durum === 'dogru' && k.t > 0.55) && k.t < 4.0) tkHayvanCiz(o, tm, clamp((k.t - 0.55) / 3.4, 0, 1), a);
   g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
 }
 
+function tkSolen(k, nk, sq, tm, a) {   // ekran uzayı (CSS px · DPR dönüşümü kurulu), 'lighter'
+  const t = k.t, y = tkYer, cx = y.cx, cy = y.cy, R = Math.max(y.hw, y.hh);
+  const gir = smooth(clamp(t / 0.5, 0, 1)), cik = 1 - smooth(clamp((t - 3.1) / 0.9, 0, 1)), A = gir * cik * a;
+  if (A < 0.01) return;
+  g.globalCompositeOperation = 'lighter';
+  // ışık hüzmeleri (ince üçgenler, yavaş döner)
+  g.save(); g.translate(cx, cy); g.rotate(tm * 0.25);
+  for (let i = 0; i < 10; i++) {
+    const an = i / 10 * 6.283, L = R * (1.5 + 0.25 * Math.sin(tm * 2 + i)), w = 0.07;
+    g.fillStyle = i % 2 ? 'rgba(255,226,140,' + (0.10 * A) + ')' : 'rgba(255,248,214,' + (0.07 * A) + ')';
+    g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(an - w) * L, Math.sin(an - w) * L); g.lineTo(Math.cos(an + w) * L, Math.sin(an + w) * L); g.closePath(); g.fill();
+  }
+  g.restore();
+  dglow('#ffe9a8', cx, cy, R * 1.3, 0.22 * A);
+  // yayılan halkalar (0, 0.35, 0.7 sn)
+  for (let q = 0; q < 3; q++) {
+    const u = clamp((t - q * 0.35) / 1.3, 0, 1); if (u <= 0 || u >= 1) continue;
+    g.strokeStyle = mixc('#ffe08a', '#ffffff', 0.4, (1 - u) * 0.7 * a); g.lineWidth = 6 * (1 - u) + 1.5;
+    g.beginPath(); g.ellipse(cx, cy, R * (0.3 + 1.6 * smooth(u)), R * (0.3 + 1.6 * smooth(u)) * 0.72, 0, 0, 6.283); g.stroke();
+  }
+  // şekil boyunca koşan ışık (kenarları sırayla dolaşır)
+  const m = sq.length - 1, p = (t * 2.2) % m, j = Math.floor(p), f = p - j, A0 = nk[sq[j]], B0 = nk[sq[j + 1]];
+  const hx = lerp(A0.x, B0.x, f), hy = lerp(A0.y, B0.y, f);
+  dglow('#ffffff', hx, hy, 16, 0.9 * A); dglow('#ffd36a', hx, hy, 44, 0.55 * A);
+  // göğe kayan minik yıldızlar (şeklin noktalarından, sırayla)
+  for (let q = 0; q < 4; q++) {
+    const u = clamp((t - 0.6 - q * 0.45) / 1.1, 0, 1); if (u <= 0 || u >= 1) continue;
+    const s = nk[sq[(q * 2) % m]], dx = (q % 2 ? 1 : -1) * (120 + q * 30), x = s.x + dx * u, yy = s.y - (160 + q * 20) * u + 40 * u * u;
+    for (let z = 0; z < 6; z++) { const w = clamp(u - z * 0.035, 0, 1); dglow(z ? '#ffe9a8' : '#ffffff', s.x + dx * w, s.y - (160 + q * 20) * w + 40 * w * w, 12 - z * 1.6, (1 - z / 6) * (1 - u) * 0.9 * a); }
+    dglow('#fff2b8', x, yy, 26, (1 - u) * 0.5 * a);
+  }
+  g.globalCompositeOperation = 'source-over';
+}
 function tkYildizCiz(x, y, r, lit, tm, a, vur) {   // nokta: sönükken beyazımsı-mavi küçük yıldız, yanınca altın
   g.save(); g.translate(x, y); g.rotate(Math.sin(tm * 0.8) * 0.12); g.globalAlpha = a;
   g.beginPath();

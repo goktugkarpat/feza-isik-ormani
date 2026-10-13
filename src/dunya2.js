@@ -323,8 +323,8 @@ function dn2Constellation(tm, hyPx, refl, rsy) {   // refl: suda yansıma (rsy =
 // ── ara sıra kayan yıldız ──
 let dn2Shoot = { t: -99, x: 0, y: 0, a: 0, len: 0, nxt: 6 };
 function dn2Shooter(tm) {
-  const S_ = dn2Shoot, f = DN2.fill; if (f < 0.12) return;
-  if (tm > S_.nxt) { S_.t = tm; S_.x = W * (0.2 + Math.random() * 0.7); S_.y = H * (0.06 + Math.random() * 0.22); S_.a = 0.35 + Math.random() * 0.3; S_.len = 1; S_.nxt = tm + 7 + Math.random() * 9; }
+  const S_ = dn2Shoot, f = DN2.fill, ow = dn2OpenW() * (1 - f), op = ow > 0.3; if (f < 0.12 && !op) return;   // açılışta: göle düşen yıldızlar (hikâye) daha sık ve daha dik
+  if (tm > S_.nxt) { S_.t = tm; S_.x = W * (0.2 + Math.random() * 0.7); S_.y = H * (0.06 + Math.random() * 0.22); S_.a = op ? 0.75 + Math.random() * 0.35 : 0.35 + Math.random() * 0.3; S_.len = 1; S_.nxt = tm + (op ? 3 + Math.random() * 3.5 : 7 + Math.random() * 9); }
   const e = tm - S_.t; if (e < 0 || e > 1.0) return;
   const q = e / 1.0, x = S_.x + Math.cos(S_.a) * q * W * 0.2, y = S_.y + Math.sin(S_.a) * q * W * 0.2, ln = W * 0.07 * Math.sin(q * Math.PI);
   g.globalCompositeOperation = 'lighter'; g.strokeStyle = '#e8f4ff'; g.lineWidth = 1.8 * S; g.globalAlpha = 0.7 * Math.sin(q * Math.PI);
@@ -508,7 +508,7 @@ function dn2MoonRays(tm, hy) {
 // patika: uzakta Bölüm 1'in Işık Ağacı (yanmış, sıcak ışıklı) · Pofuduk kıyıları: dev ışıklı mantarlar · çayır: ışık çiçeği tarlası · kaplumbağa kıyısı: yıldız oymalı taş kemer
 const DN2_LM_F = 0.15;
 const DN2_LM = [   // [tür, dünya sütunu, ölçek]
-  ['agac', 16, 1.1], ['mantar', 182, 1], ['cicek', 318, 0.9], ['mantar', 372, 0.8], ['kemer', 466, 1], ['kemer', 512, 0.75],
+  ['agac', 16, 1.1], ['mantar', 182, 1], ['cicek', 318, 0.9], ['mantar', 372, 0.8], ['kemer', 452, 1],
 ];
 const dn2LmC = {};
 function dn2LmSpr(kind) {   // 420x320 birim tasarım alanı, taban ortası (210, 300); 1.5x çözünürlük
@@ -860,6 +860,37 @@ function dn2BuildDeco() {
   DN2.deco.sort((a, b) => a.x - b.x);
   for (let r = 0; r < ROWS; r++) { let c = 0; while (c < COLS) { if (grid[r][c] !== 2) { c++; continue; } const a = c; while (c < COLS && grid[r][c] === 2) c++; DN2.plats.push({ x0: a * T, x1: c * T, y: r * T, id: DN2.plats.length }); } }
 }
+// ── açılış (ilk ~70 sütun) ve yıldız uyanınca dünyanın renklenmesi ──
+const dn2OpenW = () => smooth(clamp((72 * T - (cam.x + VW / 2)) / (20 * T), 0, 1));
+let dn2Wk = [], dn2WkT = -1;
+function dn2WakeList() {   // uyanmış yıldızların yeri ve anı (karede bir kez)
+  if (dn2WkT === now) return dn2Wk; dn2WkT = now; dn2Wk.length = 0;
+  for (const o of NESNELER) if (o.tip === 'yildiz' && o.dn2Wake !== undefined && isFinite(o.x)) dn2Wk.push(o);
+  return dn2Wk;
+}
+function dn2WakeBoost(x) { let b = 0; for (const o of dn2WakeList()) { const d = Math.abs(o.x - x), r = Math.min(520, (now - o.dn2Wake) * 300); if (d < r + 80) b = Math.max(b, clamp((r + 80 - d) / 160, 0, 1)); } return b; }
+function dn2WakeWave(tm) {   // dünya dönüşümünde: yerde iki yana koşan ışık + genişleyen halka + yükselen yıldız tozu
+  for (const o of dn2WakeList()) {
+    const e = now - o.dn2Wake; if (e < 0 || e > 3.4) continue; const R = 30 + 520 * (1 - Math.pow(1 - clamp(e / 2.8, 0, 1), 2.2)), fa = 1 - smooth(clamp((e - 2) / 1.4, 0, 1));
+    if (o.x + R < cam.x - 100 || o.x - R > cam.x + VW + 100) continue; const col = o.renk ? dn2Sat(o.renk, 1.4) : '#cfe0ff', gy = c => { const t = topOf(clamp(Math.floor(c / T), 0, COLS - 1)); return t < ROWS ? t * T : (dn2OnLake(c, 0) || { su: DN2.GREF }).su; };
+    g.globalCompositeOperation = 'lighter'; const y0 = gy(o.x);
+    g.strokeStyle = col; g.lineWidth = 2.4; g.globalAlpha = 0.22 * fa; g.beginPath(); g.ellipse(o.x, y0 - 3, R, R * 0.2, 0, 0, 6.283); g.stroke(); g.globalAlpha = 1;
+    for (const sd of [-1, 1]) for (let j = 0; j < 6; j++) { const xx = o.x + sd * R * (1 - j * 0.06); dn2Eg(j ? col : '#ffffff', xx, gy(xx) - 3, (j ? 24 : 36) - j * 1.5, (j ? 24 : 36) - j * 1.5, (j ? 0.5 : 0.9) * fa * (1 - j * 0.12)); if (j === 0) dn2Eg(col, xx, gy(xx) - 12, 60, 50, 0.25 * fa); }
+    const sp = dn2StarSpr('#fff2c8');
+    for (let i = 0; i < 14; i++) { const u = ((i * 0.618) % 1) * 2 - 1, xx = o.x + u * R * 0.95, q = clamp((e - Math.abs(u) * Math.min(2.8, e) * 0.9) / 1.4, 0, 1); if (q <= 0 || q >= 1) continue;
+      const yy = gy(xx) - 6 - q * (70 + (i % 4) * 25), a = Math.sin(q * Math.PI) * fa, r = 7 + (i % 3) * 2; g.globalAlpha = 0.8 * a; g.drawImage(sp, xx - r, yy - r, r * 2, r * 2); }
+    g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  }
+}
+function dn2OpenSeeds(tm) {   // açılışta çimenlerden kopup yükselen minik yıldız tozları (dünya dönüşümü)
+  const w = dn2OpenW(); if (w <= 0.01) return; const sp = dn2StarSpr('#dff4ff'); g.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 20; i++) {
+    const per = 6 + (i % 5) * 1.4, e = ((tm + i * 1.53) % per) / per, gx = cam.x + ((i * 0.381 + Math.floor((tm + i * 1.53) / per) * 0.137) % 1) * VW, t = topOf(clamp(Math.floor(gx / T), 0, COLS - 1)); if (t >= ROWS) continue;
+    const x = gx + Math.sin(e * 6 + i) * 16, y = t * T - 4 - e * 220, a = Math.sin(e * Math.PI) * w, r = 6 + (i % 3) * 2;
+    dn2Eg(i % 4 ? '#a8e8ff' : '#ffe6b0', x, y, r * 1.6, r * 1.6, 0.45 * a); g.globalAlpha = 0.85 * a; g.drawImage(sp, x - r, y - r, r * 2, r * 2); g.globalAlpha = 1;
+  }
+  g.globalCompositeOperation = 'source-over';
+}
 function dn2DrawDeco(tm, live) {
   const D = DN2.deco, vx0 = cam.x - 60, vx1 = cam.x + VW + 60;
   let lo = 0, hi = D.length; while (lo < hi) { const m = (lo + hi) >> 1; if (D[m].x < vx0) lo = m + 1; else hi = m; }
@@ -868,7 +899,9 @@ function dn2DrawDeco(tm, live) {
     const fc = dn2Foc((d.x - cam.x) * S, (d.y - 30 - cam.y) * S);
     g.save(); g.translate(d.x, d.y); g.rotate(sw); g.scale(d.s, d.s); g.globalAlpha = 0.38 + 0.62 * fc;
     g.drawImage(sp, -45, -150 + 1, 90, 150); g.restore(); g.globalAlpha = 1;
-    if (d.k === 'f' || d.k === 'c' || d.k === 'b') { const pul = 0.6 + 0.4 * Math.sin(tm * 1.4 + d.ph); g.globalCompositeOperation = 'lighter'; const hh = d.k === 'f' ? 34 * d.s : d.k === 'b' ? 40 * d.s : 14 * d.s; dn2Eg(d.c, d.x + sw * hh * 0.6, d.y - hh, 26 * d.s * pul + 8, 26 * d.s * pul + 8, (d.k === 'f' ? 0.2 : d.k === 'b' ? 0.15 : 0.24) * (0.5 + DN2.fill * 0.5) * fc * fc); g.globalCompositeOperation = 'source-over'; }
+    const bo = dn2Wk.length ? dn2WakeBoost(d.x) : 0;   // uyanan yıldızın çevresi kalıcı olarak renklenir (bitkiler parlar)
+    if (d.k === 'f' || d.k === 'c' || d.k === 'b') { const pul = 0.6 + 0.4 * Math.sin(tm * 1.4 + d.ph); g.globalCompositeOperation = 'lighter'; const hh = d.k === 'f' ? 34 * d.s : d.k === 'b' ? 40 * d.s : 14 * d.s; dn2Eg(d.c, d.x + sw * hh * 0.6, d.y - hh, (26 * d.s * pul + 8) * (1 + 0.4 * bo), (26 * d.s * pul + 8) * (1 + 0.4 * bo), (d.k === 'f' ? 0.2 : d.k === 'b' ? 0.15 : 0.24) * (0.5 + DN2.fill * 0.5 + bo * 0.9) * fc * fc); g.globalCompositeOperation = 'source-over'; }
+    else if (bo > 0.05) { g.globalCompositeOperation = 'lighter'; dn2Eg(d.c, d.x + sw * 30, d.y - 34 * d.s, 18 * d.s, 18 * d.s, 0.22 * bo * (0.7 + 0.3 * Math.sin(tm * 1.2 + d.ph)) * fc); g.globalCompositeOperation = 'source-over'; }
   }
 }
 function dn2PlatSpr(p) {
@@ -1063,6 +1096,7 @@ function dn2Petals(tm) {   // karakterlerden sonra: su yüzeyi (Feza'nın yansı
       for (let j = 0; j < (r.big ? 3 : 2); j++) { const kk = q - j * 0.13; if (kk <= 0) continue; const rr = (r.big ? 24 : 16) + kk * (r.big ? 160 : 70); g.strokeStyle = '#c8f0ff'; g.globalAlpha = 0.55 * (1 - kk) * (j ? 0.6 : 1); g.lineWidth = 1.6; g.beginPath(); g.ellipse(r.x, G.su + 2, rr, rr * 0.16, 0, 0, 6.283); g.stroke(); } }
     g.restore(); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
   }
+  g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S); dn2OpenSeeds(tm);
   g.setTransform(1, 0, 0, 1, 0, 0);
 }
 
@@ -1072,7 +1106,7 @@ function dn2World(tm) {
   dn2Init(); g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S); g.lineCap = 'round'; g.lineJoin = 'round';
   dn2Water(tm);
   g.setTransform(1, 0, 0, 1, 0, 0); dn2DrawGround(); g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S);
-  dn2DrawPlats(tm); dn2DrawDeco(tm);
+  dn2WakeList(); dn2DrawPlats(tm); dn2DrawDeco(tm); dn2WakeWave(tm);
   if (DN2F.on) {   // Feza'nın ardında çok yumuşak koyu "sahne" lekesi: parlak çevrede karakter ayrışsın
     g.setTransform(1, 0, 0, 1, 0, 0); const fx = DN2F.x, fy = DN2F.y + 10 * S, r = 135 * S, k = 0.5 + 0.1 * DN2.fill;
     const rg = g.createRadialGradient(fx, fy, r * 0.15, fx, fy, r); rg.addColorStop(0, `rgba(6,8,34,${k})`); rg.addColorStop(0.55, `rgba(6,8,34,${k * 0.6})`); rg.addColorStop(1, 'rgba(6,8,34,0)');

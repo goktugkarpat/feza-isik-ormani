@@ -321,8 +321,31 @@ function skCizArka(o, tm) {
   }
   for (let i = 0; i < 3; i++) skCicekCiz(o, i, tm);
 }
+// kutlama: çiçeklerden yükselen ışıklı nota işaretleri (♪) + çiçeklerin üstünde açan ışık halkası
+function skNotaIsareti(x, y, s, rot, c, a) {
+  g.save(); g.translate(x, y); g.rotate(rot); g.scale(s, s); g.globalAlpha = a;
+  g.fillStyle = c; g.strokeStyle = c; g.lineWidth = 2.2; g.lineCap = 'round';
+  g.beginPath(); g.ellipse(0, 0, 6, 4.6, -0.4, 0, 6.283); g.fill();
+  g.beginPath(); g.moveTo(5, -1.5); g.lineTo(5, -22); g.quadraticCurveTo(12, -17, 13, -10); g.stroke();
+  g.restore(); g.globalAlpha = 1;
+}
+function skNotalar(o, tm) {
+  const k = o.sk, A = k.kut ? smooth(clamp(k.t / 0.4, 0, 1)) : (k.bitti && k.durum === 'bitti' ? clamp(1 - k.t / 1.6, 0, 1) : 0);
+  if (A < 0.01) return;
+  for (let q = 0; q < 12; q++) {
+    const i = q % 3, u = (tm * 0.32 + q / 12) % 1, x = skCx(o, i) + Math.sin(u * 5 + q) * 26 + (q % 4 - 1.5) * 12, y = skCy(o) - 26 - u * 250;
+    const al = A * Math.sin(u * Math.PI);
+    g.globalCompositeOperation = 'lighter'; dglow(SK_RENK[i][0], x, y, 26, al * 0.45); g.globalCompositeOperation = 'source-over';
+    skNotaIsareti(x, y, 1.25 + 0.3 * Math.sin(q), Math.sin(tm * 2 + q) * 0.25, SK_RENK[i][1], al * 0.95);
+  }
+  if (k.kut) {   // ilk anda üç çiçekten yukarı açılan büyük ışık halkası
+    const u = clamp(k.t / 1.4, 0, 1);
+    if (u < 1) { g.globalCompositeOperation = 'lighter'; g.strokeStyle = 'rgba(255,246,200,' + (0.6 * (1 - u)) + ')'; g.lineWidth = 6 * (1 - u) + 1; g.beginPath(); g.ellipse(o.x, skCy(o), 80 + 360 * smooth(u), 30 + 140 * smooth(u), 0, 0, 6.283); g.stroke(); g.globalCompositeOperation = 'source-over'; }
+  }
+}
 function skCizOn(o, tm) {
   const k = o.sk; if (k.ap < 0.3) return;
+  skNotalar(o, tm);
   // Pırıl'dan çiçeğe uçan ışık (kuyruklu minik yıldız)
   for (const c of k.kom) {
     const u = smooth(clamp(c.t / c.s, 0, 1)), tx = skCx(o, c.i), ty = skCy(o), col = SK_RENK[c.i];

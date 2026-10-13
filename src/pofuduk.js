@@ -42,7 +42,8 @@ const PF_BAS_W = 60, PF_BAS_H = 106;     // basamak olunca (uzamış hali; tek z
 const PF_MINDER_GUC = 1100;
 const PF_BRX = 100, PF_BRY = 100;        // Büyük Pofuduk (cisim en fazla 200 geniş)
 const PF_BUYUK_GUC = 1360;
-const PF_BUYUK_YAT = 0.3;            // uyanınca çökme miktarı (0: dimdik top · 1: yassı minder)
+const PF_BUYUK_YAT = 0.3;
+const PF_FIN_OLC = 0.8;           // finalde Büyük Pofuduk'un boyu (sahnede Feza'yı ve dansçıları ezmesin)            // uyanınca çökme miktarı (0: dimdik top · 1: yassı minder)
 
 // ── sprite önbelleği ──
 let pfRes = 0, pfResH = -1, pfZMax = 0;
@@ -1525,13 +1526,16 @@ function pfSahne(F) {
   while (Lr > fx - 460 && pfYerBul(Lr - 8, y, 4) !== null) Lr -= 8;
   while (Rr < fx + 460 && pfYerBul(Rr + 8, y, 4) !== null) Rr += 8;
   Rr = Math.min(Rr, COLS * T); F.Lr = Lr; F.Rr = Rr;
-  const L = Lr + 24, R = Math.min(Rr - 22, COLS * T - 36), n = F.kucuk.length;
+  let L = Lr + 24, R = Math.min(Rr - 22, COLS * T - 36);
+  const n = F.kucuk.length;
   // Büyük Pofuduk'un yeri: herkesin SOLUNDA (ağaç gövdesi açık kalsın), gövdesi (200 geniş) Feza'ya değmesin;
   // düzlük dar ise sol kenardan biraz taşar. Yer hiç yoksa sağ uç; o da yoksa yerinde kalır (null).
-  const agacX = typeof TREE !== 'undefined' && TREE ? TREE.x : fx + 40;
-  let bx = Math.min(Lr + 92, fx - 160, agacX - 190);
-  if (bx < Lr + 40) bx = Rr - fx >= 300 ? Rr - 96 : fx - Lr >= 80 ? Lr + 60 : null;
+  // finalde Büyük Pofuduk biraz küçülür (PF_FIN_OLC) ve Feza'dan (ve yanındaki dansçılardan) uzak durur: sahne kalabalık olmasın
+  const agacX = typeof TREE !== 'undefined' && TREE ? TREE.x : fx + 40, hb = PF_BRX * PF_FIN_OLC;
+  let bx = Math.min(Lr + hb + 8, fx - 230, agacX - 210);
+  if (bx < Lr + hb - 30) bx = Rr - fx >= 330 ? Math.max(fx + 230, Rr - hb - 8) : fx - Lr >= 120 ? Lr + hb - 30 : null;
   F.bx = bx;
+  if (bx !== null && bx !== undefined) { if (bx < fx) L = Math.max(L, bx + hb + 16); else R = Math.min(R, bx - hb - 16); }
   // küçüklerin yerleri: Feza ortada, iki yanında boşluk (sahnenin yıldızı o); küçükler iki yana eşit dağılır,
   // aralarında hep aynı mesafe (üst üste binme yok). Bir yana sığmayan öbür yana geçer; hiç sığmazsa aralık daralır.
   const G0 = 50;                                    // Feza'nın merkezinden ilk dansçıya
@@ -1858,7 +1862,8 @@ TUR.kaydet('buyukPofuduk', {
   },
   ustune(o, vy) {
     const p = o.pf;
-    if (o.cisim.tip === 'ziplat') {   // kocaman yumuşak minder: Feza'yı ağaca doğru fırlat
+    if (o.cisim.tip === 'ziplat' || (p.asama >= 3 && o.uyandi && !pfFinal)) {   // kocaman yumuşak minder: Feza'yı ağaca doğru fırlat
+      if (o.cisim.tip !== 'ziplat') { P.vy = -pfBuyukGuc(o); P.ground = false; P.dj = true; P.jumpT = 0; P.bounce = true; OLAY.emit('ziplatti', o); }   // uyandı ama henüz yatmadı: yine de zıplatır (işaret gördü, zıpladı)
       pfZipla(p, 6); p.kikir = 0.9;
       pfPirilti(P.x, o.y - o.cisim.h, 12, [PF_BUYUK.i, '#ffffff', '#fff3b0'], 220, 0.9, 12, -Math.PI / 2, 2.2);
       if (P.x < o.x + 40 && typeof TREE !== 'undefined' && TREE) { pfSuzdur(TREE.x - 18, TREE.y); pfYizBasla(); }
@@ -1874,8 +1879,50 @@ TUR.kaydet('buyukPofuduk', {
     pfBuyukGuncelle(o, dt);
   },
   ciz(o, tm) { pfCevreCiz(o, tm, false); if (!pfFinal) pfBuyukCiz(o, tm); },   // finalde gövde pfFx'te (ağacın önünde) çizilir
-  cizOn(o, tm) { pfCevreCiz(o, tm, true); },
+  cizOn(o, tm) { pfCevreCiz(o, tm, true); pfDavetIsik(o, tm); },
 });
+// "Üstüme zıpla!" işareti: Büyük Pofuduk ayağa kalkıp beklerken başının üstünde zıplayan, göz kırpan küçük bir yıldız +
+// Feza'dan başına doğru yay çizen, üstünden ışık akan noktacıklar. Feza üstüne çıkınca / fırlayınca söner.
+function pfDavetIsik(o, tm) {
+  const p = o.pf;
+  if (!p || p.asama < 3 || pfFinal || DURUM !== 'oyun' || (typeof TREE !== 'undefined' && TREE && TREE.done)) { p && (p.davA = 0); return; }
+  const t = p.aT, gor = t > PF_UY.renk + 0.9 && P.fade <= 0 && Math.abs(P.x - o.x) < 900 && !(pfYiz.aktif) && !(typeof ustundeki !== 'undefined' && ustundeki === o);
+  p.davA = clamp((p.davA || 0) + (gor ? 0.03 : -0.08), 0, 1);
+  const A = p.davA; if (A <= 0.01) return;
+  const ust = o.y - (o.cisim ? o.cisim.h : PF_BRY * 2) + (p.hy || 0);
+  // başının üstünde zıplayan yıldız (zıplama tepesinde göz kırpar)
+  const zp = Math.abs(Math.sin(tm * 3.1)), sx = o.x + Math.sin(tm * 1.3) * 4, sy = ust - 92 - zp * 34;   // perçemin üstünde
+  const kirp = Math.max(0, 1 - Math.abs(zp - 1) * 12), ol = (1 + 0.35 * kirp) * A;
+  g.globalCompositeOperation = 'lighter';
+  dglow(PF_BUYUK.i, sx, sy, 70 * ol, 0.6 * A);
+  dglow('#fff3b0', sx, sy, 30 * ol, 0.85 * A);
+  dglow('#fff3b0', o.x, ust - 66, 30 * (1 - zp * 0.4), 0.45 * A * (1 - zp));   // indiği yerde minik ışık
+  g.globalCompositeOperation = 'source-over';
+  const r = 30 * ol;
+  g.globalAlpha = A; g.save(); g.translate(sx, sy); g.rotate(Math.sin(tm * 2) * 0.25); g.drawImage(pfYildiz('#fff3b0'), -r, -r, r * 2, r * 2); g.restore(); g.globalAlpha = 1;
+  // Feza'dan başına yay çizen ışık noktaları (yalnız Feza aşağıda / solda ve yakınken)
+  const fx = P.x, fy = P.y - 34, ex = o.x - 10, ey = ust - 40;
+  if (fy < ey - 10 || Math.abs(fx - o.x) > 620) return;
+  const cx = (fx + ex) / 2, cy = Math.min(fy, ey) - 150, N = 9, akis = (tm * 0.7) % 1;
+  g.globalCompositeOperation = 'lighter';
+  for (let i = 1; i <= N; i++) {
+    const u = i / (N + 1), v = 1 - u;
+    const x = v * v * fx + 2 * v * u * cx + u * u * ex, y = v * v * fy + 2 * v * u * cy + u * u * ey;
+    let d = Math.abs(u - akis); d = Math.min(d, 1 - d);
+    const parla = Math.exp(-d * d * 60);
+    dglow('#fff3b0', x, y, 18 + 16 * parla, (0.35 + 0.6 * parla) * A);
+  }
+  g.globalCompositeOperation = 'source-over';
+  g.fillStyle = '#fffbe8';
+  for (let i = 1; i <= N; i++) {   // ışık noktacıkları (koyu ormanda da açık zeminde de seçilsin)
+    const u = i / (N + 1), v = 1 - u;
+    const x = v * v * fx + 2 * v * u * cx + u * u * ex, y = v * v * fy + 2 * v * u * cy + u * u * ey;
+    let d = Math.abs(u - akis); d = Math.min(d, 1 - d);
+    const parla = Math.exp(-d * d * 60);
+    g.globalAlpha = (0.55 + 0.45 * parla) * A; g.beginPath(); g.arc(x, y, 3.6 + 3.4 * parla, 0, 6.283); g.fill();
+  }
+  g.globalAlpha = 1;
+}
 
 function pfBuyukGuncelle(o, dt) {
   const p = o.pf; p.t += dt; p.aT += dt;
@@ -2191,8 +2238,9 @@ function pfBuyukCiz(o, tm) {
   cz.rot = p.rot || 0;
   const sq = p.sq;
   const ysx = lerp(1, 1.16, yat), ysy = lerp(1, 0.52, yat);
-  cz.sx = (1 + sq) * (1 - nef * 0.025) * ysx;
-  cz.sy = (1 - sq) * (1 + nef * 0.05) * ysy;
+  const fo = pfFinal ? (p.fOlc = lerp(p.fOlc || 1, PF_FIN_OLC, 0.06)) : 1;
+  cz.sx = (1 + sq) * (1 - nef * 0.025) * ysx * fo;
+  cz.sy = (1 - sq) * (1 + nef * 0.05) * ysy * fo;
   cz.yuzSx = 1 / ysx; cz.yuzSy = lerp(1, 0.78, yat) / ysy;
   cz.patiAgiz = p.asama === 2 ? p.patiAgiz || 0 : 0; cz.kabO = 0.6;
   cz.yastik = 0; cz.kivO = 1.45; cz.yuzO = 1.22; cz.isilti = p.asama >= 3 ? p.bloom : 0; cz.bakY = p.bakY || 0; cz.am = 1;
@@ -2210,6 +2258,7 @@ function pfBuyukCiz(o, tm) {
   cz.kabarcik = p.asama < 2 ? (p.kab || 0) : 0;
   cz.parla = 0.18 + nef * 0.06 + p.bloom * 0.14;
   cz.tutamYok = false;
+  cz.olc = fo;
   pfCiz(cz, tm);
 }
 

@@ -825,6 +825,50 @@ function dnHueOf(f) {   // çiçeğin bölge rengi (her zaman geçerli bir [a, b
   if (h && h[0] && h[1]) return h;
   return f.dnHue = DN_BLOOMHUE[dnRegCol(f.x)] || DN_BLOOMHUE.patika;
 }
+// ── açılış büyüsü (Uyanış Patikası, ilk ~70 sütun): kubbeden süzülen güçlü ışık huzmeleri, huzmelerde dönen toz, yerden yükselen ışık tohumları ──
+const DN_OPEN_BEAMS = [[7, 150, 0.32, 0], [21, 210, 0.22, 1.7], [36, 170, 0.3, 3.1], [52, 230, 0.25, 4.6], [66, 160, 0.28, 2.2]];   // [sütun, genişlik, eğim, faz]
+const dnOpenW = () => { const cx = cam.x + VW / 2; return smooth(clamp((78 * T - cx) / (22 * T), 0, 1)); };
+function dnOpening(tm, front) {   // front=false: dünya katmanının arkasında huzmeler + ışık havuzu; true: karakterlerin önünde yükselen tohumlar
+  const w = dnOpenW(); if (w <= 0.01) return; const vx0 = cam.x - 300, vx1 = cam.x + VW + 300, k = w * (1 - light * 0.4);
+  g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S);
+  if (front) {
+    const sh = dnShaft('#c8f6ff'); g.globalCompositeOperation = 'lighter';
+    for (const [c, bw, ang, ph] of DN_OPEN_BEAMS) { const gx = c * T, gy = dnTopY(gx), top = gy - 560, bx = gx - Math.sin(ang) * 560; if (bx > vx1 || gx < vx0) continue;
+      const br = (0.72 + 0.28 * Math.sin(tm * 0.35 + ph)) * k;
+      g.save(); g.translate(bx, top); g.rotate(-ang); g.globalAlpha = Math.min(1, 0.7 * br); g.drawImage(sh, -bw / 2, -40, bw, 680); g.globalAlpha = Math.min(1, 0.45 * br); g.drawImage(sh, -bw * 0.18, -40, bw * 0.36, 660); g.restore();
+      for (let i = 0; i < 6; i++) {   // huzmede yavaşça dönen toz
+        const u = ((i * 0.618 + tm * 0.018 * (1 + i % 3 * 0.4) + ph) % 1), yy = top + u * 560, xx = bx + (gx - bx) * u + Math.sin(tm * 0.6 + i * 2.1 + ph) * bw * 0.28, tw = 0.5 + 0.5 * Math.sin(tm * 2.1 + i * 1.7);
+        dglow(i % 4 ? '#e8fdff' : '#fff2c8', xx, yy, 2.4 + tw * 2.2, Math.min(1, (0.6 + 0.6 * tw) * br * Math.sin(u * Math.PI))); }
+    }
+    g.globalAlpha = 1;
+    for (const [c, bw, ang, ph] of DN_OPEN_BEAMS) { const gx = c * T; if (gx < vx0 || gx > vx1) continue; const gy = dnTopY(gx), br = (0.55 + 0.45 * Math.sin(tm * 0.35 + ph)) * k;   // huzmenin yere düştüğü ışık havuzu
+      g.save(); g.translate(gx, gy - 2); g.scale(1, 0.3); dglow('#bff6ff', 0, 0, bw * 0.95, 0.5 * br); dglow('#ffffff', 0, 0, bw * 0.35, 0.35 * br); g.restore(); }
+    for (let i = 0; i < 16; i++) {   // ışık tohumları: yerden kopup kıvrılarak yükselir
+      const per = 6 + (i % 5) * 1.3, e = ((tm + i * 1.37) % per) / per, gx = cam.x + ((i * 0.381 + Math.floor((tm + i * 1.37) / per) * 0.137) % 1) * VW, gy = dnTopY(gx);
+      const x = gx + Math.sin(e * 6 + i) * 18, y = gy - 4 - e * 230, a = Math.sin(e * Math.PI) * k, col = i % 5 === 0 ? '#ffe2a0' : i % 3 ? '#a8f8ff' : '#d8c8ff';
+      dglow(col, x, y, 9 + (i % 3) * 2, 0.75 * a); if (i % 2) dglow('#ffffff', x, y, 2.2, 1 * a); }
+    g.globalCompositeOperation = 'source-over';
+  }
+}
+// ── çiçek açınca renk dalgası: yerin yüzeyi boyunca iki yana koşan ışık, genişleyen halka, yükselen kıvılcımlar (ilk ~3,5 sn) ──
+function dnBloomWave(tm) {
+  let on = false;
+  for (const f of DN_FLW) {
+    if (!f.done || !(f.bt >= 0)) continue; const e = now - f.bt; if (e < 0 || e > 3.6) continue;
+    const kk = f.dnK || 1, R = (40 + 520 * (1 - Math.pow(1 - clamp(e / 3, 0, 1), 2.2))) * kk, x0 = f.x, hue = dnHueOf(f), fa = 1 - smooth(clamp((e - 2.2) / 1.4, 0, 1));
+    if (x0 + R < cam.x - 100 || x0 - R > cam.x + VW + 100) continue;
+    if (!on) { g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S); g.globalCompositeOperation = 'lighter'; on = true; }
+    const gy0 = dnTopY(x0);
+    g.strokeStyle = hue[0]; g.lineWidth = 2.4; g.globalAlpha = 0.22 * fa; g.beginPath(); g.ellipse(x0, gy0 - 4, R, R * 0.22, 0, 0, 6.283); g.stroke();
+    g.strokeStyle = '#ffffff'; g.lineWidth = 1.2; g.globalAlpha = 0.3 * fa; g.beginPath(); g.ellipse(x0, gy0 - 4, R * 0.96, R * 0.2, 0, 0, 6.283); g.stroke(); g.globalAlpha = 1;
+    for (const sd of [-1, 1]) for (let j = 0; j < 6; j++) {   // yüzeyde koşan ışık + iz
+      const xx = x0 + sd * R * (1 - j * 0.06), yy = dnTopY(xx) - 3; dglow(j ? hue[j % 2] : '#ffffff', xx, yy, (j ? 24 : 36) - j * 1.5, (j ? 0.5 : 0.9) * fa * (1 - j * 0.12)); if (j === 0) dglow(hue[0], xx, yy - 10, 60, 0.25 * fa); }
+    for (let i = 0; i < 16; i++) {   // dalganın geçtiği yerden yükselen kıvılcımlar
+      const u = ((i * 0.618) % 1) * 2 - 1, xx = x0 + u * R * 0.95, st = Math.abs(u) * 3 * (R / (560 * kk)), q = clamp((e - Math.abs(u) * Math.min(3, e) * 0.9) / 1.4, 0, 1); if (q <= 0 || q >= 1) continue;
+      const yy = dnTopY(xx) - 6 - q * (60 + (i % 4) * 25), a = Math.sin(q * Math.PI) * fa; dglow(i % 3 ? hue[1] : '#fff6d0', xx + Math.sin(q * 5 + i) * 6, yy, 6, 0.6 * a); }
+  }
+  if (on) { g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; }
+}
 function dnColourBloom() {
   let any = false;
   for (const f of DN_FLW) {
@@ -1906,6 +1950,7 @@ function drawWorld(tm) {
   dnTreeWarmup();
   if (dnPrevNow >= 0) dnDT = clamp(now - dnPrevNow, 0, 0.1); dnPrevNow = now;
   const vx0 = cam.x - 50, vx1 = cam.x + VW + 50, bio = DNR.sakli > 0.5 ? '#b88aff' : dq('bio');
+
   // göl suyu (taban; üstüne karede yansıma gelir) ve diğer çukurların sisli derinliği
   for (const LK of DN_LAKES) { const G = LK.G; if (!(G.x1 > vx0 && G.x0 < vx1)) continue;
     const wy = G.su, wc = dc('water'); let wg = LK.dnWG;   // gradyan önbellekli (renk ya da su seviyesi değişince yeniden)
@@ -3087,6 +3132,7 @@ function drawPetals(tm) {
   for (const LK of DN_LAKES) if (dnLakeVis(LK, 120)) { dnUseLake(LK); dnReflect(tm); dnWaterFx(tm); }
   dnFallingLeaves(tm);
   dnPondPetals(tm);
+  dnBloomWave(tm); dnOpening(tm, true);
   const a0 = clamp((light - 0.25) * 2, 0, 1) * (0.7 + 0.3 * DNR.aciklik) + dnBlaze * 0.5;
   if (a0 <= 0) return;
   g.setTransform(S, 0, 0, S, 0, 0);

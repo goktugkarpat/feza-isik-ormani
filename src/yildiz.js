@@ -603,6 +603,11 @@ function ylHayvanGuncelle(o, dt) {
       }
     }
   }
+  // hazır ve bekliyor: kaplumbağa (sırtı + "bana zıpla" ışığı) Feza ile birlikte kadrajda kalsın (tek başına yürüyen kamera sırtı kesiyordu)
+  if (o.hazir && !o.firlat && DURUM === 'oyun' && Math.abs(P.x - o.x) < 1200 && typeof omDikkat === 'function' && (o.bkT = (o.bkT || 0) - dt) <= 0) {
+    o.bkT = 0.5;
+    try { omDikkat('hayvanBekle', 1.0, () => { omDkEkle(o.x - 300, o.y - o.cisim.h - 170, o.x + 250, o.y + 8); }, 0.75, 0.62); } catch (e) {}
+  }
   // nefes: uykuda yavaş ve derin, uyanıkken hızlı
   const per = o.hazir ? 3.0 : 4.6; o.nef = 0.5 + 0.5 * Math.sin(o.nefT * 6.283 / per - 1.5);
   o.kirpT -= dt; if (o.kirpT < 0) { o.kirp = 1; if (o.kirpT < -0.14) { o.kirpT = 2.5 + Math.random() * 3; o.kirp = 0; } } else o.kirp = 0;
@@ -854,6 +859,20 @@ function ylHayvanIsik(o, tm) {
   if (o.hazir && !o.firlat && DURUM === 'oyun') {   // "bana zıpla" ışık damlası
     const b = Math.abs(Math.sin(tm * 3.2)), cy = o.y - o.cisim.h - 56 - 22 * b;
     dglow('#fff2b8', bx - 10, cy, 34, 0.6); dglow('#ffffff', bx - 10, cy, 11, 0.9); dglow('#fff2b8', bx - 10, cy + 20, 14, 0.4 * (1 - b)); dglow('#fff2b8', bx - 10, cy + 34, 9, 0.25 * (1 - b));
+    dglow('#ffe9a8', bx - 10, cy, 70, 0.35); g.globalCompositeOperation = 'source-over'; ylYildizCiz(bx - 10, cy, 0.62 + 0.08 * b, Math.sin(tm * 2) * 0.2, 1, 0, 1); ylYuz(bx - 10, cy + 1, 0.62 + 0.08 * b, Math.sin(tm * 2) * 0.2, 1, 1, true, Math.sin(tm * 1.3) > 0.8 ? 1 : 0); g.globalCompositeOperation = 'lighter';   // sırtta zıplayan minik gülen yıldız: "bana zıpla"
+    // zıplama yolu: Feza'dan sırta akan ışık noktaları (yazısız "buraya zıpla"); Feza sırttaysa ya da çok uzaktaysa yok
+    const fx = P.rx !== undefined ? P.rx : P.x, fy = (P.ry !== undefined ? P.ry : P.y) - 40, dx = bx - 10 - fx;
+    const ust = typeof ustundeki !== 'undefined' && ustundeki === o;
+    o.yolA = clamp((o.yolA || 0) + (!ust && P.ground && dx > 60 && dx < 900 ? 0.03 : -0.06), 0, 1);
+    if (o.yolA > 0.01) {
+      const ty = o.y - o.cisim.h - 30, tepe = Math.min(fy, ty) - 90 - Math.min(80, dx * 0.15);
+      for (let i = 0; i < 9; i++) {
+        const u = ((tm * 0.45) + i / 9) % 1, mt = 1 - u;
+        const x = lerp(fx, bx - 10, u), y = mt * mt * fy + 2 * mt * u * tepe + u * u * ty;
+        const al = o.yolA * Math.sin(u * Math.PI) * 0.75;
+        dglow('#fff2b8', x, y, 16, al * 0.6); dglow('#ffffff', x, y, 5, al);
+      }
+    }
   }
   g.globalCompositeOperation = 'source-over';
 }

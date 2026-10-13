@@ -270,7 +270,7 @@ function drGuide(h0) {
   if (D.yolUzak) { gx = P.x + Math.sign(dx) * lim; gy = P.y - 120; }
   gx = clamp(gx, cam.x + 50, cam.x + VW - 50); gy = clamp(gy, cam.y + 60, cam.y + VH - 70);
   D.gx = gx; D.gy = gy; D.gO = h; D.gDir = Math.sign(gx - P.x) || P.f;
-  drMode('yol'); D.yp = 0; D.guideCd = 28; D.wrongT = 0; D.yawnT = -1;
+  drMode('yol'); D.yp = 0; D.guideCd = 28; D.wrongT = 0; D.yawnT = -1; D.yolKisa = false;
   D.expr = 'happy'; D.exprT = 0.6;
   if (!h0 && D.t - D.yolSayT > 45 && D.assistCd <= 0) { D.yolSayT = D.t; drSay('p_yol', { oncelik: 0 }); }   // az önce elinden tuttuysa "bu tarafa gel" demesin
   return true;
@@ -721,7 +721,13 @@ function stepDragon(dt) {
       tx = D.nfX; ty = D.nfY - 16; k = 55; damp = 12; flapW = 5;
       D.expr = 'happy'; D.exprT = 0.8;
       hopW = Math.abs(Math.sin(D.modeT * 10)) * 8 * (1 - D.modeT / 1.0);
-      if (D.modeT > 1.0) { drMode('follow'); D.lookAtT = 0; }
+      if (D.modeT > 1.0) {
+        drMode('follow'); D.lookAtT = 0;
+        // nilüfer yolu: ilk nilüfere kısa yol gösterme uçuşu (ilk zıplamayı kolaylaştırır); ikinci gölde daha kısa
+        let n0 = null;
+        if (D.nfL) for (const n of D.nfL) if (isFinite(n.x) && isFinite(n.y) && (n.x - P.x) * D.nfDir > 0 && (!n0 || Math.abs(n.x - P.x) < Math.abs(n0.x - P.x))) n0 = n;
+        if (n0 && DURUM === 'oyun') { D.golN = (D.golN || 0) + 1; drGuide(n0); D.yolKisa = D.golN > 1; D.guideCd = Math.max(D.guideCd, 14); }
+      }
     }
   } else if (D.mode === 'yol') {       // yol göster: ışıltılı noktalı iz, hedefte nabız, dönüp el salla
     const dirG = D.gDir;
@@ -740,13 +746,13 @@ function stepDragon(dt) {
       tx = D.gx + Math.cos(a) * 32; ty = D.gy + Math.sin(a) * 26; k = 150; damp = 20; flapW = 5.5;
       D.expr = 'happy'; D.exprT = 0.3;
       D.fxT -= dt; if (D.fxT < 0) { D.fxT = 0.12; drFx(D.x, D.y - 4, 'star'); }
-      if (D.modeT > 0.85) { D.yp = 2; D.modeT = 0; }
+      if (D.modeT > (D.yolKisa ? 0.5 : 0.85)) { D.yp = 2; D.modeT = 0; }
     } else {                           // Feza'ya dönüp bak, pençesiyle "gel!" de
       tx = D.gx - dirG * 6; ty = D.gy - 6 + Math.sin(D.modeT * 7) * 2.5; k = 45; damp = 11;
       D.ft = Math.sign(P.x - D.x) || -dirG; D.faceHold = 0.15;
       D.beckonW = 1; D.expr = 'happy'; D.exprT = 0.3;
       hopW = Math.abs(Math.sin(D.modeT * 6)) * 3;
-      if (D.modeT > 1.3 || Math.abs(P.x - D.gx) < 120) { drMode('follow'); D.beckonW = 0; }
+      if (D.modeT > (D.yolKisa ? 0.8 : 1.3) || Math.abs(P.x - D.gx) < 120) { drMode('follow'); D.beckonW = 0; }
     }
     if (D.yp < 2) {   // noktalı ışık izi (birkaç saniye kalır)
       D.izT -= dt;

@@ -506,7 +506,9 @@ const ARAYUZ = (() => {
     const top = bt === 'cicek' ? SAYAC.cicekTop : bt === 'yildiz' ? SAYAC.yildizTop : bt === 'kuzu' ? SAYAC.kuzuTop : SAYAC.tohumTop, var_ = bt === 'cicek' ? SAYAC.cicek : bt === 'yildiz' ? SAYAC.yildiz : bt === 'kuzu' ? SAYAC.kuzu : SAYAC.tohum;
     if (!top) return;
     // küçük, zarif: üst ortada ince bir sıra; açılanlar minik parlayan çiçek, açılmayanlar minik sönük nokta
-    const boy = Math.min(H * 0.042, W * 0.034), ara = boy * 0.9, x0 = W / 2 - (top - 1) * ara / 2, y = H * 0.045 + boy * 0.5 - (1 - a) * boy * 0.4;
+    // uzun dizilerde (ör. 28 tohum) sıra ekranın ≈%60'ını geçmesin: aralık ve simge boyu orantılı küçülür (en çok %55'e kadar)
+    const boy0 = Math.min(H * 0.042, W * 0.034), sig = Math.max(0.55, Math.min(1, W * 0.6 / Math.max(1, top * boy0 * 0.9)));
+    const boy = boy0 * sig, ara = boy * 0.9, x0 = W / 2 - (top - 1) * ara / 2, y = H * 0.045 + boy0 * 0.5 - (1 - a) * boy0 * 0.4;
     g.globalCompositeOperation = 'lighter';
     dglow('#6a58c0', W / 2, y, Math.max(top * ara * 0.65, boy * 2), a * 0.18);
     g.globalCompositeOperation = 'source-over';

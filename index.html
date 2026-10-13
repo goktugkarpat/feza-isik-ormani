@@ -20,6 +20,22 @@
 </head>
 <body>
 <canvas id="c"></canvas>
+<script>
+  // Zayıf ağda ilk açılışta bir kod dosyası yüklenemezse oyun eksik kalır (ör. bulutlar yok → bölüm geçilemez): sayfa bir kez (oturumda en çok 2) kendini yeniler.
+  // Seçilen bölüm korunur (oyun.js oturum bayrağını okuyup siler; burada yeniden yazılır).
+  addEventListener('error', function (e) {
+    var s = e && e.target; if (!s || s.tagName !== 'SCRIPT' || window.__omYenile) return;
+    var n = 0; try { n = +(sessionStorage.getItem('fezaYenile') || 0); } catch (x) {}
+    if (n >= 2) return;
+    window.__omYenile = 1;
+    try { sessionStorage.setItem('fezaYenile', String(n + 1)); } catch (x) {}
+    setTimeout(function () {   // bölüm bayrağı yenilemeden hemen önce yazılır (oyun.js açılışta okuyup siler)
+      try { if (typeof BOLUM_NO !== 'undefined' && BOLUM_NO > 1 && !/[?&]bolum=/.test(location.search)) sessionStorage.setItem('fezaIsikSec', String(BOLUM_NO)); } catch (x) {}
+      location.reload();
+    }, 1200);
+  }, true);
+  addEventListener('load', function () { setTimeout(function () { if (!window.__omYenile) try { sessionStorage.removeItem('fezaYenile'); } catch (x) {} }, 3000); });
+</script>
 <script src="src/ortak.js"></script>
 <script>
   // Bölüm seçimi: ?bolum=N > başlıktan seçim bayrağı (sessionStorage) > 1. Yalnız biri yüklenir (aynı adları tanımlarlar).

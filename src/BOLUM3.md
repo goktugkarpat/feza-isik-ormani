@@ -320,6 +320,7 @@ Düşmek: bulutların altı boşluk; düşen Feza'yı Pırıl geri taşır (mevc
   - **Kolaylık:** Bölüm 3'te uçuş boşluğu dışında DÜŞÜLECEK YER KALMADI: küçük boşluklar (45–46, 119–120) 2 kare derin sığ çukur (zıplayıp çıkılır);
     yüzen bulut boşlukları yumuşak çukur (153–159 dibi y=840, 221–226 dibi y=760) + sağ uçta çıkış zıplatanı (158.5, 225.5); kuş geçidi çukuru (176–189, çıkış 188).
     Rüzgâr Yolu esintileri genişledi (w 150, duvara dayalı).
+  - Büyük Boşluk'un iniş tarafında (sütun 454) 6 kare bulut sütunu: uçuştan sonra geri yürüyen Feza boşluğa düşmez. QA dağınık botu (yatay+dikey, 3 koşu): toplam 1 düşüş → düzeltmeden sonra 0, takılma 0; benim iki botum 0 düşüş.
   - **`b_giris` tetikleyicisi kaldırıldı** (p_b_giris'i CORE açılışta söylüyor; çift olmasın). Tohum: 14.
 - **WORLD3 tur 2:** Bulut denizi artık kümülüs öbekleriyle çiziliyor (kubbe + üst katlar, öbek başına tek hacim ışığı + gölge; yuvarlak taban lobları, köşe yok);
   ince bulut şeridi tek siluet. Basamak yüzleri düzensiz kabarcıklarla örtülü; basamak yüzünde ışık şeridi ve süs yok; derin renk ve şeffaflaşma çok yumuşak yüzeyi (±48 birim) izler.
@@ -361,6 +362,9 @@ Düşmek: bulutların altı boşluk; düşen Feza'yı Pırıl geri taşır (mevc
 - Bölüm 2 ufkunda bölgeye özgü uzak simgeler (yavaş paralaks + suda yansıma): başta uzaktaki Işık Ağacı, Pofuduk kıyılarında dev ışıklı mantarlar, çayırda ışık çiçeği tarlası, kaplumbağa kıyısında yıldız oymalı taş kemer.
 - "Kareli kâğıt" ızgarası giderildi (Chrome'da düşük çözünürlüklü gök tuvallerindeki gradyan titreşimi büyütülünce 3-4 px'lik ızgara oluyordu): gök tuvalleri GPU'da bir kez yumuşatılıyor (okuma yok); B1 kâğıt dokusu düşük frekanslı.
 - (Lead isteği) `dn2Isit()` adımları: gök adımı ≈5 ms (önceki 52 ms'lik getImageData kaldırıldı); son "dokunma" adımı tuval tuval, adım başına ≈4 ms bütçe. Headless'ta tek bir büyük tuvalin ilk yüklemesi hâlâ uzun sürebilir (bölünemez, eskiden de vardı).
+- Tur 2: açılış büyüsü (B1 ilk ~70 sütun: kubbeden süzülen ışık huzmeleri, huzmelerde dönen toz, yere düşen ışık havuzu, yerden yükselen ışık tohumları; B2 ilk ~70 sütun: göle düşen kayan yıldızlar daha sık + çimenden yükselen yıldız tozu),
+  renklenme ödülü (B1 çiçek açınca / B2 yıldız uyanınca ≈3 sn: yerde iki yana koşan ışık, genişleyen halka, yükselen kıvılcımlar; B2'de uyanan yıldızın ≈500 birim çevresindeki bitkiler kalıcı olarak daha parlak),
+  ikinci taş kemer kaldırıldı (kaplumbağanın arkasında kalabalık yapıyordu). Açılış bölgesi kare maliyeti ≈+0,1 ms ama bölümün en ucuz yeri; en pahalı kareler değişmedi.
 
 - **WORLD3 tur 3:** Gökkuşağı Tepesi bulutları sıcak altın-pembe paletle (`DN3_GCW`) boyanıyor; tepe ışığı ve bölge tonu normal karışımla mercan-altın (beyaz 'lighter' yıkama yok),
   sabah gökyüzünün ufku daha doygun şeftali. Mağara (133–144): bileşen zinciri en çok örtüşen koşuyu izler (zemin sürer, tavan ayrı yüzen bulut: altı lila kabarık);
@@ -369,11 +373,11 @@ Düşmek: bulutların altı boşluk; düşen Feza'yı Pırıl geri taşır (mevc
 
 ## LEVEL12 notları (bolum.js, bolum2.js, yildiz.js, takim.js, sarki.js — Bölüm 1-2 oynanış cilası)
 - Ölçüm: Playwright botları (düzgün + "dağınık çocuk": tereddüt, geri yürüme, geç/unutulan zıplama, dalgınlık), yatay 1024×768 ve dikey 768×1024.
-  Son durum: Bölüm 1 ve 2 baştan sona, 0 sıkışma, düşme 0 (bir çok-dağınık koşuda göl I'de 2). Oyun süresi bot için ≈2-3,5 dk (çocukta ≈5-7 dk).
+  Son durum (≈20 koşu): Bölüm 1 ve 2 baştan sona, 0 sıkışma; düzeltmelerden sonra düşme 0, konsol hatası 0. Oyun süresi bot için ≈2-3,5 dk (çocukta ≈5-7 dk).
 - **Bölüm 2 hızlı testte x≈260'ta kalma:** hata değil — `omDevamGirisi` açılışta `P.kilit = 4.2` (kamera sudan kıyıya iner, ışık toplanır). Testte ≥4,5 sn bekleyin.
   CORE'a öneri (isteğe bağlı): çocuk açılışta ekrana basıyorsa kilit ~2,5 sn'de bitebilir.
 - **Düzeltildi (yildiz.js):** üstten geçilen taş/adalar Feza'yı yalnız yukarıdan düşerken yakalıyordu: kıyıdan (720) 716'daki ilk taşa ZIPLAMADAN yürüyen çocuk
-  taşın altından geçip suya düşüyordu (her göl girişinde, ada geçişlerinde). `ylBasamak`: yerde yürürken ≤17 birimlik basamağa görünmez küçük adım. Ada çarpışma genişliği w-14 → w-2
+  taşın altından geçip suya düşüyordu (her göl girişinde, ada geçişlerinde). `ylBasamak`: yerde yürürken ön ayak taşa değince ≤17 birimlik basamağa görünmez küçük adım (yavaş yürüyüşte de). Ada çarpışma genişliği w-14 → w-2
   (taş-ada boşluğu 15 → 9). Artık üç göl de SAĞA zıplamadan yürünerek geçilebiliyor (geri dönüşte yalnız göl I'in 24'lük iniş zinciri zıplama ister).
   CORE'a not: aynı "küçük basamak" fiziği `oyun.js moveY`'de genel olsaydı (ustten cisimler için ≤16 birim) bu yamaya gerek kalmazdı.
 - **Düzeltildi (yildiz.js):** dağınık çocuk göl II'deki ada yıldızını atlayınca üç büyük yıldızdan sonra `HEDEF()` atlanan yıldıza dönüyordu: Pırıl çocuğu ~200 kare geri götürüyordu.
@@ -471,15 +475,38 @@ Bulgular (önem sırasıyla):
 - **dunya3.js sağlar** (dünya koordinatı, önbellekli, kare başına ucuz):
   - `dn3ZeminKirp(x0, x1)` → Path2D: bulutun GÖRÜNEN yüzeyinin (yumuşatılmış, +14 birim) üstündeki bölge; boşluklarda aşağı iner.
   - `dn3ZeminOn(x0, x1)` → zeminin üst kabarcık bandını (yüzeyin 34 üstü – 30 altı, basamak yüzleri dahil) önbellekli zemin parçalarından ÖNE yeniden çizer (dünya dönüşümü kurulu olmalı).
-- **LEVEL3 (bulut.js `gokkusagi`) kullanır** (`typeof` korumalı; yoksa eski davranış):
+- **Güncel (LEVEL3 Tur 5):** LEVEL3 yayı kırpmasız, zeminden sonra çiziyor; bu iki API İSTEĞE BAĞLI kaldı (kullanılmıyor). WORLD3 tarafı: tepede (yayın ±R + ekran payı) ön plan bulut tutamları çizilmez, zemin ön plan katmanı yok.
+- **(eski öneri) LEVEL3 (bulut.js `gokkusagi`) kullanabilir** (`typeof` korumalı; yoksa eski davranış):
   ```js
   // ciz(o, tm) içinde, yayı çizmeden önce (o.kirp yerine):
   const X0 = o.cx - o.R - 60, X1 = o.cx + o.R + 60;
   g.save(); if (typeof dn3ZeminKirp === 'function') { const k = dn3ZeminKirp(X0, X1); if (k) g.clip(k); } else g.clip(o.kirp);
   ... yay ... g.restore();
-  // cizOn(o, tm) başında (ışık bulutlarından önce):
-  if (typeof dn3ZeminOn === 'function') dn3ZeminOn(o.cx - o.R - 60, o.cx + o.R + 60);
+  // AYNI ciz'in sonunda (restore'dan sonra; Feza'dan ÖNCE çizilir, Feza'yı örtmez):
+  if (typeof dn3ZeminOn === 'function') dn3ZeminOn(X0, X1);
   ```
-  Sonuç: yayın ayakları kabarık bulutların İÇİNE girer (WORLD3 test sarmalayıcısıyla doğrulandı: yatay 1194×834 ve dikey 834×1194). Kayma sırasında Feza `cizOn`'dan önce çizildiği için zemin bandı Feza'yı örtmez
-  (Feza ayak altı bandın içinde kalırsa 1-2 piksel örtülebilir; gerekirse dn3ZeminOn yalnız kayma bitene dek çağrılmayabilir).
+  Sonuç: yayın ayakları kabarık bulutların İÇİNE girer (WORLD3 test sarmalayıcısıyla doğrulandı: yatay 1194×834 ve dikey 834×1194). `cizOn`'da ÇAĞIRMAYIN (Feza'nın önüne çizer).
 - **Feza seçilebilirliği (QA madde 2, arka plan tarafı):** dn3World sonunda Feza'nın arkasına yumuşak mor-gül gölge alanı (önbellekli sprite, karede tek drawImage; uçuşta kapalı).
+
+- **SES – QA turu 1 düzeltmeleri:** (2) Cümleler artık sözcük ortasında kesilmiyor: çalanın ≤3 sn'si kaldıysa biter, yeni cümle bekler (ömrü bekleme kadar uzar);
+  daha uzunsa çalan cümle kayıttaki bir sonraki gerçek cümle sonu boşluğunda (≥0,25 sn sessizlik) susar. Olay tepkisi (acil 1), acil cümle (kurtarma vb.) ve sahne cümlesi aynı kuralla girer;
+  konusu bitmemiş talimat sonra bir kez yeniden söylenir. (3) `p_kurtar` en az 30 sn arayla ve 5 çeşitten (`p_kurtar`, `p_kurtar1..4`) son ikisini tekrarlamadan; piril.js `p_kurtar` demeye devam edebilir.
+  Yeni `p_b_selam` (uçuşta bulut hayvanları; `p_b_ucus2` ile 4–8 sn içinde çakışmaz). sesler.js 87 cümle, 2,6 MB.
+- **WORLD3 (QA turu 1 sonrası):** tepede (gökkuşağı yayının ±R + ekran payı) ön plan bulut tutamları sönük/çizilmez → yay hiçbir dünya katmanıyla kesilmiyor (LEVEL3'ün kırpmasız çizimiyle doğrulandı).
+  Feza'nın arkasında mor-gül gölge alanı (karede tek sprite). Dar bulut sütunları (≤2 sütun, ör. 454'teki 6 kare sütun) ortada tek, iri, zikzak kabarcık kulesi olarak çiziliyor.
+  Yeni sığ çukurlar (45–46, 119–120, 153–159, 221–226, kuş geçidi) ekran görüntüsüyle kontrol edildi: yumuşak, kabarık çanaklar.
+- SAHNE tur 3 (performans + düzen): erimede oda artık kesme maskesi yerine desen dolgusuyla çiziliyor; halka kenarı ve ışık zerrelerinin haleleri ¼ çözünürlüklü tamponda toplanıp tek geçişte basılıyor (görünüm aynı). Ölçüm (DPR 2, rAF aralıkları, 9,3–10,8 sn, 5 deneme): ort. 12,9 → 10,8 ms, 25 ms üstü kare 7 → 0, en uzun 60 → 25 ms. Seçim ekranında baloncuklar artık başlık+alt başlığın altında ve Feza'nın yüzünün üstündeki banda hesaplanarak yerleşiyor (1024×768, 1180×820, 1194×834, 1366×1024 ve dikeyleri denendi).
+- **LEVEL12 tur 2 (anların kalitesi):** kaplumbağa hazırken (`hayvanBekle` dikkati, güç 0.75) kaplumbağanın tamamı + Feza kadrajda kalır (önceden sırt ekran dışındaydı);
+  "bana zıpla" işareti sırtta zıplayan, göz kırpan minik gülen yıldız + Feza'dan sırta akan ışık noktaları yayı. Takımyıldızı tamamlanınca: dönen ışık hüzmeleri, yayılan altın halkalar,
+  şekil boyunca koşan ışık, noktalardan göğe kayan minik yıldızlar (`tkSolen`). Şarkı kutlamasında çiçeklerden yükselen ışıklı nota işaretleri (♪) + büyük ışık halkası (`skNotalar`).
+- **CORE'a öneri (kamera):** fırlatmadan 0,9 sn sonra `omDikkatHesap` 'hayvan' kutusunu yalnız Feza + göğe çeviriyor; Feza Yıldız Tepesi'ne indiğinde kaplumbağa (sol-alt) ve yıldız dalgası
+  kadrajdan çıkıyor. İnişten sonra (Feza yerdeyken) kutuya kaplumbağanın başını da eklemek anın kahramanını gösterir.
+- **POF'a öneri (pofuduk.js, Büyük Pofuduk):** uyanış aşamaları çok sevimli. Ayağa kalkıp beklerken (Feza üstüne zıplamalı) ~3 sn boyunca "üstüme zıpla" işareti yok; ekranda yürüme eli çıkıyor.
+  Başının üstünde zıplayan bir ışık damlası/yıldız (kaplumbağadaki gibi) ve Pırıl'ın onun üstünde süzülmesi önerilir. Zıplatma ve ağaca varış akıcı; finalde Büyük Pofuduk Feza/Pırıl ile üst üste biniyor (kalabalık).
+- **LEVEL12 tur 3 (Bölüm 1 anları; kare dizileriyle incelendi):** yerleşimde değişiklik gerekmedi (bolum.js/sarki.js aynı); regresyon: Bölüm 1-2 düzgün + dağınık bot 4/4 final, 0 düşme, 0 sıkışma, konsol 0.
+  - **WORLD12 (dunya.js) önerisi — ilk çiçek:** çocuğun ilk büyük ödülü ama çiçek ekranda ~20 px'lik bir ışık noktası; halka + Pırıl sevinci var, çiçeğin kendisi küçük kalıyor.
+    İlk açılışta (SAYAC.cicek===1) taç yapraklar 1-1,5 sn'de görünür biçimde açılsın, kısa bir ışık sütunu yükselsin, çiçek ~1,5× büyük dursun.
+  - **WORLD12 — saklı yol tohumları:** dallardaki tohumlar küçük altın noktalar; koyu gövdelerin arasında 5 yaşında fark etmesi zor. Biraz daha büyük + yanıp sönen ışıltı (ylGlint benzeri) önerilir. Yaprak kemeri girişi çok güzel ve okunuyor.
+  - **CORE (oyun.js) — karanlık göl:** Pırıl'ın ışık nefesi ve nilüferlerin belirişi çok güzel; ama nilüferler belirdikten sonra kamera Feza'nın yanında sabit, nilüfer yolu sağda ekran dışına uzanıyor, adacık/karşı kıyı görünmüyor.
+    'aydinlat' sonrası ~2 sn kısa bir dikkat (nilüferler + adacık) yolu gösterir. Işık Ağacı'nın yanışı ve final kalabalığı (Pofuduklar, Büyük Pofuduk) görkemli; değişiklik önerim yok (yalnız Büyük Pofuduk Feza'nın önüne biniyor: POF notu yukarıda).
+  - **PIRIL (piril.js):** nefes anında Feza kıyıda Pırıl'dan uzak duruyor; nefes bittikten sonra Pırıl'ın bir kez nilüfere doğru "hadi" uçuşu (kısa yol gösterme) ilk zıplamayı kolaylaştırır.

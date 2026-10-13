@@ -1293,15 +1293,19 @@ function shZerreEkle(x, y, vx, vy, col, omur, r) {
 }
 function shZerreAkit(dt, tm) {
   const k = sh.k0 * sh.zoom;
+  if (!sh.parca.length) return;
+  const Dq = sh.parca.length > 12 ? shDusuk() : null;   // çok zerre varken haleler ¼ tamponda toplanır
+  if (Dq) Dq.x.globalCompositeOperation = 'lighter';
   g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'lighter';
   for (let i = sh.parca.length - 1; i >= 0; i--) {
     const q = sh.parca[i]; q.omur -= dt;
     if (q.omur <= 0) { sh.parca[i] = sh.parca[sh.parca.length - 1]; sh.parca.pop(); continue; }
     q.x += (q.vx + Math.sin(tm * 2.3 + q.ph) * 0.8) * dt; q.y += q.vy * dt; q.vx *= Math.exp(-dt * 0.8);
     const u = q.omur / q.max, a = Math.sin(u * Math.PI) * 0.85, px = shEkranX(q.x), py = shEkranY(q.y);
-    dglow(q.col, px, py, k * q.r * (1.2 + u * 0.8), a * 0.38);
+    if (Dq) shParlakX(Dq.x, q.col, px, py, k * q.r * (1.2 + u * 0.8), a * 0.38); else dglow(q.col, px, py, k * q.r * (1.2 + u * 0.8), a * 0.38);
     if (q.r > 0.8 && (i & 3) === 0) shParilti(px, py, k * q.r * 1.3, a * 0.8);
   }
+  if (Dq) { Dq.x.globalCompositeOperation = 'source-over'; shDusukBas(Dq, 'lighter', 1); }
   g.globalCompositeOperation = 'source-over';
 }
 function shPirilPozVar(p) { const k = 'P_' + p; if (shPozlar[k] === undefined) { try { shPozlar[k] = typeof pirilCizPoz === 'function' && String(pirilCizPoz).indexOf("'" + p + "'") >= 0; } catch (e) { shPozlar[k] = false; } } return shPozlar[k]; }
@@ -1407,14 +1411,20 @@ function shGirisCiz(tm, dt) {
       const kenar = (i, n) => { const a = i / n * 6.283; return [a, Rr * (1 + 0.07 * Math.sin(a * 5 + tm * 1.3) + 0.04 * Math.sin(a * 9 - tm * 2.1))]; };
       g.save(); g.beginPath(); g.rect(-W, -H, W * 3, H * 3);
       for (let i = 0; i <= 120; i++) { const [a, rr] = kenar(i, 120), xx = cxp + Math.cos(a) * rr, yy = cyp + Math.sin(a) * rr; if (i === 0) g.moveTo(xx, yy); else g.lineTo(xx, yy); }
-      g.closePath(); g.clip('evenodd'); g.drawImage(sh.oda, 0, 0); g.restore();
+      g.closePath();
+      if (sh.odaDesenC !== sh.oda) { sh.odaDesenC = sh.oda; sh.odaDesen = null; try { sh.odaDesen = g.createPattern(sh.oda, 'no-repeat'); } catch (e) {} }
+      if (sh.odaDesen) { g.fillStyle = sh.odaDesen; g.fill('evenodd'); } else { g.clip('evenodd'); g.drawImage(sh.oda, 0, 0); }
+      g.restore();
       // halkanın ışıklı kenarı
-      g.globalCompositeOperation = 'lighter';
       const bu3 = sh.tema === 'bulut';
-      g.lineJoin = 'round'; g.lineWidth = sh.k0 * 2.4; g.strokeStyle = bu3 ? `rgba(255,190,220,${0.22 * (1 - halka)})` : `rgba(190,160,255,${0.16 * (1 - halka)})`;
-      g.beginPath();
-      for (let i = 0; i <= 120; i++) { const [a, rr] = kenar(i, 120); if (i === 0) g.moveTo(cxp + Math.cos(a) * rr, cyp + Math.sin(a) * rr); else g.lineTo(cxp + Math.cos(a) * rr, cyp + Math.sin(a) * rr); }
-      g.stroke(); g.lineWidth = sh.k0 * 0.45; g.strokeStyle = bu3 ? `rgba(255,240,225,${0.6 * (1 - halka)})` : `rgba(240,225,255,${0.5 * (1 - halka)})`; g.stroke();
+      { const Dq = shDusuk(), x = Dq.x, z = sh.zoom, q = Dq.q;
+        x.setTransform(z * q, 0, 0, z * q, (sh.tx - sh.fx * z) * q, (sh.ty - sh.fy * z) * q);
+        x.lineJoin = 'round'; x.lineWidth = sh.k0 * 2.4; x.strokeStyle = bu3 ? `rgba(255,190,220,${0.22 * (1 - halka)})` : `rgba(190,160,255,${0.16 * (1 - halka)})`;
+        x.beginPath();
+        for (let i = 0; i <= 120; i++) { const [a, rr] = kenar(i, 120); if (i === 0) x.moveTo(cxp + Math.cos(a) * rr, cyp + Math.sin(a) * rr); else x.lineTo(cxp + Math.cos(a) * rr, cyp + Math.sin(a) * rr); }
+        x.stroke(); x.lineWidth = Math.max(sh.k0 * 0.45, 1.6 / (z * q)); x.strokeStyle = bu3 ? `rgba(255,240,225,${0.6 * (1 - halka)})` : `rgba(240,225,255,${0.5 * (1 - halka)})`; x.stroke();
+        shDusukBas(Dq, 'lighter', 1); shResimT(); }
+      g.globalCompositeOperation = 'lighter';
       for (let i = 0; i < 26; i++) {
         const [a, rr] = kenar(i + tm * 0.6, 26), tw = 0.5 + 0.5 * Math.sin(tm * 3 + i * 2.3);
         shParilti(cxp + Math.cos(a) * rr, cyp + Math.sin(a) * rr, sh.k0 * (1.2 + tw * 1.6), (1 - halka) * (0.4 + tw * 0.5));
@@ -2392,12 +2402,18 @@ function shSecimYer(n) {
     const rows = Math.ceil(n / cols), cw = A.w / cols, ch = A.h / rows, d = Math.min(cw, ch) * (n > 3 ? 0.97 : 0.93);
     if (!en || d > en.d + 0.5) en = { cols, rows, d, cw, ch };
   }
-  const d = Math.min(en.d, maxD), out = [];
+  // tek sırada: balonlar başlığın (alt başlık dahil) altında, Feza'nın yüzünün üstünde kalan banda sığar; ortadaki en üstte
+  // (üst kenar + nabız/süzülme payı alt başlığa değmez), yandakiler hafif aşağıda (yay)
+  const fs = Math.min(H * 0.1, W * 0.088), tb = H * (yatay ? 0.025 : 0.035) + fs * 1.62, bot = H * (yatay ? 0.535 : 0.445);
+  let d = Math.min(en.d, maxD);
+  if (en.rows === 1) d = Math.min(d, (bot - tb) / 1.24);
+  const out = [];
   for (let i = 0; i < n; i++) {
     const r = Math.floor(i / en.cols), inRow = r === en.rows - 1 ? n - r * en.cols : en.cols, ci = i - r * en.cols;
     const rowW = inRow * en.cw, x0 = A.x0 + (A.w - rowW) / 2;
     const k = inRow > 1 ? (ci - (inRow - 1) / 2) / ((inRow - 1) / 2) : 0, yay = en.rows === 1 ? d * 0.1 * (1 - k * k) : 0;
-    out.push({ x: x0 + (ci + 0.5) * en.cw, y: A.y0 + (r + 0.5) * en.ch - yay + (en.rows === 1 ? d * 0.04 : 0), d });
+    const y = en.rows === 1 ? tb + d * 0.6 + d * 0.1 - yay : Math.max(A.y0 + (r + 0.5) * en.ch, tb + d * 0.6 + r * en.ch);
+    out.push({ x: x0 + (ci + 0.5) * en.cw, y, d });
   }
   return out;
 }

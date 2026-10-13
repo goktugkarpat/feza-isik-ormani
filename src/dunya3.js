@@ -504,12 +504,21 @@ function dn3MakeComp(c0, cols, id) {
   const sAt = x => st[clamp(Math.round((x - x0) / 4), 0, N - 1)], bAt = x => sb[clamp(Math.round((x - x0) / 4), 0, N - 1)];
   const top = [], back = [], hl = [], cr = [];
   for (let x = x0 + 4 + R() * 6; x < x1 - 4; x += 13 + R() * 11) { const r = 10 + R() * 11, cy = sAt(x) + r * 0.64; top.push({ x, y: cy, r, rim: R() < 0.85 }); if (R() < 0.45) cr.push({ x: x + (R() - 0.5) * 6, y: cy + r * 0.3, r: r * 1.05 }); }
+  // dar bulut sütunları (≤2 sütun genişliğinde, iki yanı en az 1 kare alçak ya da bileşen ucu): iki ayrı yüz yığını yerine ortada tek, iri kabarcık kulesi
+  const skipF = new Set(); let skipL = false, skipR = false;
+  for (let a = 0; a < n;) { let b = a; while (b + 1 < n && tops[b + 1] === tops[a]) b++;
+    const w = b - a + 1, lh = a === 0 || tops[a - 1] > tops[a] + T * 0.5, rh = b === n - 1 || tops[b + 1] > tops[a] + T * 0.5;
+    if (w <= 2 && lh && rh && !(a === 0 && b === n - 1)) {
+      const cx = x0 + (a + b + 1) * T / 2, loT = Math.max(a > 0 ? tops[a - 1] : tops[a] + 160, b < n - 1 ? tops[b + 1] : tops[a] + 160), hw = w * T / 2;
+      let sg = R() < 0.5 ? 1 : -1; for (let y = tops[a] + 10; y < loT + 6; y += 24 + R() * 12) { const r = hw * (1 + R() * 0.4) + 8, u = (y - tops[a]) / Math.max(1, loT - tops[a]); sg = -sg; top.push({ x: cx + sg * hw * (0.1 + R() * 0.15), y: y + r * 0.3, r: r * (1 - u * 0.15), rim: u < 0.4 && sg > 0, d: (y - tops[a]) * 0.7 + 4 }); if (R() < 0.5) { const r2 = r * 0.55; top.push({ x: cx - sg * (hw + r2 * 0.3), y: y + r * 0.5, r: r2, rim: false, d: (y - tops[a]) * 0.7 + 14 }); } }
+      if (a > 0) skipF.add(a - 1); else skipL = true; if (b < n - 1) skipF.add(b); else skipR = true; }
+    a = b + 1; }
   for (let j = 0; j + 1 < n; j++) {   // iç basamaklar: dikey yüzü kabarcıklarla ört (düz kutu duvarı olmasın)
-    const ta = tops[j], tb = tops[j + 1]; if (Math.abs(ta - tb) < T * 0.5) continue;
+    const ta = tops[j], tb = tops[j + 1]; if (Math.abs(ta - tb) < T * 0.5 || skipF.has(j)) continue;
     const bx = (c0 + j + 1) * T, dir = ta < tb ? 1 : -1, hiT = Math.min(ta, tb), loT = Math.max(ta, tb);
     for (let y = hiT + 14; y < loT + 4; y += 19 + R() * 10) { const r = 15 + R() * 11; top.push({ x: bx + dir * (r * 0.25 + (R() - 0.5) * 12) - dir * 6, y: y + (R() - 0.5) * 6, r, rim: dir > 0 && R() < 0.35, d: y - hiT + 16 }); }
   }
-  for (const sd of [-1, 1]) { const ex = sd < 0 ? x0 : x1, s0 = sAt(ex + (sd < 0 ? 2 : -2)), b0 = bAt(ex + (sd < 0 ? 2 : -2));
+  for (const sd of [-1, 1]) { const ex = sd < 0 ? x0 : x1, s0 = sAt(ex + (sd < 0 ? 2 : -2)), b0 = bAt(ex + (sd < 0 ? 2 : -2)); if (sd < 0 ? skipL : skipR) continue;
     top.push({ x: ex - sd * 5, y: s0 + 9, r: 13 + R() * 3, rim: true });
     for (let d = 14; d < Math.min(150, b0 - s0 - 4); d += 16 + R() * 8) { const r = Math.max(9, 22 + R() * 9 - d * 0.09); back.push({ x: ex + sd * r * 0.4, y: s0 + d + 4, r, d }); } }
   for (let x = x0 + 6; x < x1 - 6; x += 15 + R() * 9) { const i = clamp(Math.round((x - x0) / 4), 0, N - 1), j = ci(x); if (!real[j]) continue; const r = 10 + R() * 8; back.push({ x, y: sb[i] - r * 0.4, r, d: sb[i] - st[i], bot: true }); }
@@ -846,7 +855,9 @@ function dn3FgBake() {
 function dn3Foreground(tm) {
   if (!dn3Ok() || !DN3.reg) return; if (!isFinite(tm)) tm = 0;
   dn3FgBake(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over';
-  const fly = DN3.fly, open = 1 - 0.7 * DN3.reg.ucus * (1 - fly);
+  const B = dn3Bolum(), gk = B && B.gokkusagi && isFinite(B.gokkusagi.x) ? B.gokkusagi : null;   // Gökkuşağı Tepesi: yayın üstüne ön plan çizilmez (LEVEL3 anlaşması)
+  const tk = gk ? clamp((Math.abs(cam.x + VW / 2 - gk.x) - (gk.R || 600) - VW * 0.6) / 400, 0, 1) : 1;
+  const fly = DN3.fly, open = (1 - 0.7 * DN3.reg.ucus * (1 - fly)) * tk; if (open < 0.02 && fly < 0.05) return;
   // üst kenar: aşağı sarkan yumuşak bulut tutamları (ters çevrilmiş)
   for (let n = 0; n < 3; n++) {
     const sp = DN3_FG.puff[n], span = 2300, wx = ((n * 760 + 120 - cam.x * 1.22 - tm * 6) % span + span) % span - 520; if (wx > VW + 40) continue;
