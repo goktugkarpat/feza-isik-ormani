@@ -83,12 +83,34 @@ const SES = (() => {
     "p_takim1": "Yıldızları birleştirelim!",
     "p_takim2": "Beni izle.",
     "p_takim3": "Çok güzel! Gökyüzüne yeni bir resim çizdin.",
-    "p_y_sarki": "Bu Pofuduk yıldız şarkısı istiyor. Beni dinle, sonra sen çal!"
+    "p_y_sarki": "Bu Pofuduk yıldız şarkısı istiyor. Beni dinle, sonra sen çal!",
+    "p_b_uyku": "Bu gece bulutlara gidiyoruz!",
+    "p_b_giris": "Gökkuşağı kaybolmuş! Bulut Kuzucukları renklerini kaybetmiş. Hadi, onları bulalım!",
+    "p_b_zip": "Bu bulut zıp zıp! Üstüne zıpla, seni yukarı atsın!",
+    "p_b_kuzu": "Bak, bir Bulut Kuzucuğu! Rengi gitmiş, çok üzgün. Hadi, ona sarıl!",
+    "p_b_kuzu_ilk": "Yaşasın, rengi geri geldi! Bak, gökyüzünde gökkuşağı görünüyor!",
+    "p_b_esinti": "Rüzgâr esiyor! İçine gir, seni yukarı taşısın!",
+    "p_b_sekil1": "Bu bulutun içinde biri saklanıyor. Hadi, bulalım!",
+    "p_b_sekil2": "Bak bak, bir şey çıkıyor!",
+    "p_b_sekil3": "Buldun! Bulut canlandı, bak nasıl seviniyor!",
+    "p_b_ucus": "Hadi Feza, bin sırtıma! Uçuyoruz!",
+    "p_b_ucus2": "Yaşasın, uçuyoruz! Parlayan ışıltıları topla!",
+    "p_b_tepe": "İşte Gökkuşağı Tepesi! Kuzucuklar da seninle geldi. Hadi, en tepeye çık!",
+    "p_b_bitti": "Gökkuşağı geri geldi! Ne kadar da güzel!",
+    "a_b_final1": "Yedi Bulut Kuzucuğu gökyüzünde yan yana dizilmiş ve kocaman bir gökkuşağı olmuş. Feza ile Pırıl, gökkuşağından kayarak inmişler.",
+    "a_b_final2": "Sabah olunca, Feza yatağında gözlerini açmış. Pencereden bakmış ki, gökyüzünde kocaman bir gökkuşağı! Pırıl da ona göz kırpmış.",
+    "a_b_final3": "Ve her gece, yeni bir macera onları bekliyordu...",
+    "p_dost1": "Seninle oynamak çok güzel!",
+    "p_dost2": "Ben hep yanındayım, Feza.",
+    "p_dost3": "Hadi, maceraya devam!",
+    "p_dost_orman": "Duydun mu? Orman bize şarkı söylüyor.",
+    "p_dost_yildiz": "Yıldızlar bize göz kırpıyor!",
+    "p_dost_bulut": "Bulutlar pamuk gibi yumuşacık!"
   }/*SESLER-SON*/;
 
   const sesSaat = () => performance.now() / 1000;
   const ovguMu = k => /^p_aferin/.test(k);
-  const SES_SAHNE = { p_uyan: 1, p_gecis: 1, p_y_giris: 1, p_y_bitti: 1, p_secim: 1, p_y_uyku: 1 };   // sahne cümleleri: öncelik 3, ağaç yandı/oyun bitti diye atılmaz
+  const SES_SAHNE = { p_uyan: 1, p_gecis: 1, p_y_giris: 1, p_y_bitti: 1, p_secim: 1, p_y_uyku: 1, p_b_uyku: 1, p_b_giris: 1, p_b_bitti: 1 };   // sahne cümleleri: öncelik 3, ağaç yandı/oyun bitti diye atılmaz
   const anlatici = k => k.startsWith('a_') || !!SES_SAHNE[k];
   const sesKim = k => k.startsWith('a_') ? 'a' : 'p';
   // ── cümle bilgisi: oncelik (3 sahne · 2 oyun · 1 yönlendirme · 0 övgü), acil (2 araya girer · 1 olay tepkisi), ömür (sn), konu ──
@@ -112,6 +134,12 @@ const SES = (() => {
     if (k === 'p_y_yildiz2') return { oncelik: 2, acil: 1, omur: 6, konu: null };
     if (k === 'p_y_sarki') return { oncelik: 2, acil: 1, omur: 12, konu: null };
     if (k === 'p_cicek_ilk' || k === 'p_uyandi' || k === 'p_tohum') return { oncelik: 2, acil: 1, omur: 5, konu: null };
+    // Bölüm 3
+    if (k === 'p_b_kuzu_ilk') return { oncelik: 2, acil: 1, omur: 6, konu: null };
+    if (k === 'p_b_ucus') return { oncelik: 2, acil: 1, omur: 8, konu: null };
+    if (k === 'p_b_ucus2') return { oncelik: 2, acil: 0, omur: 8, konu: null };
+    if (/^p_b_sekil/.test(k)) return { oncelik: 2, acil: 1, omur: k === 'p_b_sekil1' ? 12 : 8, konu: null };
+    if (/^p_dost/.test(k)) return { oncelik: 1, acil: 0, omur: 3, konu: null };   // uzun sessizlikte küçük dostça söz
     return { oncelik: 2, acil: 0, omur: 20, konu: null };   // konuşma tetikleyicilerinin talimatları
   }
 
@@ -175,6 +203,16 @@ const SES = (() => {
     p_buyuk_esne: () => sesBuyukAsama() < 3,
     p_buyuk_kalk: () => { const p = gP(), b = sesBuyuk(); return !sesBuyukZip && !(p && b && p.x > b.x + 2 * T && p.y < b.y - 4 * T); },
     p_agac: () => { const p = gP(); return !!(p && p.ground) && sesSaat() - sesZipT > 2; },   // uçarken değil: tepede durup ağaca dokunmadıysa
+    // Bölüm 3: talimatlar yeri geçince / konusu bitince söylenmez
+    p_b_zip: s => !sesIleride('b_zip', 12, s),
+    p_b_esinti: s => !sesIleride('b_esinti', 12, s),
+    p_b_kuzu: () => !(typeof SAYAC !== 'undefined' && SAYAC && SAYAC.kuzu > 0) && !sesKuzuN,
+    p_b_tepe: () => !sesGokBasladi,
+    p_b_ucus: () => !sesUcusBitti,
+    p_b_ucus2: () => sesUcusta(),
+    p_b_sekil1: s => !sesIleride('b_sekil1', 10, s),
+    p_dost1: () => sesDostUygun(), p_dost2: () => sesDostUygun(), p_dost3: () => sesDostUygun(),
+    p_dost_orman: () => sesDostUygun(), p_dost_yildiz: () => sesDostUygun(), p_dost_bulut: () => sesDostUygun(),
   };
   // sert: çalan cümle sürebilir mi? · gecerli: sıradaki cümle şimdi başlayabilir mi? ('' = evet, yoksa neden)
   function sesSert(s) {
@@ -257,10 +295,17 @@ const SES = (() => {
     return !!(g2 && p && p.x > g2.x0 - 16 * T && p.x < g2.x1 + 2 * T);
   }
   const sesB2 = () => typeof BOLUM_NO !== 'undefined' && BOLUM_NO === 2;
+  const sesB3 = () => typeof BOLUM_NO !== 'undefined' && BOLUM_NO === 3;
   let sesYildizBekle = false, sesYildizGec = false;
   function soyle(k, ops) {
     const ko = k;   // çağıranın verdiği ad (konuşma tetikleyicisi anahtarı)
-    if (/^y_/.test(k) && LINES['p_' + k]) k = 'p_' + k;                      // Bölüm 2 tetikleyicileri: 'y_gol' → 'p_y_gol'
+    if (/^[yb]_/.test(k) && LINES['p_' + k]) k = 'p_' + k;                   // Bölüm 2/3 tetikleyicileri: 'y_gol' → 'p_y_gol', 'b_zip' → 'p_b_zip'
+    if (sesB3()) {   // Bölüm 3: sahne/CORE Bölüm 2 adlarını çağırırsa da Bölüm 3 cümlesi söylenir
+      if (/^a_(y_)?final\d$/.test(k) && LINES['a_b_final' + k.slice(-1)]) k = 'a_b_final' + k.slice(-1);
+      else if (k === 'p_y_uyku') k = 'p_b_uyku';
+      else if (k === 'p_y_giris') k = 'p_b_giris';
+      else if (k === 'p_y_bitti') k = 'p_b_bitti';
+    }
     if (/^a_final\d$/.test(k) && sesB2() && LINES['a_y_' + k.slice(2)]) k = 'a_y_' + k.slice(2);   // Bölüm 2 final anlatıcısı
     if (k === 'p_sarki1' && sesB2()) k = 'p_y_sarki';                       // Bölüm 2: yıldız şarkısı cümlesi
     if (k === 'p_y_yildiz' && !sesYildizGec && !(typeof SAYAC !== 'undefined' && SAYAC.yildiz > 0)) { sesYildizBekle = true; return; }   // "yıldız uyanıyor": ilk yıldız gerçekten uyanınca (tetikleyici önceden de çağırabilir)
@@ -382,6 +427,44 @@ const SES = (() => {
   OLAY.on('yildizYerlesti', () => { if (++sesYerlesen === 5) soyle('p_y_yildiz2'); });
   OLAY.on('hayvanHazir', () => soyle('p_y_hayvan_uyan'));
   OLAY.on('hayvanUyandi', () => soyle('p_y_bitti', { oncelik: 3 }));
+  // Bölüm 3 olayları (kuzu.js, ucus.js, bulut.js, sekil.js): ilk kuzucuk renklenince / uçuşta / gökkuşağı başlayınca Pırıl konuşur.
+  // Övgü ara sıra: ilk kuzucukta değil (onun kendi cümlesi var), sonrakilerde ~üçte bir (ses.js övgü aralığı ayrıca ≥12 sn).
+  let sesKuzuN = 0, sesKuzuOvgu = 0, sesGokBasladi = false, sesUcusBitti = false, sesUcusOlay = false;
+  const sesUcusta = () => sesUcusOlay || !!(gP() && gP().ucus);
+  OLAY.on('kuzu', () => {
+    sesKuzuN++;
+    if (sesKuzuN === 1) { soyle('p_b_kuzu_ilk'); return; }
+    if (sesKuzuN >= 7) return;   // son kuzucukta gökkuşağı/tepe cümleleri gelecek
+    const sans = sesKuzuN - sesKuzuOvgu >= 3 ? 0.7 : 0.3;   // uzun süre övgü olmadıysa biraz daha olası
+    if (Math.random() < sans) setTimeout(() => { if (!sesCalan && !sesSira.length) { sesKuzuOvgu = sesKuzuN; soyle('p_aferin'); } }, 900);
+  });
+  OLAY.on('ucusBasla', () => {
+    sesUcusOlay = true; soyle('p_b_ucus');
+    setTimeout(() => { if (sesUcusta()) soyle('p_b_ucus2'); }, 11000);   // uçuşun ortasında bir sevinç cümlesi
+  });
+  OLAY.on('ucusBitti', () => { sesUcusOlay = false; sesUcusBitti = true; });
+  OLAY.on('gokkusagiBasla', () => { sesGokBasladi = true; soyle('p_b_bitti', { oncelik: 3 }); });
+  OLAY.on('sekil', () => setTimeout(() => soyle('p_b_sekil3'), 1200));   // sekil.js kendisi söylediyse tekrar edilmez
+  // Uzun sessizlikte küçük dostça sözler (en çok 3 kez, en az 90 sn arayla; Feza oynarken, uçuş/sahne dışında, kimse konuşmuyorken)
+  let sesDostN = 0, sesDostT = -1e9, sesHareketT = sesSaat(), sesOyunT = -1e9;
+  OLAY.on('durum', d => { if (d === 'oyun' && sesOyunT < 0) sesOyunT = sesSaat(); });
+  function sesDostUygun() {
+    const p = gP(), d = typeof DURUM !== 'undefined' ? DURUM : '';
+    return d === 'oyun' && !!p && !p.ucus && !(p.kilit > 0) && sesSaat() - sesSonBitis > 40 && sesSaat() - sesHareketT < 4;
+  }
+  setInterval(() => {
+    const p = gP();
+    if (p && Math.abs(p.vx || 0) > 40) sesHareketT = sesSaat();
+    if (sesDostN >= 3 || sesCalan || sesSira.length || sesOyunT < 0) return;
+    const t = sesSaat();
+    if (t - sesOyunT < 60 || t - sesDostT < 90 || t - sesSonBitis < 50 || !sesDostUygun()) return;
+    const bolum = typeof BOLUM_NO !== 'undefined' ? BOLUM_NO : 1;
+    const ozel = bolum === 3 ? 'p_dost_bulut' : bolum === 2 ? 'p_dost_yildiz' : 'p_dost_orman';
+    const aday = [ozel, 'p_dost1', 'p_dost2', 'p_dost3'].filter(k => LINES[k] && !sesSoylendi[k]);
+    if (!aday.length) return;
+    const k = sesDostN === 0 ? aday[0] : aday[Math.floor(Math.random() * aday.length)];
+    sesDostN++; sesDostT = t; soyle(k);
+  }, 2000);
   // seçim ekranı (DURUM 'baslik'): "Bu gece nereye gidelim?" ilk açılışta 1 kez; sonra yalnız ~25 sn hiç dokunulmazsa 1 kez daha
   let sesSecimN = 0, sesSecimT = 0;
   OLAY.on('secim', () => { sesSecimT = sesSaat(); });

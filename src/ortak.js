@@ -84,7 +84,8 @@ const dglow = (col, x, y, r, a = 1) => { if (a <= 0.002) return; g.globalAlpha =
 
 // ── Feza ──
 const P = { x: 0, y: 0, vx: 0, vy: 0, f: 1, ground: true, coyote: 0, buf: 0, dj: true, run: 0, land: 0,
-  blink: 2, blinkT: 0, hairV: 0, hairY: 0, idle: 0, safeX: 0, safeY: 0, fade: 0, air: 0, jumpT: 0, lean: 0 };
+  blink: 2, blinkT: 0, hairV: 0, hairY: 0, idle: 0, safeX: 0, safeY: 0, fade: 0, air: 0, jumpT: 0, lean: 0,
+  ucus: null };   // ucus: Bölüm 3 uçuş kancası (ucus.js koyar; doluyken oyun.js normal fiziği atlar, ucus.adim(dt, girdi) çağırır)
 const PW = 11, PH = 60;
 
 // ── Pırıl ──
