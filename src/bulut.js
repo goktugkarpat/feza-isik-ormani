@@ -490,8 +490,9 @@ TUR.kaydet('gokkusagi', {
       g.globalCompositeOperation = 'source-over';
     }
     g.restore();
+    TUR.al('gokkusagi').ayakCiz(o, tm);
   },
-  cizOn(o, tm) {
+  ayakCiz(o, tm) {   // (ciz'in sonunda çağrılır: Feza'nın ARKASINDA kalsın)
     // yayın zeminden çıktığı ve zemine değdiği yerlerde yumuşak ışık bulutları (ayaklar bulutlara karışır)
     if (o.evre === BU_GK_EVRE.bekle) return;
     const tumu = o.bu[6], ilk = o.bu[0];
@@ -567,11 +568,14 @@ TUR.kaydet('ucurtma', {
   kur(o) { o.ip = o.ip || 220; o.ph = (o.x * 0.019) % 6.28; o.renk = (o.renk || 0) % BU_UC.length; },
   ciz(o, tm) {
     const c = BU_UC[o.renk], sw = Math.sin(tm * 0.7 + o.ph), kx = o.x + o.ip * 0.42 + sw * 16, ky = o.y - o.ip * 0.86 + Math.sin(tm * 1.1 + o.ph) * 10, rot = sw * 0.18 + 0.15;
-    // ip (sarkık)
-    g.strokeStyle = 'rgba(255,255,255,0.7)'; g.lineWidth = 1.2;
-    g.beginPath(); g.moveTo(o.x, o.y - 6); g.quadraticCurveTo((o.x + kx) / 2 + 20, (o.y + ky) / 2 + 30, kx, ky + 14); g.stroke();
-    // kazık: küçük bulut tutamı
-    dglow('#ffffff', o.x, o.y - 6, 14, 0.6);
+    // ip (sarkık): ince, gök tonunda, yarı saydam; alt ≈100 birimi yumuşakça söner (yere değmez, Feza'nın önünden geçiyor gibi okunmasın)
+    const ay = o.y - 34;   // bağ yeri: yolun arkasındaki küçük bulut tümseğinin tepesi (yürüme şeridinin üstünde, arkada)
+    if (!o.ipGr || o.ipY !== ay) { o.ipY = ay; o.ipGr = g.createLinearGradient(0, ay, 0, ay - 110); o.ipGr.addColorStop(0, 'rgba(176,128,186,0)'); o.ipGr.addColorStop(1, 'rgba(176,128,186,0.42)'); }
+    g.strokeStyle = o.ipGr; g.lineWidth = 0.9;
+    g.beginPath(); g.moveTo(o.x, ay); g.quadraticCurveTo((o.x + kx) / 2 + 20, (ay + ky) / 2 + 30, kx, ky + 14); g.stroke();
+    // bağ yeri: arkadaki küçük, soluk bulut tümseği
+    g.globalAlpha = 0.55; g.fillStyle = '#f6e6f4';
+    g.beginPath(); g.arc(o.x - 9, ay + 6, 9, 0, BU_PI2); g.arc(o.x + 4, ay + 2, 11, 0, BU_PI2); g.arc(o.x + 15, ay + 8, 7, 0, BU_PI2); g.fill(); g.globalAlpha = 1;
     // kuyruk: dalgalanan fiyonklar
     g.strokeStyle = c[2]; g.lineWidth = 1.4; g.beginPath();
     let px = kx, py = ky + 22;

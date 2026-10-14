@@ -581,3 +581,6 @@ Genel sonuç:
 6. [Bilgi, iyi] Bulut Kuşu geçidi, kuzucuk sürüsü (havada süzülerek eşlik ediyor, Feza'nın önünü kapatmıyor), nilüfer yolunu gösteren kamera bakışı (`QA/t2/b1_nilufer_y/`), Büyük Pofuduk uyanışı ve ağaç finali: sorun görülmedi. Feza Bölüm 3'te artık rahatça seçiliyor (koyu saç + kontur).
 7. [Bilgi] Pofuduk fener uçuşu (Bölüm 1 sabah finali) ve Feza'nın tepki animasyonları 1 sn aralıklı görüntülerle değerlendirilemedi; o an için ayrı, sık çekimli bir kayıt gerekiyor.
 8. [Bilgi] Performans (headless masaüstü; iPad'i temsil etmez): `OYUN.kareMs` p99 en çok 2,7-8,6 ms, en kötü kare 12 ms. Dağınık koşularda biraz daha yüksek; 8 tarayıcı aynı anda çalışıyordu.
+- (CORE, Tur 4) QA turu 2: (1) uçuş bittiyse (`ucusBitti` ya da kapı `bitti/done`) ve Feza koridorun ötesindeyse, `BOLUM.ucus.x0` gerisindeki kuzucuklar HEDEF değil; gökkuşağı hedefi de onları beklemez
+  (Pırıl Bölüm 3'te doğrudan `HEDEF()` kullanıyor; test: atlanan kuzucukla uçuş sonrası HEDEF = gokkusagi). (3) Dikey ekranda kontrol 0,4 sn'den uzun kilitliyken / final geçişinde
+  kamera Feza'yı yatayda en az ≈%22 içeride tutar (yumuşak geçiş; yatay ekran aynen). Bölüm 3 tam bot: 834×1194 sağ kenara en az 86 px, 768×1024 76 px (finalde 157-183 px), 1180×820 169 px; 7/7, 0 düşüş, konsol 0.

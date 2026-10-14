@@ -617,14 +617,14 @@ function omHedefMi(o) {
     case 'karanlik': return !o.dokundu;
     case 'pofuduk': return o.tur === 'yol' && !o.uyandi && o.y >= yuzey(Math.floor(o.x / T)) - 1;
     // Bölüm 3: renklenmemiş kuzucuk → (hepsi tamamsa) uçuş kapısı → gökkuşağı. Uçuş kapısının ötesindeki kuzucuk, uçuş bitmeden hedef olmaz.
-    case 'kuzu': { if (o.done) return false; const k = omKapi(); return !(k && !omKapiBitti(k) && o.x > k.x); }
+    case 'kuzu': { if (o.done || omKuzuGeride(o)) return false; const k = omKapi(); return !(k && !omKapiBitti(k) && o.x > k.x); }
     case 'ucusKapisi': return o === omKapi() && !omKapiBitti(o) && !NESNELER.some(n => n.tip === 'kuzu' && !n.done && n.x < o.x);
     case 'bulutKopru': {   // uçuş türü yoksa (ucus.js yüklenemedi) Büyük Boşluk'un yedek köprüsü: geçilmemiş en yakın basamak hedef
       if (!o.yedek) return false;
       if (P.x > o.x + 30) o.gecildi = true;
       return !o.gecildi && !NESNELER.some(n => n.tip === 'kuzu' && !n.done && n.x < o.x);
     }
-    case 'gokkusagi': { if (o.done || o.bitti || o.basladi) return false; const k = omKapi(); return !(k && !omKapiBitti(k)) && !NESNELER.some(n => n.tip === 'kuzu' && !n.done); }
+    case 'gokkusagi': { if (o.done || o.bitti || o.basladi) return false; const k = omKapi(); return !(k && !omKapiBitti(k)) && !NESNELER.some(n => n.tip === 'kuzu' && !n.done && !omKuzuGeride(n)); }
   }
   return false;
 }
@@ -633,6 +633,8 @@ function omKapi() {   // uçuş kapısı (türü gerçekten yüklüyse; yoksa ye
   if (omKapiO === undefined) { const u = TUR.al('ucusKapisi'); omKapiO = (u && (typeof u.guncelle === 'function' || typeof u.dokun === 'function')) ? NESNELER.find(n => n.tip === 'ucusKapisi') || null : null; }
   return omKapiO;
 }
+// Uçuş bittiyse uçuş koridorunun başlangıcının gerisinde kalan kuzucuk hedef değil (oraya dönülemez; kuzucuk kendisi yetişir / bulut.js uzaktan renklendirir)
+function omKuzuGeride(o) { const U = BOLUM.ucus, k = omKapi(); return !!(U && isFinite(U.x0) && o.x < U.x0 && (omUcusBitti || (k && (k.bitti || k.done))) && P.x > U.x0); }
 function omKapiBitti(k) { return omUcusBitti || !!(k && (k.bitti || k.done)); }
 function HEDEF() {
   if (omFinalPlan || P.ucus) return null;   // final yolda / uçuşta yol gösterme yok   // Bölüm 2: yıldız hayvanı uyandı, final yolda
@@ -944,11 +946,16 @@ function stepCam(dt, snap) {
     if (tyD > ty) { ty = lerp(ty, tyD, omC.dus); st = Math.min(st, lerp(st, 0.16, omC.dus)); }
   }
   if (omZ.agacW > 0 && TREE) ty = Math.min(ty, lerp(ty, Math.max(TREE.y - OM_AGAC_TAC - 40, omC.tabanY - VHg * 0.86), omZ.agacW));   // ağacın tacı görünsün
+  // Feza'nın yatay kenar payı: dikey ekranda kontrol uzun süre kilitliyken (gökkuşağından kayış, final geçişi) Feza kenara yapışmasın (en az ≈%22); yatay ekranda eskisi gibi
+  omC.kilitT = (P.kilit > 0 || omFinalPlan || DURUM === 'final') ? (omC.kilitT || 0) + (dt || 0) : 0;
+  const kenarH = (omC.kilitT > 0.4 ? 0.22 : 0.07);
+  const kenarHedef = lerp(0.06, kenarH, pfy);
+  omC.kenar = (snap || omC.kenar === undefined) ? kenarHedef : lerp(omC.kenar, kenarHedef, 1 - Math.exp(-(dt || 0) * 1.5));   // yumuşak (kamera sıçramasın)
   // dikkat çerçevesi: kutunun ortasına bak; kutu sığmadıysa özne öncelikli, ama Feza ekranda kalır
   const dw = omDk.w > 0 ? smooth(omDk.w) : 0;
   if (dw > 0) {
     let dx = omDk.cx - VW / 2, dy = omDk.cy - VHg / 2;
-    if (!omDk.fezaYok) { dx = clamp(dx, px - VW * 0.93, px - VW * 0.07); dy = clamp(dy, py - VHg * 0.9, py - 100 - VHg * 0.04); }
+    if (!omDk.fezaYok) { dx = clamp(dx, px - VW * (1 - omC.kenar), px - VW * omC.kenar); dy = clamp(dy, py - VHg * 0.9, py - 100 - VHg * 0.04); }
     tx = lerp(tx, clamp(dx, 0, maxX), dw); ty = lerp(ty, dy, dw); st = Math.max(st, lerp(st, 0.45, dw));
   }
   if (uw > 0) {   // uçuş: Feza ekranın sol üçte birinde (hız gecikmesi telafili, biraz ileri bakış), dikeyde koridor ortası + Feza'yı izleme
@@ -969,7 +976,7 @@ function stepCam(dt, snap) {
     omC.y = omSD(omC.y, ty, omC.vy, st, dt); omC.vy = omSdV;
     // Feza asla ekran kenarına çok yaklaşmasın (hızlı sekmelerde)
     if (!(dw > 0 && omDk.fezaYok)) {   // (finalde Feza ağaçtan uzaksa ağaç öncelikli)
-      const kp = lerp(0.18, 0.06, dw), kx0 = px - VW * (1 - kp), kx1 = px - VW * kp;
+      const kp = Math.max(lerp(0.18, 0.06, dw), omC.kenar), kx0 = px - VW * (1 - kp), kx1 = px - VW * kp;
       if (omC.x < kx0) omC.x = kx0; else if (omC.x > kx1) omC.x = kx1;
       const ky0 = py - VHg * 0.94, ky1 = py - VHg * 0.22;
       if (omC.y < ky0) omC.y = ky0; else if (omC.y > ky1) omC.y = ky1;
