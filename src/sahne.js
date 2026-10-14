@@ -264,7 +264,7 @@ function shOdaAdim(p, yak) {   // oda önbelleği, parça parça çizilebilen ad
     x.save(); x.beginPath(); x.arc(33, 21, 2.6, 0, 6.283); x.fillStyle = '#eef3ff'; x.fill(); x.clip();
     const cg = x.createLinearGradient(0, P0.ust, 0, P0.alt); cg.addColorStop(0, p.glassTop); cg.addColorStop(1, p.glassBot);
     x.fillStyle = cg; x.beginPath(); x.arc(34.4, 19.9, 2.25, 0, 6.283); x.fill(); x.restore();
-    // ufukta soluk ışık, uzak tepeler, ağaçlar arasında ateşböceği ışıkları
+    // ufukta soluk ışık, uzak tepeler, ağaçlar arasında minik ışık noktaları
     { const hg = x.createLinearGradient(0, P0.alt - 18, 0, P0.alt); hg.addColorStop(0, 'rgba(90,120,220,0)'); hg.addColorStop(1, 'rgba(110,140,235,0.4)'); x.fillStyle = hg; x.fillRect(P0.x0, P0.alt - 18, 30, 18);
       x.fillStyle = '#162b60'; x.beginPath(); x.moveTo(P0.x0 - 1, P0.alt); for (let i = 0; i <= 12; i++) x.lineTo(P0.x0 - 1 + i * 2.4, P0.alt - 6 - 3.2 * Math.sin(i * 0.9 + 1) - 2 * Math.sin(i * 2.1)); x.lineTo(P0.x1 + 1, P0.alt); x.fill(); }
     // pencerenin dışında uzak ağaç siluetleri
@@ -323,7 +323,7 @@ function shOdaAdim(p, yak) {   // oda önbelleği, parça parça çizilebilen ad
   x.fillStyle = '#ffd34d'; shYildiz5(x, fx0 + 11.6, fy0 + 2.4, 1.5); x.fill();
   x.strokeStyle = '#ff8fb8'; x.lineWidth = 0.35; x.beginPath(); x.moveTo(fx0 + 1.4, fy0 + 2); x.quadraticCurveTo(fx0 + 2.6, fy0 + 0.8, fx0 + 3.4, fy0 + 2.2); x.stroke();
   x.globalAlpha = 1; x.restore();
-  // duvar rafı: kitaplar, peluş ayıcık, ateşböceği kavanozu
+  // duvar rafı: kitaplar, peluş ayıcık, ışık kavanozu
   { const gece = p.sky === 'gece', sx0 = -53, sx1 = -27, sy = 38;
     x.fillStyle = p.standD; x.beginPath(); x.moveTo(sx0 + 3, sy + 1); x.lineTo(sx0 + 3, sy + 4); x.lineTo(sx0 + 6, sy + 1); x.moveTo(sx1 - 3, sy + 1); x.lineTo(sx1 - 3, sy + 4); x.lineTo(sx1 - 6, sy + 1); x.fill();
     const kt = gece ? ['#4a5fa8', '#7a4f9a', '#3f8a8a', '#a8607a'] : ['#6aa6e8', '#f08ab0', '#7cc9a8', '#ffc86a'];
@@ -1493,7 +1493,7 @@ function shGirisCiz(tm, dt) {
   shOnPlan(shEase(shSeg(m, 0.45, 1)));
   // Zzz
   shZzz(t, tm, P);
-  // ateş böcekleri gibi süzülen ışık zerreleri (erirken çoğalır)
+  // süzülen ışık zerreleri (erirken çoğalır)
   if (B3) { shZerreler(tm, (0.25 + 0.75 * halka) * (1 - halka), true); shZerreler(tm, (0.25 + 0.75 * halka) * halka, 'bulut'); }
   else shZerreler(tm, 0.25 + 0.75 * halka, true);
   // ışık patlaması: Pırıl, Feza'yı uyandırırken
@@ -2167,7 +2167,7 @@ function shPencerePembe(a, tm) {
 }
 
 // ══════════════════ SEÇİM EKRANI (başlık ekranı = yatak başı; rüya baloncukları) ══════════════════
-// Her baloncuk: önbellekte DURAĞAN iç resim (shBalonIc) + her karede çizilen CANLI katman (shIkonCanli: ateşböcekleri,
+// Her baloncuk: önbellekte DURAĞAN iç resim (shBalonIc) + her karede çizilen CANLI katman (shIkonCanli: ışık küreleri,
 // yıldız ışıltısı, kayan bulutlar, kuzucuk) + önbellekte cam kabuk (shBalonCam). Baloncuklar Pırıl'dan doğar, nefes alır,
 // süzülür; dokununca jöle gibi esner, sonra büyüyüp ekranı doldurarak rüyaya akar.
 const SH_BALON_RENK = { orman: '#ffe6a8', gol: '#a8b8ff', bulut: '#ffc8e0', deniz: '#9fe6ff', dag: '#ffd9a0' };
@@ -2305,7 +2305,7 @@ function shIkonCanli(ad, ox, oy, q, tm, a, i0) {
     const nb = 0.5 + 0.5 * Math.sin(tm * 1.3 + i0);
     let [px, py] = U(0.56, 0.3); dglow('#ffe9a0', px, py, q * (0.3 + 0.04 * nb), a * (0.22 + 0.16 * nb));   // ağaç tacı nefes alır
     [px, py] = U(0.24, 0.76); dglow('#ff9ad6', px, py, q * (0.14 + 0.03 * nb), a * (0.35 + 0.25 * nb));     // çiçek
-    for (let k = 0; k < 11; k++) {   // ateşböcekleri: yavaş, kıvrımlı yollar
+    for (let k = 0; k < 11; k++) {   // süzülen ışık küreleri: yavaş, kıvrımlı yollar
       const s = k * 1.37 + i0, u = 0.12 + 0.76 * (0.5 + 0.5 * Math.sin(tm * (0.13 + (k % 4) * 0.03) + s)), v = 0.44 + 0.36 * (0.5 + 0.5 * Math.sin(tm * (0.19 + (k % 3) * 0.04) + s * 2.1));
       const tw = 0.5 + 0.5 * Math.sin(tm * (2.2 + (k % 3) * 0.7) + s * 3);
       [px, py] = U(u, v); dglow(k % 3 ? '#d8ffb0' : '#b0fff0', px, py, q * 0.035 * (0.7 + tw * 0.6), a * (0.25 + 0.6 * tw));
@@ -2510,7 +2510,7 @@ function shPencereCanli(tm, a) {
   }
   g.globalCompositeOperation = 'source-over';
 }
-// seçim odasının canlı ışık oyunu: ay huzmesinde süzülen toz, lambanın sıcak zerreleri, pencere önünde ateş böcekleri (ayırma yok, her kare ucuz)
+// seçim odasının canlı ışık oyunu: ay huzmesinde süzülen toz, lambanın sıcak zerreleri, pencere önünde ışık küreleri (ayırma yok, her kare ucuz)
 function shSecimIsik(tm) {
   g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'lighter';
   const k = sh.k0;
@@ -2524,10 +2524,10 @@ function shSecimIsik(tm) {
     const u = (i * 0.29 + tm * 0.045) % 1, x = SH_LAMBA.x + Math.sin(tm * 0.8 + i * 2.3) * (1 + u * 3), y = SH_LAMBA.y - 1 - u * 13;
     dglow('#ffd9a0', shPX(x), shPY(y), k * (0.45 + 0.5 * (1 - u)), Math.sin(u * Math.PI) * 0.5);
   }
-  for (let i = 0; i < 6; i++) {   // pencerenin dışında ateş böcekleri (yavaş sekiz çizerler, nabız gibi yanıp söner)
+  for (let i = 0; i < 6; i++) {   // pencerenin dışında süzülen ışık küreleri (böcek değil: yumuşak, soluk renkli; yavaş sekiz çizerler, nabız gibi yanıp söner)
     const x = 22 + (i % 3) * 6.5 + Math.sin(tm * 0.31 + i * 2.2) * 2.4, y = 40 + (i % 2) * 4 + Math.sin(tm * 0.47 + i * 1.3) * 1.8;
     const pu = Math.pow(0.5 + 0.5 * Math.sin(tm * 0.9 + i * 1.9), 2);
-    dglow('#ffe98a', shPX(x), shPY(y), k * (0.9 + 0.9 * pu), 0.2 + 0.5 * pu);
+    dglow(i % 2 ? '#e6dcff' : '#d4ecff', shPX(x), shPY(y), k * (0.9 + 0.9 * pu), 0.2 + 0.5 * pu);
   }
   g.globalCompositeOperation = 'source-over';
 }

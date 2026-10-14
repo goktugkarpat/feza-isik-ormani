@@ -1,3 +1,4 @@
 .ses_onbellek/
 __pycache__/
 .DS_Store
+.claude/
