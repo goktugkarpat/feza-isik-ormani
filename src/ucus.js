@@ -13,7 +13,7 @@
 const UC_OLC = 2.2;                    // uçarken Pırıl'ın büyüklüğü (normal = 1)
 const UC_KOLTUK = { x: -1, y: -9 };    // binek pozunda Feza'nın oturduğu yer, Pırıl'ın gövde ortasına göre (olcek 1 birimi; çizimde pirilBinekKoltuk)
 const UC_KUYRUK = { x: -40, y: 1 };    // kuyruk ucu (ışık izi buradan çıkar)
-const UC_SURE = 34;                    // hedef uçuş süresi (sn), hız koridor uzunluğundan çıkar
+const UC_SURE = 38;                    // hedef uçuş süresi (sn), hız koridor uzunluğundan çıkar
 const UC_KANAT_HZ = 1.15;              // büyük Pırıl'ın kanat çırpma sıklığı
 const UC_RENK = ['#ff8fa8', '#ffb877', '#ffe17a', '#9be89a', '#8cc8ff', '#9aa6ff', '#d4a2ff'];   // gökkuşağı (pastel)
 const UC_IZ_N = 90;

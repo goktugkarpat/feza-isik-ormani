@@ -1225,7 +1225,7 @@ function shGirisGuncelle(dt) {
   else if (sh.atla < 0) { ses('a_giris1', P.s1); ses('a_giris2', P.s2); ses('a_giris3', P.s3); }
   if (!sh.kisa) ses('p_uyan', P.uyan);
   if (sh.atla < 0) {   // yatak odası sesleri (akşam)
-    shBir('yatagaGir', P.land, 'yatagaGir'); shBir('yastik', P.walk + 2.2 / P.gir, 'yastik');
+    shBir('yatagaGir', P.yat1 - 2.5 / P.gir, 'yatagaGir'); shBir('yastik', P.yat1 - 2.2 / P.gir, 'yastik');
     shBir('lambaKis', P.uyudu - 0.5, 'lambaKis'); shBir('uykuNefes', P.uyudu + 0.3, 'uykuNefes');
     if (t > P.uyudu + 4.5 && t < P.b3 - 1 && Math.floor((t - P.uyudu) / 4.5) !== sh.nefesN) { sh.nefesN = Math.floor((t - P.uyudu) / 4.5); shSfx('uykuNefes', 0); }
   }
@@ -1273,12 +1273,11 @@ function shGirisEnt(t, P) {
   if (!P.yat1 || sh.atla >= 0 || t >= P.yat1) return null;
   const u = 1.18 * 1.4 * S / sh.k0, gx = 8, gy = 11, sx = SH_FEZA.x + gx * u, sy = SH_FEZA.y + gy * u;   // 'yatagaGir' pozunun ayakta başlangıç noktası (oda birimi)
   const E = { gx, gy, poz: 'ayakta', x: sx, y: sy, tm: 0 };
-  if (t < P.walk) {
-    const xs = Math.min(sh.wu / 2 - (sh.oxp || 0) / sh.k0 + 8, 40), w = shSeg(t, P.yat0, P.walk);
-    E.x = lerp(xs, sx, shEase(w)); E.y = lerp(73, sy, shEase(w)) - Math.abs(Math.sin(t * 9)) * 0.9 * (w > 0 && w < 1 ? 1 : 0);
-    E.standA = shSeg(t, P.yat0, P.yat0 + 0.3);
-  } else { E.poz = 'yatagaGir'; E.tm = (t - P.walk) * P.gir; E.standA = 1; }
-  E.bump = E.poz === 'yatagaGir' ? Math.sin(clamp((E.tm - 1.0) / 1.2, 0, 1) * Math.PI) + 0.6 * Math.sin(clamp((E.tm - 2.2) / 1.0, 0, 1) * Math.PI) : 0;
+  // Feza yatakta başlar (ayakla yatağa uçar gibi görünen yürüyüş kaldırıldı): oturmuş, Pırıl kolunda; sonra yavaşça uzanır.
+  const tmSon = 4.4, tmOtur = 1.9, tmSure = (tmSon - tmOtur) / P.gir;
+  E.poz = 'yatagaGir'; E.standA = 1;
+  E.tm = t < P.yat1 - tmSure ? tmOtur + 0.08 * (0.5 + 0.5 * Math.sin(t * 1.3)) : tmSon - (P.yat1 - t) * P.gir;
+  E.bump = 0;   // sıçrama yok
   return E;
 }
 function shNefes(t, P, tm) {

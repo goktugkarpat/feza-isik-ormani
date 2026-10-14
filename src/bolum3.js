@@ -10,7 +10,8 @@
    5 Büyük Boşluk (318–453: kapı 326 + Pırıl'ın sırtında uçuş) → 6 Gökkuşağı Tepesi (454–523: 7. kuzucuk, tepe, gökkuşağı kaydırağı).
    Platform türlerimde (bulutZip, bulutYuzen, bulutKopru) nesnenin y'si ÜST YÜZEYDİR (kur() alt kenara çevirir); esinti için y = sütunun dibi. */
 'use strict';
-const ROWS = 30, COLS = 524;
+const BL3_E = 96;   // uçuş koridoru uzatması (sütun): uçuş biraz uzun ve hızlı sürer; Gökkuşağı Tepesi ve sonrası bu kadar sağa kayar
+const ROWS = 30, COLS = 524 + BL3_E;
 const BL3_EKSTRA = 8;   // yüzeyin altında 8 kare daha bulut (kamera alt sınırı ROWS'a bağlı)
 const grid = Array.from({ length: ROWS }, () => new Uint8Array(COLS));
 const ground = (a, b, h) => { for (let x = a; x <= b; x++) for (let y = ROWS - h - BL3_EKSTRA; y < ROWS; y++) grid[y][x] = 1; };
@@ -25,7 +26,7 @@ const bl3Sat = row => row * T;   // ince bulutun (ızgara 2) üst y'si
 
 // Bölüm sütunları: ilk taslak (458 sütun) bölgelerine yeni anlar eklendi; bl3K(c) eski sütunu yeni yerine taşır.
 //   Eklenen aralıklar: 57–92 "Gökyüzü Merdiveni" · 176–189 "Uykucu Bulut Kuşu" geçidi · 269–284 "Tüy Köprüsü".
-const bl3K = c => c + (c >= 219 ? 66 : c >= 140 ? 50 : c >= 57 ? 36 : 0);
+const bl3K = c => c + (c >= 388 ? 66 + BL3_E : c >= 219 ? 66 : c >= 140 ? 50 : c >= 57 ? 36 : 0);
 const bl3Z = (a, b, h) => ground(bl3K(a), bl3K(b), h);
 const bl3Blok = (a, b, r0, r1) => { for (let x = a; x <= b; x++) for (let y = r0; y <= r1; y++) grid[y][x] = 1; };   // havada duran bulut kütlesi (mağara tavanı)
 
@@ -50,7 +51,7 @@ ground(269, 272, 4);
 for (const [a, b, h] of [[219, 235, 4], [236, 239, 5], [240, 264, 4]]) bl3Z(a, b, h);
 // 6. Gökkuşağı Tepesi (454–523): iniş çayırı, basamaklar, tepe (h=9, 487–499), kaydırak inişi
 for (const [a, b, h] of [[388, 402, 4], [403, 407, 5], [408, 412, 6], [413, 416, 7], [417, 420, 8], [421, 433, 9], [434, 437, 7], [438, 441, 5], [442, 457, 4]]) bl3Z(a, b, h);
-ground(454, 454, 10);   // iniş çayırının sol ucunda kabarık bulut sütunu (6 kare, çift zıplamayla da aşılmaz): uçuştan sonra geri yürüyen Feza Büyük Boşluk'a düşmesin
+ground(454 + BL3_E, 454 + BL3_E, 10);   // iniş çayırının sol ucunda kabarık bulut sütunu (6 kare, çift zıplamayla da aşılmaz): uçuştan sonra geri yürüyen Feza Büyük Boşluk'a düşmesin
 // ── İnce bulutlar (üstten geçilir) — isteğe bağlı sürpriz yerleri ──
 for (const [a, b, r] of [[42, 47, 12], [126, 129, 15], [132, 136, 13], [229, 232, 15]]) plat(bl3K(a), bl3K(b), r);
 for (const [a, b, r] of [[62, 66, 14], [68, 72, 11], [74, 80, 8], [83, 87, 12]]) plat(a, b, r);   // Gökyüzü Merdiveni basamakları (560 → 440 → 320, iniş 480)
@@ -69,8 +70,8 @@ const BOLUM = {
     { ad: 'ruzgar', x0: 190 * T, x1: 285 * T },
     { ad: 'sekil', x0: 285 * T, x1: 318 * T },
     { ad: 'bosluk', x0: 318 * T, x1: 331 * T },
-    { ad: 'ucus', x0: 331 * T, x1: 454 * T },
-    { ad: 'tepe', x0: 454 * T, x1: COLS * T },
+    { ad: 'ucus', x0: 331 * T, x1: (454 + BL3_E) * T },
+    { ad: 'tepe', x0: (454 + BL3_E) * T, x1: COLS * T },
   ],
   gol: null,
   gollar: [],
@@ -86,7 +87,7 @@ const BOLUM = {
     { x0: 236 * T, x1: 254 * T, zoom: 0.86, yOfs: -60 },          // esinti 2 + bulut adası
     { x0: 268 * T, x1: 286 * T, zoom: 0.84, yOfs: 0 },            // tüy köprüsü
     { x0: 320 * T, x1: 332 * T, zoom: 0.86, yOfs: -40 },          // Büyük Boşluk'un kıyısı: geniş gökyüzü
-    { x0: 466 * T, x1: COLS * T, zoom: 0.8, yOfs: -60 },          // tepe + gökkuşağı
+    { x0: (466 + BL3_E) * T, x1: COLS * T, zoom: 0.8, yOfs: -60 },          // tepe + gökkuşağı
   ],
 };
 P.x = P.safeX = BOLUM.baslangic.x; P.y = P.safeY = BOLUM.baslangic.y;
@@ -168,7 +169,7 @@ bl3X(nx(bl3K(405)), 'bulutZip', bl3H(5) - 18, { w: 96, guc: 980 });             
 nesne('gokkusagi', BL3_TEPE.c, BL3_TEPE.y, { x: BL3_YAY.cx, cx: BL3_YAY.cx, cy: BL3_YAY.cy, R: BL3_YAY.R, bant: BL3_YAY.bant, tepeX0: nx(bl3K(421)) - 20, tepeX1: nx(bl3K(433)) + 20 });
 
 // ── Süsler (yalnız güzellik; sayaçlara girmez) ──
-for (const [c, y, n] of [[30, 260, 5], [78, 120, 6], [154, 200, 7], [255, 150, 6], [366, 180, 8], [426, 240, 5], [481, 150, 6]]) nesne('kusSuru', c, y, { n });
-for (const c of [10, 33, 88, 124, 156, 211, 266, 278, 296, 336, 396, 461, 512]) nesne('tuy', c, yuzey(Math.min(c, COLS - 1)) - 120 - (c * 13) % 90, {});
+for (const [c, y, n] of [[30, 260, 5], [78, 120, 6], [154, 200, 7], [255, 150, 6], [366, 180, 8], [426, 240, 5], [481 + BL3_E, 150, 6]]) nesne('kusSuru', c, y, { n });
+for (const c of [10, 33, 88, 124, 156, 211, 266, 278, 296, 336, 396, 461 + BL3_E, 512 + BL3_E]) nesne('tuy', c, yuzey(Math.min(c, COLS - 1)) - 120 - (c * 13) % 90, {});
 const FLOWERS = [];
 const TREE = null;

@@ -90,12 +90,12 @@ function sklPoz(ad, t, a, out) {
     out.yx = 0.74; out.yy = -0.36; out.ys = 0.78; out.yon = 1; out.mutlu = a > 0 && t > 1.1 && t < 3.9 ? 1 : 0;
     rot = ga * Math.sin(t * 2.4) * 0.03; dy = -ga * 0.04 * Math.abs(Math.sin(t * 2.4));
   } else if (ad === 'kus') {
-    const cir = Math.sin(t * 9), kn = -1.95 + ga * 0.6 * cir;
-    sklC(0.0, 0.12, 0.55); sklC(-0.4, 0.18, 0.42); sklC(0.32, 0.2, 0.4); sklC(0.55, -0.3, 0.38); sklC(0.1, -0.12, 0.38);
-    sklC(-1.0, -0.02, 0.2); sklC(-1.12, 0.15, 0.18); sklC(-1.0, 0.31, 0.16);
-    sklZincir(-0.12, -0.3, kn, -0.75 + ga * 0.35 * cir, 4, 0.92, 0.27, 0.15);
+    const cir = Math.sin(t * 9), kn = -2.85 + ga * 0.75 * cir;   // kanat: sırtta yatık (tüy gibi uzun kuyruk/boyun değil); çırparken yukarı kalkar
+    sklC(0.0, 0.2, 0.56); sklC(-0.36, 0.26, 0.4); sklC(0.3, 0.28, 0.38); sklC(0.4, -0.42, 0.34); sklC(0.2, -0.16, 0.3);   // yuvarlak gövde + daha küçük, yüksek ve net kafa
+    sklC(-0.88, 0.02, 0.22); sklC(-1.04, -0.16, 0.17); sklC(-1.06, 0.2, 0.17);   // kısa, kabarık kuyruk tutamı (yelpaze)
+    sklZincir(0.0, -0.02, kn, -0.2 + ga * 0.3 * cir, 4, 0.44, 0.26, 0.15);   // kanat: dinlenirken gövdenin içinde yatar, çırparken yukarı kalkar
     sklC(0.05, 0.72, 0.1); sklC(0.25, 0.72, 0.1);
-    out.yx = 0.6; out.yy = -0.36; out.ys = 0.74; out.yon = 1; out.mutlu = a > 0 && t > 0.6 && Math.sin(t * 1.7) > 0.2 ? 1 : 0;
+    out.yx = 0.48; out.yy = -0.44; out.ys = 0.7; out.yon = 1; out.mutlu = a > 0 && t > 0.6 && Math.sin(t * 1.7) > 0.2 ? 1 : 0;
     dy = -ga * (0.12 + 0.1 * Math.sin(t * 2.2)); rot = ga * 0.06 * Math.sin(t * 2.2);
   } else if (ad === 'ayicik') {
     const sall = ga * smooth(clamp(t / 0.6, 0, 1));
@@ -616,7 +616,10 @@ function sklDetay(a, ad) {
   } else if (ad === 'fil') {
     sklDaire(a[5], 0.55, 0.12, 0.08, 'rgba(255,170,200,0.13)');   // kulak içi
     g.strokeStyle = 'rgba(255,255,255,0.85)'; g.lineWidth = 0.03; for (const i of [11, 12, 13]) { const q = a[i]; if (!q) continue; g.beginPath(); g.arc(q.x, q.y + q.r * 0.2, q.r * 0.6, 0.5, Math.PI - 0.5); g.stroke(); }   // tırnaklar
-  } else if (ad === 'kus') { sklDaire(a[12], 0.8, 0, 0, 'rgba(255,180,100,0.55)'); sklDaire(a[13], 0.8, 0, 0, 'rgba(255,180,100,0.55)'); }
+  } else if (ad === 'kus') { { const w0 = a[8], w1 = a[11]; if (w0 && w1 && w0.r > 0.02) { const ang = Math.atan2(w1.y - w0.y, w1.x - w0.x), ln = Math.hypot(w1.x - w0.x, w1.y - w0.y) + w0.r * 0.9;
+      g.save(); g.translate((w0.x + w1.x) / 2, (w0.y + w1.y) / 2); g.rotate(ang); g.fillStyle = 'rgba(255,205,150,0.6)'; g.strokeStyle = 'rgba(232,160,100,0.7)'; g.lineWidth = 0.025;
+      g.beginPath(); g.ellipse(0, 0, ln * 0.62, w0.r * 0.62, 0, 0, 6.283); g.fill(); g.stroke(); g.restore(); } }   // tek parça kanat
+    sklDaire(a[12], 0.8, 0, 0, 'rgba(255,180,100,0.55)'); sklDaire(a[13], 0.8, 0, 0, 'rgba(255,180,100,0.55)'); }   // kanat içi ve ayaklar turuncu
   else if (ad === 'balina') {   // karın çizgileri
     g.strokeStyle = 'rgba(150,140,210,0.3)'; g.lineWidth = 0.025;
     for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(0.05 + i * 0.08, 0.5 + i * 0.07); g.quadraticCurveTo(0.45, 0.62 + i * 0.05, 0.8, 0.42 + i * 0.03); g.stroke(); }
