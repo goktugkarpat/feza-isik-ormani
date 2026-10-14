@@ -1452,6 +1452,15 @@ const AU = (() => {
     },
     denizati(t) { arp(74, t, 0.026, -0.15, 1.4, sfxG); arp(79, t + 0.16, 0.022, 0.15, 1.5, sfxG); },
     ahtapotKol(t) { gur(t, 0.22, 'lowpass', 650, 330, 0.7, 0.012, 0.02, 0, 0.5); arp(69, t + 0.04, 0.028, 0, 1.3, sfxG); },
+    kabukYer(t, v) {
+      const idx = typeof v === 'number' ? v : (v && v.i) || 0;
+      const notes = [[74, 78], [78, 83], [81, 86, 93]][idx % 3] || [74, 78];
+      notes.forEach((n, k) => {
+        arp(n, t + k * 0.1, 0.026, ((idx % 3) - 1) * 0.18, 2.0, sfxG);
+        cam(NOTE(n + 12), t + 0.02 + k * 0.1, 0.022, 1.6, 0, sfxG, false);
+      });
+      gur(t, 0.18, 'lowpass', 520, 260, 0.8, 0.01, 0.02, 0, 0.4);
+    },
     inciUyan(t) { [62, 67, 71, 74].forEach((n, i) => arp(n, t + i * 0.22, 0.03, (i - 1.5) * 0.12, 2.7, sfxG)); },
     inciDostlar(t) { [74,78,81,86].forEach((n,i)=>{arp(n,t+i*.17,.025,(i-1.5)*.15,2.4,sfxG);flut(n-12,t+i*.17,.55,.015,(1.5-i)*.1,sfxG);}); },
     inciDalga(t) { [67,71,74,78,81,86].forEach((n,i)=>arp(n,t+i*.16,.027-i*.002,(i-2.5)*.12,3.1,sfxG));kabar([55,62,67,71],t+.2,.7,1.2,2,.024,sfxG,false); },
@@ -1975,7 +1984,7 @@ const AU = (() => {
     yildizTas: 'yildizTasi', yildizTasBelir: 'yildizTasBelir', hayvanFirlat: 'hayvanZipla', hayvanUyandi: 'hayvanUyandi', yildizUyan: 'yildizUyan', yildizYuksel: 'yildizYuksel', yildizYerles: 'yildizYerles', yildizTasi: 'yildizTasi', hayvanAsama: 'hayvanAsama', hayvanUyan: 'hayvanUyan', balikSic: 'balikSic', yatagaGir: 'yatagaGir', yastik: 'yastik', lambaKis: 'lambaKis', uykuNefes: 'uykuNefes', sabahKus: 'sabahKus', gerinme: 'gerinme', fezaEsne: 'fezaEsne', gozKirp: 'gozKirp', secim: 'secim', ruyayaGec: 'ruyayaGec', yildizRozet: 'yildizRozet', bolum2Basla: 'bolum2Basla', hayvanBurun: 'hayvanBurun', hayvanEsne: 'hayvanEsne', hayvanNokta: 'hayvanNokta', hayvanComel: 'hayvanComel', takimNota: 'takimNota', takimBitti: 'takimBitti', takimYanlis: 'takimYanlis', takimBelir: 'takimBelir', bolumGecis: 'bolumGecis', hayvanZipla: 'hayvanZipla',
     sarki: 'sarki', sarkiOlmadi: 'sarkiOlmadi', sarkiBitti: 'sarkiBitti', sarkiZafer: 'sarkiZafer', fener: 'fener', yildizIz: 'yildizIz', bumf: 'bumf', sarsinti: 'bumf',
     bulutZip: 'bulutZip', esinti: 'esinti', gokkusagiParca: 'gokkusagiParca', gokkusagiBasla: 'gokkusagiBasla', gokkusagiTamam: 'gokkusagiTamam', kayma: 'kayma', kuzuRenk: 'kuzuRenk', kuzuMee: 'kuzuMee',
-    ucusBasla: 'ucusBasla', pirilBuyu: 'pirilBuyu', isiltiTopla: 'isiltiTopla', isilti: 'isiltiTopla', ucusIn: 'ucusIn', bulutDus: 'bulutDus', kuslar: 'kuslar', bolum3Basla: 'bolum3Basla', kemer: 'kemer', ucusKemer: 'kemer', isiltiTamam: 'isiltiTamam', sekilOv: 'sekilOv', sekilCanlan: 'sekilCanlan', sekilBitti: 'sekilBitti', denizHamle: 'denizHamle', denizati: 'denizati', ahtapotKol: 'ahtapotKol', ahtapotTamam: 'inciUyan', vatozBasla: 'denizHamle', vatozBitti: 'denizati', inciUyan: 'inciUyan', inciDostlar: 'inciDostlar', inciDalga: 'inciDalga', inciDoruk: 'inciDoruk', inci: 'denizati', denizZafer: 'denizZafer' };
+    ucusBasla: 'ucusBasla', pirilBuyu: 'pirilBuyu', isiltiTopla: 'isiltiTopla', isilti: 'isiltiTopla', ucusIn: 'ucusIn', bulutDus: 'bulutDus', kuslar: 'kuslar', bolum3Basla: 'bolum3Basla', kemer: 'kemer', ucusKemer: 'kemer', isiltiTamam: 'isiltiTamam', sekilOv: 'sekilOv', sekilCanlan: 'sekilCanlan', sekilBitti: 'sekilBitti', denizHamle: 'denizHamle', denizati: 'denizati', ahtapotKol: 'ahtapotKol', kabukYer: 'kabukYer', ahtapotTamam: 'inciUyan', vatozBasla: 'denizHamle', vatozBitti: 'denizati', inciUyan: 'inciUyan', inciDostlar: 'inciDostlar', inciDalga: 'inciDalga', inciDoruk: 'inciDoruk', inci: 'denizati', denizZafer: 'denizZafer' };
   const ESKI = { jump: 1, dbl: 1, bloom: 1, land: 1, splash: 1 };   // olaylar da tetikler → çift çalmasın
   const sonCal = {};
   let sonOlay = -1;

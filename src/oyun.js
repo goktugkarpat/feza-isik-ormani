@@ -483,6 +483,10 @@ function omDenizAdim(dt) {
   P.vx = lerp(P.vx, locked ? 0 : dx * speed * force, t);
   P.vy = lerp(P.vy, locked ? 0 : dy * speed * force, t);
   if (Math.abs(P.vx) > 12) P.f = Math.sign(P.vx);
+  const vspd = Math.hypot(P.vx, P.vy);
+  if (!locked && vspd > 45 && Math.random() < dt * (P.denizHamle > 0 ? 14 : 7) && typeof parts !== 'undefined') {
+    parts.push({ x: P.x - (P.f || 1) * 8 + (Math.random() - .5) * 8, y: P.y - 20 - Math.random() * 12, vx: -P.vx * .12 + (Math.random() - .5) * 10, vy: -16 - Math.random() * 18, life: .55 + Math.random() * .35, max: .9, col: '#dcfaf5', size: 2.2 + Math.random() * 1.6 });
+  }
   let nx = clamp(P.x + P.vx * dt, 24, COLS * T - 40), ny = clamp(P.y + P.vy * dt, sea.yUst + PH, sea.yAlt);
   const limit = typeof DENIZ !== 'undefined' && typeof DENIZ.gecitX === 'function' ? DENIZ.gecitX() : null;
   if (Number.isFinite(limit) && nx > limit) { nx = Math.max(P.x, limit); P.vx = 0; }
