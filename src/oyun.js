@@ -113,11 +113,11 @@ addEventListener('pagehide', omDuraklat); addEventListener('pageshow', omDurakla
 // Ses kilidi: iPad'de dokunuşla ses açma "pointerdown"da değil parmak kalkınca (touchend/pointerup) geçerli sayılır.
 // İlk dokunuşta begin() AU.start()'ı çağırır; parmak kalkınca da bir kez daha çağrılır (AU.start tekrar çağrılınca bir şey yapmaz,
 // muzik.js kendi touchend dinleyicisiyle bağlamı sürdürür).
-function omSesAc() { if (started && typeof AU !== 'undefined' && AU && typeof AU.start === 'function') { try { AU.start(); } catch (e) { omHataBildir('AU.start', e); } } }
+function omSesAc() { if ((started || DURUM === 'baslik') && typeof AU !== 'undefined' && AU && typeof AU.start === 'function') { try { AU.start(); } catch (e) { omHataBildir('AU.start', e); } } }
 cv.addEventListener('pointerup', omSesAc); cv.addEventListener('touchend', omSesAc, { passive: true });
 addEventListener('keydown', e => {
   if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault();
-  if (DURUM === 'baslik') { if (!omSecimAktif) begin(); return; }
+  if (DURUM === 'baslik') { if (!omSecimAktif) begin(); else omSesAc(); return; }
   if (DURUM !== 'oyun') { if (!e.repeat) OLAY.emit('dokunus', {}); return; }
   if (omAcilis) omAcilis.dokundu = true;
   if (!keys[e.code] && (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW')) jumpPressed = true;
