@@ -93,6 +93,8 @@ const AU = (() => {
     BB: A(47, [50, 54, 57, 59, 64], [11, 2, 4, 6, 9]),           // Bm11
     BS: A(45, [50, 52, 57, 59, 64], [9, 11, 2, 4, 6]),           // Asus
   };
+  // Başlık / rüya seçimi "Rüya Beşiği": 37 ölçü (3/4, 2.4 sn) ≈ 89 sn. Giriş 4 · A1 8 (ana tema) · B 9 (Pırıl'ın teması) · köprü 4 · A2 8 · son 4
+  const BSL_AK = ('D D GD A  D GD D A Bm G A D  D Bm G A D Bm G A D  Bm9 Em9 Fsm7 Asus  D GD D A Bm Em A D  D GD A D').split(/\s+/);
   // cb: akor başına ölçü sayısı
   const PROG = {
     patika: { cb: 4, ak: ['D9', 'Bm9', 'G7', 'Asus'] },
@@ -110,6 +112,7 @@ const AU = (() => {
     // Bölüm 3: 8 akor × 2 ölçü (38 sn) · uçuş: akor her ölçüde (19 sn), daha hızlı ve yukarı bakan
     bulut: { cb: 2, ak: ['BG', 'BA', 'BE', 'BD', 'BG', 'BA', 'BB', 'BS'] },
     ucus: { cb: 1, ak: ['BG', 'BA', 'BE', 'BD', 'BG', 'BA', 'BD', 'BS'] },
+    baslik: { cb: 1, ak: BSL_AK },
     ninni: { cb: 1, ak: null },   // akorlar çalınan parçanın ölçülerinden gelir (PARCA.ana / PARCA.piril)
   };
 
@@ -133,6 +136,21 @@ const AU = (() => {
   };
   // Pırıl motifinin baş kısmı (alıntılar: ışık nefesi, kurtarma, göz kırpma)
   const PIRIL_BAS = [[0, 81, 2], [2, 90, 3], [5, 88, 1], [6, 86, 3]];
+  // Başlık teması: bölümler ve köprü/giriş/son ezgileri (ana ve Pırıl temaları PARCA'dan gelir)
+  const BSL_PLAN = []; for (const [ad, n] of [['giris', 4], ['A1', 8], ['B', 9], ['kopru', 4], ['A2', 8], ['son', 4]]) for (let k = 0; k < n; k++) BSL_PLAN.push([ad, k, n]);
+  const BSL_MEL = {   // giriş: Pırıl'ın sıçrayışı (çelesta) + inen pes ezgisi · köprü: cam çan · son: Feza'nın üç–iki–biri sönerek
+    giris: yaz('r:6 | r:6 | A5:2 F#6:3 E6:1 | D6:3 C#6:1 B5:2'),
+    kopru: yaz('A5:2 F#6:4 | E6:3 D6:1 B5:2 | F#6:3 E6:1 C#6:2 | B5:2 D6:2 E6:2'),
+    son: yaz('F#6:3 E6:1 D6:2 | D6:2 B5:2 G5:2 | C#6:3 B5:1 A5:2 | D6:6'),
+  };
+  const BSL_MIX = {   // katman düzeyleri (karisimGuncelle bunları KARISIM.baslik ile çarpar; ölçü ölçü yumuşakça geçer)
+    giris: { pad: 0.8, zil: 0.8, tus: 0.5, arp: 0.6, tel: 0, koro: 0, bas: 0.5 },
+    A1: { pad: 0.85, zil: 1, tus: 0.5, arp: 0.7, tel: 0, koro: 0.15, bas: 0.7 },
+    B: { pad: 1, zil: 0.75, tus: 1, arp: 1, tel: 0.6, koro: 0.7, bas: 0.8 },
+    kopru: { pad: 0.9, zil: 0.65, tus: 0.4, arp: 0.5, tel: 0.3, koro: 1, bas: 0.55 },
+    A2: { pad: 1, zil: 1, tus: 0.8, arp: 1, tel: 1, koro: 0.9, bas: 1 },
+    son: { pad: 0.7, zil: 0.8, tus: 0.3, arp: 0.4, tel: 0.2, koro: 0.3, bas: 0.5 },
+  };
   // Bölge temaları (4/4): A ve B; döngüler A → B → A (çelesta) → B (seyrek, nefes alan) diye değişir
   const TEMA = {
     patika: {   // D9 ×4 · Bm9 ×4 · G7 ×4 · Asus ×4 – ana temanın yürüyen hâli
@@ -242,7 +260,7 @@ const AU = (() => {
     bulut: { zil: 0.9, pad: 1, tus: 0.75, arp: 1, tel: 0.85, koro: 0.7, bas: 0.7, tuba: 0, hop: 0.6, rev: 1.35, dly: 0.85, flut: 1 },
     ucus: { zil: 0.9, pad: 1.05, tus: 0.85, arp: 1.1, tel: 1.1, koro: 0.6, bas: 0.9, tuba: 0, hop: 0.6, rev: 1.05, dly: 0.6, flut: 1.05 },
     final: { zil: 1.1, pad: 1.15, tus: 0.9, arp: 1.1, tel: 1.35, koro: 1.25, bas: 1.1, tuba: 0.8, hop: 0.75, rev: 1.1, dly: 0.55, flut: 0.8 },
-    baslik: { zil: 1, pad: 0.45, tus: 0.2, arp: 0.2, tel: 0.15, koro: 0, bas: 0.3, tuba: 0, hop: 0, rev: 0.8, dly: 0.5 },
+    baslik: { zil: 1, pad: 0.6, tus: 0.9, arp: 1, tel: 0.5, koro: 0.7, bas: 0.55, tuba: 0, hop: 0, rev: 1.05, dly: 0.65 },   // BSL_MIX ile ölçeklenir
     ninni: { zil: 1.1, pad: 0.55, tus: 0.25, arp: 0.35, tel: 0.3, koro: 0, bas: 0.35, tuba: 0, hop: 0, rev: 0.75, dly: 0.45 },
     // rüya: giriş sahnesinde Pırıl uyanıp oda eridikçe ninninin üstüne koro, yaylı ve arp açılır
     ruya: { zil: 1, pad: 1.2, tus: 0.45, arp: 1, tel: 0.95, koro: 0.7, bas: 0.5, tuba: 0, hop: 0, rev: 1.3, dly: 0.75 },
@@ -349,7 +367,7 @@ const AU = (() => {
   function pad(ak, t0, dur) {
     const atk = Math.min(3, dur * 0.45), rel = Math.min(3.5, Math.max(1.2, dur * 0.6));
     if (!yerVar(ak.pad.length * 2 + 2, t0, t0 + dur + rel, true)) return;
-    const lp = suzgec('lowpass', 520 + (progAd === 'yildiz' ? 150 + 1700 * yoS : progAd === 'bulut' || progAd === 'ucus' ? 350 + 1100 * koS + 500 * gDoruk + (progAd === 'ucus' ? 300 : 0) : isik() * 1500), 0.4);
+    const lp = suzgec('lowpass', 520 + (progAd === 'baslik' ? 260 : progAd === 'yildiz' ? 150 + 1700 * yoS : progAd === 'bulut' || progAd === 'ucus' ? 350 + 1100 * koS + 500 * gDoruk + (progAd === 'ucus' ? 300 : 0) : isik() * 1500), 0.4);
     const vg = ac.createGain();
     vg.gain.value = 0; vg.gain.setValueAtTime(0, t0); vg.gain.linearRampToValueAtTime(0.05, t0 + atk);
     vg.gain.setValueAtTime(0.05, t0 + dur); vg.gain.linearRampToValueAtTime(0, t0 + dur + rel);
@@ -581,7 +599,7 @@ const AU = (() => {
   function ninniBas(s) { ninniSira = s || { ad: 'ana', i: 0 }; }
   function cubukPlanla(t) {
     const d = d0;
-    const istenen = mod === 'orman' ? ormanAd(d) : mod === 'baslik' ? 'ninni' : mod;
+    const istenen = mod === 'orman' ? ormanAd(d) : mod;
     if (istenen !== progAd && (mod !== 'orman' || bic % 2 === 0 || istenen === 'senlik' || istenen === 'ucus' || progAd === 'ninni' || progAd === 'final')) {
       if (!(progAd === 'final' && mod === 'final')) {
         if (istenen === 'ninni' && progAd !== 'ninni') ninniBas();
@@ -611,14 +629,15 @@ const AU = (() => {
         if (ninni) { let s = ninniIleri(ninniSira); while (n < 4 && PARCA[s.ad][s.i].ak === akAd) { n++; s = ninniIleri(s); } }
         else while (n < pr.ak.length && pr.ak[(pi + n) % pr.ak.length] === pr.ak[pi]) n++;
         pad(ak, t, n * pr.cb * BAR);
-        sesYurut(tel, ak, 57, 78, t, progAd === 'ninni' ? 0.1 : 0.045);
-        sesYurut(koro, ak, 59, 72, t, 0.08);
+        sesYurut(tel, ak, 57, 78, t, progAd === 'ninni' || progAd === 'baslik' ? 0.1 : 0.045);
+        sesYurut(koro, ak, 59, 72, t, progAd === 'baslik' ? 0.3 : 0.08);
       }
       akor = ak; oncekiAk = ak;
     }
     const l = d.light;
     if (progAd === 'ninni') ninniCubuk(t);
     else if (progAd === 'final') finalCubuk(t, pi);
+    else if (progAd === 'baslik') baslikCubuk(t, akor, pi, dongu);
     else if (progAd === 'yildiz') yildizCubuk(t, akor, bic, pi, d);
     else if (progAd === 'bulut') bulutCubuk(t, akor, bic, pi, d);
     else if (progAd === 'ucus') ucusCubuk(t, akor, pi, d);
@@ -944,6 +963,82 @@ const AU = (() => {
       tn.forEach((n, k) => arp(n, t + 1.65 + k * 0.13, 0.016 * ruya, 0.5 - k * 0.3, 1.6));
       if (sira.i % 2) zil(NOTE(tn[3] + 12), t + 2.0, 0.011 * ruya, 2, -0.5, null);
     }
+  }
+
+  // ── başlık / rüya seçimi: "Rüya Beşiği" – 37 ölçülük uzun ninni (D majör, 3/4, ~75 vuruş/dk) ──
+  // giriş (pad kabarır, uzak çanlar) → A1 (ana tema, müzik kutusu) → B (Pırıl'ın teması çelestada, harp akıntısı, "aa" korosu) →
+  // köprü (cam çanlar, koro, en sessiz an) → A2 (ana temanın ikinci yarısı, çelesta eşliğinde, en dolu ama yine yumuşak) → son (Feza'nın
+  // üç–iki–biri sönerek, başa bağlanır). Katman düzeyleri bölüme göre BSL_MIX'ten gelir; hiçbir şey ani başlamaz/bitmez.
+  let baslikSec = false, baslikIlgiT = -1e9, bslMix = BSL_MIX.giris;
+  function harpa(t, ak, tur, v, ofs, ara) {   // akor sesleriyle harp: 'dalga' (yükselen), 'ters' (inen), 'osti' (6 sekizlik, sallanan)
+    const tn = []; for (let m = 57; m <= 86; m++) if (ak.ton.includes(m % 12)) tn.push(m);
+    const lo = Math.max(0, tn.findIndex(x => x >= 62)), at = i => tn[cl(lo + i, 0, tn.length - 1)];
+    const S6 = 0.4;
+    if (tur === 'osti') {
+      [0, 1, 2, 3, 2, 1].forEach((g, i) => { if (i && rnd() < 0.12) return; arp(at(g), t + i * S6 + (rnd() - 0.5) * 0.01, v * (i ? 1 : 1.25), -0.3 + g * 0.13, 1.9); });
+    } else {
+      const a = ara || 0.11;
+      for (let i = 0; i < 5; i++) arp(tur === 'ters' ? at(5 - i) : at(i), t + ofs + i * a, v * (tur === 'ters' ? 1 - 0.1 * i : 0.8 + 0.1 * i), -0.4 + i * 0.2, 2.4);
+    }
+  }
+  function baslikIsilti(t, ak, n, v, ofs) {   // tepede tek tük yıldız ışıltısı (akor sesleriyle, cam çan)
+    for (let i = 0; i < n; i++) cam(NOTE(akorTonu(ak, 86 + Math.floor(rnd() * 12))), t + ofs + i * (0.2 + rnd() * 0.3), v * (0.8 + 0.4 * rnd()), 2.4, rnd() - 0.5, null);
+  }
+  function baslikCubuk(t, ak, pi, dg) {
+    const [sec, k] = BSL_PLAN[pi % BSL_PLAN.length], S6 = 0.4, S = baslikSec;
+    const mx = BSL_MIX[sec];
+    // giriş yükselir, son sönerek başa bağlanır
+    const f = sec === 'giris' ? [0.7, 0.8, 0.9, 1][k] : sec === 'son' ? [1, 0.85, 0.72, 0.62][k] : 1;
+    bslMix = {}; for (const a in mx) bslMix[a] = mx[a] * f;
+    const bar = sec === 'A1' ? PARCA.ana[k].m : sec === 'A2' ? PARCA.ana[8 + k].m : sec === 'B' ? PARCA.piril[k].m : BSL_MEL[sec][k];
+    const kutu = sec === 'A1' || sec === 'A2' || sec === 'son' || (sec === 'giris' && k === 3);
+    oncelikli = true;
+    if (!S) {
+      for (const [s, n, u] of bar) {
+        const ts = t + s * S6 + (rnd() - 0.5) * 0.012, pan = cl((n - 84) * 0.04, -0.3, 0.3);
+        if (kutu) {
+          zil(NOTE(n), ts, 0.066 * f, 1.4 + u * 0.35, 0.12, null);
+          if (sec === 'A2') tus(n + 12, ts + 0.012, 0.016, 1.3 + u * 0.3, -0.2, true, B.zil);   // çelesta üstten eşlik eder
+        } else if (sec === 'kopru') cam(NOTE(n), ts, 0.04, 2.4 + u * 0.35, pan, null);
+        else {   // çelesta: Pırıl'ın teması (giriş 3. ölçü dahil)
+          tus(n, ts, 0.055 * f, 1.5 + u * 0.4, 0.15, true, B.zil); zil(NOTE(n + 12), ts + 0.006, 0.015 * f, 1.1 + u * 0.2, -0.25, null, false);
+        }
+      }
+    }
+    oncelikli = false;
+    if (S) { bslMix = { pad: 0.9, zil: 0.2, tus: 0.1, arp: 0.15, tel: 0.3, koro: 0.9, bas: 0.4 }; return; }   // rüya seçildi: yalnız pad + koro kalır
+    // müzik kutusu eşliği: 1. vuruşta bas, 2–3'te akor (A bölümlerinde); B'de yalnız kök
+    const kok = ak.bas + 24 > 66 ? ak.bas + 12 : ak.bas + 24;
+    if (kutu || sec === 'B') zil(NOTE(kok), t, 0.028, 2.2, -0.25, null, false);
+    if (kutu && sec !== 'giris') {
+      const ic = ak.pad.slice(2, 4).map(n => n + 12);
+      [2, 4].forEach(s => ic.forEach((n, i) => zil(NOTE(n), t + s * S6 + i * 0.008, 0.015 * f, 1.3, i ? 0.3 : -0.1, null, false)));
+    }
+    // derin, yumuşak bas: 1. vuruşta kök (B/A2'de 3. vuruşta beşli)
+    if (!(sec === 'giris' && k < 1)) {
+      bas(ak.bas + 12, t, 0.065, 'nabiz');
+      if (sec === 'B' || sec === 'A2') bas(akorTonu(ak, ak.bas + 19), t + 4 * S6, 0.032, 'nabiz');
+    }
+    // harp
+    const v = 0.019;
+    if (sec === 'giris') { if (k === 0) harpa(t, ak, 'dalga', v * 0.8, 1.2, 0.16); else if (k === 1) harpa(t, ak, 'dalga', v * 0.9, 0.4, 0.14); }
+    else if (sec === 'A1') { if (dg % 2 === 0) { if (k % 2 === 1) harpa(t, ak, 'dalga', v, 1.6, 0.11); } else if (k >= 2 && rnd() < 0.8) harpa(t, ak, 'osti', v * 0.7); }
+    else if (sec === 'B') harpa(t, ak, k === 8 ? 'ters' : 'osti', k === 8 ? v : v * 0.85, 0.6, 0.15);
+    else if (sec === 'kopru') harpa(t, ak, k % 2 ? 'dalga' : 'ters', v * 0.9, k % 2 ? 1.0 : 0.6, 0.17);
+    else if (sec === 'A2') { harpa(t, ak, 'osti', v * 0.9); if (k === 7) harpa(t, ak, 'ters', v * 0.8, 1.2, 0.14); }
+    else if (sec === 'son') { if (k === 0) harpa(t, ak, 'dalga', v * 0.8, 0.8, 0.14); else if (k === 1) harpa(t, ak, 'ters', v * 0.7, 0.6, 0.16); else if (k === 2) harpa(t, ak, 'dalga', v * 0.55, 0.4, 0.18); }
+    // ışıltılar: köprüde her ölçü, öbür bölümlerde ara sıra (nefes alan, makine gibi değil)
+    if (sec === 'kopru') baslikIsilti(t, ak, 1 + (k % 2), 0.012, 1.0 + rnd() * 0.5);
+    else if (sec === 'giris' && k >= 1 && k <= 2) baslikIsilti(t, ak, 1, 0.01, 1.6);
+    else if ((sec === 'A1' || sec === 'A2' || sec === 'B') && rnd() < 0.35) baslikIsilti(t, ak, 1, 0.011, 1.4 + rnd() * 0.8);
+    else if (sec === 'son' && (k === 1 || k === 2)) baslikIsilti(t, ak, 1, 0.009, 1.4);
+  }
+  function baslikIlgi() {   // seçim ekranında boş dokunuş: üç yumuşak çan yukarı süzülür (en sık 3 sn'de bir)
+    if (!ac || mod !== 'baslik' || baslikSec || (ac.state !== 'running' && !test)) return;
+    const t = zaman() + 0.02; if (t - baslikIlgiT < 3) return; baslikIlgiT = t;
+    const ak = akorAt(t), tn = []; for (let m = 81; m <= 98; m++) if (ak.ton.includes(m % 12)) tn.push(m);
+    const i0 = Math.floor(rnd() * Math.max(1, tn.length - 3));
+    oncelikli = true; try { for (let i = 0; i < 3; i++) cam(NOTE(tn[Math.min(tn.length - 1, i0 + i)]), t + i * 0.16, 0.02, 1.8, -0.3 + i * 0.3, null); } finally { oncelikli = false; }
   }
 
   // ── Büyük Pofuduk uykusu: horlama + uykulu tuba, ölçüye eşli (2 ölçülük döngü) ──
@@ -1911,7 +2006,8 @@ const AU = (() => {
     OLAY.on('bolum2Basla', () => olaySes('bolum2Basla'));
     OLAY.on('bolum3Basla', () => olaySes('bolum3Basla'));
     for (const ad of ['yatagaGir', 'yastik', 'lambaKis', 'uykuNefes', 'sabahKus', 'gerinme', 'fezaEsne', 'gozKirp']) OLAY.on(ad, e => olaySes(ad, e));
-    OLAY.on('secim', e => olaySes('secim', e));
+    OLAY.on('secim', e => { baslikSec = true; olaySes('secim', e); });   // başlık müziği yumuşakça kısılır; yeni sahne gelince açılır
+    OLAY.on('secimIlgi', () => setTimeout(() => { if (!sonCal.secim || zaman() - sonCal.secim > 0.6) baslikIlgi(); }, 110));
     OLAY.on('ruyayaGec', () => { olaySes('ruyayaGec'); ninniKaydet(); });
     OLAY.on('yildizRozet', () => olaySes('yildizRozet'));
     OLAY.on('uyandi', o => {
@@ -1971,7 +2067,7 @@ const AU = (() => {
   }
   function finaleGir() { ruya = 0; if (mod !== 'final') { if (progAd === 'yildiz' && ac) padBirak(zaman()); mod = 'final'; progAd = 'final'; pi = 0; bic = 0; } }
   function durumDegisti(d) {
-    if (d === 'oyun' || d === 'baslik' || d === 'giris') { ruya = 0; sabahKus = false; pirilBekle = false; }
+    if (d === 'oyun' || d === 'baslik' || d === 'giris') { baslikSec = false; ruya = 0; sabahKus = false; pirilBekle = false; }
     if (zorlaMod) return;
     if (d === 'giris') mod = 'ninni';   // Bölüm 2'nin kısa uyku girişi de ninniyle başlar; 'oyun' gelince ninni yumuşakça 'yildiz' müziğine geçer
     else if (d === 'baslik') mod = 'baslik';
@@ -2031,16 +2127,17 @@ const AU = (() => {
       let v = TEMEL[ad] * kk(ad) * (ob === 'yildiz' ? yildizEtkisi(ad) : b3 ? bulutEtkisi(ad) : isikEtkisi(ad, l, mod));
       if (ad === 'tuba' && mod === 'orman') v = ob === 'aciklik' ? 1 : k.tuba;
       if (ad === 'hop' && mod !== 'final') v *= cl((d.takip || 0) / 2, 0, 1) * yuru;
+      if (ob === 'baslik') v *= (bslMix[ad] != null ? bslMix[ad] : 1) * (baslikSec ? 0.5 : 1);
       if (solo && solo !== ad) v = 0;
       hedefle(B[ad].gain, v, t, ad === 'hop' ? 0.5 : 1.4);
     }
     hedefle(revMuzik.gain, 0.5 * kk('rev'), t, 2);
     hedefle(dly.fbG.gain, 0.3 + 0.12 * kk('dly'), t, 2);
     hedefle(dly.out.gain, 0.6 * kk('dly'), t, 2);
-    hedefle(muzikG.gain, ob === 'yildiz' ? 0.8 * (1.1 - 0.4 * yoS) : b3 ? 0.8 * (1.06 - 0.22 * koS - 0.14 * gDoruk) : 0.8, t, 2);   // Bölüm 2 doruğu Bölüm 1'den yüksek kalmasın (ölçüm: ~−3 dB)
+    hedefle(muzikG.gain, ob === 'baslik' && baslikSec ? 0.5 : ob === 'yildiz' ? 0.8 * (1.1 - 0.4 * yoS) : b3 ? 0.8 * (1.06 - 0.22 * koS - 0.14 * gDoruk) : 0.8, t, 2);   // Bölüm 2 doruğu Bölüm 1'den yüksek kalmasın (ölçüm: ~−3 dB)
     hedefle(yalaG.gain, ob === 'yildiz' ? 0.012 : 0, t, 2.5);
     hedefle(B.telLP.frequency, 750 + 1100 * lEff + (mod === 'final' ? 700 : 0), t, 2);
-    hedefle(ruzgarG.gain, mod === 'orman' ? (ob === 'yildiz' ? 0.011 : ob === 'ucus' ? 0.03 : ob === 'bulut' ? 0.016 : 0.018 * (1 - 0.5 * l) * (bolge === 'gol' ? 1.4 : 1)) : mod === 'ninni' ? 0.004 : 0.008, t, 2);
+    hedefle(ruzgarG.gain, mod === 'orman' ? (ob === 'yildiz' ? 0.011 : ob === 'ucus' ? 0.03 : ob === 'bulut' ? 0.016 : 0.018 * (1 - 0.5 * l) * (bolge === 'gol' ? 1.4 : 1)) : mod === 'ninni' ? 0.004 : mod === 'baslik' ? 0.002 : 0.008, t, 2);
   }
   function kis(acik, kim) {
     if (!ac) return;
