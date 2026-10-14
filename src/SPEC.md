@@ -1,4 +1,4 @@
-# Feza ve Pırıl: Işık Ormanı — modül sözleşmesi
+# Feza ve Pırıl: Işıklı Rüyalar — modül sözleşmesi
 
 Audience: Feza, 5 years old, on an iPad (also desktop Chrome). Turkish only. Nothing scary, no insects, no fail state.
 Plain Canvas 2D, classic `<script>` files (no ES modules, no libraries), must work from `file://`. `?sessiz` = no sound

@@ -1,4 +1,4 @@
-# Feza ve Pırıl: Işık Ormanı – çalışma notları
+# Feza ve Pırıl: Işıklı Rüyalar – çalışma notları
 
 - 5 yaşındaki Feza için Ori tarzı (biraz Gris) 2D platform oyunu; yalnız Türkçe. Feza okuma bilmiyor: hiçbir şey yazıya dayanmaz
   (Pırıl'ın sesi + el/ışık ipuçları; altyazı yalnız `?altyazi` ile). Korkutucu hiçbir şey, böcek yok, kaybetme yok.
@@ -11,8 +11,8 @@
   (tr-TR-EmelNeural; `a_` anlatıcı, `p_` Pırıl). `.ses_onbellek/` git'e girmez.
 - Test: her zaman `?sessiz`; `?atla` başlık ve açılışı atlar; `?atlanir` açılışı dokunuşla atlanabilir yapar.
 - iPad uygulaması: `manifest.webmanifest`, `sw.js` (dosya eklenirse `SRC`/`CORE`'a ekle, önemli değişiklikte `CACHE` sürümünü artır;
-  önek `feza-isik-ormani-`, eski önbellek silerken yalnız bu önek), `icons/`.
-- GitHub'a SADECE ebeveyn "yükle / GitHub'a gönder" dediğinde gönder (depo: goktugkarpat/feza-isik-ormani, `main`).
+  önek `feza-piril-` (eski `feza-isik-ormani-` önbellekleri de temizlenir), eski önbellek silerken yalnız bu önek), `icons/`.
+- GitHub'a SADECE ebeveyn "yükle / GitHub'a gönder" dediğinde gönder (depo: goktugkarpat/feza-piril, `main`).
   `yayinla.command` ilk seferde depoyu oluşturup GitHub Pages'ı açar.
 - Bölümler ("her gece başka bir rüya"): Bölüm 1 `bolum.js`, Bölüm 2 (Yıldız Gölü) `bolum2.js`, Bölüm 3 (Bulut Ülkesi) `bolum3.js` (+ `dunya3 bulut kuzu sekil ucus`); `index.html` `?bolum=N` > `sessionStorage 'fezaIsikSec'` > 1 ile birini yükler (`BOLUM_NO`); başlık sayfası hep Bölüm 1'dir ve seçim sahnesini (`SAHNE.secim`) gösterir; her bölüm sabah finaliyle biter, sonuç kartı "odaya dön" ile seçime döner. Kayıt: `fezaIsikTamam`, `fezaIsikSon`. Ayrıntı: `src/BOLUM2.md`, `src/BOLUM3.md` (Bölüm 3 sözleşmesi + ajan notları). Test: `?bolum=N`, `?atla`.
 - Ebeveyn kısayolu: seçim ekranında sol üst köşe 3 sn = kayıtları sıfırla.

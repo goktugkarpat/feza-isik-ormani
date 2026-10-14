@@ -113,8 +113,8 @@ const ARAYUZ = (() => {
       x.fillText('Feza ve Pırıl', w / 2, pad + fs * 0.2);
       x.font = `italic 400 ${fs2}px ${FONT_SERIF}`;
       if (renk) { const gr = x.createLinearGradient(0, pad + fs * 0.5, 0, pad + fs * 1.05); gr.addColorStop(0, '#fff6dc'); gr.addColorStop(1, '#bff4ff'); x.fillStyle = gr; }
-      x.fillText('Işık Ormanı', w / 2, pad + fs * 0.95);
-      return x.measureText('Işık Ormanı').width;
+      x.fillText('Işıklı Rüyalar', w / 2, pad + fs * 0.95);
+      return x.measureText('Işıklı Rüyalar').width;
     };
     // parıltı katmanı: yazıyı tuvalin dışına çizip yalnız gölgesini içeri düşür (saf ışıma)
     const gx = glow.getContext('2d');

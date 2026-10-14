@@ -1,6 +1,6 @@
 // İnternetsiz çalışma: ilk açılıştan sonra oyun (kod, gömülü sesler, simgeler) cihazda saklanır.
 // Dosya eklenirse SRC listesine ekle; önemli değişiklikte CACHE sürümünü artır.
-const CACHE = 'feza-isik-ormani-v35';
+const CACHE = 'feza-piril-v36';
 const SRC = ['ortak', 'bolum', 'dunya', 'feza', 'piril', 'pofuduk', 'sahne', 'arayuz', 'sarki', 'bolum2', 'dunya2', 'yildiz', 'takim', 'dunya3', 'bulut', 'kuzu', 'sekil', 'ucus', 'bolum3', 'muzik', 'ses', 'oyun'];
 const CORE = ['./', './index.html', './sesler.js', './manifest.webmanifest', ...SRC.map(n => './src/' + n + '.js')];
 const ICONS = ['./icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];   // eksik simge kurulumu durdurmasın
@@ -14,7 +14,7 @@ self.addEventListener('install', e => e.waitUntil((async () => {
 })()));
 self.addEventListener('activate', e => e.waitUntil((async () => {
   // Aynı sitedeki (goktugkarpat.github.io) diğer oyunların önbelleklerine dokunma: yalnız bu oyunun öneki silinir.
-  for (const k of await caches.keys()) if (k.startsWith('feza-isik-ormani-') && k !== CACHE) await caches.delete(k);
+  for (const k of await caches.keys()) if ((k.startsWith('feza-piril-') || k.startsWith('feza-isik-ormani-')) && k !== CACHE) await caches.delete(k);
   await self.clients.claim();
 })()));
 self.addEventListener('fetch', e => {

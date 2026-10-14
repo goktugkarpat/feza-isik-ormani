@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Feza ve Pırıl: Işık Ormanı – records every voice line (SES.LINES in src/ses.js) and writes sesler.js.
+"""Feza ve Pırıl: Işıklı Rüyalar – records every voice line (SES.LINES in src/ses.js) and writes sesler.js.
 
 Needs:  python3 -m pip install edge-tts   (internet while recording)   and ffmpeg
 Run:    python3 gen_voice.py            only new/changed lines are recorded; the rest come from .ses_onbellek/
@@ -199,7 +199,7 @@ async def main():
         sys.exit(1)
     temp_out = OUT + ".tmp"
     with open(temp_out, "w", encoding="utf-8", newline="\n") as f:   # LF also on Windows (the Mac commits it)
-        f.write("// Feza ve Pırıl: Işık Ormanı – voice lines (tr-TR-EmelNeural; a_ narrator, p_ Pırıl), trimmed mono mp3 as base64.\n"
+        f.write("// Feza ve Pırıl: Işıklı Rüyalar – voice lines (tr-TR-EmelNeural; a_ narrator, p_ Pırıl), trimmed mono mp3 as base64.\n"
                 "// Bu dosya gen_voice.py ile üretildi; elle değiştirmeyin. Cümleler: src/ses.js › LINES.\n")
         f.write("window.VOICE_MP3 = {\n")
         f.write(",\n".join(f" {json.dumps(k)}: \"{v}\"" for k, v in mp3.items()))
