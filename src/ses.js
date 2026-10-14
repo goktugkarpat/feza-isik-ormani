@@ -84,7 +84,7 @@ const SES = (() => {
     "p_y_hayvan": "Vay, Yıldız Kaplumbağası! Sırtındaki yıldızları yakarsak uyanacak. Hadi, hepsine dokun!",
     "p_y_hayvan_uyan": "Günaydın, Yıldız Kaplumbağası! Hadi, hep birlikte göğe!",
     "p_y_bitti": "Bütün yıldızlar yerinde! Orman da gökyüzü de ışık içinde.",
-"p_secim": "Bu gece nereye gidelim?",
+    "p_secim": "Bu gece nereye gidelim?",
     "p_y_uyku": "Bu gece yıldızlara gidiyoruz!",
     "p_takim1": "Yıldızları birleştirelim!",
     "p_takim2": "Beni izle.",
@@ -113,12 +113,31 @@ const SES = (() => {
     "p_dost3": "Hadi, maceraya devam!",
     "p_dost_orman": "Duydun mu? Orman bize şarkı söylüyor.",
     "p_dost_yildiz": "Yıldızlar bize göz kırpıyor!",
-    "p_dost_bulut": "Bulutlar pamuk gibi yumuşacık!"
-  }/*SESLER-SON*/;
+    "p_dost_bulut": "Bulutlar pamuk gibi yumuşacık!",
+    "p_i_uyku": "Bu gece İnci Denizi’ne gidiyoruz!",
+    "p_i_giris": "Burası İnci Denizi! Minik dostlarımıza yardım edip Büyük İnci’yi uyandıralım.",
+    "p_i_yuz": "Parmağını gitmek istediğin yerde tut. Yukarıya da aşağıya da yüzebilirsin! Yuvarlak düğmeyle biraz hızlanırız.",
+    "p_i_denizati": "Denizatlarına dokun. Onlarla birlikte mercan bahçelerini ışıklandıralım!",
+    "p_i_denizati_ilk": "Bak, ışığı uyandı! Kuyruğuyla bize teşekkür ediyor.",
+    "p_i_ahtapot": "Bu sevimli ahtapot kabuklarına dolanmış. Ona yardım edelim!",
+    "p_i_ahtapot_yardim": "Kolundaki kabuğu, aynı şekilli kum yuvasına sürükle. Ben yanındayım!",
+    "p_i_ahtapot_bitti": "Kolları açıldı! Bak, bize yolu açıyor. Teşekkür ederiz, minik dostum!",
+    "p_i_vatoz": "Kurdele Vatoz ile ışıklı kemerlerden geçelim. Parmağını yukarıda ya da aşağıda tutarak onu yönlendirebilirsin!",
+    "p_i_vatoz_bitti": "Ne güzel yüzdük! İşte Büyük İnci’nin yuvası.",
+    "p_i_inci": "Büyük İnci burada uyuyor. Hadi, yaklaşıp ona dokunalım!",
+    "p_i_inci_uyan": "İnci uyanıyor! Bak, kabuğu açılıyor.",
+    "p_i_dostlar": "Denizatı dostlarımız da geldi! Birlikte dans edelim.",
+    "p_i_deniz_uyandi": "İnci Denizi ışıl ışıl oldu. Ne güzel bir rüya!",
+    "p_i_bitti": "İnci uyandı! Bütün deniz ışıl ışıl. Dostlarımız da çok mutlu!",
+    "p_dost_deniz": "Denizin içinde seninle yüzmek çok güzel!",
+    "a_i_final1": "Feza ile Pırıl, İnci Denizi’nin minik dostlarına yardım etmişler. Büyük İnci uyanınca mercanlar yumuşacık renklerle parlamış.",
+    "a_i_final2": "Sabah Feza yatağında gözlerini açmış. Güneş, odasına deniz gibi ışıklar çizmiş. Pırıl da ona tatlı tatlı göz kırpmış.",
+    "a_i_final3": "Ve her gece, yeni bir rüya onları bekliyormuş..."
+}/*SESLER-SON*/;
 
   const sesSaat = () => performance.now() / 1000;
   const ovguMu = k => /^p_aferin/.test(k);
-  const SES_SAHNE = { p_uyan: 1, p_gecis: 1, p_y_giris: 1, p_y_bitti: 1, p_secim: 1, p_y_uyku: 1, p_b_uyku: 1, p_b_giris: 1, p_b_bitti: 1 };   // sahne cümleleri: öncelik 3, ağaç yandı/oyun bitti diye atılmaz
+  const SES_SAHNE = { p_uyan: 1, p_gecis: 1, p_y_giris: 1, p_y_bitti: 1, p_secim: 1, p_y_uyku: 1, p_b_uyku: 1, p_b_giris: 1, p_b_bitti: 1, p_i_uyku: 1, p_i_giris: 1, p_i_yuz: 1, p_i_bitti: 1, p_i_inci_uyan: 1, p_i_dostlar: 1, p_i_deniz_uyandi: 1 };   // sahne cümleleri: öncelik 3, ağaç yandı/oyun bitti diye atılmaz
   const anlatici = k => k.startsWith('a_') || !!SES_SAHNE[k];
   const sesKim = k => k.startsWith('a_') ? 'a' : 'p';
   // ── cümle bilgisi: oncelik (3 sahne · 2 oyun · 1 yönlendirme · 0 övgü), acil (2 araya girer · 1 olay tepkisi), ömür (sn), konu ──
@@ -196,7 +215,12 @@ const SES = (() => {
   let sesZipladi = false; OLAY.on('ziplama', () => { sesZipladi = true; });
   const agacYandi = () => (typeof BOLUM_NO !== 'undefined' && BOLUM_NO === 2) ? false : !!(typeof TREE !== 'undefined' && TREE && TREE.done);
   // her talimatın "hâlâ yerinde mi?" koşulu (çalma anında bakılır)
-  const KOSUL = {   // s: sıradaki cümle (s.o = tetikleyen konuşma nesnesi, s.yer = göl grubu vb.)
+  const KOSUL = {
+    p_i_denizati: () => typeof DNZ === 'undefined' || DNZ.ati.some(o => !o.done),
+    p_i_ahtapot: () => typeof DNZ === 'undefined' || !DNZ.oct || !DNZ.oct.done,
+    p_i_vatoz: () => typeof DNZ === 'undefined' || !DNZ.ride || (!DNZ.ride.done && DNZ.ride.faz !== 'inis'),
+    p_i_inci: () => typeof DNZ === 'undefined' || !DNZ.pearl || (!DNZ.pearl.done && DNZ.pearl.dnz.faz === 'bekle'),
+    p_i_ahtapot_yardim: s => typeof DNZ === 'undefined' || !DNZ.oct || !DNZ.oct.done,   // s: sıradaki cümle (s.o = tetikleyen konuşma nesnesi, s.yer = göl grubu vb.)
     p_merhaba: s => !sesBitmis('p_merhaba', 'cicek') && !sesIleride('p_merhaba', 10, s),
     p_zipla: s => !sesZipladi || !sesIleride('p_zipla', 8, s),   // hiç zıplamadıysa talimat geçerli kalır (5 yaşında: öğrenmesi şart)
     p_uyuyor: s => { const o = (s.o && s.o.konu) || sesSonraki('p_uyuyor', 'pofuduk'), p = gP(); return !(o && (o.uyandi || (p && p.x > o.x + 3 * T))); },
@@ -313,8 +337,17 @@ const SES = (() => {
   const sesB3 = () => typeof BOLUM_NO !== 'undefined' && BOLUM_NO === 3;
   let sesYildizBekle = false, sesYildizGec = false;
   function soyle(k, ops) {
+    if (typeof BOLUM_NO !== 'undefined' && BOLUM_NO === 4 && k === 'p_i_ahtapot') {
+      setTimeout(() => { if (typeof DNZ !== 'undefined' && DNZ.oct && !DNZ.oct.done && DURUM === 'oyun') soyle('p_i_ahtapot_yardim', { oncelik: 3 }); }, 4500);
+    }
     const ko = k;   // çağıranın verdiği ad (konuşma tetikleyicisi anahtarı)
-    if (/^[yb]_/.test(k) && LINES['p_' + k]) k = 'p_' + k;                   // Bölüm 2/3 tetikleyicileri: 'y_gol' → 'p_y_gol', 'b_zip' → 'p_b_zip'
+    if (/^[ybi]_/.test(k) && LINES['p_' + k]) k = 'p_' + k;                   // Bölüm 2/3 tetikleyicileri: 'y_gol' → 'p_y_gol', 'b_zip' → 'p_b_zip'
+    if (typeof BOLUM_NO !== 'undefined' && BOLUM_NO === 4) {
+      if (/^a_(y_|b_)?final\d$/.test(k)) k = 'a_i_final' + k.slice(-1);
+      else if (k === 'p_y_uyku') k = 'p_i_uyku';
+      else if (k === 'p_y_giris' || k === 'p_uyan') k = 'p_i_giris';
+      else if (k === 'p_y_bitti') k = 'p_i_bitti';
+    }
     if (sesB3()) {   // Bölüm 3: sahne/CORE Bölüm 2 adlarını çağırırsa da Bölüm 3 cümlesi söylenir
       if (/^a_(y_)?final\d$/.test(k) && LINES['a_b_final' + k.slice(-1)]) k = 'a_b_final' + k.slice(-1);
       else if (k === 'p_y_uyku') k = 'p_b_uyku';
@@ -408,6 +441,7 @@ const SES = (() => {
     p_merhaba: c => sesHalaGecerli(c), p_zipla: c => sesHalaGecerli(c), p_ciftzipla: c => sesHalaGecerli(c),
     p_minder: c => sesHalaGecerli(c) && !sesBitmis('p_minder', 'pofuduk'),                          // minder Pofuduk'a zıpladıysa bitti
     p_y_hayvan: c => sesHalaGecerli(c) && !sesSirada('p_y_hayvan_uyan') && !sesSirada('p_y_bitti'),  // "hepsine dokun" – kaplumbağa uyandıysa bitti
+    p_i_yuz: c => sesHalaGecerli(c), p_i_ahtapot_yardim: c => sesHalaGecerli(c),
     p_takim1: () => true, p_takim2: () => true,
   };
   const sesSirada = k => sesSira.some(q => q.k === k);
@@ -533,7 +567,7 @@ const SES = (() => {
     const t = sesSaat();
     if (t - sesOyunT < 60 || t - sesDostT < 90 || t - sesSonBitis < 50 || !sesDostUygun()) return;
     const bolum = typeof BOLUM_NO !== 'undefined' ? BOLUM_NO : 1;
-    const ozel = bolum === 3 ? 'p_dost_bulut' : bolum === 2 ? 'p_dost_yildiz' : 'p_dost_orman';
+    const ozel = bolum === 4 ? 'p_dost_deniz' : bolum === 3 ? 'p_dost_bulut' : bolum === 2 ? 'p_dost_yildiz' : 'p_dost_orman';
     const aday = [ozel, 'p_dost1', 'p_dost2', 'p_dost3'].filter(k => LINES[k] && !sesSoylendi[k]);
     if (!aday.length) return;
     const k = sesDostN === 0 ? aday[0] : aday[Math.floor(Math.random() * aday.length)];
@@ -541,6 +575,7 @@ const SES = (() => {
   }, 2000);
   // seçim ekranı (DURUM 'baslik'): "Bu gece nereye gidelim?" ilk açılışta 1 kez; sonra yalnız ~25 sn hiç dokunulmazsa 1 kez daha
   let sesSecimN = 0, sesSecimT = 0;
+  OLAY.on('denizati', () => { if (typeof BOLUM_NO !== 'undefined' && BOLUM_NO === 4) soyle('p_i_denizati_ilk', { oncelik: 2 }); });
   OLAY.on('secim', () => { sesSecimT = sesSaat(); });
   OLAY.on('secimIlgi', () => { sesSecimT = sesSaat(); });   // boş dokunuş: yalnız sayaç sıfırlanır (ses çalmaz)
   const sesSecimBasla = d => {

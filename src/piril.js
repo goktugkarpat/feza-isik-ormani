@@ -242,7 +242,7 @@ function drGoalOpen(o) {
 function drHedef() {
   let h = null;
   try { if (typeof HEDEF === 'function') h = HEDEF(); } catch (e) {}
-  if (BOLUM_NO === 3) return h;   // Bulut Ülkesi: CORE sırası (kuzucuk → uçuş kapısı → gökkuşağı tepesi) aynen
+  if (BOLUM_NO === 3 || BOLUM_NO === 4) return h;   // Bulut Ülkesi: CORE sırası (kuzucuk → uçuş kapısı → gökkuşağı tepesi) aynen
   for (const o of NESNELER) if (o.tip === 'karanlik' && !o.lit && o.x > P.x - 200 && (!h || o.x < h.x)) h = o;
   if (BOLUM_NO === 2) {   // Yıldız Gölü: Feza'ya en yakın uyanmamış (zorunlu) yıldız; isteğe bağlı zor yıldızlar çağrılmaz
     let b = null, bd = 1e9;
@@ -452,6 +452,7 @@ function stepDragon(dt) {
   if (!isFinite(D.x) || !isFinite(D.y)) { D.x = P.x - 40; D.y = P.y - 100; D.vx = D.vy = 0; drResetTail(); }
   if (P.ucus) { drUcusta(dt); return; }   // Bölüm 3: Feza'yı sırtında taşıyor (ucus.js çizer)
   if (D.ucusOldu) drUcusBitti();
+  if (BOLUM_NO === 4 && P.deniz) { drDenizAdim(dt); return; }
   D.t += dt; D.modeT += dt; if (D.flare > 0) D.flare = Math.max(0, D.flare - dt / 0.9);
   const wx = Math.sin(D.t * 0.71) * 9 + Math.sin(D.t * 1.93) * 3, wy = Math.sin(D.t * 1.31) * 5 + Math.sin(D.t * 0.53) * 4;
   let tx = P.x - P.f * 40 + wx, ty = P.y - 112 + wy;
@@ -1368,7 +1369,8 @@ function drTuySprite() {   // gündüz ışık tüyü (256×64; elips, lila→na
   x.strokeStyle = 'rgba(150,120,230,0.35)'; x.lineWidth = 3.4; x.beginPath(); x.moveTo(cx - Lk / 2 + 11, cy); x.lineTo(cx + Lk * 0.35, cy); x.stroke();
   return (drTuyC = c);
 }
-function drawWing(x, far, tm) {   // ışıktan kanat: yarı saydam, lavanta-nane, yumuşak üç tüy
+function drawWing(x, far, tm) {
+  if (BOLUM_NO === 4 && P.deniz && !D.plush) { drDenizKanat(x, far, tm); return; }   // ışıktan kanat: yarı saydam, lavanta-nane, yumuşak üç tüy
   const A = D.wingA * (far ? 0.55 : 1) * (D.wingSO ? 1 : 0.55 + 0.45 * DR_YK); if (A < 0.01) return;
   const w = Math.sin(D.ph + (far ? 0.35 : 0));
   let ang = lerp(-0.95, 0.62, (w + 1) / 2);
@@ -1555,7 +1557,7 @@ function drChin(x, mx) {   // önden limon yeşili çene: karından yukarı yumu
   x.quadraticCurveTo(mx + 6.6, -2.2, mx + 6, 2); x.lineTo(mx - 6, 2); x.quadraticCurveTo(mx - 6.6, -2.2, mx - 4.4, -4.4); x.closePath(); x.fill();
 }
 function drFront(x, tm, yaw) {   // önden görünüş (dönüşte yaw ile 3/4'e döner; ara sahnelerde tam önden)
-  const C = DR_COL, pose = D.pose, lg = D.glide * 2, pl = D.plush;
+  const C = DR_COL, pose = D.pose, lg = D.glide * 2, pl = D.plush, su = BOLUM_NO === 4 && P.deniz && !D.plush;
   const yw = yaw || 0, ya = Math.abs(yw), ys = yw >= 0 ? 1 : -1, YA = yw * 0.95;   // YA: başın dönüş açısı (radyan)
   const sph = (a0, r) => r * Math.sin(a0 + YA);                                     // küre üstündeki noktanın yatay yeri
   const bsh = yw * 2.4;                                                             // gövde ayrıntılarının kayması
@@ -1564,9 +1566,10 @@ function drFront(x, tm, yaw) {   // önden görünüş (dönüşte yaw ile 3/4'e
     const shx = sd * 7 + bsh * 0.6, shy = -0.8;
     let px = sd * lerp(10.4, 10, pose) + bsh, py = lerp(3.4, -14, pose);
     px = lerp(px, sd * 10.8, pl * (1 - pose)); py = lerp(py, 6.6, pl * (1 - pose));
+    if (su) { const ph = D.ph + (sd < 0 ? Math.PI : 0); px = shx + sd * (3.3 + Math.sin(ph) * 2.2); py = shy + 3.4 + Math.cos(ph) * 2.5; }
     if (D.clap > 0.01) { const w = Math.abs(Math.sin(D.clapPh || 0)); px = lerp(px, sd * (1.7 + 4.6 * w) + bsh, D.clap); py = lerp(py, -2.2 - 1.2 * w, D.clap); }   // alkış: eller göğsün önünde buluşur
     x.strokeStyle = C.line; x.lineWidth = 6.4; x.lineCap = 'round';
-    x.beginPath(); x.moveTo(shx, shy); x.lineTo(px, py); x.stroke();
+    x.beginPath(); x.moveTo(shx, shy); if (su) x.quadraticCurveTo(shx + 2.3, shy + 3.2, px, py); else x.lineTo(px, py); x.stroke();
     x.strokeStyle = C.pur; x.lineWidth = 5.2; x.stroke();
     x.fillStyle = C.purL; x.beginPath(); x.arc(px, py, 1.8, 0, 6.283); x.fill();
   };
@@ -1702,21 +1705,22 @@ function drCrest(x, tm, w) {   // w: dalgalanma ağırlığı
   x.restore();
 }
 function drSide(x, tm) {   // yandan görünüş (sağa bakan yerel uzay)
-  const C = DR_COL, pose = D.pose, grip = D.grip, bk = D.beckon;
+  const C = DR_COL, pose = D.pose, grip = D.grip, bk = D.beckon, su = BOLUM_NO === 4 && P.deniz && !D.plush;
 
   drawWing(x, true, tm);
   // uzak bacak
   x.fillStyle = C.purD;
-  x.beginPath(); x.ellipse(3, 9.6 - D.glide * 1.5, 4.4, 4.2, 0, 0, 6.283); x.fill();
-  x.beginPath(); x.ellipse(6.4, 13.6 - D.glide * 2, 4.6, 2.6, 0, 0, 6.283); x.fill();
+  x.beginPath(); x.ellipse(3 - (su ? Math.sin(D.ph) * 1.5 : 0), 9.6 - D.glide * 1.5 + (su ? Math.cos(D.ph) * 0.8 : 0), 4.4, 4.2, 0, 0, 6.283); x.fill();
+  x.beginPath(); x.ellipse(6.4 - (su ? Math.sin(D.ph) * 1.8 : 0), 13.6 - D.glide * 2 + (su ? Math.cos(D.ph) * 0.9 : 0), 4.6, 2.6, su ? -0.18 * Math.sin(D.ph) : 0, 0, 6.283); x.fill();
   // kısa tombul kollar: itmede yukarı, taşırken öne, "gel" derken el sallar
   const arm = (far) => {
     const shx = far ? 6.4 : 4.6, shy = far ? -1.6 : -0.6;
     let px = lerp(far ? 10.8 : 9.2, far ? 11.5 : 9.5, pose), py = lerp(far ? 2.6 : 3.8, far ? -13 : -14, pose);
     px = lerp(px, far ? 12.6 : 11.8, grip); py = lerp(py, far ? 5.2 : 6.2, grip);
+    if (su) { const ph = D.ph + (far ? Math.PI : 0); px = shx + 3.3 + Math.sin(ph) * 2.7; py = shy + 3.4 + Math.cos(ph) * 2.7; }
     if (!far && bk > 0.01) { const w = Math.sin(tm * 9); px = lerp(px, 11.5 + w * 1.8, bk); py = lerp(py, -8 - w * 2.6, bk); }
     x.strokeStyle = C.line; x.lineWidth = 6.2; x.lineCap = 'round';
-    x.beginPath(); x.moveTo(shx, shy); x.lineTo(px, py); x.stroke();
+    x.beginPath(); x.moveTo(shx, shy); if (su) x.quadraticCurveTo(shx + 2.3, shy + 3.2, px, py); else x.lineTo(px, py); x.stroke();
     x.strokeStyle = far ? C.purD : C.pur; x.lineWidth = 5; x.stroke();
     x.fillStyle = far ? C.pur : C.purL; x.beginPath(); x.arc(px, py, 1.7, 0, 6.283); x.fill();
   };
@@ -1746,6 +1750,7 @@ function drSide(x, tm) {   // yandan görünüş (sağa bakan yerel uzay)
 
   drawWing(x, false, tm);
   drHeadSide(x, tm);
+  if (su) { x.strokeStyle = 'rgba(195,248,230,0.32)'; x.lineWidth = 0.65; x.beginPath(); x.moveTo(-7.1, 1.1); x.bezierCurveTo(-9.1, 5, -8.4, 10, -5.3, 12.5); x.stroke(); }
 }
 function drHeadPath(x) {
   x.beginPath(); x.moveTo(-5, -11);
@@ -2217,6 +2222,7 @@ function pirilCizPoz(ctx, x, y, olcek, poz, tm, u) {
   D.blinkT = 1; D.tail = drPozTail;
   D.spin = 0; D.sq = 0; D.dz = 1; D.au = 0; D.gasp = 0; D.nom = 0; D.nomO = 0; D.mRound = 0; D.mWide = 0; D.spd = 0; D.sniff = 0;
   tm = tm || 0;
+  if (BOLUM_NO === 4 && poz === 'ucus') { D.mouth = drPozSave.mouth || 0; D.mRound = drPozSave.mRound || 0; D.mWide = drPozSave.mWide || 0; }
   if (poz === 'binek') {   // Bölüm 3 uçuşu: büyük Pırıl (konuşurken ağzı oyundaki hecelerle oynar)
     const s1 = D.sCr, s2 = D.sEr, s3 = D.sTl;
     D.mouth = drPozSave.mouth || 0; D.mRound = drPozSave.mRound || 0; D.mWide = drPozSave.mWide || 0;
@@ -2280,3 +2286,80 @@ function pirilCizPoz(ctx, x, y, olcek, poz, tm, u) {
   ctx.restore();
   for (const k of DR_POZ_KEYS) D[k] = drPozSave[k];
 }
+
+// Peluş kimliği değişmez: aynı kulak, ibik ve kanatlar suda daha yavaş, yüzgeç gibi çırpınır.
+function drDenizAdim(dt) {
+  if (!Number.isFinite(dt) || dt < 0) return;
+  D.t += dt; D.modeT += dt; drTalkStep(dt);
+  D.suSevT = Math.max(0, (D.suSevT || 0) - dt); D.suGosterT = Math.max(0, (D.suGosterT || 0) - dt); D.suYardimT = Math.max(0, (D.suYardimT || 0) - dt);
+  if (!D.suIlkGosterildi && DURUM === 'oyun') {
+    const ilk = NESNELER.find(o => o.tip === 'denizati' && !o.done);
+    if (ilk && Math.hypot(ilk.x - P.x, ilk.y - P.y + 40) < 420) { D.suIlkGosterildi = true; D.suGosterT = 3.2; D.suGosterO = ilk; D.expr = 'happy'; D.exprT = 1.2; drPulse(ilk.x, ilk.y - 42, 26, 2); }
+  }
+
+  let h = null; try { h = drHedef(); } catch (e) {}
+  const idle = (P.idle || 0) > 7 && h && Math.hypot(h.x - P.x, h.y - P.y) < 850;
+  const finalTarget = typeof INCI !== 'undefined' && INCI.active ? INCI.hedefPiril() : null;
+  const guide = D.suGosterT > 0 && D.suGosterO && !D.suGosterO.done, help = guide && D.suYardimT > 0, celebrate = D.suSevT > 0;
+  const gx = finalTarget ? finalTarget.x : help ? D.suGosterO.x - 35 : guide ? lerp(P.x, D.suGosterO.x, 0.68) : idle ? lerp(P.x, h.x, 0.32) : P.x - (P.f || 1) * 64;
+  const gy = finalTarget ? finalTarget.y : help ? D.suGosterO.y - 90 : guide ? lerp(P.y - 110, D.suGosterO.y - 85, 0.68) : idle ? lerp(P.y - 110, h.y - 70, 0.32) : P.y - 116;
+  const joy = finalTarget ? INCI.joy : celebrate ? Math.sin(clamp((2.6 - D.suSevT) / 2.6, 0, 1) * Math.PI) : 0;
+  const tx = gx + Math.sin(D.t * 0.8) * 5 + Math.sin(D.t * 4) * joy * 5, ty = Math.max(cam.y + 50, Math.min(gy, Math.abs(D.x - P.x) < 85 ? P.y - 126 : gy) + Math.sin(D.t * 1.3) * 4 - Math.abs(Math.sin(D.t * 4.2)) * joy * 10);
+  const px = D.x, py = D.y, k = 1 - Math.exp(-dt * 4.2);
+  D.x = lerp(D.x, tx, k); D.y = lerp(D.y, ty, k); D.vx = dt > 0 ? (D.x - px) / dt : 0; D.vy = dt > 0 ? (D.y - py) / dt : 0;
+  const facing = guide ? Math.sign(D.suGosterO.x - D.x) || 1 : idle ? Math.sign(h.x - D.x) || P.f : Math.abs(D.vx) > 20 ? Math.sign(D.vx) : P.f || 1;
+  if (D.tt < 0 && facing !== D.face) { D.tt = 0; D.face0 = D.face; D.tTo = facing; }
+  if (D.tt >= 0) { D.tt += dt / 0.34; if (D.tt >= 0.5) D.face = D.tTo; if (D.tt >= 1) D.tt = -1; }
+  drTurnPose(D.tt, D.face0, D.face); D.f = D.face; D.ft = facing;
+  D.tilt = lerp(D.tilt, clamp(D.vy / 550, -0.25, 0.25) + (finalTarget ? Math.sin(INCI.t * 2.15) * joy * .16 : 0), 1 - Math.exp(-dt * 6));
+  D.flapRate = lerp(D.flapRate, 1.25 + clamp(Math.hypot(D.vx, D.vy) / 300, 0, 1) + joy * 1.4, k);
+  D.ph += dt * D.flapRate * Math.PI * 2; D.bob = Math.sin(D.ph) * 0.9; D.wingA = 0.82; D.glide = 0.27; D.wingSO = true; D.glowA = 0.32 + joy * 0.35;
+  D.spd = Math.hypot(D.vx, D.vy); D.mode = 'follow'; D.pose = 0; D.grip = 0; D.beckon = guide ? 0.65 : joy * (finalTarget ? .8 : .42); D.dz = lerp(D.dz, 1, k); D.stretch = 0;
+  D.lookX = lerp(D.lookX, guide ? 0.9 : 0.75, k); D.lookY = lerp(D.lookY, guide ? clamp((D.suGosterO.y - 42 - D.y) / 100, -0.55, 0.55) : idle ? 0.2 : clamp(P.vy / 250, -0.5, 0.5), k);
+  D.headTilt = lerp(D.headTilt, D.lookY * 0.2 - D.tilt * 0.25 + Math.sin(D.t * 1.7) * 0.018, k); D.headRoll = Math.sin(D.ph - 0.5) * 0.018;
+  D.blinkT -= dt; if (D.blinkT < -0.14) D.blinkT = 2.2 + Math.random() * 3;
+  D.exprT -= dt; if (celebrate || help || finalTarget) { D.expr = 'happy'; D.exprT = 0.25; } else if (D.exprT <= 0) D.expr = 'normal';
+  drSpring(D.sCr, -D.vx / 1800, 12, 0.5, dt); drSpring(D.sEr, -D.vy / 1600, 13, 0.5, dt);
+  drSpring(D.sTl, Math.sin(D.ph) * 0.12, 10, 0.5, dt); drSpring(D.sSq, 0, 14, 0.5, dt);
+  let prev = drLocal(D.tailRX, 6); if (Math.hypot(prev.x - D.tail[0].x, prev.y - D.tail[0].y) > 70) drResetTail(); D.tail[0].x = prev.x; D.tail[0].y = prev.y;
+  for (let i = 1; i < DR_TAIL_N; i++) {
+    const u = i / (DR_TAIL_N - 1), a = Math.PI - 0.75 + u * 1.9 + Math.sin(D.ph * 0.85 - u * 4.4) * (0.18 + clamp(D.spd / 260, 0, 1) * 0.09);
+    const dx = D.fs * Math.cos(a) * DR_TAIL_LEN, dy = Math.sin(a) * DR_TAIL_LEN, q = D.tail[i], sk = 1 - Math.exp(-dt * (22 - u * 12));
+    q.x = lerp(q.x, prev.x + dx, sk); q.y = lerp(q.y, prev.y + dy, sk);
+    const qx = q.x - prev.x, qy = q.y - prev.y, len = Math.hypot(qx, qy) || 1; q.x = prev.x + qx / len * DR_TAIL_LEN; q.y = prev.y + qy / len * DR_TAIL_LEN; prev = q;
+  }
+  for (let i = D.iz.length - 1; i >= 0; i--) { D.iz[i].life -= dt; if (D.iz[i].life <= 0) D.iz.splice(i, 1); }
+  for (let i = D.pulse.length - 1; i >= 0; i--) { D.pulse[i].t += dt; if (D.pulse[i].t > D.pulse[i].life) D.pulse.splice(i, 1); }
+}
+
+let drSuKanatC = null;
+function drDenizKanatResmi() {
+  if (drSuKanatC) return drSuKanatC;
+  const c = document.createElement('canvas'); c.width = 224; c.height = 152; const x = c.getContext('2d'); x.setTransform(6, 0, 0, 6, 7, 78);
+  const path = () => { x.beginPath(); x.moveTo(0, 0); x.bezierCurveTo(4, -3, 7, -11, 15, -11); x.bezierCurveTo(22, -11, 30, -6, 31, -4); x.quadraticCurveTo(31, -1.6, 23, -1.4); x.quadraticCurveTo(31, 1, 27, 3.3); x.quadraticCurveTo(22, 5.4, 15, 3.7); x.quadraticCurveTo(20, 7, 14, 8.4); x.bezierCurveTo(7, 10, 3, 2.5, 0, 0); x.closePath(); };
+  const gr = x.createLinearGradient(0, -7, 30, 4); gr.addColorStop(0, '#d4b6eb'); gr.addColorStop(0.4, '#aaa7db'); gr.addColorStop(0.8, '#81c2c6'); gr.addColorStop(1, '#bde7dc'); path(); x.fillStyle = gr; x.globalAlpha = 0.79; x.fill(); x.globalAlpha = 1;
+  x.strokeStyle = 'rgba(233,252,237,0.7)'; x.lineWidth = 0.6; x.stroke();
+  x.save(); path(); x.clip(); const shine = x.createLinearGradient(2, -10, 28, 6); shine.addColorStop(0, 'rgba(242,223,255,0.3)'); shine.addColorStop(0.7, 'rgba(145,225,218,0)'); x.fillStyle = shine; x.fillRect(-1, -12, 34, 24); x.restore();
+  x.strokeStyle = 'rgba(222,245,235,0.39)'; x.lineWidth = 0.35;
+  for (const py of [-5.5, 0.8, 6]) { x.beginPath(); x.moveTo(1, 0); x.quadraticCurveTo(10, py * 0.3 - 1, 24 - Math.abs(py), py); x.stroke(); }
+  return drSuKanatC = c;
+}
+function drDenizKanat(x, far, tm) {
+  const phase = D.ph + (far ? 0.4 : 0), stroke = Math.sin(phase), sweep = -2.96 + stroke * 0.43;
+  const sc = far ? 0.75 : 1.02, c = drDenizKanatResmi();
+  x.save(); x.translate(far ? 1.5 : -2, far ? -6.5 : -5); x.rotate(sweep); x.scale(sc * (1 + Math.cos(phase) * 0.045), sc * (0.78 + 0.16 * (stroke + 1) * 0.5));
+  x.globalCompositeOperation = 'source-over'; x.globalAlpha = far ? 0.57 : 0.88; x.drawImage(c, -1.16, -13, c.width / 6, c.height / 6); x.restore();
+}
+
+OLAY.on('denizati', e => {
+  if (BOLUM_NO !== 4) return; dragonInit();
+  const o = e && (e.o || e); D.suSevT = 2.6; D.suSevO = o; D.suGosterT = 0; D.suYardimT = 0;
+  D.expr = 'happy'; D.exprT = 2.6; D.sEr.v += 2.8; D.sCr.v += 2.1; D.sTl.v += 2.2;
+  for (let i = 0; i < 7; i++) { const a = i * 0.897, life = 0.65 + (i % 3) * 0.1; D.iz.push({ x: D.x + Math.cos(a) * 14, y: D.y + Math.sin(a) * 14, life, max: life, ph: i * 1.7, col: i % 2 ? '#ffda7d' : '#d6b3ff' }); }
+});
+
+OLAY.on('denizatiYardim', e => {
+  if (BOLUM_NO !== 4 || !e || !e.o || e.o.done) return;
+  dragonInit(); D.suGosterO = e.o; D.suGosterT = Math.max(1, +e.sure || 4); D.suYardimT = D.suGosterT;
+  D.expr = 'happy'; D.exprT = D.suGosterT; D.suIlkGosterildi = true;
+});

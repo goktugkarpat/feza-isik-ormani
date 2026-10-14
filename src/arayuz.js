@@ -220,8 +220,17 @@ const ARAYUZ = (() => {
     x.save(); x.translate(m, m + R * 0.08);
     x.shadowColor = 'rgba(200,160,255,1)'; x.shadowBlur = R * 0.18;
     x.lineCap = 'round'; x.lineJoin = 'round'; x.strokeStyle = '#ffffff'; x.lineWidth = R * 0.16;
-    x.beginPath(); x.moveTo(-R * 0.36, R * 0.06); x.lineTo(0, -R * 0.32); x.lineTo(R * 0.36, R * 0.06); x.stroke();
-    x.beginPath(); x.moveTo(0, -R * 0.26); x.lineTo(0, R * 0.36); x.stroke();
+    if (BOLUM_NO === 4) {
+      x.lineWidth = R * .075; x.fillStyle = '#e2fff5';
+      x.beginPath(); x.ellipse(R * .08, 0, R * .37, R * .21, 0, 0, 6.283); x.fill();
+      x.beginPath(); x.moveTo(-R * .2, 0); x.lineTo(-R * .48, -R * .2); x.quadraticCurveTo(-R * .37, 0, -R * .48, R * .2); x.closePath(); x.fill();
+      x.fillStyle = '#326486'; x.beginPath(); x.arc(R * .25, -R * .035, R * .035, 0, 6.283); x.fill();
+      x.strokeStyle = '#bdfff1'; x.beginPath(); x.arc(R * .48, -R * .31, R * .09, 0, 6.283); x.stroke();
+      x.beginPath(); x.moveTo(-R * .42, R * .34); x.quadraticCurveTo(0, R * .22, R * .42, R * .34); x.stroke();
+    } else {
+      x.beginPath(); x.moveTo(-R * 0.36, R * 0.06); x.lineTo(0, -R * 0.32); x.lineTo(R * 0.36, R * 0.06); x.stroke();
+      x.beginPath(); x.moveTo(0, -R * 0.26); x.lineTo(0, R * 0.36); x.stroke();
+    }
     x.restore();
     x.fillStyle = '#fff6d6'; yildiz4(x, m + R * 0.46, m - R * 0.42, R * 0.17, 0.25); x.fill();
     x.fillStyle = 'rgba(255,246,214,0.8)'; yildiz4(x, m + R * 0.62, m - R * 0.14, R * 0.08, 0.3); x.fill();
@@ -257,6 +266,7 @@ const ARAYUZ = (() => {
   const uiSarkiEl = { x: 0, y: 0, a: 0, ist: false };   // sarki.js: şarkı çiçeğine dokunma eli (CSS px; her karede elGoster çağrılırsa görünür)
   const ip = { basla: -1, sahneT: 0, sonGirdi: 0, yurudu: false, zipladi: false, ziplaIlk: false, ziplaIlkT: 0, ilkSoylendi: false, itT: 0, itGoster: 0, ciftGoster: 0 };
   const ziplaSoyle = () => { if (!ip.zipladi && !ip.ilkSoylendi) { ip.ilkSoylendi = true; ip.ziplaIlk = true; ip.ziplaIlkT = now; } };
+  OLAY.on('denizHamle', () => { ip.zipladi = true; zipT = 1; });
   OLAY.on('ziplama', () => { ip.zipladi = true; ip.ziplaIlk = false; ip.itGoster = 0; ip.itT = 0; zipT = 1; });
   OLAY.on('ciftZiplama', () => { ip.ciftGoster = 0; ip.ciftYapti = true; zipT = 1; });
   OLAY.on('konusma', v => {
@@ -436,7 +446,8 @@ const ARAYUZ = (() => {
       x.fillStyle = gr; x.fillRect(-m, -m, SIM_B, SIM_B);
     }
     x.lineJoin = 'round'; x.lineCap = 'round';
-    if (tur.startsWith('kuzu')) kuzuSimge(x, +tur.slice(4) || 0, sonuk);
+    if (tur === 'denizati' && typeof DENIZ !== 'undefined' && typeof DENIZ.ikon === 'function') DENIZ.ikon(x, 0, 0, 42, acik);
+    else if (tur.startsWith('kuzu')) kuzuSimge(x, +tur.slice(4) || 0, sonuk);
     else if (tur === 'cicek') {
       for (let i = 0; i < 5; i++) {
         x.save(); x.rotate(i * 1.2566);
@@ -496,14 +507,36 @@ const ARAYUZ = (() => {
   OLAY.on('cicek', () => { bildirim = { tur: 'cicek', t0: now }; });
   OLAY.on('tohum', () => { bildirim = { tur: 'tohum', t0: now }; });
   OLAY.on('yildiz', () => { bildirim = { tur: 'yildiz', t0: now }; });
+  let uiDenizSon = null;
+  OLAY.on('denizati', e => { uiDenizSon = { o: e && (e.o || e), t0: now }; });
   OLAY.on('kuzu', () => { bildirim = { tur: 'kuzu', t0: now }; });   // Bölüm 3 sayacı: renklenen kuzucuklar (SAYAC.kuzu / kuzuTop), her biri kendi gökkuşağı renginde   // Bölüm 2 sayacı: açılan yıldız simgesi (SAYAC.yildiz / yildizTop)
+  // Beş dost, yazı okumadan görülen küçük bir ilerleme sırası. Her buluş aynı şekli doldurur.
+  function denizDostlariCiz(tm) {
+    if (BOLUM_NO !== 4 || DURUM !== 'oyun' || typeof DENIZ === 'undefined' || DENIZ.aktif || P.ucus) return;
+    const ati = DENIZ.denizatlari; if (!ati.length) return;
+    const age = uiDenizSon ? now - uiDenizSon.t0 : 99;
+    if (ati.every(o => o.done) && age > 5) return;
+    const a = Math.min(1, (now - startT) / 2) * (ati.every(o => o.done) ? 1 - smooth(clamp((age - 3.8) / 1.2, 0, 1)) : 1);
+    const r = Math.min(H * .039, W / 17), gap = r * 1.62, x0 = W / 2 - (ati.length - 1) * gap / 2, y = r * 1.5;
+    g.save(); g.globalAlpha = a; g.fillStyle = 'rgba(8,17,59,.55)';
+    rr(g, x0 - r, y - r * 1.03, gap * (ati.length - 1) + r * 2, r * 2.14, r); g.fill();
+    g.strokeStyle = 'rgba(152,239,245,.35)'; g.lineWidth = Math.max(1, DPR); g.stroke();
+    for (let i = 0; i < ati.length; i++) {
+      const o = ati[i], xx = x0 + i * gap, recent = !!uiDenizSon && uiDenizSon.o === o && age < 2.2;
+      const scale = recent ? 1 + Math.sin(clamp(age / 2.2, 0, 1) * Math.PI) * .18 : 1;
+      if (o.done) { g.globalCompositeOperation = 'lighter'; dglow('#ffcb65', xx, y, r * 1.15, a * .22); g.globalCompositeOperation = 'source-over'; }
+      simgeCiz('denizati', o.done, xx, y, r * 1.64, a * (o.done ? 1 : .72), scale);
+      if (o.done) { g.fillStyle = '#fff2a1'; g.beginPath(); g.arc(xx + r * .59, y + r * .55, r * .11, 0, Math.PI * 2); g.fill(); }
+    }
+    g.restore();
+  }
   function bildirimCiz(tm) {
     if (!bildirim || DURUM !== 'oyun') return;
     const u = now - bildirim.t0, sure = bildirim.tur === 'yildiz' || bildirim.tur === 'kuzu' ? 3.6 : 2.8;
     if (u > sure) { bildirim = null; return; }
     const a = uiEase(uiSeg(u, 0.15, 0.5)) * (1 - uiEase(uiSeg(u, sure - 0.8, sure)));
     const bt = bildirim.tur;
-    const top = bt === 'cicek' ? SAYAC.cicekTop : bt === 'yildiz' ? SAYAC.yildizTop : bt === 'kuzu' ? SAYAC.kuzuTop : SAYAC.tohumTop, var_ = bt === 'cicek' ? SAYAC.cicek : bt === 'yildiz' ? SAYAC.yildiz : bt === 'kuzu' ? SAYAC.kuzu : SAYAC.tohum;
+    const top = bt === 'denizati' ? SAYAC.denizatiTop : bt === 'cicek' ? SAYAC.cicekTop : bt === 'yildiz' ? SAYAC.yildizTop : bt === 'kuzu' ? SAYAC.kuzuTop : SAYAC.tohumTop, var_ = bt === 'denizati' ? SAYAC.denizati : bt === 'cicek' ? SAYAC.cicek : bt === 'yildiz' ? SAYAC.yildiz : bt === 'kuzu' ? SAYAC.kuzu : SAYAC.tohum;
     if (!top) return;
     // küçük, zarif: üst ortada ince bir sıra; açılanlar minik parlayan çiçek, açılmayanlar minik sönük nokta
     // uzun dizilerde (ör. 28 tohum) sıra ekranın ≈%60'ını geçmesin: aralık ve simge boyu orantılı küçülür (en çok %55'e kadar)
@@ -587,7 +620,7 @@ const ARAYUZ = (() => {
     const fs = Math.round(Math.min(H * 0.06, W * 0.055)), w = Math.ceil(fs * 9), h = Math.ceil(fs * 2);
     const c = tuval(w, h), x = c.getContext('2d');
     const bn = typeof BOLUM_NO !== 'undefined' ? BOLUM_NO : 1;
-    const bas = bn === 3 ? 'Gökkuşağı geldi!' : bn === 2 ? 'Gökyüzü ışıl ışıl!' : 'Orman ışıl ışıl!';
+    const bas = bn === 4 ? 'İnci Denizi ışıl ışıl!' : bn === 3 ? 'Gökkuşağı geldi!' : bn === 2 ? 'Gökyüzü ışıl ışıl!' : 'Orman ışıl ışıl!';
     x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = `400 ${fs}px ${FONT_SERIF}`;
     x.save(); x.shadowColor = 'rgba(255,190,90,0.9)'; x.shadowBlur = fs * 0.35; x.fillStyle = '#8a4fb0'; x.fillText(bas, w / 2, h / 2); x.restore();
     const gr = x.createLinearGradient(0, h * 0.25, 0, h * 0.75); gr.addColorStop(0, '#9b5cc4'); gr.addColorStop(1, '#6a3a94');
@@ -640,7 +673,7 @@ const ARAYUZ = (() => {
   function sonSatirlar() {   // her tür: toplam kadar yuva, toplanan kadar dolu/parlak (hiç toplanmayan tür çıkmaz)
     const say = v => Math.max(0, Math.min(40, Math.floor(v || 0)));
     const satir = [];
-    for (const [tur, n, top0] of [['kuzu', SAYAC.kuzu, SAYAC.kuzuTop], ['yildiz', SAYAC.yildiz, SAYAC.yildizTop], ['cicek', SAYAC.cicek, SAYAC.cicekTop], ['pofuduk', SAYAC.pofuduk, SAYAC.pofudukTop], ['tohum', SAYAC.tohum, SAYAC.tohumTop]]) {
+    for (const [tur, n, top0] of [['denizati', SAYAC.denizati, SAYAC.denizatiTop], ['kuzu', SAYAC.kuzu, SAYAC.kuzuTop], ['yildiz', SAYAC.yildiz, SAYAC.yildizTop], ['cicek', SAYAC.cicek, SAYAC.cicekTop], ['pofuduk', SAYAC.pofuduk, SAYAC.pofudukTop], ['tohum', SAYAC.tohum, SAYAC.tohumTop]]) {
       const dolu = say(n);
       let top = Math.max(dolu, say(top0));
       if (tur === 'tohum' && top > 14) top = dolu;   // çok sayıda isteğe bağlı tohum: kart gri yuvalarla dolmasın, yalnız toplananlar (hep olumlu)
@@ -888,6 +921,7 @@ const ARAYUZ = (() => {
     if (dugmeA > 0.005) { dene('parmak', () => parmakCiz(tm, dt)); dene('dugme', () => dugmeCiz(tm, dt, dugmeA)); }
     dene('ipucuCiz', () => ipucuCiz(tm));
     dene('bildirim', () => bildirimCiz(tm));
+    dene('denizDostlari', () => denizDostlariCiz(tm));
     if (DURUM === 'son') dene('son', () => sonCiz(tm, dt));
     else if (uiIsit.length) { const c = uiIsit.pop(); g.globalAlpha = 0.004; g.drawImage(c, 0, 0, 2, 2); g.globalAlpha = 1; }
     dene('altyazi', altyaziCiz);

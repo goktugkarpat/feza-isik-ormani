@@ -50,7 +50,7 @@ STYLE = {            # prefix → (rate, pitch, volume)
 }
 DEFAULT = ("-5%", "+2Hz", "+0%")
 # Pırıl's "how to play" lines are said a touch slower than her happy chatter: Feza learns the controls from them.
-TEACH = {"p_merhaba", "p_zipla", "p_ciftzipla", "p_minder", "p_buyuk", "p_uyuyor", "p_sakli"}
+TEACH = {"p_merhaba", "p_zipla", "p_ciftzipla", "p_minder", "p_buyuk", "p_uyuyor", "p_sakli", "p_i_yuz", "p_i_ahtapot_yardim"}
 TEACH_RATE = "-6%"
 
 # How words should *sound* (subtitles keep the normal spelling). Regex → spoken form.

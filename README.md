@@ -16,6 +16,10 @@ Korkutucu hiçbir şey yoktur, kaybetmek yoktur. Feza okuma bilmediği için her
 3. **Bulut Ülkesi** (gün doğumu) — Renklerini kaybetmiş 7 Bulut Kuzucuğu'na sarılıp gökkuşağını geri getirmek, zıplatan bulutlar,
    rüzgâr akımları, Bulut Kuşu, "Bulutlarda ne var?" (bulutu ovunca hayvan çıkar), Pırıl'ın sırtında uçuş ve gökkuşağından kayarak iniş.
 
+4. **İnci Denizi** (su altında) — Beş denizatına dokunarak ışıklı mercan bahçelerini uyandırma, üç kabuğu yuvalarına taşıyarak sevimli ahtapotun kollarını açma,
+   vatozun sırtında ışıklı kemerlerden geçme ve Büyük İnci’yi uyandırma. Denizatı dostları finalde birlikte dans eder;
+   mercan bahçeleri ve deniz canlıları harekete tepki verir. Her yöne yüzülür; kaybetmek ve oksijen sınırı yoktur.
+
 **Pofuduklar** ormanın ışığını karınlarında taşıyan tüylü orman dostlarıdır. Üstlerine zıplamak onları gıdıklayıp ışıklarını uyandırır:
 hapşırırlar, karınları parlar, çevrelerindeki mantarlar ve bitkiler renklenir, Feza'nın peşine takılırlar. Bazıları çok derin uyur;
 onları yalnızca ışık şarkısı uyandırır.
@@ -30,19 +34,20 @@ onları yalnızca ışık şarkısı uyandırır.
 ## Nasıl oynanır
 
 - **Yürümek:** ekranın herhangi bir yerine parmağını koyup tut; Feza o tarafa yürür. Parmak yakınsa yavaş, uzaksa koşar.
+- **İnci Denizi:** ekranı basılı tutarak her yöne yüz. Sol alttaki balık düğmesi kısa bir yüzme hamlesi yapar; ahtapotun kabukları parmakla sürüklenir veya kabuğa ve eşleşen yuvaya sırayla dokunulur.
 - **Zıplamak:** sol alttaki yuvarlak düğmeye bas. Havadayken bir daha basınca Pırıl Feza'yı yukarı iter.
 - **Işık çiçekleri:** Feza dokununca açılır, çevre renklenir. Pırıl karanlık göllere ışık üfler, nilüfer yaprakları çıkar.
 - **Pofuduklar:** uyuyan Pofuduğun üstüne zıplayınca hapşırıp uyanır ve Feza'nın peşine takılır; bazıları zıplatma minderi ya da basamak olur.
 - **Takılırsa:** Pırıl yolu gösterir; suya düşerse ya da bir yerde zorlanırsa Pırıl onu taşır.
 - **Saklı yollar:** parlayan yaprak kemerlerinin ardında ışık tohumları saklıdır.
-- Klavye (ebeveyn için): **oklar / A–D** yürür, **Boşluk / W / ↑** zıplar.
+- Klavye (ebeveyn için): **oklar / A–D** yürür, **Boşluk / W / ↑** zıplar. İnci Denizi’nde **oklar / W–A–S–D** her yöne yüzdürür, **Boşluk** hızlandırır.
 
 ## Ebeveyn için notlar
 
 - **Sessiz açmak:** adrese `?sessiz` ekle. Açılışı atlamak için `?atla`, altyazı için `?altyazi`.
-- **Doğrudan bir rüyayı açmak:** `?bolum=1`, `?bolum=2` veya `?bolum=3`.
+- **Doğrudan bir rüyayı açmak:** `?bolum=1`, `?bolum=2`, `?bolum=3` veya `?bolum=4`.
 - **Kayıtları sıfırlamak:** seçim ekranında sol üst köşeye 3 saniye basılı tut. Bitirilen rüyalar cihazda saklanır, kilit yoktur.
-- **Performans:** iPad Pro (120 Hz) dahil her ekranda oyun en çok 60 kare/sn çizer; oyun hızı her ekranda aynıdır.
+- **Performans:** dokunmatik cihazlarda oyun en çok 60, masaüstünde en çok 120 kare/sn çizer; oyun hızı her ekranda aynıdır.
   Büyük ekranlarda çözünürlük otomatik uyarlanır.
 - **Seslendirme:** tr-TR-EmelNeural kadın sesiyle önceden kaydedilmiş, kırpılmış mp3'ler (`sesler.js`); cümleleri değiştirmek için
   `src/ses.js` düzenlenip `python gen_voice.py` çalıştırılır.

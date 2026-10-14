@@ -41,6 +41,7 @@ Every object: `{tip, x, y (bottom-centre, world), id, ...}`. Behaviour comes fro
   bottom-centre is `o.x,o.y`. `kati` solid, `ustten` one-way top, `ziplat` bounces Feza up with `guc`. Set `dx/dy` to the
   box's movement this frame if it moves (Feza standing on it is carried).
 - `guncelle(o, dt)` every frame; `ciz(o, tm)` behind Feza; `cizOn(o, tm)` in front (world transform set).
+  `dt` may be zero while the document is hidden or a timestamp repeats. Keep positions and velocities finite; guard division by `dt`.
 - `ustune(o, vy)` Feza landed on top (stomp / bounce). `dokun(o)` Feza came within `o.r` of the object (fires once; set
   `o.dokundu=false` to re-arm). `TUR.kaydet` merges, so several files may add methods to the same type.
 
@@ -112,3 +113,22 @@ Voice lines carrying this story: `p_uyan`, `p_uyuyor`, `p_uyandi`, `p_buyuk`, `p
 Test bayrakları: `?sessiz`, `?atla`, `?bolum=1|2`, `?nogecis`, `?altyazi`.
 
 Tur 3: başlık = seçim sahnesi; `OLAY` akışı: `SAHNE.secim(secenekler, onSec)` → `onSec(id)` (1: `begin()`, 2: sessionStorage 'fezaIsikSec'=2 + yenileme → `SAHNE.giris(bitti, {bolum:2, kisa:true})`). Bölüm bitince `finaleGec()` 'fezaIsikTamam'a bölüm no yazar. Bölüm 1→2 geçiş sinematiği kaldırıldı.
+
+
+## Bölüm 4 (İnci Denizi)
+`index.html` yalnız `bolum4.js` haritasını seçer; çizimler `dunya4.js` içindeki `dn4*` işlevlerine yönlenir.
+`deniz.js` beş denizatı, üç kabuk eşleştirmeli ahtapot ve 30 saniyelik vatoz yolculuğunu yönetir.
+`inci.js`, `deniz.js` sonrasında yüklenir ve `buyukInci` türünün 22 saniyelik kutlamasını yönetir.
+
+- `P.deniz` yalnız bu bölümde açıktır. Dokunup tutma veya W/A/S/D her yöne yüzdürür; Boşluk kısa yüzme hamlesidir.
+- `DENIZ.hedef()` ana etkinlik sırasını, `DENIZ.aktif` kabuk etkinliğini bildirir. Sürükleme yüzme girdisini sahiplenmez;
+  tersi de geçerlidir. Kabuk seçilip eşleşen yuvaya ikinci kez dokunularak da yerleştirilebilir.
+- İlk buluşma `denizati`, sonraki oyun `denizatiOyun` olayını üretir; tekrar etkileşim sayacı artırmaz.
+- `ahtapotTamam` geçidi açar; `vatozBitti` Feza'yı yolun sonuna indirir. Başarısızlık veya oksijen sınırı yoktur.
+- İnci bütün üç etkinlik tamamlanmadan başlamaz. `inciSahne`, `inciKabuk`, `inciDostlar`, `inciDalga`, `inciDoruk` ve
+  `inciTamam` birer kez üretilir. Dünya uyanışı 14. saniyedeki `inciDalga` olayına bağlıdır.
+- `INCI.active`, `INCI.joy`, `INCI.hedefPiril()` ve `INCI.kameraKutu()` ortak karakter/kamera güncellemelerinde kullanılır.
+  Ana Feza/Pırıl modelleri çizilir; ikinci bir kahraman kopyası oluşturulmaz.
+- Manzara parçaları en fazla 24 öğeli LRU önbelleğinde tutulur. Büyük atlaslar giriş sırasında hazırlanır.
+  Yeni çalışma zamanı dosyaları hem `index.html` hem `sw.js` listesine eklenmelidir.
+- Giriş ve deneme: `?sessiz&bolum=4&uyku`; doğrudan oynanış denemesi: `?sessiz&atla&bolum=4`.
