@@ -112,7 +112,9 @@ function skGuncelle(o, dt) {
     k.bosT += dt;
     // geç yardım (ilk anda değil): uzun süre dokunmazsa ya da aynı turda iki kez şaşırırsa el sıradaki çiçeğe dokunmayı gösterir
     if ((k.bosT > 5.5 || (k.yanlis >= 2 && k.t > 0.6)) && k.mel && k.adim < k.mel.length) skElGoster(o, k.mel[k.adim]);
-    if (k.bosT > 16) { k.gi = 0; k.komGi = -1; k.adim = 0; k.mel = skMelodi(o); skDur(o, 'goster'); k.t = -0.2; }   // sabırla yeniden göster
+    // ışık perdesi (kapi.js) şarkı bitene kadar yolu kapatır: çok uzun boşta kalınırsa Pırıl çiçekleri kendisi çalar (takılma olmasın)
+    if (k.bosT > 9 && (k.tekrar || 0) >= 1 && k.mel && k.adim < k.mel.length) { k.oto = true; skBas(o, k.mel[k.adim]); k.oto = false; k.bosT = 5; return; }
+    if (k.bosT > 16) { k.tekrar = (k.tekrar || 0) + 1; k.gi = 0; k.komGi = -1; k.adim = 0; k.mel = skMelodi(o); skDur(o, 'goster'); k.t = -0.2; }   // sabırla yeniden göster
   } else if (k.durum === 'yanlis') {
     if (k.t > 1.5) { k.gi = 0; k.komGi = -1; k.adim = 0; skDur(o, 'goster'); k.t = 0; }
   } else if (k.durum === 'dogru') {
@@ -129,7 +131,7 @@ function skBas(o, i) {
   const k = o.sk;
   if (k.durum === 'sira') {
     const bek = k.mel[k.adim];
-    k.bosT = 0;
+    k.bosT = 0; if (!k.oto) k.tekrar = 0;
     if (i === bek) {
       skParla(o, i, 1); skNota(o, i, 1.15); skKivilcim(o, i, 9); skIlkSay++; k.adim++; k.dogruSay = (k.dogruSay || 0) + 1; skPofNota(o, 1);
       if (k.adim >= k.mel.length) { skDur(o, 'dogru'); k.sonuc = 0; k.say = 0; }

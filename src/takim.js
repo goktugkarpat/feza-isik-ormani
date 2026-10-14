@@ -127,6 +127,8 @@ function tkGuncelle(o, dt) {
     if (!k.drag && k.bosT > 4 && k.n < k.sek.seq.length && typeof ARAYUZ !== 'undefined' && ARAYUZ && typeof ARAYUZ.elGoster === 'function') {
       const q = tkNoktalar(k)[k.sek.seq[k.n]]; ARAYUZ.elGoster(q.x, q.y);
     }
+    // ışık perdesi (kapi.js) takımyıldızı bitene kadar yolu kapatır: çok uzun boşta kalınırsa Pırıl sıradaki noktayı kendisi bağlar
+    if (!k.drag && k.bosT > 14 && k.n < k.sek.seq.length) { tkBagla(o); k.bosT = 7; return; }
     if (k.bosT > 22 && k.n === 0) { tkDur(o, 'goster'); k.dmN = 0; k.bosT = 0; }   // sabırla yeniden göster
   } else if (k.durum === 'dogru') {
     tkDogru(o, dt);

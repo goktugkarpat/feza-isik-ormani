@@ -109,7 +109,8 @@ blSoz(158, 'y_pofuduk', 70, 166, blPofA);
 nesne('pofuduk', 174.5, yuzey(174), { tur: 'minder' });
 nesne('yildiz', 174.5, blDal(13) - 40, { r: 60, secmeli: true });
 nesne('yildiz', 180.5, yuzey(180) - 34, { r: 54, birikinti: true });
-nesne('takim', 191.5, yuzey(191), { sekil: 0 });   // Takımyıldızı çiz 1: kıyıda, 4 nokta (takim.js)
+const blTakim1 = nesne('takim', 191.5, yuzey(191), { sekil: 0 });
+nesne('miniKapi', 191.5 + 4.75, yuzey(196), { bagId: blTakim1.id, stil: 'takim' });   // takımyıldızı bitene kadar ilerisi kapalı (kapi.js)   // Takımyıldızı çiz 1: kıyıda, 4 nokta (takim.js)
 nesne('pofuduk', 204.5, yuzey(204), { tur: 'yol' });
 // 5. Yıldız Gölü II
 blZ('d', 8680, 9616, [708, 704, 700, 696, 692, 690]);
@@ -120,9 +121,11 @@ bl2X(10474, 'yildiz', 644, { r: 70 });
 bl2X(11040, 'yildizAda', 700, { w: 340, zincir: 'adaD' });
 bl2X(11040, 'yildiz', 648, { r: 66 });
 blZ('f', 11203, 11520, [706, 714]);
-bl2X(9700, 'takim', 690, { sekil: 1 });   // Takımyıldızı çiz 2: ada C üstünde, 6 nokta (kuğu)
+const blTakim2 = bl2X(9700, 'takim', 690, { sekil: 1 });
+bl2X(9900, 'miniKapi', 690, { bagId: blTakim2.id, stil: 'takim' });   // Takımyıldızı çiz 2: ada C üstünde, 6 nokta (kuğu)
 // 6. Şarkı kıyısı 2
-nesne('takim', 298.5, yuzey(298), { sekil: 2 });   // Takımyıldızı çiz 3: kıyıda, 7 nokta (kaplumbağa)
+const blTakim3 = nesne('takim', 298.5, yuzey(298), { sekil: 2 });
+nesne('miniKapi', 298.5 + 4.75, yuzey(303), { bagId: blTakim3.id, stil: 'takim' });   // Takımyıldızı çiz 3: kıyıda, 7 nokta (kaplumbağa)
 nesne('pofuduk', 307.5, yuzey(307), { tur: 'yol' });
 nesne('pofuduk', 322, yuzey(322), { tur: 'basamak' });
 nesne('tohum', 350.5, yuzey(350) - 20, { r: 44 });

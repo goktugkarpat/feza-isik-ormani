@@ -160,8 +160,10 @@ nesne('agac', 444, yuzey(444), { r: 90 });
 
 // Şarkı çiçekleri (sarki.js, isteğe bağlı mini etkinlik; sayaçlara girmez): üçer ışıklı çiçek, notalar D pentatonik (E5 A5 B5 gibi).
 // 1) Pofuduk Çayırı'nın düzlüğü (130–139): solundaki çukurda uyuyan Pofuduk (120,5) dansa kalkar. 2) Açıklığın girişi (387–392): sağındaki uyuyan Pofuduk (397).
-nesne('sarki', 133.4, yuzey(133), { notalar: [74, 78, 81], melodiler: [[0, 2], [0, 1, 2], [0, 2, 1, 2]] });
-nesne('sarki', 389.6, yuzey(389), { notalar: [76, 81, 86], melodiler: [[1, 2], [0, 2, 1], [2, 0, 1, 0]] });
+const blSarki1 = nesne('sarki', 133.4, yuzey(133), { notalar: [74, 78, 81], melodiler: [[0, 2], [0, 1, 2], [0, 2, 1, 2]] });
+nesne('miniKapi', 133.4 + 4.75, yuzey(138), { bagId: blSarki1.id, stil: 'sarki' });   // şarkı bitene kadar ilerisi ışık perdesiyle kapalı (kapi.js)
+const blSarki2 = nesne('sarki', 389.6, yuzey(389), { notalar: [76, 81, 86], melodiler: [[1, 2], [0, 2, 1], [2, 0, 1, 0]] });
+nesne('miniKapi', 389.6 + 4.75, yuzey(394), { bagId: blSarki2.id, stil: 'sarki' });
 
 // Eski adlar (dunya.js uyumluluğu)
 const FLOWERS = NESNELER.filter(n => n.tip === 'cicek');

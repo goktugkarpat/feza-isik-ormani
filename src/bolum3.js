@@ -152,9 +152,11 @@ nesne('ucurtma', 270, bl3H(4), { ip: 280, renk: 2 }); nesne('ucurtma', 286, bl3H
 nesne('tohum', 279, bl3H(4) - 120, { r: 46 });   // tüy köprüsünün ortasında
 
 // ════════ 4. Bulut Şekilleri ════════
-nesne('bulutSekil', bl3K(225), yuzey(bl3K(225)), { sira: 0 });
+const bl3Sekil1 = nesne('bulutSekil', bl3K(225), yuzey(bl3K(225)), { sira: 0 });
+nesne('miniKapi', bl3K(225) + 5.75, yuzey(bl3K(225) + 5), { bagId: bl3Sekil1.id, stil: 'sekil' });   // bulut canlanana kadar ilerisi kapalı (kapi.js)
 bl3Kuzu(bl3K(237.5));                                                             // tümseğin üstünde
-nesne('bulutSekil', bl3K(248), yuzey(bl3K(248)), { sira: 1 });
+const bl3Sekil2 = nesne('bulutSekil', bl3K(248), yuzey(bl3K(248)), { sira: 1 });
+nesne('miniKapi', bl3K(248) + 5.75, yuzey(bl3K(248) + 5), { bagId: bl3Sekil2.id, stil: 'sekil' });
 
 // ════════ 5. Büyük Boşluk → uçuş ════════
 const bl3Kapi = nesne('ucusKapisi', bl3K(260), yuzey(bl3K(260)), { x1: BL3_UCUS.x1, yUst: BL3_UCUS.yUst, yAlt: BL3_UCUS.yAlt });

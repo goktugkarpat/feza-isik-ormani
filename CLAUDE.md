@@ -15,6 +15,7 @@
 - GitHub'a SADECE ebeveyn "yükle / GitHub'a gönder" dediğinde gönder (depo: goktugkarpat/feza-piril, `main`).
   `yayinla.command` ilk seferde depoyu oluşturup GitHub Pages'ı açar.
 - Bölümler ("her gece başka bir rüya"): Bölüm 1 `bolum.js`, Bölüm 2 (Yıldız Gölü) `bolum2.js`, Bölüm 3 (Bulut Ülkesi) `bolum3.js` (+ `dunya3 bulut kuzu sekil ucus`); `index.html` `?bolum=N` > `sessionStorage 'fezaIsikSec'` > 1 ile birini yükler (`BOLUM_NO`); başlık sayfası hep Bölüm 1'dir ve seçim sahnesini (`SAHNE.secim`) gösterir; her bölüm sabah finaliyle biter, sonuç kartı "odaya dön" ile seçime döner. Kayıt: `fezaIsikTamam`, `fezaIsikSon`. Ayrıntı: `src/BOLUM2.md`, `src/BOLUM3.md` (Bölüm 3 sözleşmesi + ajan notları). Test: `?bolum=N`, `?atla`.
+- Mini oyun kapısı (`src/kapi.js`, nesne `miniKapi`): şarkı (B1), takımyıldızı (B2) ve bulut şekilleri (B3) bitene kadar hemen ilerisine ışık perdesi gerilir (`bolum*.js`'te `bagId` ile bağlanır); çocuk dokunmazsa Pırıl kendisi tamamlar (sarki/takim/sekil geç yardım), yani asla takılmaz.
 - Ebeveyn kısayolu: seçim ekranında sol üst köşe 3 sn = kayıtları sıfırla.
 - Cihaz profili (`OM_MASA`, `?cihaz=pc|tablet`): dokunmatikte yoğunluk en çok 1,5 ve 60 fps kilidi; masaüstünde monitörün gerçek çözünürlüğü ve en çok 120 fps.
 - 60 fps kilidi (ProMotion): `oyun.js` `omDongu` yenileme aralığını ölçer; 120 Hz'de her ikinci rAF'ta, 75-100 Hz ve 144 Hz+'ta zaman tabanlı çizer, 60 Hz ve altında hiç kare düşürmez. Fizik/animasyon gerçek zaman damgasıyla ilerler (hız her Hz'de aynı). Test kancaları: `OYUN.lim`, `OYUN.kareSay`, `OYUN.kareMs`.
