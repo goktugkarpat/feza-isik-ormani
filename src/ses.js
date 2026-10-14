@@ -395,11 +395,20 @@ const SES = (() => {
     }
     return (sesSinir[k] = r);
   }
+  // Kritik talimatlar (QA turu 2): olay cümlesi gelse de sonuna kadar söylenir, gelen cümle bekler. "Üç çiçeğe dokun" Büyük Pofuduk'un ilk
+  // aşamalarında hâlâ geçerli (yalnız uyanınca biter); kontrol öğreten cümleler hâlâ geçerliyse tamamlanır.
+  const SES_KRITIK = {
+    p_buyuk: () => sesBuyukAsama() < 3,
+    p_merhaba: c => !sesGecerli(Object.assign({}, c, { son: 1e9 })), p_zipla: c => !sesGecerli(Object.assign({}, c, { son: 1e9 })),
+    p_ciftzipla: c => !sesGecerli(Object.assign({}, c, { son: 1e9 })), p_minder: c => !sesGecerli(Object.assign({}, c, { son: 1e9 })),
+    p_y_hayvan: c => !sesGecerli(Object.assign({}, c, { son: 1e9 })), p_takim1: () => true, p_takim2: () => true,
+  };
   function sesYumusakKes(neden, s, zorla) {
     const c = sesCalan; if (!c) return;
     const t = sesSaat(), kalan = c.bas ? c.bas + c.sure - t : c.sure;
     let ne = kalan;   // yeni cümle en geç ne zaman başlayabilir
-    if (kalan > SES_BEKLE) {
+    let kritik = false; if (!zorla && SES_KRITIK[c.k]) { try { kritik = !!SES_KRITIK[c.k](c); } catch (e) {} }
+    if (kalan > SES_BEKLE && !kritik) {
       const simdi = c.bas ? t - c.bas : 0, b = sesCumleSinirlari(c).find(x => x > simdi + 0.05 && x < c.sure - 0.6);
       if (b != null) {
         ne = (c.bas || t) + b - t;
