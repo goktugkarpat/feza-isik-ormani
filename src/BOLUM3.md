@@ -584,3 +584,6 @@ Genel sonuç:
 - (CORE, Tur 4) QA turu 2: (1) uçuş bittiyse (`ucusBitti` ya da kapı `bitti/done`) ve Feza koridorun ötesindeyse, `BOLUM.ucus.x0` gerisindeki kuzucuklar HEDEF değil; gökkuşağı hedefi de onları beklemez
   (Pırıl Bölüm 3'te doğrudan `HEDEF()` kullanıyor; test: atlanan kuzucukla uçuş sonrası HEDEF = gokkusagi). (3) Dikey ekranda kontrol 0,4 sn'den uzun kilitliyken / final geçişinde
   kamera Feza'yı yatayda en az ≈%22 içeride tutar (yumuşak geçiş; yatay ekran aynen). Bölüm 3 tam bot: 834×1194 sağ kenara en az 86 px, 768×1024 76 px (finalde 157-183 px), 1180×820 169 px; 7/7, 0 düşüş, konsol 0.
+- **SES – QA turu 2:** kritik talimatlar (`p_buyuk` Büyük Pofuduk kalkana dek; `p_merhaba p_zipla p_ciftzipla p_minder p_y_hayvan` hâlâ geçerliyken; `p_takim1/2`) olay cümlesiyle kesilmez,
+  gelen cümle bekler (ömrü uzar); aynı konudaki ara aşamalar yalnız en yenisiyle söylenir (`p_buyuk_goz` → `p_buyuk_esne` gelirse atılır). Talimatı eskiten olay (`p_buyuk_kalk`, `p_y_hayvan_uyan`,
+  `p_y_bitti`, `p_b_kuzu_ilk`, `p_cicek_ilk`, `p_b_bitti`) gelince eski talimat cümle sonunda susar ve bir daha söylenmez (`SES_ESKITIR`). Test kancası: `SES._sinir(anahtar)` (cümle sonları, sn).
