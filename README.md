@@ -34,6 +34,7 @@ onları yalnızca ışık şarkısı uyandırır.
 ## Nasıl oynanır
 
 - **Yürümek:** ekranın herhangi bir yerine parmağını koyup tut; Feza o tarafa yürür. Parmak yakınsa yavaş, uzaksa koşar.
+- **Rüyalara dönüş:** her bölümün sağ üstündeki ev/geri simgesini 1,2 saniye basılı tut. Kısa dokunmak çıkış yapmaz; tamamlanan rüyalar korunur.
 - **İnci Denizi:** ekranı basılı tutarak her yöne yüz. Sol alttaki balık düğmesi kısa bir yüzme hamlesi yapar; ahtapotun kabukları parmakla sürüklenir veya kabuğa ve eşleşen yuvaya sırayla dokunulur.
 - **Zıplamak:** sol alttaki yuvarlak düğmeye bas. Havadayken bir daha basınca Pırıl Feza'yı yukarı iter.
 - **Işık çiçekleri:** Feza dokununca açılır, çevre renklenir. Pırıl karanlık göllere ışık üfler, nilüfer yaprakları çıkar.

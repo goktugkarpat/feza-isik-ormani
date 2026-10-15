@@ -16,10 +16,33 @@
   html, body { margin: 0; height: 100%; background: #050a18; overflow: hidden; touch-action: none;
     -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
   canvas { display: block; width: 100vw; height: 100vh; }
+  #bolum-geri { position: fixed; z-index: 5; top: calc(16px + env(safe-area-inset-top, 0px)); right: calc(16px + env(safe-area-inset-right, 0px));
+    width: 64px; height: 64px; padding: 0; display: grid; place-items: center; border: 1px solid #e5d6ff80; border-radius: 50%;
+    background: radial-gradient(circle at 38% 28%, #675c92ed, #252044ed 78%); color: #fff3da; cursor: pointer; touch-action: none;
+    box-shadow: inset 0 1px 0 #fff8, 0 3px 12px #080b2040; -webkit-tap-highlight-color: transparent; }
+  #bolum-geri[hidden] { display: none; }
+  #bolum-geri:focus-visible { outline: 3px solid #fff0b8; outline-offset: 4px; }
+  #bolum-geri svg { width: 56px; height: 56px; overflow: visible; pointer-events: none; }
+  #bolum-geri .geri-halka { fill: none; stroke: #ffe7a4; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 100; transform: rotate(-90deg); transform-origin: 28px 28px; }
+  #bolum-geri.basili .geri-halka { animation: geri-bekle 1.2s linear forwards; }
+  #bolum-geri.basili { background: radial-gradient(circle at 38% 28%, #8370ae, #3b305d 78%); }
+  #bolum-geri .geri-ipucu { position: absolute; right: 0; top: 72px; padding: 7px 11px; border: 1px solid #e5d6ff55; border-radius: 14px;
+    background: #211c3af2; color: #fff3da; font: 600 13px/1.3 system-ui, sans-serif; white-space: nowrap; opacity: 0; pointer-events: none; }
+  #bolum-geri.basili .geri-ipucu, #bolum-geri:focus-visible .geri-ipucu { opacity: 1; }
+  @keyframes geri-bekle { to { stroke-dashoffset: 0; } }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
+<button id="bolum-geri" type="button" hidden aria-label="Rüya seçimine dönmek için basılı tut" title="Rüyalara dön · 1,2 saniye basılı tut">
+  <svg viewBox="0 0 56 56" aria-hidden="true">
+    <circle class="geri-halka" cx="28" cy="28" r="25" pathLength="100"/>
+    <path d="M21 18 31 10l10 8v17H29" fill="#d9c4f52b" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"/>
+    <path d="M32 35V24h5v11M24 24l-8 8 8 8M17 32h13" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="m12 14 1.1 2.8L16 18l-2.9 1.1L12 22l-1.1-2.9L8 18l2.9-1.2Z" fill="#ffe7a4"/>
+  </svg>
+  <span class="geri-ipucu" aria-hidden="true">Rüyalara dön · basılı tut</span>
+</button>
 <script>
   // Zayıf ağda ilk açılışta bir kod dosyası yüklenemezse oyun eksik kalır (ör. bulutlar yok → bölüm geçilemez): sayfa bir kez (oturumda en çok 2) kendini yeniler.
   // Seçilen bölüm korunur (oyun.js oturum bayrağını okuyup siler; burada yeniden yazılır).

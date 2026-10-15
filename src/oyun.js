@@ -60,9 +60,9 @@ function omGuvenliOlc() {
     omGuvenli.sol = parseFloat(cs.paddingLeft) || 0; omGuvenli.alt = parseFloat(cs.paddingBottom) || 0;
   } catch (_) { omGuvenli.sol = omGuvenli.alt = 0; }
 }
-function dugmeYeri() {   // CSS px; 5 yaş başparmağı: iPad Pro'da çap ≈ 80 px, merkez kenarlardan ≈ 76 px
+function dugmeYeri() {   // CSS px; iPad'de çap 100–120 px: küçük çocuğun rahat görebileceği/basabileceği boy
   omGuvenliOlc();
-  const r = clamp(Math.min(innerWidth, innerHeight) * 0.048, 32, 44);
+  const r = clamp(Math.min(innerWidth, innerHeight) * 0.065, 44, 60);
   const pay = r + 36;
   GIRDI.dugme.r = r; GIRDI.dugme.x = omGuvenli.sol + pay; GIRDI.dugme.y = innerHeight - omGuvenli.alt - pay;
 }

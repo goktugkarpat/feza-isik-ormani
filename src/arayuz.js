@@ -884,22 +884,77 @@ const ARAYUZ = (() => {
     if (DURUM !== 'son' || !son || !tekrarYer) return;
     if (!v || v.x == null || Math.hypot(v.x - tekrarYer.x, v.y - tekrarYer.y) < tekrarYer.r) {
       if (son.cikis) return; son.cikis = true;
-      // aydınlık sabah odasından karanlık seçim ekranına sert kesme olmasın: önce ≈0,45 sn'de gece mavisine kararır, sonra yenilenir
-      let bekle = 0;
-      try { if (typeof omPerde !== 'undefined' && omPerde) { omPerde.hedef = 1; omPerde.hiz = 2.4; bekle = 480; } } catch (e) {}
-      setTimeout(() => { try {   // odaya dön: seçim ekranı (başlık sayfası); ?bolum/?atla düşer, ?sessiz gibi test bayrakları kalır
-        sessionStorage.removeItem('fezaIsikSec'); sessionStorage.removeItem('fezaGecis');
-        const q = new URLSearchParams(location.search); q.delete('bolum'); q.delete('atla'); q.delete('nogecis');
-        const qs = q.toString().replace(/=(&|$)/g, '$1');   // değersiz bayraklar (?sessiz) "sessiz=" olmasın
-        location.replace(location.pathname + (qs ? '?' + qs : ''));
-      } catch (e) { try { location.reload(); } catch (e2) {} } }, bekle);
+      // Sabah finali ile bölümden erken çıkış aynı güvenli dönüş yolunu kullanır.
+      odayaDon();
     }
   });
+
+  // Rüyaya ara verme: kısa dokunuş çıkmaz; basılı tutma halkası dolunca seçim odasına dönülür.
+  const uiGeri = document.getElementById('bolum-geri');
+  let uiGeriT = 0, uiGeriParmak = null, uiGeriTus = null, uiCikis = false;
+  function geriVazgec() {
+    clearTimeout(uiGeriT); uiGeriT = 0; uiGeriParmak = null; uiGeriTus = null;
+    if (uiGeri) uiGeri.classList.remove('basili');
+  }
+  function odayaDon() {
+    if (uiCikis) return; uiCikis = true; geriVazgec();
+    if (uiGeri) uiGeri.disabled = true;
+    if (typeof omHepsiniBirak === 'function') omHepsiniBirak();
+    P.kilit = Math.max(P.kilit || 0, 1);
+    let bekle = 0;
+    try { if (typeof omPerde !== 'undefined' && omPerde) { omPerde.hedef = 1; omPerde.hiz = 2.4; bekle = 480; } } catch (e) {}
+    setTimeout(() => {
+      try { sessionStorage.removeItem('fezaIsikSec'); sessionStorage.removeItem('fezaGecis'); } catch (e) {}
+      try {
+        const q = new URLSearchParams(location.search); q.delete('bolum'); q.delete('atla'); q.delete('nogecis');
+        const qs = q.toString().replace(/=(&|$)/g, '$1');
+        location.replace(location.pathname + (qs ? '?' + qs : ''));
+      } catch (e) { try { location.reload(); } catch (e2) {} }
+    }, bekle);
+  }
+  function geriBasla(parmak, tus) {
+    if (!uiGeri || uiGeri.hidden || uiCikis || DURUM !== 'oyun' || document.hidden || uiGeriT) return;
+    uiGeriParmak = parmak; uiGeriTus = tus; uiGeri.classList.add('basili');
+    uiGeriT = setTimeout(() => {
+      if (DURUM === 'oyun' && !document.hidden && !uiGeri.hidden) odayaDon();
+      else geriVazgec();
+    }, 1200);
+  }
+  function geriGuncelle() {
+    if (!uiGeri) return;
+    const gorunur = DURUM === 'oyun';
+    if (uiGeri.hidden === gorunur) { uiGeri.hidden = !gorunur; if (!gorunur) geriVazgec(); }
+  }
+  if (uiGeri) {
+    uiGeri.addEventListener('pointerdown', e => {
+      e.preventDefault(); e.stopPropagation(); if (e.button !== 0 || uiGeriT) return;
+      try { uiGeri.setPointerCapture(e.pointerId); } catch (_) {}
+      geriBasla(e.pointerId, null);
+    });
+    uiGeri.addEventListener('pointermove', e => {
+      if (e.pointerId !== uiGeriParmak) return;
+      const b = uiGeri.getBoundingClientRect();
+      if (e.clientX < b.left || e.clientX > b.right || e.clientY < b.top || e.clientY > b.bottom) geriVazgec();
+    });
+    for (const ad of ['pointerup', 'pointercancel', 'lostpointercapture']) uiGeri.addEventListener(ad, e => { if (e.pointerId === uiGeriParmak) geriVazgec(); });
+    uiGeri.addEventListener('contextmenu', e => e.preventDefault());
+    uiGeri.addEventListener('keydown', e => {
+      if (e.code !== 'Space' && e.code !== 'Enter') return;
+      e.preventDefault(); e.stopPropagation(); if (!e.repeat) geriBasla(null, e.code);
+    });
+    uiGeri.addEventListener('keyup', e => { if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); e.stopPropagation(); if (e.code === uiGeriTus) geriVazgec(); } });
+    uiGeri.addEventListener('blur', geriVazgec);
+    addEventListener('blur', geriVazgec);
+    document.addEventListener('visibilitychange', geriVazgec);
+    addEventListener('pagehide', geriVazgec);
+    addEventListener('resize', geriVazgec);
+    OLAY.on('durum', () => { geriVazgec(); geriGuncelle(); });
+  }
 
   // ══════════ ANA ÇİZİM ══════════
   let durumOnce = DURUM; const uiHata = {};
   function ciz(tm, dt) {
-    kontrol();
+    kontrol(); geriGuncelle();
     g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
     if (DURUM !== durumOnce) { durumOnce = DURUM; }
     // başlık (oyun başlayınca yumuşakça söner)
