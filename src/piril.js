@@ -84,7 +84,7 @@ function drSay(k, opt) { if (typeof SES !== 'undefined' && SES && SES.soyle) { t
 function drSfx(k, v) { if (typeof AU !== 'undefined' && AU && AU.sfx) { try { AU.sfx(k, v); } catch (e) {} } }
 function drFree() { return D.mode === 'follow' || D.mode === 'orbit'; }
 function drBusy() { return D.mode === 'firlat' || D.mode === 'push' || D.mode === 'tasi' || D.mode === 'dalis' || D.mode === 'nefes' || D.mode === 'yardim' || D.mode === 'sakli'; }
-function drPlaying() { return DURUM === 'oyun' && P.fade <= 0 && !(P.kilit > 0); }
+function drPlaying() { return DURUM === 'oyun' && P.fade <= 0 && !(P.kilit > 0) && !(BOLUM_NO === 5 && (typeof KR5 !== 'undefined' && KR5.aktif || typeof V5 !== 'undefined' && V5.final)); }
 let DR_YK = 1;   // Feza'ya yakınken Pırıl'ın gövdesine bağlı 'lighter' ışıkların çarpanı (Feza'yı soldurmasın); drawDragon ayarlar
 function drGlow(x, col, px, py, r, a) { if (DR_YK < 1) { a *= DR_YK; r *= 0.7 + 0.3 * DR_YK; } x.globalAlpha = a; x.drawImage(glow(col), px - r, py - r, r * 2, r * 2); x.globalAlpha = 1; }
 
@@ -245,6 +245,7 @@ OLAY.on('aydinlat', grup => {   // başka yerden gelirse de nilüfer cümlesi (g
 
 // ── yol gösterme ──
 function drGoalOpen(o) {
+  if (BOLUM_NO === 5 && (o.tip === 'korBahce' || o.tip === 'volkanMini' || o.tip === 'volkanSal' || o.tip === 'korCicegi')) return !o.done;
   return (o.tip === 'cicek' && !o.done) || (o.tip === 'buyukPofuduk' && !o.uyandi) ||
     (o.tip === 'agac' && !(typeof TREE !== 'undefined' && TREE && TREE.done)) || (o.tip === 'karanlik' && !o.lit) ||
     (o.tip === 'yildiz' && !o.done && !o.secmeli) || (o.tip === 'yildizHayvan' && !o.uyandi && o.hazir) ||
@@ -253,7 +254,7 @@ function drGoalOpen(o) {
 function drHedef() {
   let h = null;
   try { if (typeof HEDEF === 'function') h = HEDEF(); } catch (e) {}
-  if (BOLUM_NO === 3 || BOLUM_NO === 4) return h;   // Bulut Ülkesi: CORE sırası (kuzucuk → uçuş kapısı → gökkuşağı tepesi) aynen
+  if (BOLUM_NO === 3 || BOLUM_NO === 4 || BOLUM_NO === 5) return h;   // özel rüyaların CORE görev sırasını koru
   for (const o of NESNELER) if (o.tip === 'karanlik' && !o.lit && o.x > P.x - 200 && (!h || o.x < h.x)) h = o;
   if (BOLUM_NO === 2) {   // Yıldız Gölü: Feza'ya en yakın uyanmamış (zorunlu) yıldız; isteğe bağlı zor yıldızlar çağrılmaz
     let b = null, bd = 1e9;
@@ -466,7 +467,8 @@ function stepDragon(dt) {
   if (BOLUM_NO === 4 && P.deniz) { drDenizAdim(dt); return; }
   D.t += dt; D.modeT += dt; if (D.flare > 0) D.flare = Math.max(0, D.flare - dt / 0.9);
   // sigorta: hiçbir Pırıl modu Feza'yı sonsuza dek kilitlemesin (yardim ≤3 sn, tasi ≤8 sn, P.kilit sürekli >2,5 sn olamaz)
-  if (DURUM === 'oyun' && !P.ucus && P.kilit > 0 && D.mode !== 'tasi') { D.kilitSay = (D.kilitSay || 0) + dt; if (D.kilitSay > 2.5) { P.kilit = 0; D.kilitSay = 0; if (D.mode === 'yardim') drMode('follow'); } } else D.kilitSay = 0;
+  const korKutlama = BOLUM_NO === 5 && typeof V5 !== 'undefined' && V5.final;
+  if (DURUM === 'oyun' && !korKutlama && !P.ucus && P.kilit > 0 && D.mode !== 'tasi') { D.kilitSay = (D.kilitSay || 0) + dt; if (D.kilitSay > 2.5) { P.kilit = 0; D.kilitSay = 0; if (D.mode === 'yardim') drMode('follow'); } } else D.kilitSay = 0;
   if (D.mode === 'yardim' && D.modeT > 3) { P.kilit = 0; drMode('follow'); }
   if (D.mode === 'tasi' && D.modeT > 8) { P.kilit = 0; P.fade = 0; D.tasiyor = false; drMode('follow'); }
   const wx = Math.sin(D.t * 0.71) * 9 + Math.sin(D.t * 1.93) * 3, wy = Math.sin(D.t * 1.31) * 5 + Math.sin(D.t * 0.53) * 4;

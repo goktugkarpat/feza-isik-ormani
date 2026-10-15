@@ -285,8 +285,8 @@ const ARAYUZ = (() => {
     return false;
   }
   function ipucuGuncelle(dt) {
-    const agacYandi = typeof TREE !== 'undefined' && TREE && TREE.done;
-    const sahne = DURUM !== 'oyun' || agacYandi || (typeof SAHNE !== 'undefined' && SAHNE.aktif && SAHNE.aktif()) || P.kilit > 0 || P.fade > 0 || !!P.ucus || dikkatAni();
+    const agacYandi = typeof TREE !== 'undefined' && TREE && TREE.done || BOLUM_NO === 5 && typeof V5 !== 'undefined' && V5.final;
+    const sahne = DURUM !== 'oyun' || agacYandi || (typeof SAHNE !== 'undefined' && SAHNE.aktif && SAHNE.aktif()) || P.kilit > 0 || P.fade > 0 || !!P.ucus || (typeof KR5 !== 'undefined' && !!KR5.aktif) || dikkatAni();
     if (sahne) {
       ip.sahneT = now; ip.itT = 0;
       for (const k in uiIpucu) uiIpucu[k] = Math.max(0, uiIpucu[k] - dt * 4);
@@ -448,6 +448,16 @@ const ARAYUZ = (() => {
     x.lineJoin = 'round'; x.lineCap = 'round';
     if (tur === 'denizati' && typeof DENIZ !== 'undefined' && typeof DENIZ.ikon === 'function') DENIZ.ikon(x, 0, 0, 42, acik);
     else if (tur.startsWith('kuzu')) kuzuSimge(x, +tur.slice(4) || 0, sonuk);
+    else if (tur === 'kor') {
+      for (let i = 0; i < 6; i++) {
+        x.save(); x.rotate(i * Math.PI / 3);
+        x.fillStyle = sonuk ? 'rgba(140,129,166,.65)' : i % 2 ? '#ffb7a0' : '#f98b83';
+        x.beginPath(); x.moveTo(0, 5); x.bezierCurveTo(-26, -8, -22, -36, 0, -44); x.bezierCurveTo(22, -36, 26, -8, 0, 5); x.fill();
+        x.fillStyle = sonuk ? 'rgba(181,158,183,.35)' : '#ffdbb1';
+        x.beginPath(); x.moveTo(0, 2); x.lineTo(0, -40); x.quadraticCurveTo(14, -20, 0, 2); x.fill(); x.restore();
+      }
+      x.fillStyle = sonuk ? '#998eac' : '#fff1b8'; x.beginPath(); x.arc(0, 0, 10, 0, Math.PI * 2); x.fill();
+    }
     else if (tur === 'cicek') {
       for (let i = 0; i < 5; i++) {
         x.save(); x.rotate(i * 1.2566);
@@ -507,6 +517,7 @@ const ARAYUZ = (() => {
   OLAY.on('cicek', () => { bildirim = { tur: 'cicek', t0: now }; });
   OLAY.on('tohum', () => { bildirim = { tur: 'tohum', t0: now }; });
   OLAY.on('yildiz', () => { bildirim = { tur: 'yildiz', t0: now }; });
+  OLAY.on('korUyandi', () => { bildirim = { tur: 'kor', t0: now }; });
   let uiDenizSon = null;
   OLAY.on('denizati', e => { uiDenizSon = { o: e && (e.o || e), t0: now }; });
   OLAY.on('kuzu', () => { bildirim = { tur: 'kuzu', t0: now }; });   // Bölüm 3 sayacı: renklenen kuzucuklar (SAYAC.kuzu / kuzuTop), her biri kendi gökkuşağı renginde   // Bölüm 2 sayacı: açılan yıldız simgesi (SAYAC.yildiz / yildizTop)
@@ -536,7 +547,7 @@ const ARAYUZ = (() => {
     if (u > sure) { bildirim = null; return; }
     const a = uiEase(uiSeg(u, 0.15, 0.5)) * (1 - uiEase(uiSeg(u, sure - 0.8, sure)));
     const bt = bildirim.tur;
-    const top = bt === 'denizati' ? SAYAC.denizatiTop : bt === 'cicek' ? SAYAC.cicekTop : bt === 'yildiz' ? SAYAC.yildizTop : bt === 'kuzu' ? SAYAC.kuzuTop : SAYAC.tohumTop, var_ = bt === 'denizati' ? SAYAC.denizati : bt === 'cicek' ? SAYAC.cicek : bt === 'yildiz' ? SAYAC.yildiz : bt === 'kuzu' ? SAYAC.kuzu : SAYAC.tohum;
+    const top = bt === 'kor' ? SAYAC.korTop : bt === 'denizati' ? SAYAC.denizatiTop : bt === 'cicek' ? SAYAC.cicekTop : bt === 'yildiz' ? SAYAC.yildizTop : bt === 'kuzu' ? SAYAC.kuzuTop : SAYAC.tohumTop, var_ = bt === 'kor' ? SAYAC.kor : bt === 'denizati' ? SAYAC.denizati : bt === 'cicek' ? SAYAC.cicek : bt === 'yildiz' ? SAYAC.yildiz : bt === 'kuzu' ? SAYAC.kuzu : SAYAC.tohum;
     if (!top) return;
     // küçük, zarif: üst ortada ince bir sıra; açılanlar minik parlayan çiçek, açılmayanlar minik sönük nokta
     // uzun dizilerde (ör. 28 tohum) sıra ekranın ≈%60'ını geçmesin: aralık ve simge boyu orantılı küçülür (en çok %55'e kadar)
@@ -620,7 +631,7 @@ const ARAYUZ = (() => {
     const fs = Math.round(Math.min(H * 0.06, W * 0.055)), w = Math.ceil(fs * 9), h = Math.ceil(fs * 2);
     const c = tuval(w, h), x = c.getContext('2d');
     const bn = typeof BOLUM_NO !== 'undefined' ? BOLUM_NO : 1;
-    const bas = bn === 4 ? 'İnci Denizi ışıl ışıl!' : bn === 3 ? 'Gökkuşağı geldi!' : bn === 2 ? 'Gökyüzü ışıl ışıl!' : 'Orman ışıl ışıl!';
+    const bas = bn === 5 ? 'Dağın kalbi uyandı!' : bn === 4 ? 'İnci Denizi ışıl ışıl!' : bn === 3 ? 'Gökkuşağı geldi!' : bn === 2 ? 'Gökyüzü ışıl ışıl!' : 'Orman ışıl ışıl!';
     x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = `400 ${fs}px ${FONT_SERIF}`;
     x.save(); x.shadowColor = 'rgba(255,190,90,0.9)'; x.shadowBlur = fs * 0.35; x.fillStyle = '#8a4fb0'; x.fillText(bas, w / 2, h / 2); x.restore();
     const gr = x.createLinearGradient(0, h * 0.25, 0, h * 0.75); gr.addColorStop(0, '#9b5cc4'); gr.addColorStop(1, '#6a3a94');
@@ -673,7 +684,7 @@ const ARAYUZ = (() => {
   function sonSatirlar() {   // her tür: toplam kadar yuva, toplanan kadar dolu/parlak (hiç toplanmayan tür çıkmaz)
     const say = v => Math.max(0, Math.min(40, Math.floor(v || 0)));
     const satir = [];
-    for (const [tur, n, top0] of [['denizati', SAYAC.denizati, SAYAC.denizatiTop], ['kuzu', SAYAC.kuzu, SAYAC.kuzuTop], ['yildiz', SAYAC.yildiz, SAYAC.yildizTop], ['cicek', SAYAC.cicek, SAYAC.cicekTop], ['pofuduk', SAYAC.pofuduk, SAYAC.pofudukTop], ['tohum', SAYAC.tohum, SAYAC.tohumTop]]) {
+    for (const [tur, n, top0] of [['kor', SAYAC.kor, SAYAC.korTop], ['denizati', SAYAC.denizati, SAYAC.denizatiTop], ['kuzu', SAYAC.kuzu, SAYAC.kuzuTop], ['yildiz', SAYAC.yildiz, SAYAC.yildizTop], ['cicek', SAYAC.cicek, SAYAC.cicekTop], ['pofuduk', SAYAC.pofuduk, SAYAC.pofudukTop], ['tohum', SAYAC.tohum, SAYAC.tohumTop]]) {
       const dolu = say(n);
       let top = Math.max(dolu, say(top0));
       if (tur === 'tohum' && top > 14) top = dolu;   // çok sayıda isteğe bağlı tohum: kart gri yuvalarla dolmasın, yalnız toplananlar (hep olumlu)
@@ -713,7 +724,7 @@ const ARAYUZ = (() => {
   function sonOnHazirla() {
     const L = sonYerlesim(sonSatirlar());
     const isler = [() => uiIsit.push(sonKart(L.kw, L.kh).c), () => { for (let i = 0; i < 4; i++) pofSprite(i); }, () => uiIsit.push(baslikKucuk()), () => uiIsit.push(tekrarSprite(L.R).c), () => parlakSprite(), () => elSprite(),
-      () => { if (BOLUM_NO === 3) { for (let k = 0; k < 7; k++) simge('kuzu' + k, true); simge('kuzu', false); } else simge(BOLUM_NO === 2 ? 'yildiz' : 'cicek', true); }, () => simge('pofuduk', true), () => simge('tohum', true)];
+      () => { if (BOLUM_NO === 3) { for (let k = 0; k < 7; k++) simge('kuzu' + k, true); simge('kuzu', false); } else simge(BOLUM_NO === 5 ? 'kor' : BOLUM_NO === 2 ? 'yildiz' : 'cicek', true); }, () => simge('pofuduk', true), () => simge('tohum', true)];
     let i = 0;
     const adim = () => { if (i >= isler.length || DURUM === 'son') return; kontrol(); try { isler[i++](); } catch (e) {} setTimeout(adim, 120); };
     adim();
@@ -793,7 +804,7 @@ const ARAYUZ = (() => {
     }
   }
   // tür satırlarının arkasında çok hafif renkli, yuvarlak bir "raf" (her tür kendi yerinde dursun)
-  const UI_RAF = { kuzu: '255,190,215', yildiz: '255,225,140', cicek: '255,160,205', pofuduk: '200,160,255', tohum: '255,205,120' };
+  const UI_RAF = { kor: '255,178,140', kuzu: '255,190,215', yildiz: '255,225,140', cicek: '255,160,205', pofuduk: '200,160,255', tohum: '255,205,120' };
   const uiIsit = [];   // ekran kartına bir kez minicik çizilip ısıtılacak tuvaller
   function sonCiz(tm, dt) {
     if (!son) sonKur();
@@ -972,7 +983,7 @@ const ARAYUZ = (() => {
     dene('ipucu', () => ipucuGuncelle(dt));
     zipT = Math.max(0, zipT - dt * 2.5);
     uiKilitT = P.kilit > 0 ? uiKilitT + dt : 0;   // kontrol yarım saniyeden uzun kilitliyse (sahne anı: ağaç, gökkuşağından kayış...) düğme işe yaramaz → gizle
-    dugmeA = clamp(dugmeA + (DURUM === 'oyun' && !P.ucus && uiKilitT < 0.5 ? dt * 1.5 : -dt * 3), 0, 1);   // Bölüm 3 uçuşunda zıplama düğmesi yok
+    dugmeA = clamp(dugmeA + (DURUM === 'oyun' && !P.ucus && !(typeof KR5 !== 'undefined' && KR5.aktif) && !(BOLUM_NO === 5 && typeof V5 !== 'undefined' && V5.final) && uiKilitT < 0.5 ? dt * 1.5 : -dt * 3), 0, 1);   // yolculuk, kristal korosu ve Kor Çiçeği kutlamasında zıplama düğmesi yok
     if (dugmeA > 0.005) { dene('parmak', () => parmakCiz(tm, dt)); dene('dugme', () => dugmeCiz(tm, dt, dugmeA)); }
     dene('ipucuCiz', () => ipucuCiz(tm));
     dene('bildirim', () => bildirimCiz(tm));

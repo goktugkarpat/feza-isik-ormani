@@ -132,13 +132,27 @@ const SES = (() => {
     "p_dost_deniz": "Denizin içinde seninle yüzmek çok güzel!",
     "a_i_final1": "Feza ile Pırıl, İnci Denizi’nin minik dostlarına yardım etmişler. Büyük İnci uyanınca mercanlar yumuşacık renklerle parlamış.",
     "a_i_final2": "Sabah Feza yatağında gözlerini açmış. Güneş, odasına deniz gibi ışıklar çizmiş. Pırıl da ona tatlı tatlı göz kırpmış.",
-    "a_i_final3": "Ve her gece, yeni bir rüya onları bekliyormuş..."
+    "a_i_final3": "Ve her gece, yeni bir rüya onları bekliyormuş...",
+    "p_v_uyku": "Bu gece, Uyuyan Yanardağ'a gidiyoruz!",
+    "p_v_giris": "Bak Feza, dağ usulca nefes alıyor! Kor Çiçeği uyumuş. Işık bahçelerini canlandırıp onu uyandıralım.",
+    "p_v_buhar": "Bu yumuşacık buhar bizi yukarı taşıyor! Taşlara zıpla, sıcak rüzgârda süzül!",
+    "p_v_mini": "Bu kristaller şarkı söylüyor! Parlayan kristallere dokun. Her sesle bahçemiz biraz daha canlanacak.",
+    "p_v_mini_yardim": "Bir kristale dokunman yeterli. Güzel şarkımızı birlikte yapıyoruz.",
+    "p_v_kristal_son": "Duydun mu? Dağ şarkımıza cevap veriyor! Işık nehri de bize yol açtı.",
+    "p_v_sal": "Işık nehrinde yolculuğa çıkıyoruz! Parmağınla yukarıya, aşağıya yol göster; salımız sıcak buharda süzülsün. Ben yanındayım!",
+    "p_v_sal_son": "Ne güzel süzüldük! Işık kuşlarımız da bizimle geldi. Hadi, Kor Çiçeği'ni bulalım!",
+    "p_v_kalp": "İşte dağın kalbi: Kor Çiçeği! Bahçelerimiz uyandı. Şimdi yaklaş, çiçeğe dokunalım.",
+    "p_v_bahce": "Bak, taşların arasından ışık çiçekleri açılıyor! Dağ yeniden renkleniyor.",
+    "p_dost_volkan": "Bu dağın şarkısı ne kadar güzel! Seninle keşfetmeyi çok seviyorum.",
+    "a_v_final1": "Feza ile Pırıl, uyuyan dağın şarkısını bulmuşlar. Kor Çiçeği açılınca, gökyüzüne altın ışık kuşları yükselmiş. Bütün bahçeler yeniden canlanmış.",
+    "a_v_final2": "Sabah Feza, sıcacık yatağında gözlerini açmış. Gün ışığı, yorganına altın desenler çizmiş. Pırıl da ona tatlı tatlı göz kırpmış.",
+    "a_v_final3": "Ve o güzel dağın şarkısı, Feza'nın rüyalarında hep yaşayacakmış."
 }/*SESLER-SON*/;
 
   const sesSaat = () => performance.now() / 1000;
   const ovguMu = k => /^p_aferin/.test(k);
   const SES_SAHNE = { p_uyan: 1, p_gecis: 1, p_y_giris: 1, p_y_bitti: 1, p_secim: 1, p_y_uyku: 1, p_b_uyku: 1, p_b_giris: 1, p_b_bitti: 1, p_i_uyku: 1, p_i_giris: 1, p_i_yuz: 1, p_i_bitti: 1, p_i_inci_uyan: 1, p_i_dostlar: 1, p_i_deniz_uyandi: 1 };   // sahne cümleleri: öncelik 3, ağaç yandı/oyun bitti diye atılmaz
-  const anlatici = k => k.startsWith('a_') || !!SES_SAHNE[k];
+  const anlatici = k => k.startsWith('a_') || k === 'p_v_uyku' || k === 'p_v_giris' || !!SES_SAHNE[k];
   const sesKim = k => k.startsWith('a_') ? 'a' : 'p';
   // ── cümle bilgisi: oncelik (3 sahne · 2 oyun · 1 yönlendirme · 0 övgü), acil (2 araya girer · 1 olay tepkisi), ömür (sn), konu ──
   const KONU_SIRA = { p_buyuk: 1, p_buyuk_goz: 2, p_buyuk_esne: 3, p_buyuk_kalk: 4, p_agac: 5, p_karanlik: 1, p_nilufer: 2, p_karanlik2: 1, p_nilufer2: 2 };
@@ -148,6 +162,8 @@ const SES = (() => {
     if (anlatici(k)) return { oncelik: 3, acil: 0, omur: 1e9, konu: null };
     if (ovguMu(k)) return { oncelik: 0, acil: 0, omur: 1.5, konu: null };
     if (k === 'p_yol') return { oncelik: 1, acil: 0, omur: 3, konu: null };
+    if (k === 'p_v_mini_yardim') return { oncelik: 2, acil: 1, omur: 8, konu: null };
+    if (k === 'p_v_kristal_son' || k === 'p_v_sal_son' || k === 'p_v_bahce') return { oncelik: 2, acil: 1, omur: 8, konu: null };
     if (/^p_kurtar/.test(k) || /^p_yardim/.test(k)) return { oncelik: 2, acil: 2, omur: 3, konu: 'kurtar' };
     if (k === 'p_buyuk_kalk' || k === 'p_agac') return { oncelik: 2, acil: 2, omur: 12, konu: 'buyuk' };
     if (k === 'p_buyuk_goz' || k === 'p_buyuk_esne') return { oncelik: 2, acil: 1, omur: 8, konu: 'buyuk' };
@@ -216,6 +232,10 @@ const SES = (() => {
   const agacYandi = () => (typeof BOLUM_NO !== 'undefined' && BOLUM_NO === 2) ? false : !!(typeof TREE !== 'undefined' && TREE && TREE.done);
   // her talimatın "hâlâ yerinde mi?" koşulu (çalma anında bakılır)
   const KOSUL = {
+    p_v_mini: () => typeof V5 === 'undefined' || !V5.mini,
+    p_v_mini_yardim: () => typeof V5 === 'undefined' || !V5.mini,
+    p_v_sal: () => typeof V5 === 'undefined' || !V5.sal,
+    p_v_kalp: () => typeof V5 === 'undefined' || !V5.final,
     p_i_denizati: () => typeof DNZ === 'undefined' || DNZ.ati.some(o => !o.done),
     p_i_ahtapot: () => typeof DNZ === 'undefined' || !DNZ.oct || !DNZ.oct.done,
     p_i_vatoz: () => typeof DNZ === 'undefined' || !DNZ.ride || (!DNZ.ride.done && DNZ.ride.faz !== 'inis'),
@@ -341,7 +361,12 @@ const SES = (() => {
       setTimeout(() => { if (typeof DNZ !== 'undefined' && DNZ.oct && !DNZ.oct.done && DURUM === 'oyun') soyle('p_i_ahtapot_yardim', { oncelik: 3 }); }, 4500);
     }
     const ko = k;   // çağıranın verdiği ad (konuşma tetikleyicisi anahtarı)
-    if (/^[ybi]_/.test(k) && LINES['p_' + k]) k = 'p_' + k;                   // Bölüm 2/3 tetikleyicileri: 'y_gol' → 'p_y_gol', 'b_zip' → 'p_b_zip'
+    if (/^[ybiv]_/.test(k) && LINES['p_' + k]) k = 'p_' + k;                   // Bölüm tetikleyicileri: 'y_gol' → 'p_y_gol', 'v_mini' → 'p_v_mini'
+    if (typeof BOLUM_NO !== 'undefined' && BOLUM_NO === 5) {
+      if (/^a_(y_|b_|i_)?final\d$/.test(k)) k = 'a_v_final' + k.slice(-1);
+      else if (k === 'p_y_uyku') k = 'p_v_uyku';
+      else if (k === 'p_y_giris' || k === 'p_uyan') k = 'p_v_giris';
+    }
     if (typeof BOLUM_NO !== 'undefined' && BOLUM_NO === 4) {
       if (/^a_(y_|b_)?final\d$/.test(k)) k = 'a_i_final' + k.slice(-1);
       else if (k === 'p_y_uyku') k = 'p_i_uyku';
@@ -579,7 +604,7 @@ const SES = (() => {
     const t = sesSaat();
     if (t - sesOyunT < 60 || t - sesDostT < 90 || t - sesSonBitis < 50 || !sesDostUygun()) return;
     const bolum = typeof BOLUM_NO !== 'undefined' ? BOLUM_NO : 1;
-    const ozel = bolum === 4 ? 'p_dost_deniz' : bolum === 3 ? 'p_dost_bulut' : bolum === 2 ? 'p_dost_yildiz' : 'p_dost_orman';
+    const ozel = bolum === 5 ? 'p_dost_volkan' : bolum === 4 ? 'p_dost_deniz' : bolum === 3 ? 'p_dost_bulut' : bolum === 2 ? 'p_dost_yildiz' : 'p_dost_orman';
     const aday = [ozel, 'p_dost1', 'p_dost2', 'p_dost3'].filter(k => LINES[k] && !sesSoylendi[k]);
     if (!aday.length) return;
     const k = sesDostN === 0 ? aday[0] : aday[Math.floor(Math.random() * aday.length)];
