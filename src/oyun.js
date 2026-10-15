@@ -166,8 +166,8 @@ function begin() {
   try { localStorage.setItem('fezaIsikSon', String(BOLUM_NO)); } catch (e) {}   // başlıkta son oynanan bölüm parlak durur
   DURUM = 'giris'; OLAY.emit('durum', DURUM);
   if (BOLUM_NO === 2 || BOLUM_NO === 3 || BOLUM_NO === 4) {   // Bölüm 2/3: kısa uyku girişi (yeni sahne varsa; test bayrakları ?atla/?bolum= atlar, ?uyku zorlar) → ışıkla belirme
-    const basla = () => { oyunaBasla(); omDevamGirisi(); };
-    if (typeof SAHNE !== 'undefined' && SAHNE && typeof SAHNE.secim === 'function' && typeof SAHNE.giris === 'function' && !Q.has('atla') && (!Q.has('bolum') || Q.has('uyku'))) { omPerde.a = omPerde.hedef = 1; omPerdeBek = { t0: now, iyi: 0 }; try { SAHNE.giris(basla, { bolum: BOLUM_NO, kisa: true }); } catch (e) { omHata('SAHNE.giris', e); basla(); } }   // yenileme sonrası ilk ~0,4 sn koyu, sonra uyku sahnesi görünür (sahne bitince omDevamGirisi perdeyi kapatıp açar)
+    const basla = () => { const kesintisiz = BOLUM_NO === 4 && omSahneGiris; if (kesintisiz) omSonKareYakala(); oyunaBasla(); omDevamGirisi(kesintisiz); };   // Bölüm 4: dalış sahnesi bitince kararma yok, çapraz geçiş
+    if (typeof SAHNE !== 'undefined' && SAHNE && typeof SAHNE.secim === 'function' && typeof SAHNE.giris === 'function' && !Q.has('atla') && (!Q.has('bolum') || Q.has('uyku'))) { omSahneGiris = true; omPerde.a = omPerde.hedef = 1; omPerdeBek = { t0: now, iyi: 0 }; try { SAHNE.giris(basla, { bolum: BOLUM_NO, kisa: true }); } catch (e) { omHata('SAHNE.giris', e); basla(); } }   // yenileme sonrası ilk ~0,4 sn koyu, sonra uyku sahnesi görünür (sahne bitince omDevamGirisi perdeyi kapatıp açar)
     else basla();
     return;
   }
@@ -1356,7 +1356,15 @@ function omDr(ad) {   // çağrı anında seçilir (dunya2.js / dunya3.js sonrad
 const omPerde = { a: 0, hedef: 0, hiz: 0.5 };
 // Yenilemeden sonra uyku sahnesi perdenin ARKASINDA çizilmeye başlar; ilk kareler (önbellek kurma, GPU yükleme) yüzlerce ms takılabilir.
 // Perde sabit sürede değil, kareler düzene girince (en az 0,4 sn, art arda 4 akıcı kare; en geç 2,2 sn) açılır: takılma karanlıkta kalır.
-let omPerdeBek = null;
+let omPerdeBek = null, omSahneGiris = false, omGecisKare = null;
+// Bölüm 4: dalış sahnesinin son karesi alınır; oyunun ilk karelerinde üstte soluyarak oyuna kesintisiz bağlar (kararma yok)
+function omSonKareYakala() { try { const c = document.createElement('canvas'); c.width = cv.width; c.height = cv.height; c.getContext('2d').drawImage(cv, 0, 0); omGecisKare = { c, t0: -1 }; } catch (e) { omGecisKare = null; } }
+function omGecisKareCiz() {
+  const K = omGecisKare; if (!K) return;
+  if (K.t0 < 0) K.t0 = now;
+  const u = (now - K.t0) / 1.0; if (u >= 1) { omGecisKare = null; return; }
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1 - smooth(clamp(u, 0, 1)); g.globalCompositeOperation = 'source-over'; g.drawImage(K.c, 0, 0, W, H); g.globalAlpha = 1;
+}
 function omPerdeBekle(raw) {
   const B = omPerdeBek; if (!B) return;
   B.iyi = (raw > 0 && raw < 0.034) ? B.iyi + 1 : 0;
@@ -1505,7 +1513,13 @@ function omAcilisCiz() {
   if (su > 0) { dglow(OM_ACL_R[3], fx, fy + 42, 130, su * (BOLUM_NO === 4 ? .12 : .45) * gir); }
   g.globalCompositeOperation = 'source-over';
 }
-function omDevamGirisi() {
+function omDevamGirisi(kesintisiz) {
+  if (kesintisiz) {   // Bölüm 4: dalış sahnesinden gelindi: kararma yok, cümleler sahnede söylendi (tekrar yok), kontrol hemen
+    omPerde.a = omPerde.hedef = 0; omPerdeBek = null; omAcilis = null;
+    P.kilit = Math.max(P.kilit || 0, 0.25);
+    OLAY.emit('bolum4Basla'); OLAY.emit('gecisAsama', { ad: 'acilis', bolum: BOLUM_NO, kesintisiz: true });
+    return;
+  }
   omPerde.a = 1; omPerde.hedef = 1; omPerde.hiz = 0.4;
   omAcilis = { t0: now };
   P.kilit = Math.max(P.kilit || 0, 4.2);
@@ -1577,6 +1591,7 @@ function frame(ms) {
   if (SH && typeof SH.ciz === 'function') { try { SH.ciz(t, dt); } catch (e) { omHata('SAHNE.ciz', e); sahneOk = false; } omTemizle(); }
   if (typeof ARAYUZ !== 'undefined' && ARAYUZ && typeof ARAYUZ.ciz === 'function') { try { ARAYUZ.ciz(t, dt); } catch (e) { omHata('ARAYUZ.ciz', e); } omTemizle(); }
   omCagir('perde', omPerdeCiz, dt);
+  if (omGecisKare) omCagir('gecisKare', omGecisKareCiz);
   if (omGecis && DURUM === 'oyun') { g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S); omCagir('gecisIsigi', omGecisCiz, 0, 0, 0, true); omTemizle(); }   // kutlama: yükselen ışık küreleri
   if (omAcilis) { g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S); omCagir('acilis', omAcilisCiz, 0, 0, 0, true); omTemizle(); }
   // sahne sürekli hata veriyorsa (≈2,5 sn) oyun orada takılı kalmasın: girişte oyuna, finalde son ekrana geç

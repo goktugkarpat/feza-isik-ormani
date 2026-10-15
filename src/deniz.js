@@ -460,7 +460,8 @@ function dnzOctSprite() {
 TUR.kaydet('ahtapot', {
   kur(o) { o.r = 230; o.ry = 80; o.dnz = { t: 0, sure: 0, bas: false, sev: 0, kut: 0, relax: 0, look: 0, notice: 0, balletT: 0, kol: [], px: P.x, py: P.y }; for (let i = 0; i < 3; i++) { const xx = [-83, 18, 98][i], yy = [-2, 9, -8][i]; o.dnz.kol.push({ x: xx, y: yy, x0: xx, y0: yy, tx: [-178, 0, 178][i], ty: 108 + (i === 1 ? 17 : 0), done: false, u: 0, vur: 0, doneT: 0, hover: 0, ox: xx, oy: yy }); } dnzOctSprite(); glow('#caffec'); for (let i = 0; i < 3; i++) dnzKabukSprite(i); DNZ.oct = o; },
   dokun: dnzOctAktif,
-  guncelle(o, dt) { const k = o.dnz; k.t += dt; k.balletT = Math.max(0, (k.balletT || 0) - dt); let completed = 0; for(const arm of k.kol)if(arm.done)completed++; k.relax += (completed/3-k.relax)*(1-Math.exp(-dt*2.1)); k.look += (clamp((P.x-o.x)/260,-1,1)-k.look)*(1-Math.exp(-dt*3)); k.notice += ((Math.abs(P.x-o.x)<350?1:0)-k.notice)*(1-Math.exp(-dt*2)); k.sev = Math.max(0, k.sev - dt);
+  guncelle(o, dt) { const k = o.dnz; k.t += dt; if (o.done) for (let i = 0; i < DNZ.ati.length; i++) { const a = DNZ.ati[i]; if (a.done) continue; a.dnz.autoT = (a.dnz.autoT == null ? 1.6 + i * 0.9 : a.dnz.autoT) - dt; if (a.dnz.autoT <= 0) dnzAtBul(a); }   // atlanmış denizatları ışıkla toplu uyanır: vatoz/İnci şartı kilitlemez
+    k.balletT = Math.max(0, (k.balletT || 0) - dt); let completed = 0; for(const arm of k.kol)if(arm.done)completed++; k.relax += (completed/3-k.relax)*(1-Math.exp(-dt*2.1)); k.look += (clamp((P.x-o.x)/260,-1,1)-k.look)*(1-Math.exp(-dt*3)); k.notice += ((Math.abs(P.x-o.x)<350?1:0)-k.notice)*(1-Math.exp(-dt*2)); k.sev = Math.max(0, k.sev - dt);
     if (k.balletT > 0 && Math.random() < 0.35 && typeof parts !== 'undefined') {
       const armIdx = Math.floor(Math.random() * 3);
       const armPt = k.kol[armIdx];
@@ -1089,7 +1090,8 @@ TUR.kaydet('denizSus', {
 const DENIZ = {
   get aktif() { return !!DNZ.aktif; }, get ahtapot() { return DNZ.oct; }, get vatoz() { return DNZ.ride; }, get inci() { return DNZ.pearl; }, get denizatlari() { return DNZ.ati; },
   hedef() { for (const a of DNZ.ati) if (!a.done) return a; if (DNZ.oct && !DNZ.oct.done) return DNZ.oct; if (DNZ.ride && !DNZ.ride.done) return { x: DNZ.ride.kx, y: DNZ.ride.ky }; return DNZ.pearl && !DNZ.pearl.done ? DNZ.pearl : null; },
-  gecitX() { if (!DNZ.oct || DNZ.oct.done && DNZ.ati.every(q => q.done)) return Infinity; return typeof BOLUM !== 'undefined' && BOLUM.deniz ? BOLUM.deniz.ahtapotX - 110 : DNZ.oct.x + 270; },
+  gecitX() { if (!DNZ.oct || DNZ.oct.done) return Infinity;   // duvar yalnız ahtapot bulmacası bitene kadar; atlanmış denizatları ilerlemeyi engellemez (ahtapot bitince ışıkla kendiliğinden uyanır)
+    return typeof BOLUM !== 'undefined' && BOLUM.deniz ? BOLUM.deniz.ahtapotX - 110 : DNZ.oct.x + 270; },
   ikon(c, x, y, r, on) { dnzAtCiz(c, x - r * .05, y - r * .18, r / 65, 0, on ? '#ffdbad' : '#a0bec6', false, 0); },
   // Only diagnostics; no alternate reward or skip pathway in the actual game.
   test: { kabukYer(o, i) { const a = o.dnz.kol[i]; return { x: o.x + a.x, y: o.y + a.y - 9, tx: o.x + a.tx, ty: o.y + a.ty - 9 }; }, ahtapotBasla: dnzOctAktif, denizatiBul: dnzAtBul, vatozBasla: dnzRideBasla },

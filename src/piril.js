@@ -2374,11 +2374,21 @@ function drDenizAdim(dt) {
   const finalTarget = typeof INCI !== 'undefined' && INCI.active ? INCI.hedefPiril() : null;
   const guide = D.suGosterT > 0 && D.suGosterO && !D.suGosterO.done, help = guide && D.suYardimT > 0, celebrate = D.suSevT > 0;
 
-  let pointX = 0, pointY = 0, pointDist = 0, pointing = false;
+  let pointX = 0, pointY = 0, pointDist = 0, pointing = false, lead = false;
   if (settled && h && !finalTarget && DURUM === 'oyun' && !celebrate && !guide) {
     pointX = h.x - P.x; pointY = (h.y - 30) - P.y;
     pointDist = Math.hypot(pointX, pointY);
     if (pointDist > 24) pointing = true;
+  }
+  // Boşta/duvarda yol gösterme: Feza ~6 sn kıpırdamazsa ya da ilerleme duvarına (gecitX) ~4 sn yaslanırsa Pırıl hedefe doğru ışık izi bırakarak yüzer
+  D.suLeadCd = (D.suLeadCd || 0) - dt; D.suLeadT = D.suLeadT || 0;
+  let wallX = Infinity; try { if (typeof DENIZ !== 'undefined' && DENIZ.gecitX) wallX = DENIZ.gecitX(); } catch (e) {}
+  D.suWallT = (P.x > wallX - 80 && DURUM === 'oyun') ? (D.suWallT || 0) + dt : 0;
+  const lazy = DURUM === 'oyun' && h && !finalTarget && !celebrate && !guide && !dashing && P.fade <= 0 && (P.idle > 6 || D.suWallT > 4);
+  if (D.suLeadT > 0) { D.suLeadT -= dt; if (!lazy && P.idle < 1.2 && D.suWallT < 1) D.suLeadT = 0; if (D.suLeadT <= 0) D.suLeadCd = 9; }
+  else if (lazy && D.suLeadCd <= 0 && Math.hypot(h.x - P.x, h.y - P.y) > 150) { D.suLeadT = 6; D.suIsaretT = 9; }
+  if (D.suLeadT > 0 && h && !finalTarget && DURUM === 'oyun') {
+    pointX = h.x - P.x; pointY = (h.y - 30) - P.y; pointDist = Math.hypot(pointX, pointY); pointing = pointDist > 24; lead = pointing;
   }
 
   let gx, gy;
@@ -2395,9 +2405,13 @@ function drDenizAdim(dt) {
     gx = lerp(P.x, D.suGosterO.x, 0.68); gy = lerp(P.y - 110, D.suGosterO.y - 85, 0.68);
   } else if (pointing) {
     const dirNorm = 1 / Math.max(1, pointDist);
-    const leadDist = clamp(pointDist * 0.38, 55, 115);
+    const leadDist = lead ? Math.min(pointDist, 380) : clamp(pointDist * 0.38, 55, 115);
     gx = P.x + pointX * dirNorm * leadDist + Math.sin(D.t * 1.5) * 6;
-    gy = P.y - 72 + pointY * dirNorm * leadDist * 0.5 + Math.sin(D.t * 2.0) * 5;
+    gy = P.y - 72 + pointY * dirNorm * leadDist * (lead ? 0.85 : 0.5) + Math.sin(D.t * 2.0) * 5;
+    if (lead) {   // ışık izi: Pırıl'ın geçtiği yol parıldar
+      D.izT = (D.izT || 0) - dt;
+      if (D.izT <= 0) { D.izT = 0.045; D.iz.push({ x: D.x - D.fs * 6, y: D.y + 4, life: 3.4, max: 3.4, ph: Math.random() * 6.283, col: DR_IZ[D.iz.length % 4] }); }
+    }
   } else {
     gx = P.x - (P.f || 1) * 64; gy = P.y - 116;
   }

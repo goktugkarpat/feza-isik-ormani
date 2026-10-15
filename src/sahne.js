@@ -1220,7 +1220,8 @@ function shKisaPlan() {
   if (sh.tema === 'deniz') {
     P.acil = 0.8; P.s1 = 1.1; P.yat0 = 0.8; P.walk = 1.3; P.gir = 4.4 / 1.8; P.land = P.walk + 0.9 / P.gir; P.yat1 = 3.1;
     P.uyku0 = P.yat1; P.dalK = 1.8; P.uyudu = P.uyku0 + 3.05 / P.dalK; P.ic = P.uyudu - 1;
-    P.b2 = 5.1; P.s2 = P.b2; P.b3 = 6.1; P.s3 = P.b3; P.erime = 2.1; P.b4 = 8.2; P.son = 17.8;
+    P.b2 = 5.1; P.s2 = P.b2; P.b3 = 6.1; P.s3 = P.b3; P.erime = 2.1; P.b4 = 8.2;
+    P.yuzT = Math.max(8.2, 3.5 + shSure('p_i_giris', 4.8) + 0.3); P.son = Math.max(P.b4 + 3, P.yuzT + shSure('p_i_yuz', 7.4) + 0.8);   // yüzme cümlesi bitince (sessiz bekleme yok) oyuna kesintisiz geçilir
   }
   const yok = 1e9; P.uyan = P.kalk = P.isik = P.dunya = P.bk0 = P.bk1 = P.bk2 = P.bk3 = yok;
   return P;
@@ -1253,7 +1254,7 @@ function shGirisGuncelle(dt) {
   const ses = (k, at) => { if (!sh.sesler[k] && t >= at) { sh.sesler[k] = 1; shSoyle(shFk(k)); } };
   if (sh.kisa) { if (!sh.sesler.uyku && t >= P.s1) { sh.sesler.uyku = 1; shSoyle(sh.uykuK || 'p_y_uyku'); } }
   else if (sh.atla < 0) { ses('a_giris1', P.s1); ses('a_giris2', P.s2); ses('a_giris3', P.s3); }
-  if (sh.tema === 'deniz') { ses('p_i_giris', 3.8); ses('p_i_yuz', 9.3); }
+  if (sh.tema === 'deniz') { ses('p_i_giris', 3.5); ses('p_i_yuz', P.yuzT || 8.6); }
   if (!sh.kisa) ses('p_uyan', P.uyan);
   if (sh.atla < 0) {   // yatak odası sesleri (akşam)
     shBir('yatagaGir', P.yat1 - 2.5 / P.gir, 'yatagaGir'); shBir('yastik', P.yat1 - 2.2 / P.gir, 'yastik');
@@ -3046,8 +3047,7 @@ function shDenizGirisCiz(tm, t, P0) {
     g.globalCompositeOperation = 'lighter'; dglow('#ffc987', px, py - 18 * sc, sc * 38, 0.14 * enter); g.globalCompositeOperation = 'source-over';
     dnzAtCiz(g, px, py, sc * 0.46, tm, o.dnz.renk, true, 0, null);
   }
-  const end = shEase(shSeg(t, P0.son - 0.65, P0.son));
-  if (end > 0) { g.fillStyle = 'rgba(5,17,43,' + end.toFixed(3) + ')'; g.fillRect(0, 0, W, H); }
+  // sahne sonunda kararma YOK: son kare oyunun ilk karesine yumuşak çapraz geçişle bağlanır (oyun.js omGecisKare)
   g.restore();
 }
 
