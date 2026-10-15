@@ -1,8 +1,12 @@
 /* dunya5.js — Uyuyan Yanardağ: katmanlı kâğıt peyzaj, mürekkep mavisi bazalt,
    altın mercan lav ve sıcak ışık bahçeleri. Büyük resimler yalnız önbellekte boyanır. */
 'use strict';
-const DN5={sky:null,heartSky:null,vig:null,atlas:[],blooms:[],mount:[],falls:[],walls:[],molten:[],chunks:new Map(),prep:0,finT:null,finX:0,last:-1,life:[],warm:false,mx0:0,my0:0,mk:1};
-const DN5_COL=['#d94469','#ef9a62','#6cb9a7','#7959be','#bb3c89','#47a8ae','#9447b7','#df6e75'];
+const DN5={sky:null,heartSky:null,vig:null,atlas:[],blooms:[],mount:[],falls:[],walls:[],molten:[],rocks:[],chunks:new Map(),prep:0,finT:null,finX:0,last:-1,life:[],warm:false,mx0:0,my0:0,mk:1};
+const DN5_COL=['#cf2458','#d58057','#4d9d91','#7546ad','#ac267d','#338f9a','#8739ac','#cc4969'];
+// Kristal/tekne modülleri daha sonra yüklenir; ilk dokunuşta yeni ışık tuvali açılmaz.
+const DN5_TOUCH_GLOWS=['#ffd8a8','#ffc065','#f56d98','#b67be3','#58d2c6','#ffdc79','#ffbf58','#fa6684','#b87be4','#53d6c8','#ffdb72','#ffb58c','#ffc994','#ffe0af','#ffb48e'];
+const DN5_FALL_COLS=[30,75,127,153,211,286,449,474,531,580],DN5_BLOOM_COLS=[.5,24,44,82,119,148,197,239,283,439,473,513,544,589];
+const DN5_PAR_F=[.06,.13,.24],DN5_PAR_STEP=[710,540,420],DN5_PAR_BASE=[660,730,780],DN5_PAR_ALPHA=[.48,.5,.65];
 const DN5_RIVERS=[
  [337,109,322,166,292,173,294,232,292,282,229,319,185,408],
  [350,111,343,172,363,199,350,254,336,309,317,345,305,449],
@@ -33,7 +37,11 @@ function dn5PaintChannel(c,q,index,gradient){
  for(let j=6;j<xs.length-1;j+=4){const w=ws[j],x=xs[j],y=ys[j],n=nsx[j],m=nsy[j],side=j%8?1:-1;c.fillStyle=j%3?'#713d5c':'#91445d';c.beginPath();c.moveTo(x+n*w*side,y+m*w*side);c.lineTo(x+n*w*.1,y+m*w*.1+2);c.lineTo(x-n*w*.25,y-m*w*.25+6);c.lineTo(x+n*w*side,y+m*w*side+10);c.closePath();c.fill();}
 }
 function dn5MoltenArt(kind){
- if(DN5.molten[kind])return DN5.molten[kind];const cv=dn5Cv(64,96),c=cv.getContext('2d'),gr=c.createLinearGradient(14,10,45,85);gr.addColorStop(0,'#ffe09a');gr.addColorStop(.25,'#ffb34f');gr.addColorStop(.6,'#f46d3e');gr.addColorStop(1,'#b83f55');c.fillStyle=gr;c.beginPath();c.moveTo(32,5);c.bezierCurveTo(12,29,8,55,17,75);c.quadraticCurveTo(31,93,48,73);c.bezierCurveTo(57,53,49,28,32,5);c.fill();c.fillStyle=kind?'rgba(92,38,64,.46)':'rgba(128,45,64,.3)';c.beginPath();c.moveTo(18,48);c.lineTo(32,54);c.lineTo(46,38);c.lineTo(47,72);c.lineTo(33,85);c.lineTo(18,72);c.closePath();c.fill();c.fillStyle='#ffda77';c.beginPath();c.ellipse(28,42,6,17,-.15,0,6.283);c.fill();DN5.molten[kind]=cv;return cv;
+ if(DN5.molten[kind])return DN5.molten[kind];const cv=dn5Cv(64,96),c=cv.getContext('2d'),R=rng(9833+kind*91),gr=c.createLinearGradient(12,16,49,79);
+ gr.addColorStop(0,'#ffe0a0');gr.addColorStop(.25,'#ffb64e');gr.addColorStop(.57,'#ef6837');gr.addColorStop(1,'#8d2b4b');c.fillStyle=gr;c.beginPath();c.moveTo(31,5);c.bezierCurveTo(26,23,9,39,14,60);c.bezierCurveTo(9,77,25,91,36,86);c.bezierCurveTo(53,83,56,62,48,45);c.bezierCurveTo(46,27,37,18,31,5);c.fill();
+ c.fillStyle=kind?'#65344f':'#a74448';c.beginPath();c.moveTo(15,51);c.lineTo(27,57);c.lineTo(35,46);c.lineTo(47,41);c.lineTo(51,62);c.lineTo(43,78);c.lineTo(31,85);c.lineTo(16,72);c.lineTo(22,63);c.closePath();c.fill();
+ c.fillStyle='#ffd183';c.beginPath();c.moveTo(28,22);c.bezierCurveTo(20,42,23,50,29,53);c.bezierCurveTo(34,47,32,34,28,22);c.fill();c.strokeStyle='#ffae50';c.lineWidth=1.1;c.beginPath();c.moveTo(17,54);c.lineTo(27,61);c.lineTo(30,75);c.moveTo(27,61);c.lineTo(38,57);c.lineTo(46,64);c.stroke();
+ for(let j=0;j<15;j++){const x=22+R()*20,y=54+R()*22;c.fillStyle=j%3?'rgba(239,133,78,.27)':'rgba(37,26,54,.3)';c.fillRect(x,y,1+R()*2,1+R()*2);}DN5.molten[kind]=cv;return cv;
 }
 function dn5VolcanoActivity(tm,inside){
  const opacity=1-inside;if(opacity<.01)return;const k=DN5.mk,cx=DN5.mx0+355*k,cy=DN5.my0+109*k,vh=H/S,css=DPR/S,breath=.82+.18*Math.sin(tm*.69),loft=css*1.45;
@@ -52,10 +60,10 @@ function dn5VolcanoActivity(tm,inside){
  // Eighteen fixed descriptors, evaluated analytically. No spawn list or objects
  // are allocated per frame; droplets land visually on the distant lava slopes.
  for(let j=0;j<DN5_BOMBS.length;j++){
-  const b=DN5_BOMBS[j],age=(tm+b.offset)%b.period;if(age>b.duration)continue;const u=age/b.duration,bank=25+b.land*.55,reach=clamp(b.launch+b.reach,-bank,bank)-b.launch,px=cx+(b.launch+reach*u)*k,py=cy-4*b.height*loft*u*(1-u)+b.land*k*u*u;
+  const b=DN5_BOMBS[j],age=(tm+b.offset)%b.period;if(age>b.duration)continue;const u=age/b.duration,bank=25+b.land*.55,reach=clamp(b.launch+b.reach,-bank,bank)-b.launch,sway=Math.sin(u*Math.PI)*Math.sin(tm*.31+b.phase)*4,px=cx+(b.launch+reach*u+sway)*k,py=cy-4*b.height*loft*u*(1-u)+b.land*k*u*u;
   if(px<-30||px>W/S+30||py<-35||py>vh+35)continue;const fade=Math.min(1,u/.07,(1-u)/.13)*opacity,dx=reach*k,dy=-4*b.height*loft*(1-2*u)+2*b.land*k*u,sz=b.size*Math.min(k,1.75),tail=.035;
   g.globalAlpha=fade*.56;g.strokeStyle='#ef8245';g.lineWidth=sz*.65;g.beginPath();g.moveTo(px-dx*tail,py-dy*tail);g.lineTo(px,py);g.stroke();
-  g.save();g.globalAlpha=fade;g.translate(px,py);g.rotate(Math.atan2(dy,dx)+Math.PI*.5);g.drawImage(dn5MoltenArt(b.kind),-sz,-sz*1.5,sz*2,sz*3);g.restore();
+  g.save();g.globalAlpha=fade;g.translate(px,py);g.rotate(Math.atan2(dy,dx)+Math.PI*.5+Math.sin(tm*.8+b.phase)*.14);g.drawImage(dn5MoltenArt(b.kind),-sz,-sz*1.5,sz*2,sz*3);g.restore();
  }
  // Hot highlights travel along the uneven channels at different velocities.
  g.globalAlpha=opacity*.49;g.strokeStyle='#ffc56c';g.lineWidth=1.25*k;g.beginPath();
@@ -105,7 +113,11 @@ function dn5Sky(){
  DN5.vig=dn5Cv(200,160);const v=DN5.vig.getContext('2d'),gr=v.createRadialGradient(105,70,48,105,70,125);gr.addColorStop(0,'rgba(25,29,62,0)');gr.addColorStop(.6,'rgba(25,29,62,.01)');gr.addColorStop(1,'rgba(25,29,62,.32)');v.fillStyle=gr;v.fillRect(0,0,200,160);
 }
 function dn5Leaf(c,x,y,len,w,ang,col,fold){
- c.save();c.translate(x,y);c.rotate(ang);const gr=c.createLinearGradient(-w,-len*.7,w,0);gr.addColorStop(0,dn5Mix(col,'#fff0cf',.32));gr.addColorStop(.48,col);gr.addColorStop(.49,dn5Mix(col,'#303453',.26));gr.addColorStop(1,dn5Mix(col,'#252c4a',.55));c.fillStyle=gr;c.beginPath();c.moveTo(0,1);c.bezierCurveTo(-w,-len*.15,-w*.9,-len*.72,0,-len);c.bezierCurveTo(w*.85,-len*.78,w,-len*.2,0,1);c.fill();c.strokeStyle='rgba(255,231,186,.43)';c.lineWidth=.85;c.beginPath();c.moveTo(0,0);c.quadraticCurveTo(-w*.1,-len*.55,0,-len);c.stroke();if(fold){c.strokeStyle='rgba(245,230,195,.22)';c.lineWidth=.55;for(let j=1;j<7;j++){const yy=-len*j/7,wide=Math.sin(j/7*Math.PI)*w*.8;c.beginPath();c.moveTo(0,yy);c.quadraticCurveTo(-wide*.6,yy-len*.055,-wide,yy-len*.12);c.moveTo(0,yy);c.quadraticCurveTo(wide*.6,yy-len*.055,wide,yy-len*.12);c.stroke();}}c.restore();
+ c.save();c.translate(x,y);c.rotate(ang);const gr=c.createLinearGradient(-w,-len*.7,w,0);
+ gr.addColorStop(0,dn5Mix(col,'#e9c99f',.21));gr.addColorStop(.37,col);gr.addColorStop(.57,dn5Mix(col,'#30304e',.21));gr.addColorStop(1,dn5Mix(col,'#212a47',.58));c.fillStyle=gr;c.beginPath();c.moveTo(0,1);c.bezierCurveTo(-w,-len*.15,-w*.9,-len*.72,0,-len);c.bezierCurveTo(w*.85,-len*.78,w,-len*.2,0,1);c.fill();
+ c.fillStyle='rgba(28,25,52,.16)';c.beginPath();c.moveTo(0,1);c.quadraticCurveTo(w*.19,-len*.42,0,-len);c.bezierCurveTo(w*.85,-len*.78,w,-len*.2,0,1);c.fill();
+ c.strokeStyle='rgba(246,205,157,.43)';c.lineWidth=.85;c.beginPath();c.moveTo(0,0);c.quadraticCurveTo(-w*.1,-len*.55,0,-len+1);c.stroke();
+ if(fold){c.strokeStyle='rgba(236,201,167,.21)';c.lineWidth=.55;for(let j=1;j<6;j++){const yy=-len*j/6,wide=Math.sin(j/6*Math.PI)*w*.75;c.beginPath();c.moveTo(0,yy);c.quadraticCurveTo(-wide*.6,yy-len*.055,-wide,yy-len*.12);c.moveTo(0,yy);c.quadraticCurveTo(wide*.6,yy-len*.055,wide,yy-len*.12);c.stroke();}}c.restore();
 }
 function dn5Flora(v){
  if(DN5.atlas[v])return DN5.atlas[v];const cv=dn5Cv(560,640),c=cv.getContext('2d'),R=rng(5201+v*93);c.scale(2,2);const col=DN5_COL[v%8],dark=dn5Mix(col,'#283650',.48);c.lineCap='round';
@@ -127,33 +139,37 @@ function dn5Flora(v){
    c.strokeStyle=dark;c.lineWidth=2;c.beginPath();c.moveTo(140,298);c.bezierCurveTo(xx+sd*35,253,xx-sd*29,yy+31,xx,yy);c.stroke();
    dn5Leaf(c,xx-sd*7,yy+55,32,10,sd*.86,DN5_COL[(v+2)%8],true);
    for(let z=0;z<5;z++){c.save();c.translate(xx,yy);c.rotate((z-2)*.42);dn5Leaf(c,0,0,23+z%2*5,9,0,col,true);c.restore();}
-   c.fillStyle='#fff0c6';c.beginPath();c.ellipse(xx,yy-4,4.2,5.1,0,0,6.283);c.fill();
+   c.fillStyle='#cb8e69';c.beginPath();c.ellipse(xx,yy-4,3.3,4.1,0,0,6.283);c.fill();
   }
  }else{
   // Spiral mineral lilies: explicitly sculpted blossoms, never insect silhouettes.
-  for(let j=0;j<5;j++){const x=86+j*27,h=70+R()*118;c.strokeStyle=dark;c.lineWidth=2;c.beginPath();c.moveTo(140,300);c.bezierCurveTo(x+22,235,x-16,300-h+25,x,300-h);c.stroke();dn5Leaf(c,x,300-h+45,35,9,j%2?.75:-.75,col,true);for(let k=0;k<6;k++){c.save();c.translate(x,300-h);c.rotate(k*6.283/6);dn5Leaf(c,0,0,18,7,0,col,false);c.restore();}c.fillStyle='#fff1c1';c.beginPath();c.arc(x,300-h,4,0,6.283);c.fill();}
+  for(let j=0;j<5;j++){const x=86+j*27,h=70+R()*118;c.strokeStyle=dark;c.lineWidth=2;c.beginPath();c.moveTo(140,300);c.bezierCurveTo(x+22,235,x-16,300-h+25,x,300-h);c.stroke();dn5Leaf(c,x,300-h+45,35,9,j%2?.75:-.75,col,true);for(let k=0;k<6;k++){c.save();c.translate(x,300-h);c.rotate(k*6.283/6);dn5Leaf(c,0,0,18,7,0,col,false);c.restore();}c.fillStyle='#d2a778';c.beginPath();c.arc(x,300-h,3.3,0,6.283);c.fill();}
  }
  // Mineral dust is baked into the plant; animation only moves its whole paper layer.
- c.globalAlpha=.4;for(let j=0;j<32;j++){c.fillStyle='#fff3cb';c.fillRect(62+R()*158,145+R()*150,.5+R(),.5+R());}c.globalAlpha=1;DN5.atlas[v]=cv;return cv;
+ c.globalAlpha=.18;for(let j=0;j<26;j++){c.fillStyle='#d5aa95';c.fillRect(62+R()*158,145+R()*150,.5+R(),.5+R());}c.globalAlpha=1;DN5.atlas[v]=cv;return cv;
+}
+function dn5LilyHead(c,x,y,scale,angle,v){
+ c.save();c.translate(x,y);c.rotate(angle);c.scale(scale,scale);
+ const bright=v?'#c35bd6':'#f45d80',pigment=v?'#8b2baa':'#c92559',shadow=v?'#3b1b61':'#591738',gr=c.createLinearGradient(-30,-58,28,13);
+ gr.addColorStop(0,bright);gr.addColorStop(.4,pigment);gr.addColorStop(1,shadow);
+ // A side-facing trumpet, with long unequal folded petals. There is no
+ // circular golden eye: that visual language belongs to the touchable roses.
+ c.fillStyle=shadow;c.beginPath();c.moveTo(-2,16);c.bezierCurveTo(-18,-2,-26,-20,-28,-51);c.bezierCurveTo(-11,-40,0,-27,3,-5);c.bezierCurveTo(8,-27,22,-47,37,-54);c.bezierCurveTo(35,-18,25,1,6,17);c.closePath();c.fill();
+ c.fillStyle=gr;c.beginPath();c.moveTo(-1,17);c.bezierCurveTo(-9,-4,-38,-10,-46,-40);c.bezierCurveTo(-22,-39,-8,-25,4,-13);c.bezierCurveTo(8,-34,19,-51,31,-63);c.bezierCurveTo(33,-33,24,-12,12,6);c.bezierCurveTo(29,-4,44,-7,53,-26);c.bezierCurveTo(53,-2,34,15,8,23);c.closePath();c.fill();
+ c.fillStyle=v?'#612180':'#982044';c.beginPath();c.moveTo(0,17);c.bezierCurveTo(-16,-1,-35,-13,-46,-40);c.bezierCurveTo(-29,-23,-12,-21,4,-13);c.bezierCurveTo(1,-1,1,9,8,23);c.closePath();c.fill();
+ c.fillStyle=v?'#aa48c0':'#e83c69';c.beginPath();c.moveTo(2,8);c.bezierCurveTo(17,3,40,-6,53,-26);c.bezierCurveTo(42,1,26,16,8,23);c.closePath();c.fill();
+ c.strokeStyle=v?'rgba(227,141,229,.7)':'rgba(255,153,160,.72)';c.lineWidth=1.1;c.beginPath();c.moveTo(-43,-38);c.bezierCurveTo(-28,-23,-12,-17,-1,14);c.moveTo(29,-58);c.bezierCurveTo(24,-35,11,-14,5,12);c.moveTo(8,21);c.bezierCurveTo(26,13,42,-6,51,-22);c.stroke();
+ c.strokeStyle=v?'rgba(49,22,80,.45)':'rgba(84,20,51,.45)';c.lineWidth=.65;c.beginPath();c.moveTo(-24,-25);c.quadraticCurveTo(-13,-19,-8,-4);c.moveTo(24,-35);c.lineTo(13,-16);c.moveTo(33,2);c.lineTo(18,11);c.stroke();
+ c.fillStyle=v?'#51446c':'#365c5c';c.beginPath();c.moveTo(-4,20);c.lineTo(-11,8);c.quadraticCurveTo(0,13,9,24);c.lineTo(15,12);c.lineTo(11,29);c.lineTo(1,27);c.closePath();c.fill();c.restore();
 }
 function dn5Bloom(v){
- if(DN5.blooms[v])return DN5.blooms[v];const cv=dn5Cv(620,640),c=cv.getContext('2d');c.scale(2,2);
- const colors=v?['#e8a0df','#a13fc0','#572a79']:['#ff9a9c','#d83e69','#74254f'];
- c.lineCap='round';c.strokeStyle='#3f777c';c.lineWidth=4;c.beginPath();c.moveTo(155,310);c.bezierCurveTo(126,256,175,210,155,135);c.stroke();c.strokeStyle='#b7b499';c.lineWidth=.9;c.beginPath();c.moveTo(154,308);c.bezierCurveTo(128,256,174,210,154,139);c.stroke();
- dn5Leaf(c,146,259,67,19,-.91,v?'#687b91':'#4e9994',true);dn5Leaf(c,157,225,60,18,.95,v?'#586e8f':'#5a918b',true);
- // Sculptural radial petals with broad rounded shoulders, an angular central
- // fold and a dark underside. Pigment provides the colour, not a neon halo.
- for(let layer=0;layer<3;layer++){
-  const count=layer===0?8:layer===1?7:5,len=layer===0?83:layer===1?64:43,w=layer===0?29:layer===1?24:19;
-  for(let j=0;j<count;j++){
-   c.save();c.translate(155,135);c.rotate(j*6.283/count+layer*.34+(v?.14:0));
-   const gr=c.createLinearGradient(-w,-len,w,7);gr.addColorStop(0,colors[0]);gr.addColorStop(.48,colors[1]);gr.addColorStop(1,colors[2]);c.fillStyle=gr;c.beginPath();c.moveTo(0,12);c.bezierCurveTo(-w*.85,-len*.12,-w*1.08,-len*.67,0,-len);c.bezierCurveTo(w*.93,-len*.76,w*.92,-len*.15,0,12);c.fill();
-   c.fillStyle='rgba(66,27,70,.16)';c.beginPath();c.moveTo(0,-len);c.lineTo(0,12);c.quadraticCurveTo(w*.64,-len*.35,0,-len);c.fill();c.strokeStyle='rgba(255,218,200,.51)';c.lineWidth=.8;c.beginPath();c.moveTo(0,7);c.lineTo(0,-len+3);c.stroke();
-   c.strokeStyle='rgba(255,203,205,.22)';c.lineWidth=.55;for(let k=1;k<4;k++){const yy=-len*k/4;c.beginPath();c.moveTo(0,yy);c.lineTo(-w*.58,yy-len*.1);c.moveTo(0,yy);c.lineTo(w*.58,yy-len*.1);c.stroke();}c.restore();
-  }
+ if(DN5.blooms[v])return DN5.blooms[v];const cv=dn5Cv(620,640),c=cv.getContext('2d');c.scale(2,2);c.lineCap='round';
+ const heads=v?[[116,171,.8,-.62],[164,125,1,.18],[211,205,.65,.66]]:[[112,183,.83,-.7],[162,125,1,-.15],[212,180,.7,.66]];
+ for(let j=0;j<heads.length;j++){
+  const h=heads[j];c.strokeStyle='#252d46';c.lineWidth=5.6;c.beginPath();c.moveTo(155,315);c.bezierCurveTo(144+(j-1)*13,268,h[0]+(j-1)*11,h[1]+53,h[0],h[1]+19*h[2]);c.stroke();c.strokeStyle=v?'#52627d':'#36776a';c.lineWidth=3.5;c.stroke();c.strokeStyle=v?'rgba(168,126,158,.55)':'rgba(157,151,119,.5)';c.lineWidth=.65;c.stroke();
  }
- c.fillStyle=v?'#66335f':'#852d4e';c.beginPath();c.arc(155,135,13,0,6.283);c.fill();
- for(let j=0;j<11;j++){const a=j*2.399,r=4+j*.65;c.fillStyle=j%3?'#f2b86f':'#ffe2a2';c.beginPath();c.ellipse(155+Math.cos(a)*r,135+Math.sin(a)*r,1.4,2,a,0,6.283);c.fill();}
+ dn5Leaf(c,148,275,76,17,-.77,v?'#555b7c':'#367a70',true);dn5Leaf(c,159,250,68,16,.88,v?'#64527f':'#3d8876',true);dn5Leaf(c,152,302,54,12,-.3,v?'#494c70':'#2c6260',true);dn5Leaf(c,172,224,41,10,.73,v?'#5c4a80':'#388073',true);
+ for(let j=0;j<heads.length;j++){const h=heads[j];dn5LilyHead(c,h[0],h[1],h[2],h[3],v);}
  DN5.blooms[v]=cv;return cv;
 }
 function dn5Mountain(v){
@@ -161,7 +177,14 @@ function dn5Mountain(v){
  const p=new Path2D();p.moveTo(-15,450);p.lineTo(55,375);p.lineTo(120,354);p.lineTo(195,258);p.lineTo(263,211);p.lineTo(316,105);p.lineTo(336,98);p.quadraticCurveTo(350,110,367,101);p.lineTo(391,108);p.lineTo(452,242);p.lineTo(509,287);p.lineTo(558,350);p.lineTo(642,378);p.lineTo(715,450);p.closePath();
  const gr=c.createLinearGradient(0,100,0,450);gr.addColorStop(0,dn5Mix(base,'#c58fa9',.13));gr.addColorStop(.55,base);gr.addColorStop(1,dn5Mix(base,'#a78ba4',.13));c.fillStyle=gr;c.fill(p);c.save();c.clip(p);
  const facets=[[[336,98],[275,273],[145,410]],[[339,107],[327,304],[245,451]],[[360,109],[414,286],[507,431]],[[391,108],[476,295],[573,420]],[[326,135],[226,294],[119,353]],[[368,142],[352,369],[405,450]],[[215,285],[175,408],[59,434]],[[486,278],[521,402],[643,444]]];
- for(let j=0;j<facets.length;j++){c.fillStyle=j%2?'rgba(235,196,202,.12)':'rgba(30,43,82,.13)';c.beginPath();for(let k=0;k<facets[j].length;k++){const z=facets[j][k];if(k)c.lineTo(z[0],z[1]);else c.moveTo(z[0],z[1]);}c.closePath();c.fill();}
+ for(let j=0;j<facets.length;j++){const facet=facets[j],fg=c.createLinearGradient(facet[0][0]-30,facet[0][1],facet[1][0]+45,facet[2][1]);fg.addColorStop(0,j%2?'rgba(183,125,159,.2)':'rgba(14,27,51,.24)');fg.addColorStop(.6,j%2?'rgba(154,123,156,.08)':'rgba(25,29,56,.15)');fg.addColorStop(1,j%2?'rgba(214,157,160,.16)':'rgba(15,24,47,.26)');c.fillStyle=fg;c.beginPath();for(let k=0;k<facet.length;k++){const z=facet[k];if(k)c.lineTo(z[0],z[1]);else c.moveTo(z[0],z[1]);}c.closePath();c.fill();}
+ // Weathered ribs follow the slope. Their shaded side and narrow warm lip
+ // give the mountain volume without sharpening the whole skyline.
+ for(let j=0;j<14;j++){
+  const side=j%2?1:-1,u=.08+j/19,sx=350+side*(9+u*28),sy=111+u*72,ex=350+side*(71+u*220),ey=229+u*230,w=5+u*9;
+  c.fillStyle='rgba(18,25,47,.2)';c.beginPath();c.moveTo(sx,sy);c.bezierCurveTo(sx+side*22,sy+76,ex-side*24,ey-57,ex,ey);c.lineTo(ex+side*w,ey+6);c.bezierCurveTo(ex-side*12,ey-60,sx+side*34,sy+69,sx,sy);c.fill();
+  c.strokeStyle=side<0?'rgba(223,164,166,.21)':'rgba(167,136,170,.14)';c.lineWidth=.9;c.beginPath();c.moveTo(sx,sy);c.bezierCurveTo(sx+side*22,sy+76,ex-side*24,ey-57,ex,ey);c.stroke();
+ }
  c.lineCap='round';
  // Fine contour shelves and split paper ridges are painted into the mountain;
  // the main silhouette stays quiet while the eye finds detail on a second look.
@@ -170,7 +193,7 @@ function dn5Mountain(v){
   c.strokeStyle=j%3?'rgba(227,194,203,.14)':'rgba(35,45,80,.12)';c.lineWidth=.6+R()*.6;
   c.beginPath();c.moveTo(350+side*(13+u*55),yy-35);c.bezierCurveTo(xx-side*45,yy-25,xx-side*24,yy+8,xx+side*(21+R()*40),yy+20);c.stroke();
  }
- for(let j=0;j<135;j++){const xx=85+R()*560,y=168+R()*275;c.strokeStyle='rgba(241,202,202,'+(.035+R()*.065)+')';c.lineWidth=.4+R()*.6;c.beginPath();c.moveTo(xx,y);c.lineTo(xx+4+R()*14,y+1+R()*4);c.stroke();}
+ for(let j=0;j<180;j++){const xx=85+R()*560,y=168+R()*275;c.strokeStyle=j%4?'rgba(221,176,180,'+(.035+R()*.065)+')':'rgba(22,24,49,.21)';c.lineWidth=.4+R()*.6;c.beginPath();c.moveTo(xx,y);c.lineTo(xx+4+R()*14,y+1+R()*4);c.stroke();}
  // Broad molten rivers visibly shape the mountain, rather than a few decorative threads.
  // The dark banks, coral body and thin golden centre are all baked into one atlas.
  const riverGradient=c.createLinearGradient(0,110,0,450);riverGradient.addColorStop(0,'#ffd07c');riverGradient.addColorStop(.18,'#ffae68');riverGradient.addColorStop(.56,'#eb795f');riverGradient.addColorStop(1,'#c45f76');
@@ -183,9 +206,18 @@ function dn5Mountain(v){
 }
 function dn5Rock(c,x,y,w,h,col,seed){
  const R=rng(seed),n=8,pts=[];for(let j=0;j<n;j++){const a=j/n*6.283,r=.88+R()*.14;pts.push([x+Math.cos(a)*w*.5*r,y+Math.sin(a)*h*.5*r]);}
- const gr=c.createLinearGradient(x-w*.4,y-h*.4,x+w*.5,y+h*.5);gr.addColorStop(0,dn5Mix(col,'#c8c0ce',.16));gr.addColorStop(.45,col);gr.addColorStop(1,dn5Mix(col,'#172c47',.45));c.fillStyle=gr;c.beginPath();pts.forEach((p,j)=>j?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]));c.closePath();c.fill();
- for(let j=0;j<4;j++){c.fillStyle=j%2?'rgba(245,215,196,.045)':'rgba(12,27,52,.09)';c.beginPath();c.moveTo(x-w*.04,y-h*.12);c.lineTo(pts[j*2][0],pts[j*2][1]);c.lineTo(pts[(j*2+1)%n][0],pts[(j*2+1)%n][1]);c.closePath();c.fill();}
- c.strokeStyle='rgba(215,213,217,.18)';c.lineWidth=1.1;c.beginPath();c.moveTo(pts[4][0],pts[4][1]);c.lineTo(pts[5][0],pts[5][1]);c.lineTo(pts[6][0],pts[6][1]);c.stroke();
+ const gr=c.createLinearGradient(x-w*.4,y-h*.45,x+w*.5,y+h*.45);gr.addColorStop(0,dn5Mix(col,'#ad9baf',.27));gr.addColorStop(.45,col);gr.addColorStop(1,dn5Mix(col,'#17243f',.6));c.fillStyle=gr;c.beginPath();pts.forEach((p,j)=>j?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]));c.closePath();c.fill();c.save();c.clip();
+ // Large planes share one upper-left mineral light. Small seams live inside
+ // those planes, rather than making an unrelated noisy triangle mosaic.
+ const cx=x-w*.08,cy=y-h*.1;
+ for(let j=0;j<n;j++){const p=pts[j],p1=pts[(j+1)%n],fg=c.createLinearGradient(cx,cy,(p[0]+p1[0])*.5,(p[1]+p1[1])*.5);fg.addColorStop(0,dn5Mix(col,'#4b3a67',.14));fg.addColorStop(1,j>=4&&j<=6?dn5Mix(col,'#bd9ba8',.26):dn5Mix(col,'#14213a',.38));c.fillStyle=fg;c.beginPath();c.moveTo(cx,cy);c.lineTo(p[0],p[1]);c.lineTo(p1[0],p1[1]);c.closePath();c.fill();}
+ for(let j=0;j<8;j++){const xx=x-w*.38+j*w*.1,yy=y-h*.25+R()*h*.25,sk=(R()-.5)*w*.15;c.strokeStyle=j%3?'rgba(28,24,48,.31)':'rgba(204,151,145,.28)';c.lineWidth=.7;c.beginPath();c.moveTo(xx,yy);c.lineTo(xx+sk*.4,yy+h*.13);c.lineTo(xx+sk,yy+h*.24);c.lineTo(xx+sk*.8,yy+h*.4);c.stroke();}
+ for(let j=0;j<45;j++){c.fillStyle=j%3?'rgba(201,175,170,.06)':'rgba(20,24,43,.12)';c.fillRect(x+(R()-.5)*w,y+(R()-.5)*h,.4+R()*1.5,.3+R()*.9);}c.restore();
+ c.strokeStyle='rgba(220,170,147,.36)';c.lineWidth=1.1;c.beginPath();c.moveTo(pts[4][0],pts[4][1]);c.lineTo(pts[5][0],pts[5][1]);c.lineTo(pts[6][0],pts[6][1]);c.stroke();
+}
+function dn5RockArt(v){
+ const id=v%6;if(DN5.rocks[id])return DN5.rocks[id];const cv=dn5Cv(640,360),c=cv.getContext('2d');c.scale(2,2);
+ dn5Rock(c,160,91,318,169,id<3?'#3c4862':'#443c60',id*119+4821);DN5.rocks[id]=cv;return cv;
 }
 function dn5Fall(v){
  if(DN5.falls[v])return DN5.falls[v];const cv=dn5Cv(440,1000),c=cv.getContext('2d'),R=rng(1040+v*341);c.scale(2,2);
@@ -227,7 +259,15 @@ function dn5Chunk(i){
  for(let x=-2;x<=DN5_CW+2;x+=2){const y=dn5Surface(x+x0);if(y!==prev){p.lineTo(x,prev);p.lineTo(x,y);prev=y;}}
  p.lineTo(DN5_CW+2,prev);p.lineTo(DN5_CW+2,1200);p.closePath();const gr=c.createLinearGradient(0,520,0,1200);gr.addColorStop(0,dn5Mix(base,'#bda5a8',.18));gr.addColorStop(.45,base);gr.addColorStop(1,'#172c49');c.fillStyle=gr;c.fill(p);c.save();c.clip(p);
  // Tall irregular basalt prisms, softly modelled and threaded with fine warm seams.
- for(let q=Math.floor((x0-60)/57);q<Math.ceil((x0+DN5_CW+80)/57);q++){const Q=rng(q*199+912),xx=q*57-x0,w=43+Q()*20,top=dn5Surface(q*57+20),end=top+145+Q()*310,sk=(Q()-.5)*18;const b=c.createLinearGradient(xx,0,xx+w,0);b.addColorStop(0,dn5Mix(base,'#a7a5b9',.1+Q()*.13));b.addColorStop(.4,base);b.addColorStop(1,dn5Mix(base,'#152a43',.3));c.fillStyle=b;c.beginPath();c.moveTo(xx,top-3);c.lineTo(xx+w,top-3);c.lineTo(xx+w+sk,end);c.lineTo(xx+w*.58,end+20);c.lineTo(xx+sk,end+7);c.closePath();c.fill();c.strokeStyle='rgba(17,29,51,.24)';c.lineWidth=1.7;c.beginPath();c.moveTo(xx+w,top+12);c.lineTo(xx+w+sk,end);c.lineTo(xx+w*.58,end+20);c.stroke();if(q%4===0){c.strokeStyle='rgba(247,177,140,.27)';c.lineWidth=.85;c.beginPath();c.moveTo(xx+w*.8,top+34);c.lineTo(xx+w*.72,top+80);c.lineTo(xx+w*.95,top+95);c.lineTo(xx+w*.85,end-18);c.stroke();}}
+ for(let q=Math.floor((x0-60)/57);q<Math.ceil((x0+DN5_CW+80)/57);q++){
+  const Q=rng(q*199+912),xx=q*57-x0,w=43+Q()*20,top=dn5Surface(q*57+20),end=top+145+Q()*310,sk=(Q()-.5)*18;
+  const b=c.createLinearGradient(xx,0,xx+w,0);b.addColorStop(0,dn5Mix(base,'#c093a3',.2+Q()*.09));b.addColorStop(.24,dn5Mix(base,'#a19ab1',.12));b.addColorStop(.65,base);b.addColorStop(1,dn5Mix(base,'#15223e',.47));c.fillStyle=b;c.beginPath();c.moveTo(xx,top-3);c.lineTo(xx+w,top-3);c.lineTo(xx+w+sk,end);c.lineTo(xx+w*.58,end+20);c.lineTo(xx+sk,end+7);c.closePath();c.fill();
+  c.fillStyle='rgba(16,22,42,.23)';c.beginPath();c.moveTo(xx+w*.68,top+2);c.lineTo(xx+w,top-3);c.lineTo(xx+w+sk,end);c.lineTo(xx+w*.58,end+20);c.lineTo(xx+w*.71+sk*.5,end*.54+top*.46);c.closePath();c.fill();
+  c.strokeStyle='rgba(211,164,159,.28)';c.lineWidth=.85;c.beginPath();c.moveTo(xx+3,top+8);c.lineTo(xx+sk*.35+3,top+(end-top)*.42);c.lineTo(xx+sk+3,end-5);c.stroke();
+  c.strokeStyle='rgba(16,24,45,.4)';c.lineWidth=1.1;c.beginPath();c.moveTo(xx+w,top+12);c.lineTo(xx+w+sk,end);c.lineTo(xx+w*.58,end+20);c.stroke();
+  for(let j=0;j<3;j++){const yy=top+39+j*(end-top)*.25+Q()*17,ix=xx+w*(.17+Q()*.28);c.strokeStyle='rgba(18,23,42,.3)';c.lineWidth=.8;c.beginPath();c.moveTo(xx+4,yy);c.lineTo(ix,yy-4);c.lineTo(ix+7,yy+3);c.lineTo(xx+w-3,yy-1);c.stroke();c.strokeStyle='rgba(186,144,154,.19)';c.lineWidth=.5;c.beginPath();c.moveTo(xx+5,yy+1.6);c.lineTo(ix,yy-2.5);c.lineTo(ix+7,yy+4.5);c.stroke();}
+  if(q%4===0){c.strokeStyle='rgba(237,143,99,.42)';c.lineWidth=.85;c.beginPath();c.moveTo(xx+w*.8,top+34);c.lineTo(xx+w*.72,top+80);c.lineTo(xx+w*.95,top+95);c.lineTo(xx+w*.85,end-18);c.stroke();}
+ }
  for(let j=0;j<150;j++){const x=R()*DN5_CW,y=dn5Surface(x+x0)+18+R()*290;c.fillStyle=j%4?'rgba(219,205,195,.055)':'rgba(255,198,153,.12)';c.beginPath();c.ellipse(x,y,.5+R()*2,.4+R()*.9,-.2,0,6.283);c.fill();}
  c.restore();
  // Glowing hollows below the walking shelf reveal the mountain's warm interior.
@@ -267,7 +307,7 @@ function dn5Backdrop(tm){
  const hotX=mx+mw*.007,hotY=y0-mh*.758;DN5.peakX=hotX;DN5.peakY=hotY;DN5.mx0=mx-mw*.5;DN5.my0=y0-mh;DN5.mk=mw/700;
  g.globalCompositeOperation='lighter';dn5Glow('#ffd3aa',hotX,hotY,100+approach*80,46+approach*22,(.11+.02*Math.sin(tm*.6))*(1-inside));g.globalCompositeOperation='source-over';
  dn5VolcanoActivity(tm,inside);
- for(let layer=0;layer<3;layer++){const f=[.06,.13,.24][layer],step=[710,540,420][layer],base=[660,730,780][layer]-cam.y*(.2+layer*.1),left=cam.x*f-380,right=cam.x*f+vw+380;g.setTransform(S,0,0,S,-cam.x*S*f,0);g.globalAlpha=[.48,.5,.65][layer]*(1-inside*.66);for(let q=Math.floor(left/step);q<=Math.ceil(right/step);q++){const R=rng(q*217+layer*391+109),xx=q*step,hh=150+R()*140,ww=step*1.4;g.save();g.translate(xx,base);g.scale(ww/700,hh/450);g.drawImage(dn5Mountain(layer+1),0,-450,700,450);g.restore();}g.globalAlpha=1;}
+ for(let layer=0;layer<3;layer++){const f=DN5_PAR_F[layer],step=DN5_PAR_STEP[layer],base=DN5_PAR_BASE[layer]-cam.y*(.2+layer*.1),left=cam.x*f-380,right=cam.x*f+vw+380;g.setTransform(S,0,0,S,-cam.x*S*f,0);g.globalAlpha=DN5_PAR_ALPHA[layer]*(1-inside*.66);for(let q=Math.floor(left/step);q<=Math.ceil(right/step);q++){const R=rng(q*217+layer*391+109),xx=q*step,hh=150+R()*140,ww=step*1.4;g.save();g.translate(xx,base);g.scale(ww/700,hh/450);g.drawImage(dn5Mountain(layer+1),0,-450,700,450);g.restore();}g.globalAlpha=1;}
  if(inside>.002){
   g.setTransform(S,0,0,S,0,0);const wallH=720,wallW=384,y=-60-cam.y*.065,drift=Math.sin(cam.x*.00016)*15;
   g.globalAlpha=inside*.82;g.drawImage(dn5CraterWall(0),-190+drift,y,wallW,wallH);
@@ -276,7 +316,7 @@ function dn5Backdrop(tm){
   g.globalCompositeOperation='lighter';dn5Glow('#eab195',vw*.17,vh*.7,120,220,inside*.055);dn5Glow('#eab195',vw*.86,vh*.65,120,220,inside*.06);g.globalCompositeOperation='source-over';
  }
  // Soft drifting bands have a tangible paper silhouette, not opaque smoky bubbles.
- g.setTransform(S,0,0,S,0,0);g.globalAlpha=.025*(1-inside*.65);g.fillStyle='#edb5ac';for(let j=0;j<4;j++){const y=360+j*37-cam.y*.1,xx=((tm*(3+j)+j*237-cam.x*.03)%(vw+650)+vw+650)%(vw+650)-325;g.beginPath();g.moveTo(xx-250,y);g.bezierCurveTo(xx-100,y-16,xx+130,y-17,xx+290,y);g.bezierCurveTo(xx+110,y+5,xx-100,y+9,xx-250,y);g.fill();}g.globalAlpha=1;
+ g.setTransform(S,0,0,S,0,0);g.globalAlpha=.014*(1-inside*.65);g.fillStyle='#d398a4';for(let j=0;j<4;j++){const y=360+j*37-cam.y*.1,xx=((tm*(3+j)+j*237-cam.x*.03)%(vw+650)+vw+650)%(vw+650)-325;g.beginPath();g.moveTo(xx-250,y);g.bezierCurveTo(xx-100,y-16,xx+130,y-17,xx+290,y);g.bezierCurveTo(xx+110,y+5,xx-100,y+9,xx-250,y);g.fill();}g.globalAlpha=1;
 }
 function dn5Arch(c,x,y,w,h,col){
  c.strokeStyle=col;c.lineWidth=w*.11;c.lineCap='round';c.beginPath();c.moveTo(x-w*.5,y);c.bezierCurveTo(x-w*.58,y-h*.8,x-w*.22,y-h,x,y-h);c.bezierCurveTo(x+w*.25,y-h,x+w*.58,y-h*.76,x+w*.5,y);c.stroke();c.strokeStyle='rgba(221,190,184,.22)';c.lineWidth=1.2;c.beginPath();c.moveTo(x-w*.55,y);c.bezierCurveTo(x-w*.64,y-h*.76,x-w*.25,y-h*1.05,x,y-h*1.05);c.bezierCurveTo(x+w*.28,y-h*1.04,x+w*.62,y-h*.76,x+w*.55,y);c.stroke();
@@ -285,14 +325,14 @@ function dn5Midground(tm){
  const f=.52,left=cam.x*f-350,right=cam.x*f+W/S+350;g.setTransform(S,0,0,S,-cam.x*S*f,-cam.y*S*.64);
  for(let q=Math.floor(left/660);q<=Math.ceil(right/660);q++){const R=rng(q*591+875),x=q*660+R()*180,bm=dn5Biome(x/f),base=785+R()*70,k=.75+R()*.3;g.globalAlpha=.56;
   if(bm===1||bm===2){dn5Arch(g,x,base,370*k,410*k,bm===2?'#465f7f':'#59617c');for(let j=0;j<4;j++){const yy=base-370*k+Math.sin(j*.8)*28;g.save();g.translate(x+(j-1.5)*56*k,yy);g.rotate(Math.PI+Math.sin(tm*.21+q+j)*.02);g.drawImage(dn5Flora((j+q+40)%10),-110*k,-225*k,220*k,251*k);g.restore();}}
-  else if(bm===4){dn5Rock(g,x,base-18,520*k,270*k,'#354e6c',q*91+512);g.globalAlpha=.34;g.drawImage(dn5Flora((Math.abs(q)+8)%10),x-90*k,base-180*k,180*k,206*k);}
-  else{dn5Rock(g,x,base,430*k,180*k,'#465674',q*91+512);g.drawImage(dn5Flora((Math.abs(q)+bm*2)%10),x-150*k,base-300*k,300*k,343*k);}
+  else if(bm===4){g.drawImage(dn5RockArt(3+Math.abs(q)%3),x-260*k,base-153*k,520*k,270*k);g.globalAlpha=.34;g.drawImage(dn5Flora((Math.abs(q)+8)%10),x-90*k,base-180*k,180*k,206*k);}
+  else{g.drawImage(dn5RockArt(Math.abs(q)%3),x-215*k,base-90*k,430*k,180*k);g.drawImage(dn5Flora((Math.abs(q)+bm*2)%10),x-150*k,base-300*k,300*k,343*k);}
   g.globalAlpha=bm===4?.15:.3;g.drawImage(dn5Flora((Math.abs(q)*3+2)%10),x-250*k,base-260*k,260*k,297*k);
   g.globalCompositeOperation='lighter';dn5Glow(bm===2?'#94d9dc':'#ffc8a1',x,base-120*k,260*k,125*k,.12);g.globalCompositeOperation='source-over';
  }g.globalAlpha=1;
  // The lava system remains visible during ordinary exploration, not only the ride.
  // These falls sit in a separate depth plane and leave the hero's silhouette open.
- const cols=[30,75,127,153,211,286,449,474,531,580];
+ const cols=DN5_FALL_COLS;
  for(let j=0;j<cols.length;j++){
   const x=nx(cols[j])*.72;if(x<cam.x*.72-180||x>cam.x*.72+W/S+180)continue;
   const k=.75+(j%3)*.11,base=875;g.setTransform(S,0,0,S,-cam.x*S*.72,-cam.y*S*.73);g.globalAlpha=.71;
@@ -312,8 +352,9 @@ function dn5Lava(tm){
 }
 function dn5Plants(tm){
  const left=cam.x-180,right=cam.x+VW+180;g.setTransform(S,0,0,S,-cam.x*S,-cam.y*S);
- for(let q=Math.floor(left/176);q<=Math.ceil(right/176);q++){const R=rng(q*251+718),x=q*176+R()*90,y=dn5Surface(x),bm=dn5Biome(x);if(y>=1200)continue;const v=(Math.abs(q)*3+bm*2)%10,k=.22+R()*.3,dist=Math.abs(x-P.x),near=dist<90&&Math.abs(y-P.y)<150,lean=Math.sin(tm*.65+q)*.035+(near?(x>P.x?.1:-.1):0);g.save();g.translate(x,y+3);g.rotate(lean);g.globalAlpha=near?.7:.88;g.drawImage(dn5Flora(v),-140*k,-300*k,280*k,320*k);g.restore();
-  if(q%3===0){g.globalCompositeOperation='lighter';dn5Glow(DN5_COL[v%8],x,y-45*k,40*k,34*k,.25+.08*Math.sin(tm*.8+q));g.globalCompositeOperation='source-over';}
+ for(let q=Math.floor(left/176);q<=Math.ceil(right/176);q++){const R=rng(q*251+718),x=q*176+R()*90,y=dn5Surface(x),bm=dn5Biome(x);if(y>=1200)continue;const v=(Math.abs(q)*3+bm*2)%10,k=.22+R()*.3,dist=Math.abs(x-P.x),near=dist<90&&Math.abs(y-P.y)<150,lean=Math.sin(tm*.65+q)*.025+Math.sin(tm*.29+q*1.7)*.009+(near?(x>P.x?.075:-.075):0);g.save();g.translate(x,y+3);g.rotate(lean);g.globalAlpha=.93;g.drawImage(dn5Flora(v),-140*k,-300*k,280*k,320*k);g.restore();
+  // Decorative plants carry pigment and mineral edges, never a touch-target
+  // halo. The interactive gardens own the clear golden invitation to play.
  }
  // Nearby waking gardens send a broad, restrained warm colour through their plants.
  for(const a of DN5.life){const age=now-a.t;if(age<0||age>14||a.x<left-600||a.x>right+600)continue;const r=age*160;g.globalCompositeOperation='lighter';dn5Glow(DN5_COL[a.v],a.x,a.y-40,80+r,25+r*.28,Math.sin(age/14*Math.PI)*.1);g.globalCompositeOperation='source-over';}
@@ -341,16 +382,17 @@ function dn5Petals(tm){
 }
 function dn5Foreground(tm){
  if(!dn5Ready())return;const f=1.08,vh=H/S,left=cam.x*f-160,right=cam.x*f+W/S+160;g.setTransform(S,0,0,S,-cam.x*S*f,0);
- for(let q=Math.floor(left/590);q<=Math.ceil(right/590);q++){const R=rng(q*71+881),x=q*590+R()*130,y=vh+65,k=.42+R()*.2,worldx=x/f,near=Math.abs(worldx-P.x)<140;g.save();g.translate(x,y);g.rotate(Math.sin(tm*.35+q)*.025);g.globalAlpha=near?.07:dn5Biome(worldx)===3?.08:.22;g.drawImage(dn5Flora((Math.abs(q)*3+5)%10),-140*k,-300*k,280*k,320*k);g.restore();}g.globalAlpha=1;
+ for(let q=Math.floor(left/590);q<=Math.ceil(right/590);q++){const R=rng(q*71+881),x=q*590+R()*130,y=vh+65,k=.42+R()*.2,worldx=x/f,near=Math.abs(worldx-P.x)<140;g.save();g.translate(x,y);g.rotate(Math.sin(tm*.35+q)*.025);g.globalAlpha=near?.12:dn5Biome(worldx)===3?.14:.34;g.drawImage(dn5Flora((Math.abs(q)*3+5)%10),-140*k,-300*k,280*k,320*k);g.restore();}g.globalAlpha=1;
  // Large red and violet origami blossoms frame the path. Their own pigment is
  // saturated; only a blossom overlapping Feza yields to his readable silhouette.
- const bf=1.035,cols=[.5,24,44,82,119,148,197,239,283,439,473,513,544,589];g.setTransform(S,0,0,S,-cam.x*S*bf,0);
+ const bf=1.035,cols=DN5_BLOOM_COLS,px=(Number.isFinite(P.rx)?P.rx:P.x)-cam.x,py=(Number.isFinite(P.ry)?P.ry:P.y)-cam.y;g.setTransform(S,0,0,S,-cam.x*S*bf,0);
  for(let j=0;j<cols.length;j++){
-  const wx=nx(cols[j]),x=wx*bf;if(x<cam.x*bf-165||x>cam.x*bf+W/S+165)continue;const k=.79+(j%3)*.09,dx=Math.abs(wx-P.x),alpha=dx<140?.13:dx<210?.13+(dx-140)/70*.74:.87;
-  g.save();g.translate(x,vh+65);g.rotate(Math.sin(tm*.37+j)*.018);g.globalAlpha=alpha;g.drawImage(dn5Bloom(j%2),-155*k,-310*k,310*k,320*k);g.restore();
+  const wx=nx(cols[j]),x=wx*bf;if(x<cam.x*bf-165||x>cam.x*bf+W/S+165)continue;const k=.79+(j%3)*.09,dx=Math.abs(x-cam.x*bf-px),dy=Math.abs(vh+65-175*k-(py-34));
+  const overlap=(1-smooth(clamp((dx-48*k-20)/(70*k),0,1)))*(1-smooth(clamp((dy-46*k-27)/(40*k),0,1))),alpha=.98-overlap*.8;
+  g.save();g.translate(x,vh+65);g.rotate(Math.sin(tm*.37+j)*.016+Math.sin(tm*.17+j*1.7)*.005);g.scale(1+Math.sin(tm*.49+j)*.006,1);g.globalAlpha=alpha;g.drawImage(dn5Bloom(j%2),-155*k,-310*k,310*k,320*k);g.restore();
  }g.globalAlpha=1;
 }
 function dn5Vignette(){if(!dn5Ready())return;dn5Sky();g.setTransform(1,0,0,1,0,0);g.globalAlpha=1;g.drawImage(DN5.vig,0,0,W,H);}
 function dn5Isit(){
- if(!dn5Ready())return false;dn5Sky();if(DN5.prep<10){dn5Flora(DN5.prep++);return false;}if(DN5.prep<14){dn5Mountain(DN5.prep++-10);return false;}if(DN5.prep<18){dn5Chunk(DN5.prep++-14);return false;}if(DN5.prep<26){glow(DN5_COL[DN5.prep++-18]);return false;}if(DN5.prep<31&&typeof vk5Warm==='function'){if(!vk5Warm())return false;DN5.prep=31;return false;}if(DN5.prep<34){dn5Fall(DN5.prep++-31);return false;}if(DN5.prep<36){dn5CraterWall(DN5.prep++-34);return false;}if(DN5.prep<38){dn5Bloom(DN5.prep++-36);return false;}if(DN5.prep<40){dn5MoltenArt(DN5.prep++-38);return false;}DN5.warm=true;return true;
+ if(!dn5Ready())return false;dn5Sky();if(DN5.prep<10){dn5Flora(DN5.prep++);return false;}if(DN5.prep<14){dn5Mountain(DN5.prep++-10);return false;}if(DN5.prep<18){dn5Chunk(DN5.prep++-14);return false;}if(DN5.prep<26){glow(DN5_COL[DN5.prep++-18]);return false;}if(DN5.prep<31&&typeof vk5Warm==='function'){if(!vk5Warm())return false;DN5.prep=31;return false;}if(DN5.prep<34){dn5Fall(DN5.prep++-31);return false;}if(DN5.prep<36){dn5CraterWall(DN5.prep++-34);return false;}if(DN5.prep<38){dn5Bloom(DN5.prep++-36);return false;}if(DN5.prep<40){dn5MoltenArt(DN5.prep++-38);return false;}if(DN5.prep<46){dn5RockArt(DN5.prep++-40);return false;}if(DN5.prep<61){glow(DN5_TOUCH_GLOWS[DN5.prep++-46]);return false;}DN5.warm=true;return true;
 }

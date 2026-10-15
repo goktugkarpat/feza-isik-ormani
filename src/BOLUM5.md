@@ -93,7 +93,7 @@ sabah sahnesinde tekrar edilmez. Kutlama bitişinden yaklaşık iki saniye sonra
 
 “Dağın Nefesi” yeni bir F Lidyen bestesidir: sıcak 6/8 salınım, yumuşak taş/handpan tınısı, arp, flüt, yaylılar ve seyrek koro.
 Feza'nın inen üç notası ve Pırıl'ın altılı sıçrayışı bu rüyada yeniden işlenir. Ana ezgi 32 ölçü/76,8 saniye;
-sal düzenlemesi 28 ölçü/67,2 saniyelik ayrı bir forma sahiptir. Salın gerçek başlangıç/bitiş olayları müziği yönetir;
+sal düzenlemesi 14 ölçü/33,6 saniyelik ayrı bir forma sahiptir; aynı 6/8 tempoda giriş, yükseliş, kuşlar ve iniş cümleleri duyulur. Salın gerçek başlangıç/bitiş olayları müziği yönetir;
 bu uzunluklar çocuğa dayatılan bir oynanış sayacı değildir. Kristaller F majör pentatonikte cevap verir, eşlik çocuğun notalarına alan bırakır.
 Patlama, sert vurmalı katmanı veya sürekli konuşma yoktur. Konuşma sırasında mevcut müzik kısma sistemi çalışır.
 
@@ -109,12 +109,15 @@ ilk ekleme sırasında önceki 106 ses kaydının MP3 içeriği aynı korunmuşt
   Her hedefin ardından 1,65 saniyelik müzikal açılma, en sonda 4,2 saniyelik çiçek/kuş kutlaması vardır.
   Üç büyük tomurcuk dokunuşlarla dolar; bitişten sonra sağa uzanan ışık izi devam yönünü gösterir.
   Basılı tutma ve Pırıl'ın sessizlikte yardımı da ilerletir; gerçek süre dokunuş hızına ve duraklamalara bağlıdır.
-  Salın kod süresi 2 saniye biniş + 60 saniye nehir + 2 saniye iniştir.
+  Salın kod süresi 1,2 saniye biniş + 32,4 saniye nehir + 1,4 saniye iniş, toplam 35 saniyedir.
+  Yol, 44 ışık ve 5 kemer korunur; sahne anları normalize `routeU` ilerlemesine bağlıdır.
   Çiçek kutlaması 26 saniyedir. Bunlar oyun zamanlayıcılarıdır, CPU/GPU ölçümü değildir.
 - Hedef iPad M1'de akıcı 60 FPS, masaüstünde mevcut profilin en çok 120 FPS sınırıdır. Donanım üzerinde ayrıca doğrulanmalıdır.
   CPU'da fizik/rota sözleşmesi testi veya sesin çevrimdışı işlenmesi, iPad'de çizim performansı kanıtı sayılmaz.
 - Büyük gökyüzü, dağ, bitki, taş, sal ve kristal resimleri önbelleğe alınır; kare başına ağır blur/filter kullanılmaz.
   Dünya zemini 768 birimlik parçalarla çizilir; LRU en çok 12 arazi tuvali tutar. `dn5Isit()` atlas hazırlığını karelere yayar.
+  Altı bazalt atlası yaklaşık 5,27 MiB tutar. Mini/salın 15 renk dizesi de açılışta sırayla önısıtılır;
+  renk nicemlemesiyle 14 küçük ışık sprite'ı oluşur ve ilk etkileşimde tekrar üretilmez.
   Mini oyunda ses dalgaları 18 öğeli havuzu yeniden kullanır; ses motorunun mevcut geçici ses sınırı korunur.
 - İlk çevrimdışı ses kontrollerinde ana tema, sal, kristal ve final çıktıları sonlu kaldı, clipping görülmedi.
   Hızlı kristal dokunuşları ve müzik modu geçişleri ayrı denendi. Önceki dört rüyanın kısa ses karşılaştırmaları eski nota sıralarını korudu;

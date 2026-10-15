@@ -40,7 +40,7 @@ onları yalnızca ışık şarkısı uyandırır.
 - **Yürümek:** ekranın herhangi bir yerine parmağını koyup tut; Feza o tarafa yürür. Parmak yakınsa yavaş, uzaksa koşar.
 - **Rüyalara dönüş:** her bölümün sağ üstündeki ev/geri simgesini 1,2 saniye basılı tut. Kısa dokunmak çıkış yapmaz; tamamlanan rüyalar korunur.
 - **İnci Denizi:** ekranı basılı tutarak her yöne yüz. Sol alttaki balık düğmesi kısa bir yüzme hamlesi yapar; ahtapotun kabukları parmakla sürüklenir veya kabuğa ve eşleşen yuvaya sırayla dokunulur.
-- **Uyuyan Yanardağ:** ışıklı tomurcukların yanından geçerek bahçeleri uyandır. Kristal korosunda kristallere dokun, üzerlerinde parmağını gezdir veya basılı tut; üç üst tomurcuk sırayla açılır. Üçü de açılıp kuşlar uçunca sağdaki ışık izini takip ederek devam et. Yanlış nota ve süre cezası yoktur. Pırıl gerektiğinde eşlik eder.
+- **Uyuyan Yanardağ:** canlı renkli tomurcukların yanından geçerek bahçeleri uyandır. Kristal korosunda kristallere veya üç üst çiçeğe dokun, parmağını gezdir ya da basılı tut; üç çiçek sırayla açılır. Üçü de açılıp kuşlar uçunca sağdaki ışık izini takip ederek devam et. Yanlış nota ve süre cezası yoktur. Pırıl gerektiğinde eşlik eder. Lav kayığı aynı manzaralar ve kemerler boyunca 35 saniyede yol alır; parmağınla yukarı-aşağı yön verebilirsin.
 - **Lav nehri:** sal kendisi ilerler. Parmağını yukarıda veya aşağıda tutarak nehrin akışı içinde yol göster; ışıklı kemerlerin, lav şelalelerinin ve kuşların tadını çıkar. Bütün ışıkları yakalamak gerekmez.
 - **Zıplamak:** sol alttaki büyük yuvarlak düğmeye bas. Havadayken bir daha basınca Pırıl Feza'yı yukarı iter.
 - **Işık çiçekleri:** Feza dokununca açılır, çevre renklenir. Pırıl karanlık göllere ışık üfler, nilüfer yaprakları çıkar.

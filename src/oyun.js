@@ -1178,6 +1178,10 @@ function omPirilHale() {
   } else if (BOLUM_NO === 4) {
     dglow('#8ddbd2', D.x, D.y, 70, 0.055);
     dglow('#fff0cc', D.x, D.y, 26, 0.04);
+  } else if (BOLUM_NO === 5) {
+    // Lav ışığında küçük, pigmentli bir kenar ışığı; yakındaki çiçek yüzlerini beyaza boyamaz.
+    dglow('#d65fa8', D.x, D.y, 65, 0.055);
+    dglow('#ffbd78', D.x, D.y, 24, 0.035);
   } else {
     dglow('#b88aff', D.x, D.y, 150, 0.24);
     dglow('#ffe0ff', D.x, D.y, 40, 0.11);

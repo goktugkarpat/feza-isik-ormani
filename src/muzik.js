@@ -123,8 +123,8 @@ const AU = (() => {
     volkan: { cb: 2, ak: ['VF', 'VC', 'VD', 'VG', 'VF', 'VA', 'VR', 'VC', 'VD', 'VA', 'VG', 'VC', 'VF', 'VR', 'VG', 'VF'] },
     volkanKristal: { cb: 2, ak: ['VF', 'VR', 'VD', 'VC', 'VF', 'VG', 'VR', 'VF'] },
     volkanKalp: { cb: 2, ak: ['VR', 'VC', 'VD', 'VA', 'VF', 'VG', 'VC', 'VF'] },
-    // 28 ayrı ölçü: kıyıdan ayrılış → sıcak akıntı → yükseliş → kemerler → dingin iniş (67.2 sn).
-    lavsal: { cb: 1, ak: ['VF', 'VF', 'VC', 'VC', 'VD', 'VA', 'VG', 'VC', 'VF', 'VR', 'VD', 'VG', 'VF', 'VC', 'VA', 'VG', 'VD', 'VA', 'VR', 'VC', 'VF', 'VG', 'VA', 'VC', 'VR', 'VG', 'VC', 'VF'] },
+    // 14 ölçü / 33,6 sn: 35 sn'lik sal yolculuğunda giriş, uçuş, doruk ve iniş duyulur.
+    lavsal: { cb: 1, ak: ['VF', 'VF', 'VD', 'VA', 'VF', 'VR', 'VF', 'VG', 'VA', 'VC', 'VR', 'VG', 'VC', 'VF'] },
     volkanFinal: { cb: 1, ak: ['VF', 'VR', 'VD', 'VC', 'VF', 'VA', 'VG', 'VC', 'VF', 'VR', 'VD', 'VG', 'VF', 'VC', 'VR', 'VF', 'VF', 'VF'] },
     baslik: { cb: 1, ak: BSL_AK },
     ninni: { cb: 1, ak: null },   // akorlar çalınan parçanın ölçülerinden gelir (PARCA.ana / PARCA.piril)
@@ -1051,6 +1051,8 @@ const AU = (() => {
     'C6:2 A6:3 G6:1 | F6:2 D6:2 C6:2 | B5:2 D6:1 E6:1 G6:2 | F6:6 |' +
     'A5:3 G5:1 F5:2 | E5:2 G5:2 C6:2 | D6:2 C6:1 A5:1 F5:2 | E6:3 C6:1 A5:2 |' +
     'G5:2 C6:2 F6:2 | E6:2 D6:1 B5:1 G5:2 | E6:3 D6:1 C6:2 | F5:6');
+  // Aynı temanın kısa düzenlemesi: tempo hızlandırılmaz, müzikal cümleler yeni yolculuğa seçilir.
+  const V_SAL_CUE = [0,1,4,5,8,9,20,21,22,23,24,25,26,27];
   function korTasi(n, t, vol, pan, hedef, uzun) {
     // El yapımı çelik dil tamburunun yuvarlak, tok sesi; keskin metalik çınlama/sert vuruş yok.
     const dec = uzun ? 1.65 : 1.05;
@@ -1111,21 +1113,21 @@ const AU = (() => {
     }
   }
   function lavsalCubuk(t, ak, pi) {
-    const b = pi % 28, giris = b < 4, yuksel = b >= 8 && b < 16, zirve = b >= 20 && b < 24, inis = b >= 24;
+    const b = pi % V_SAL_CUE.length, giris = b < 2, yuksel = b >= 2 && b < 6, zirve = b >= 6 && b < 10, inis = b >= 10;
     const guc = giris ? .78 + b * .04 : inis ? .84 : zirve ? 1.04 : .94;
-    volkanEzgi(V_SAL_MEL[b], t, b, guc, giris || (b >= 16 && b < 20) ? 'tas' : 'nefes');
+    volkanEzgi(V_SAL_MEL[V_SAL_CUE[b]], t, b, guc, giris || inis ? 'tas' : 'nefes');
     volkanEsleme(t, ak, b, guc, !giris && !inis);
     if (yuksel || zirve) {
       const ns = akTon(ak, 65, 7);
       for (let s = 0; s < 6; s++) if (s % 3 !== 0) arp(ns[(s + b) % 7], t + s * .4 + .2, .014 * guc, (s - 2.5) * .13, 1.05);
       if (b % 2 === 1) tus(ns[3], t + .82, .017, 1.5, -.25, true, B.zil);
     }
-    if ((b === 7 || b === 15 || b === 23) && !inis) {
+    if ((b === 3 || b === 5 || b === 9) && !inis) {
       const ns = akTon(ak, 76, 6, true);
       ns.forEach((n, i) => arp(n, t + 1.35 + i * .11, .02, -.4 + i * .16, 1.6));
     }
     // Kemerlerin üstünde çok seyrek göksel ışık; ince gürültü/perküsyon katmanı eklenmez.
-    if ((b >= 12 && b < 16) || zirve) {
+    if ((b >= 4 && b < 6) || zirve) {
       const ns = akTon(ak, 89, 4, true); sopranoCan(ns[b % 4], t + 1.7, zirve ? .013 : .009, b % 2 ? .3 : -.3);
     }
   }
@@ -2935,7 +2937,7 @@ const AU = (() => {
   }
   function volkanEtkisi(k, ob) {
     const sal = ob === 'lavsal', kalp = ob === 'volkanKalp' || ob === 'volkanFinal';
-    const form = sal ? cl((zaman() - vSalT0) / 16, 0, 1) : vIsik;
+    const form = sal ? cl((zaman() - vSalT0) / 9, 0, 1) : vIsik;
     switch (k) {
       case 'pad': return .86 + form * .14;
       case 'tel': return .6 + form * .35 + (kalp ? .1 : 0);

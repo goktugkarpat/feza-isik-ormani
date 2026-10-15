@@ -2,7 +2,7 @@
    Doğru sıra, metin, zaman baskısı veya kaybetme yok. Her dokunuş müziğe katılır.
    Üç hareket farklı bir bahçe kurar; Pırıl uzun sessizlikte nazikçe eşlik eder. */
 'use strict';
-const KR5 = { o: null, ptr: -1, note: -1, px: 0, py: 0, hold: 0, get aktif() { return this.o && this.o.kr5 && this.o.kr5.active && !this.o.done && Math.abs(P.x-this.o.x)<540 && Math.abs(P.y-this.o.y)<320 ? this.o : null; } };
+const KR5 = { o: null, ptr: -1, note: -1, bud: -1, px: 0, py: 0, hold: 0, get aktif() { return this.o && this.o.kr5 && this.o.kr5.active && !this.o.done && Math.abs(P.x-this.o.x)<540 && Math.abs(P.y-this.o.y)<320 ? this.o : null; } };
 const KR5_COLORS = ['#ffc065','#f56d98','#b67be3','#58d2c6','#ffdc79'];
 const KR5_FLOWERS = ['#df386d','#b6389e','#8745bf','#ed586c','#ba52c5'];
 const KR5_GOALS = [12,15,18], KR5_STAGE_TURN = 1.65;
@@ -48,26 +48,27 @@ function kr5Activate(o){
   if(typeof omDikkat==='function'&&k.kameraFn)omDikkat('kristalKoro',1.5,k.kameraFn,1,.48);
   OLAY.emit('volkanMiniBasla',{o});OLAY.emit('volkanMiniAsama',{o,stage:1});
 }
-function kr5AddWave(o,index,help,strength){
+function kr5AddWave(o,index,help,strength,bud){
   const k=o.kr5;if(!k.active||o.done||k.finish>0||k.stageFinish>0||DURUM!=='oyun')return;
   const gem=k.gems[index];if(!gem||gem.cool>.02)return;
   gem.cool=.16;gem.pulse=1;gem.charge=Math.min(1,gem.charge+.22);gem.hit++;
   k.notes=Math.min(KR5_GOALS[k.stage],k.notes+strength);k.allNotes++;k.pulse=1;k.last=index;
+  const budIndex=Number.isInteger(bud)&&bud>=0&&bud<3?bud:-1;k.budPulse[k.stage]=Math.max(k.budPulse[k.stage],.65);if(budIndex>=0)k.budPulse[budIndex]=1;
   if(!help){k.idle=0;k.userHits++;}else k.helpHits++;
-  const slot=k.waves[k.waveI++%k.waves.length];slot.on=true;slot.t=0;slot.i=index;slot.stage=k.stage;slot.r=0;slot.help=help;
+  const slot=k.waves[k.waveI++%k.waves.length];slot.on=true;slot.t=0;slot.i=index;slot.stage=k.stage;slot.r=0;slot.help=help;slot.bud=budIndex;
   if(k.stage===2){const bird=k.birds[index];bird.fly=1;bird.flash=1;}
   OLAY.emit('volkanKristal',{o,index,stage:k.stage,help:!!help,strength:clamp(strength,0,1)});
   if(k.notes>=KR5_GOALS[k.stage]){k.stageFinish=.001;k.completed=k.stage+1;k.transition=1;if(typeof dragonHappy==='function')dragonHappy(o);}
 }
 function kr5NextStage(o){
   const k=o.kr5;k.stage++;k.stageAge=0;k.stageFinish=0;k.notes=0;k.pulse=1;k.transition=1;
-  if(k.stage>=3){k.finish=.001;KR5.ptr=-1;KR5.note=-1;return;}
+  if(k.stage>=3){k.finish=.001;KR5.ptr=-1;KR5.note=-1;KR5.bud=-1;return;}
   OLAY.emit('volkanMiniAsama',{o,stage:k.stage+1});
   if(typeof dragonHappy==='function')dragonHappy(o);
   if(typeof omDikkat==='function'&&k.kameraFn)omDikkat('kristalKoro',1.5,k.kameraFn,1,.48);
 }
 function kr5Complete(o){
-  const k=o.kr5;if(o.done)return;o.done=true;k.active=false;k.finish=5;KR5.ptr=-1;KR5.note=-1;
+  const k=o.kr5;if(o.done)return;o.done=true;k.active=false;k.finish=5;KR5.ptr=-1;KR5.note=-1;KR5.bud=-1;
   if(typeof V5!=='undefined')V5.mini=true;
   if(typeof omDikkat==='function'&&k.kameraFn)omDikkat('kristalKoro',.1,k.kameraFn,1,.48);
   lightTarget=Math.max(lightTarget,.55);
@@ -78,6 +79,7 @@ function kr5Update(o,dt){
   for(const gem of k.gems){gem.cool=Math.max(0,gem.cool-dt);gem.pulse=Math.max(0,gem.pulse-dt*1.55);}
   for(const w of k.waves){if(!w.on)continue;w.t+=dt;if(w.t>1.65)w.on=false;}
   for(const b of k.birds){b.fly=Math.max(0,b.fly-dt*.16);b.flash=Math.max(0,b.flash-dt);}
+  for(let i=0;i<3;i++)k.budPulse[i]=Math.max(0,k.budPulse[i]-dt*1.9);
   k.pulse=Math.max(0,k.pulse-dt);k.transition=Math.max(0,k.transition-dt*.45);
   if(DURUM!=='oyun'||P.ucus)return;
   const dist=Math.abs(P.x-o.x),near=dist<540&&Math.abs(P.y-o.y)<320;
@@ -89,7 +91,7 @@ function kr5Update(o,dt){
   // Hedef dolduğunda uzun bir süre sayacı beklenmez: kısa müzikal açılma, ardından yeni hareket.
   if(k.stageFinish>0){k.stageFinish+=dt;if(k.stageFinish>=KR5_STAGE_TURN)kr5NextStage(o);return;}
   // Touch-and-hold also plays: small fingers need not repeatedly lift at exactly the right moment.
-  if(KR5.ptr>=0&&KR5.o===o){KR5.hold+=dt;if(KR5.hold>.42){KR5.hold=0;const i=KR5.note>=0?KR5.note:k.last;kr5AddWave(o,i,false,.72);}}
+  if(KR5.ptr>=0&&KR5.o===o){KR5.hold+=dt;if(KR5.hold>.42){KR5.hold=0;const i=KR5.note>=0?KR5.note:k.last;kr5AddWave(o,i,false,.72,KR5.bud);}}
   // First Pırıl demonstrates one soft note, then accompanies. A silent child can always continue.
   if(k.idle>8&&k.helpClock>1.15){
     k.helpClock=0;
@@ -117,7 +119,7 @@ function kr5Flower(o,tm){
   g.save();g.translate(cx,cy);
   // The flower is faceted, but the motion is soft: glass petals unfold like folded paper.
   for(let layer=0;layer<2;layer++)for(let i=0;i<5;i++){
-    const a=-Math.PI/2+i*Math.PI*2/5+layer*Math.PI/5+Math.sin(tm*.55)*.025;
+    const a=-Math.PI/2+i*Math.PI*2/5+layer*Math.PI/5+Math.sin(tm*.55)*.025+Math.sin(i*1.6+k.last)*k.pulse*.035;
     g.save();g.rotate(a);g.scale(open*(layer?.72:1),open*(layer?.72:1));
     kr5Poly(g,[[0,7],[-29,-36],[-8,-96],[12,-112],[32,-48],[17,-7]],KR5_FLOWERS[(i+layer)%5]);
     kr5Poly(g,[[0,7],[-29,-36],[-8,-96],[-5,-35]],layer?'#8d2d7c':'#792c79');
@@ -133,17 +135,23 @@ function kr5Flower(o,tm){
     g.strokeStyle=mixc('#6c6683',KR5_COLORS[i],lit,.38+lit*.36);g.lineWidth=1.2+lit*.5;g.beginPath();g.moveTo(p.x,p.y+6);g.bezierCurveTo(p.x,p.y-52,cx+(p.x-cx)*.4,cy+88,cx,cy+10);g.stroke();
   }
 }
+function kr5BudPosition(o,i){return{x:o.x+(i-1)*55,y:o.y-400};}
+function kr5HitBud(o,p){
+  let index=-1,best=32;
+  for(let i=0;i<3;i++){const a=kr5BudPosition(o,i),dist=Math.hypot(p.x-a.x,p.y-a.y);if(dist<best){index=i;best=dist;}}
+  return index;
+}
 function kr5StageBuds(o,tm){
   const k=o.kr5;if(!k.active&&!o.done)return;
   // Üç büyük tomurcuk okunmadan anlaşılır: her notada açılır, biteni açık kalır.
   for(let i=0;i<3;i++){
     const progress=o.done||k.completed>i?1:k.stage===i?clamp(k.notes/KR5_GOALS[i],0,1):0;
-    const x=o.x+(i-1)*48,y=o.y-400,active=!o.done&&k.stage===i;
+    const position=kr5BudPosition(o,i),x=position.x,y=position.y,active=!o.done&&k.stage===i,pulse=k.budPulse[i];
     g.strokeStyle=active?'rgba(242,176,155,.64)':'rgba(156,115,164,.42)';g.lineWidth=1;g.beginPath();g.moveTo(o.x,o.y-367);g.quadraticCurveTo(x,o.y-375,x,y+12);g.stroke();
-    g.save();g.translate(x,y);g.rotate(Math.sin(tm*.8+i)*.035);
+    g.save();g.translate(x,y);g.rotate(Math.sin(tm*.8+i)*.035+Math.sin((1-pulse)*12)*pulse*.045);g.scale(1+pulse*.16,1+pulse*.1);
     for(let j=0;j<5;j++){
-      const a=-Math.PI/2+j*Math.PI*2/5,part=clamp(progress*5-j,0,1),rr=5+part*8;
-      g.fillStyle=part>0?KR5_FLOWERS[(j+i)%5]:'#685174';g.strokeStyle=part>0?'#e792b1':'#aa7ca4';g.lineWidth=.7;
+      const a=-Math.PI/2+j*Math.PI*2/5,part=clamp(progress*5-j,0,1),rr=8+part*9;
+      g.fillStyle=part>0?KR5_FLOWERS[(j+i)%5]:'#78396e';g.strokeStyle=part>0?'#f6a2bd':'#c36a9e';g.lineWidth=.8;
       g.beginPath();g.ellipse(Math.cos(a)*rr*.65,Math.sin(a)*rr*.65,rr*.68,rr*.4,a,0,Math.PI*2);g.fill();g.stroke();
     }
     g.fillStyle=progress>=1?'#ffda7c':active?'#ddb276':'#8e718e';g.beginPath();g.arc(0,0,2.4+progress*1.7,0,Math.PI*2);g.fill();g.restore();
@@ -171,7 +179,7 @@ function kr5EdgeFlowers(o,tm){
   }
 }
 function kr5DrawGem(o,i,tm){
-  const k=o.kr5,p=kr5NotePosition(o,i),a=k.gems[i],scale=(.96+a.pulse*.055)*a.s,center=p.y-63*a.s;
+  const k=o.kr5,p=kr5NotePosition(o,i),a=k.gems[i],scale=(.96+a.pulse*.085+Math.sin((1-a.pulse)*10)*a.pulse*.018)*a.s,center=p.y-63*a.s;
   dglow(KR5_COLORS[i],p.x,center,73,.1+a.charge*.13+a.pulse*.16);
   kr5Poly(g,[[p.x-29,p.y+4],[p.x-20,p.y-10],[p.x+17,p.y-12],[p.x+29,p.y+3],[p.x+18,p.y+14],[p.x-19,p.y+14]],'#81778c');
   kr5Poly(g,[[p.x-29,p.y+4],[p.x-20,p.y-10],[p.x+17,p.y-12],[p.x+9,p.y+4]],'#b29aa3');
@@ -181,12 +189,15 @@ function kr5DrawGem(o,i,tm){
   g.globalAlpha=.98;g.drawImage(kr5GemArt(i),-36*scale,-150*scale,72*scale,156*scale);g.globalAlpha=1;
   // Thin suspended copper ring catches the gesture and makes the touch area visible.
   const ring=33+a.pulse*14;
-  g.strokeStyle=mixc('#a7b7c7',KR5_COLORS[i],.55,.3+a.pulse*.5);g.lineWidth=1.2;g.beginPath();g.ellipse(0,-63*a.s,ring,ring*1.27,0,0,Math.PI*2);g.stroke();
+  g.strokeStyle=mixc('#d9b6ad',KR5_COLORS[i],.55,.44+a.pulse*.5);g.lineWidth=1.35;g.beginPath();g.ellipse(0,-63*a.s,ring,ring*1.27,0,0,Math.PI*2);g.stroke();
+  const invitation=k.active&&!o.done?(.5+.5*Math.sin(tm*2.5+i*.9))*.22:0;
+  kr5Star(0,-63*a.s,4.2+a.pulse*2.5+invitation*3,tm*.25,'#ffe3a0',.75+a.pulse*.2);
+  if(a.pulse>.02){g.strokeStyle='rgba(255,222,158,'+(a.pulse*.65)+')';g.lineWidth=1.3;g.beginPath();g.ellipse(0,-63*a.s,37+(1-a.pulse)*20,46+(1-a.pulse)*24,0,0,Math.PI*2);g.stroke();}
   g.restore();
   for(let j=0;j<3;j++){const t=(tm*.18+i*.17+j/3)%1;kr5Star(p.x+Math.sin(j*2.4+i)*29,p.y-24-t*132*a.s,3.8,tm*.3+i,KR5_COLORS[i],Math.sin(t*Math.PI)*(.2+a.charge*.5));}
 }
 function kr5DrawWave(o,w,tm){
-  const k=o.kr5,p=kr5NotePosition(o,w.i),center=p.y-63*k.gems[w.i].s,u=clamp(w.t/1.3,0,1),e=smooth(u),xx=lerp(p.x,o.x,e),yy=lerp(center,o.y-255,e)-Math.sin(u*Math.PI)*90;
+  const k=o.kr5,p=w.bud>=0?kr5BudPosition(o,w.bud):kr5NotePosition(o,w.i),center=w.bud>=0?p.y:p.y-63*k.gems[w.i].s,u=clamp(w.t/1.3,0,1),e=smooth(u),xx=lerp(p.x,o.x,e),yy=lerp(center,o.y-255,e)-Math.sin(u*Math.PI)*(w.bud>=0?-15:90);
   if(w.t<.65){g.save();g.globalAlpha=(1-w.t/.65)*.58;g.strokeStyle=KR5_COLORS[w.i];g.lineWidth=2;g.beginPath();g.ellipse(p.x,center,25+w.t*82,30+w.t*85,0,0,Math.PI*2);g.stroke();g.restore();}
   if(u<1){dglow(KR5_COLORS[w.i],xx,yy,19,.34);kr5Star(xx,yy,6.5,tm*1.4,KR5_COLORS[w.i],1-u*.35);}
 }
@@ -227,6 +238,7 @@ function kr5Hint(o,tm){
 function kr5World(e){const r=cv.getBoundingClientRect();return{x:cam.x+(e.clientX-r.left)*DPR/S,y:cam.y+(e.clientY-r.top)*DPR/S};}
 function kr5Hit(o,p){
   const k=o.kr5;let best=-1,dist=1e9;
+  const bud=kr5HitBud(o,p);if(bud>=0)return(bud*2+k.stage)%5;
   if(k.stage===2)for(let i=0;i<5;i++){const b=kr5BirdPosition(o,i,now),d=Math.hypot(p.x-b.x,p.y-b.y);if(d<54&&d<dist){dist=d;best=i;}}
   for(let i=0;i<5;i++){const a=kr5NotePosition(o,i),d=Math.hypot((p.x-a.x)*.92,(p.y-a.y+63*k.gems[i].s)*.6);if(d<57&&d<dist){dist=d;best=i;}}
   if(best<0&&k.stage===1&&Math.abs(p.x-o.x)<250&&p.y<o.y-110&&p.y>o.y-250)best=clamp(Math.floor((p.x-o.x+250)/100),0,4);
@@ -240,25 +252,25 @@ addEventListener('pointerdown',e=>{
   // Kristaller arasındaki boşluğa dokunmak yürüme başlatmaz; bahçenin tamamı bir enstrümandır.
   if(i<0&&Math.abs(p.x-o.x)<310&&p.y>o.y-410&&p.y<o.y+55)i=clamp(Math.round((p.x-o.x)/95)+2,0,4);
   if(i<0)return;
-  kr5Claim(e);KR5.ptr=e.pointerId;KR5.note=i;KR5.px=p.x;KR5.py=p.y;KR5.hold=0;
-  kr5AddWave(o,i,false,1);try{cv.setPointerCapture(e.pointerId);}catch(_){}
+  kr5Claim(e);KR5.ptr=e.pointerId;KR5.note=i;KR5.bud=kr5HitBud(o,p);KR5.px=p.x;KR5.py=p.y;KR5.hold=0;
+  kr5AddWave(o,i,false,1,KR5.bud);try{cv.setPointerCapture(e.pointerId);}catch(_){}
 },true);
 addEventListener('pointermove',e=>{
   if(e.pointerId!==KR5.ptr||!KR5.aktif)return;kr5Claim(e);const o=KR5.o,p=kr5World(e),i=kr5Hit(o,p);
-  if(i>=0&&(i!==KR5.note||Math.hypot(p.x-KR5.px,p.y-KR5.py)>34)){KR5.note=i;KR5.px=p.x;KR5.py=p.y;KR5.hold=0;kr5AddWave(o,i,false,.9);}
+  if(i>=0&&(i!==KR5.note||Math.hypot(p.x-KR5.px,p.y-KR5.py)>34)){KR5.note=i;KR5.bud=kr5HitBud(o,p);KR5.px=p.x;KR5.py=p.y;KR5.hold=0;kr5AddWave(o,i,false,.9,KR5.bud);}
 },true);
-function kr5Release(e){if(e.pointerId!==KR5.ptr)return;KR5.ptr=-1;KR5.note=-1;KR5.hold=0;kr5Claim(e);}
+function kr5Release(e){if(e.pointerId!==KR5.ptr)return;KR5.ptr=-1;KR5.note=-1;KR5.bud=-1;KR5.hold=0;kr5Claim(e);}
 addEventListener('pointerup',kr5Release,true);addEventListener('pointercancel',kr5Release,true);
-addEventListener('blur',()=>{KR5.ptr=-1;KR5.note=-1;KR5.hold=0;});
+addEventListener('blur',()=>{KR5.ptr=-1;KR5.note=-1;KR5.bud=-1;KR5.hold=0;});
 addEventListener('keydown',e=>{
   const o=KR5.aktif;if(!o||DURUM!=='oyun'||!(e.code==='Space'||e.code==='KeyE'))return;
   const k=o.kr5;if(k.finish>0)return;e.preventDefault();e.stopPropagation();if(e.repeat)return;kr5AddWave(o,(k.last+1)%5,false,1);
 },true);
-OLAY.on('durum',d=>{if(d!=='oyun'){KR5.ptr=-1;KR5.note=-1;KR5.hold=0;}});
+OLAY.on('durum',d=>{if(d!=='oyun'){KR5.ptr=-1;KR5.note=-1;KR5.bud=-1;KR5.hold=0;}});
 TUR.kaydet('volkanMini',{
-  kur(o){o.r=145;o.ry=95;o.done=false;o.kr5={active:false,age:0,stage:0,stageAge:0,stageFinish:0,completed:0,notes:0,allNotes:0,userHits:0,helpHits:0,finish:0,idle:0,helpClock:0,helpSaid:false,pulse:0,transition:0,last:4,waveI:0,waves:[],gems:[],birds:[]};
+  kur(o){o.r=145;o.ry=95;o.done=false;o.kr5={active:false,age:0,stage:0,stageAge:0,stageFinish:0,completed:0,budPulse:[0,0,0],notes:0,allNotes:0,userHits:0,helpHits:0,finish:0,idle:0,helpClock:0,helpSaid:false,pulse:0,transition:0,last:4,waveI:0,waves:[],gems:[],birds:[]};
     o.kr5.kameraFn=typeof omDkEkle==='function'?()=>omDkEkle(o.x-310,o.y-420,o.x+310,o.y+45):null;
-    for(let i=0;i<18;i++)o.kr5.waves.push({on:false,t:0,i:0,stage:0,r:0,help:false});
+    for(let i=0;i<18;i++)o.kr5.waves.push({on:false,t:0,i:0,stage:0,r:0,help:false,bud:-1});
     for(let i=0;i<5;i++){o.kr5.gems.push({x:(i-2)*95,y:-12,s:.82+Math.sin(i/4*Math.PI)*.3,pulse:0,charge:0,hit:0,cool:0});o.kr5.birds.push({fly:0,flash:0});kr5GemArt(i);}
     kr5GardenArt();KR5.o=o;},
   dokun(o){kr5Activate(o);},guncelle:kr5Update,
