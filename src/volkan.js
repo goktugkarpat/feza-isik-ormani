@@ -1,7 +1,7 @@
 /* volkan.js — Yanardağın yaşayan bahçeleri, sıcak buhar oyuncakları ve Kor Çiçeği.
    Korku, hasar, zaman sınırı yok. Her tamamlanma olayı yalnız bir kez üretilir. */
 'use strict';
-const VK5={sprites:[],petals:[],birds:[],buds:[],vents:[],steps:[],leaves:new Map(),hint:null,heart:null,seed:null,warm:0,final:null};
+const VK5={sprites:[],petals:[],birds:[],buds:[],vents:[],steps:[],leaves:new Map(),heart:null,seed:null,warm:0,final:null};
 const VK5_COL=['#e83d68','#9a3fc1','#c92e8a'];
 const VK5_GLOW_COL=['#f3ad65','#ecb06d','#efa65e','#eaa266','#ffc87b','#e83d68','#9a3fc1','#c92e8a'];
 const VK5_LEAF_COL=['#e83d68','#9a3fc1','#c92e8a','#b72f63','#7c3ea6','#a33491','#577e88','#5a8392','#447a88','#7857a4','#7e49a3','#993454','#536c86','#406e7b','#5e8392','#829d9d','#9ebfaf','#657b87','#d5ad9f','#8c8199','#8facac','#c4afbf','#b8c9bc','#98b6ac','#aab9ad'];
@@ -61,10 +61,6 @@ function vk5BudArt(v,opened){
 function vk5LeafArt(col){
  if(VK5.leaves.has(col))return VK5.leaves.get(col);const cv=vk5Cv(120,240),c=cv.getContext('2d');c.scale(2,2);const gr=c.createLinearGradient(11,25,51,109);gr.addColorStop(0,mixc(col,'#ffc7b8',.24));gr.addColorStop(.48,col);gr.addColorStop(.49,mixc(col,'#23324a',.24));gr.addColorStop(1,mixc(col,'#182d42',.58));c.fillStyle=gr;c.beginPath();c.moveTo(30,113);c.bezierCurveTo(4,86,5,39,30,7);c.bezierCurveTo(56,38,56,82,30,113);c.fill();c.strokeStyle='rgba(32,33,58,.65)';c.lineWidth=1;c.stroke();c.strokeStyle='rgba(248,197,182,.45)';c.lineWidth=1;c.beginPath();c.moveTo(30,110);c.quadraticCurveTo(26,52,30,10);c.stroke();c.lineWidth=.65;for(let j=0;j<6;j++){const yy=30+j*12,wide=Math.sin((yy-7)/106*Math.PI)*17;c.beginPath();c.moveTo(29,yy+12);c.lineTo(30-wide,yy);c.moveTo(29,yy+12);c.lineTo(30+wide,yy);c.stroke();}VK5.leaves.set(col,cv);return cv;
 }
-function vk5HintArt(){
- if(VK5.hint)return VK5.hint;const cv=vk5Cv(100,124),c=cv.getContext('2d');c.scale(2,2);c.fillStyle='#ffe0b3';c.strokeStyle='#5e3b63';c.lineWidth=2.6;c.lineJoin='round';c.beginPath();c.moveTo(16,5);c.lineTo(33,5);c.lineTo(34,17);c.quadraticCurveTo(40,20,36,28);c.quadraticCurveTo(33,32,29,28);c.lineTo(29,46);c.quadraticCurveTo(29,53,25,53);c.quadraticCurveTo(21,53,21,46);c.lineTo(21,29);c.quadraticCurveTo(16,37,12,33);c.lineTo(5,26);c.quadraticCurveTo(2,21,7,19);c.quadraticCurveTo(10,18,15,23);c.lineTo(15,12);c.closePath();c.fill();c.stroke();c.fillStyle='#b94a83';c.fillRect(15,5,20,7);c.strokeStyle='#ffd07c';c.lineWidth=1;c.strokeRect(15,5,20,7);VK5.hint=cv;return cv;
-}
-function vk5Hint(x,y,tm,alpha){if(alpha<.02)return;g.save();g.globalAlpha=alpha;g.drawImage(vk5HintArt(),x-12,y-32+Math.sin(tm*1.9)*3,24,30);g.restore();}
 function vk5SeedArt(){
  if(VK5.seed)return VK5.seed;const cv=vk5Cv(96,128),c=cv.getContext('2d');c.scale(2,2);const gr=c.createLinearGradient(13,11,33,49);gr.addColorStop(0,'#ffde8d');gr.addColorStop(.4,'#efac4e');gr.addColorStop(1,'#b36749');c.fillStyle=gr;c.strokeStyle='#9b4f5f';c.lineWidth=1.3;c.beginPath();c.moveTo(24,10);c.bezierCurveTo(35,21,38,36,31,45);c.quadraticCurveTo(23,55,16,45);c.bezierCurveTo(9,36,13,21,24,10);c.fill();c.stroke();c.fillStyle='#ffd67d';c.beginPath();c.moveTo(24,13);c.lineTo(19,32);c.lineTo(24,47);c.lineTo(29,32);c.closePath();c.fill();c.strokeStyle='#ffe9a6';c.lineWidth=.9;c.beginPath();c.moveTo(22,17);c.quadraticCurveTo(16,28,18,36);c.stroke();
  // A folded ruby husk distinguishes the collectible from an action flower.
@@ -90,21 +86,18 @@ function vk5StepArt(v){
 }
 function vk5Warm(){
  if(VK5.warm<3){vk5Petal(VK5.warm++);return false;}if(VK5.warm<6){vk5Stone(VK5.warm++-3);return false;}if(VK5.warm<9){vk5BirdArt(VK5.warm++-6);return false;}if(VK5.warm<15){const i=VK5.warm++-9;vk5BudArt(Math.floor(i/2),!!(i%2));return false;}
- if(VK5.warm<15+VK5_LEAF_COL.length){vk5LeafArt(VK5_LEAF_COL[VK5.warm++-15]);return false;}const next=15+VK5_LEAF_COL.length;if(VK5.warm===next){vk5HintArt();vk5HeartArt();vk5SeedArt();VK5.warm++;return false;}if(VK5.warm<next+4){vk5VentArt(VK5.warm++-next-1);return false;}if(VK5.warm<next+7){vk5StepArt(VK5.warm++-next-4);return false;}if(VK5.warm<next+11){const i=(VK5.warm++-next-7)*2;glow(VK5_GLOW_COL[i]);glow(VK5_GLOW_COL[i+1]);return false;}return true;
+ if(VK5.warm<15+VK5_LEAF_COL.length){vk5LeafArt(VK5_LEAF_COL[VK5.warm++-15]);return false;}const next=15+VK5_LEAF_COL.length;if(VK5.warm===next){vk5HeartArt();vk5SeedArt();VK5.warm++;return false;}if(VK5.warm<next+4){vk5VentArt(VK5.warm++-next-1);return false;}if(VK5.warm<next+7){vk5StepArt(VK5.warm++-next-4);return false;}if(VK5.warm<next+11){const i=(VK5.warm++-next-7)*2;glow(VK5_GLOW_COL[i]);glow(VK5_GLOW_COL[i+1]);return false;}return true;
 }
 function vk5Leaf(x,y,ang,len,w,col,alpha){
  g.save();g.translate(x,y);g.rotate(ang);g.globalAlpha=alpha;g.drawImage(vk5LeafArt(col),-w*1.3,-len,w*2.6,len*1.06);g.restore();
 }
-function vk5Node(n,tm,col,variant,focused){
+function vk5Node(n,tm,col,variant){
  const age=n.done?Math.max(0,now-n.t):99,k=n.done?vk5Ease(age/1.35):0,x=n.x,y=n.y,near=clamp(1-Math.abs(P.x-x)/230,0,1),bh=64+variant*7,hx=x+Math.sin(tm*.85+n.note)*2+clamp((P.x-x)/180,-1,1)*near*4,hy=y-bh-k*10+Math.sin(tm*1.25+n.note)*1.8;
  g.fillStyle='#302f4e';g.beginPath();g.ellipse(x,y,31,8,0,0,6.283);g.fill();g.strokeStyle='#a47b86';g.lineWidth=1;g.beginPath();g.ellipse(x,y-2,27,5.5,0,0,6.283);g.stroke();
  g.lineCap='round';g.strokeStyle='#302a46';g.lineWidth=5;g.beginPath();g.moveTo(x,y-4);g.bezierCurveTo(x-12,y-18,hx+9,hy+19,hx,hy);g.stroke();g.strokeStyle=variant===1?'#7857a4':'#577e88';g.lineWidth=2.6;g.stroke();
  for(let j=0;j<3;j++)vk5Leaf(x+(j%2?2:-2),y-12-j*14,(j%2?1:-1)*(.85+k*.12),24+k*7,8,j%2?'#577e88':variant===1?'#7c3ea6':'#b72f63',1);
  const rebound=n.done?Math.sin(Math.min(age,1.2)*14)*Math.exp(-age*3.8)*.13:Math.sin(tm*1.5+n.note)*.018*near,scale=(.94+k*.13)*(1+rebound);
  g.save();g.translate(hx,hy);g.rotate(Math.sin(tm*.7+n.note)*.035+clamp((P.x-x)/220,-1,1)*near*.035);g.scale(scale,scale);g.globalAlpha=1;g.drawImage(vk5BudArt(variant,false),-35,-36.4,70,77);if(k>.001){g.globalAlpha=k;g.drawImage(vk5BudArt(variant,true),-35,-36.4,70,77);}g.restore();
- // The pending face is colourful before activation. A small local hand points
- // only to the nearest pending flower; it never intercepts walking or touch.
- if(focused&&!n.done&&Math.abs(P.x-x)<320)vk5Hint(hx,hy-26,tm,clamp((320-Math.abs(P.x-x))/90,0,1)*.96);
  if(n.done&&age<1.4){g.globalCompositeOperation='lighter';vk5Glow('#f3ad65',hx,hy,20,20,Math.sin(age/1.4*Math.PI)*.14);g.globalCompositeOperation='source-over';}
 }
 function vk5GardenPower(o){let a=0;for(const n of o.nodes)if(n.done)a++;return a/o.nodes.length;}
@@ -145,8 +138,7 @@ TUR.kaydet('korBahce',{
   if(o.sira===0){for(let j=0;j<9;j++){const a=(j-4)*(.12+op*.13)+Math.sin(tm*.4+j)*.015;vk5Leaf(o.x,o.y-9,a,52+power*34+(j%2)*19,15+op*4,j%2?col:'#b72f63',1);}for(let j=0;j<3;j++)vk5Leaf(o.x,o.y-16,(j-1)*.25,85+op*45,19,col,1);}
   else if(o.sira===1){for(let j=0;j<7;j++){const a=(j-3)*(.2+op*.14)+Math.sin(tm*.45+j)*.018,len=70+power*60+Math.sin(j)*17;g.save();g.translate(o.x,o.y-12);g.rotate(a);g.strokeStyle='#362c50';g.lineWidth=4;g.beginPath();g.moveTo(0,0);g.bezierCurveTo(-20,-len*.5,18,-len*.8,0,-len);g.stroke();g.strokeStyle='#7857a4';g.lineWidth=2;g.stroke();vk5Leaf(0,-len,Math.sin(tm*.6+j)*.08,30+op*20,14,j%2?col:'#7c3ea6',1);g.drawImage(vk5HeartArt(),-4,-len-8,8,11);g.restore();}}
   else{for(let layer=0;layer<2;layer++)for(let j=0;j<7;j++){const a=(j-3)*(.15+op*.18),ln=65+layer*25+power*25;g.save();g.translate(o.x,o.y-12-layer*12);g.rotate(a);g.scale(.36+layer*.08,.38+power*.16);g.drawImage(vk5Petal((j+layer)%3),-65,-255,130,270);g.restore();}}
-  let target=null,closest=1e9;for(const n of o.nodes)if(!n.done){const distance=Math.abs(P.x-n.x)+(n.x<P.x-130?300:0);if(distance<closest){closest=distance;target=n;}}
-  for(const n of o.nodes)vk5Node(n,tm,col,o.sira,n===target);g.restore();
+  for(const n of o.nodes)vk5Node(n,tm,col,o.sira);g.restore();
   if(o.done){const age=now-o.end;if(age<2.2){g.globalCompositeOperation='lighter';vk5Glow(col,o.x,o.y-55,80+age*25,40+age*12,Math.sin(age/2.2*Math.PI)*.08);g.globalCompositeOperation='source-over';}}
  }
 });
@@ -190,8 +182,8 @@ TUR.kaydet('volkanPerde',{
  },
  ciz(o,tm){
   if(o.fade<=.002)return;const unfold=vk5Ease(1-o.fade),crystal=o.stil==='kristal';g.save();g.lineCap='round';
-  // A pair of folded mineral vines opens like a little garden gate. It has no
-  // hand cue: the vivid round flowers beside it are the actual invitations.
+  // A pair of folded mineral vines opens like a little garden gate; the vivid
+  // round flowers beside it remain the actual invitations.
   for(let i=0;i<2;i++){const side=i?1:-1;g.save();g.translate(o.x+side*24,o.y);g.rotate(side*(unfold*.62+Math.sin(tm*.55+i)*.012));g.globalAlpha=o.fade;g.strokeStyle='#302b47';g.lineWidth=6;g.beginPath();g.moveTo(0,1);g.bezierCurveTo(side*18,-65,side*5,-126,-side*16,-187);g.stroke();g.strokeStyle=crystal?'#7953a2':i?'#993454':'#7c3ea6';g.lineWidth=3;g.stroke();g.strokeStyle='#d09f9a';g.lineWidth=.7;g.beginPath();g.moveTo(-side*1,-4);g.bezierCurveTo(side*14,-67,side*2,-124,-side*18,-180);g.stroke();
    for(let j=0;j<4;j++){const yy=-24-j*40,xx=side*(5-j*4)+Math.sin(tm*.7+j)*1.2;vk5Leaf(xx,yy,side*(.68+Math.sin(tm*.7+j)*.045),26-j*.8,8.2,j%2?'#b72f63':'#7c3ea6',o.fade);}
    g.drawImage(vk5HeartArt(),-side*16-5,-194,10,14);g.restore();
@@ -226,7 +218,6 @@ TUR.kaydet('korCicegi',{
   for(let layer=0;layer<3;layer++){const count=layer===0?9:7;for(let j=0;j<count;j++){const ang=(j-(count-1)*.5)*(layer===0?.07+opening*.24:.06+opening*.21),osc=Math.sin(tm*.45+j*.8+layer)*.012*opening,k=(layer===0?.78:layer===1?.62:.47)*(1+.04*Math.sin(tm*.3+layer)*opening);g.save();g.translate(cx,cy+layer*12);g.rotate(ang+osc);g.scale(k*(.72+opening*.28),k);g.globalAlpha=1;g.drawImage(vk5Petal((layer+j%2)%3),-65,-255,130,270);g.restore();}}
   // Small molten seed, real gold facets: keep the ruby/violet pigment intact.
   const seed=1+Math.sin(tm*1.1)*.025;g.drawImage(vk5HeartArt(),cx-23*seed,cy-80*seed,46*seed,62*seed);g.globalCompositeOperation='lighter';vk5Glow('#eaa266',cx,cy-49,92+opening*25,80,.035+heart*.035);vk5Glow('#ffc87b',cx,cy-48,26+heart*8,30+heart*8,.1+heart*.1);g.globalCompositeOperation='source-over';
-  if(!o.started&&vk5FinalReady()&&Math.abs(P.x-cx)<380)vk5Hint(cx,cy-227,tm,clamp((380-Math.abs(P.x-cx))/110,0,.96));
   if(opening>.02){g.strokeStyle='rgba(251,231,187,.55)';g.lineWidth=1;for(let j=0;j<9;j++){const ang=(j-4)*.29,ln=40+heart*32;g.beginPath();g.moveTo(cx,cy-8);g.quadraticCurveTo(cx+Math.sin(ang)*ln,cy-35,cx+Math.sin(ang)*ln,cy-15-Math.cos(ang)*ln);g.stroke();g.fillStyle='#fff0c3';g.beginPath();g.ellipse(cx+Math.sin(ang)*ln,cy-15-Math.cos(ang)*ln,2.3,3.4,ang,0,6.283);g.fill();}}
   g.restore();
   if(o.started){g.globalCompositeOperation='lighter';for(let j=0;j<36;j++){const u=((a*.065+j/36)%1),rad=38+u*(130+lift*150),ang=j*2.399+tm*.15,x=cx+Math.cos(ang)*rad,y=cy-40-u*(160+lift*330)+Math.sin(ang)*40,fade=Math.sin(u*Math.PI)*heart;vk5Glow(DN5_COL[j%8],x,y,11+u*4,10,fade*.5);g.fillStyle='#fff1ca';g.globalAlpha=fade*.7;g.beginPath();g.ellipse(x,y,1.4,3,-ang,0,6.283);g.fill();}g.globalAlpha=1;g.globalCompositeOperation='source-over';

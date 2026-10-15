@@ -136,9 +136,9 @@ const SES = (() => {
     "p_v_uyku": "Bu gece, Uyuyan Yanardağ'a gidiyoruz!",
     "p_v_giris": "Bak Feza, dağ usulca nefes alıyor! Kor Çiçeği uyumuş. Işık bahçelerini canlandırıp onu uyandıralım.",
     "p_v_buhar": "Bu yumuşacık buhar bizi yukarı taşıyor! Taşlara zıpla, sıcak rüzgârda süzül!",
-    "p_v_mini": "Parlayan kristallere dokun. Üç tomurcuğu şarkımızla açalım!",
-    "p_v_mini_yardim": "Bir kristale dokunman yeterli. Güzel şarkımızı birlikte yapıyoruz.",
-    "p_v_kristal_son": "Harika! Üç çiçek de açıldı. Şimdi ışık nehrine doğru yürüyelim.",
+    "p_v_mini": "Gel, birlikte uçalım! Büyük tomurcuklara dokun, çiçekler açılsın.",
+    "p_v_mini_yardim": "Büyük tomurcuğa dokun. Bak, çiçek açacak!",
+    "p_v_kristal_son": "Bütün çiçekler açıldı! Şimdi kayığımıza gidelim.",
     "p_v_sal": "Işık nehrinde yolculuğa çıkıyoruz! Parmağınla yukarıya, aşağıya yol göster; salımız sıcak buharda süzülsün. Ben yanındayım!",
     "p_v_sal_son": "Ne güzel süzüldük! Işık kuşlarımız da bizimle geldi. Hadi, Kor Çiçeği'ni bulalım!",
     "p_v_kalp": "İşte dağın kalbi: Kor Çiçeği! Bahçelerimiz uyandı. Şimdi yaklaş, çiçeğe dokunalım.",
@@ -232,8 +232,8 @@ const SES = (() => {
   const agacYandi = () => (typeof BOLUM_NO !== 'undefined' && BOLUM_NO === 2) ? false : !!(typeof TREE !== 'undefined' && TREE && TREE.done);
   // her talimatın "hâlâ yerinde mi?" koşulu (çalma anında bakılır)
   const KOSUL = {
-    p_v_mini: () => typeof V5 === 'undefined' || !V5.mini,
-    p_v_mini_yardim: () => typeof V5 === 'undefined' || !V5.mini,
+    p_v_mini: () => (typeof V5 === 'undefined' || !V5.mini) && (typeof KR5 === 'undefined' || !KR5.o || KR5.o.kr5.opened < KR5.o.kr5.flowers.length),
+    p_v_mini_yardim: () => typeof KR5 !== 'undefined' && !!KR5.aktif && KR5.o.kr5.phase === 'play' && KR5.o.kr5.opened < KR5.o.kr5.flowers.length,
     p_v_sal: () => typeof V5 === 'undefined' || !V5.sal,
     p_v_kalp: () => typeof V5 === 'undefined' || !V5.final,
     p_i_denizati: () => typeof DNZ === 'undefined' || DNZ.ati.some(o => !o.done),

@@ -20,7 +20,7 @@ Korkutucu hiçbir şey yoktur, kaybetmek yoktur. Feza okuma bilmediği için her
    vatozun sırtında ışıklı kemerlerden geçme ve Büyük İnci’yi uyandırma. Denizatı dostları finalde birlikte dans eder;
    mercan bahçeleri ve deniz canlıları harekete tepki verir. Her yöne yüzülür; kaybetmek ve oksijen sınırı yoktur.
 5. **Uyuyan Yanardağ** (sıcak akşam ışığı) — Bazalt patikalarda üç ışık bahçesini canlandırma, yumuşak buharla yükselme ve
-   dokunarak çalınan kristal korosu. Katlanmış taş sal üzerinde lav nehrinden geçilir; ışıklardan origami kuşlar doğar,
+   Pırıl'la uçarken tek dokunuşla açılan altı büyük çiçek. Katlanmış taş sal üzerinde lav nehrinden geçilir; ışıklardan origami kuşlar doğar,
    büyük Güneşkuşu yolculuğa katılır. Sonunda Kor Çiçeği açılır ve dağ yeniden renklenir. Yeni müzik, sıcak taş tınıları ve
    Türkçe seslendirmeler bu rüya için hazırlandı; lav yolculuğunda düşmek, yanmak veya kaybetmek yoktur.
 
@@ -40,7 +40,7 @@ onları yalnızca ışık şarkısı uyandırır.
 - **Yürümek:** ekranın herhangi bir yerine parmağını koyup tut; Feza o tarafa yürür. Parmak yakınsa yavaş, uzaksa koşar.
 - **Rüyalara dönüş:** her bölümün sağ üstündeki ev/geri simgesini 1,2 saniye basılı tut. Kısa dokunmak çıkış yapmaz; tamamlanan rüyalar korunur.
 - **İnci Denizi:** ekranı basılı tutarak her yöne yüz. Sol alttaki balık düğmesi kısa bir yüzme hamlesi yapar; ahtapotun kabukları parmakla sürüklenir veya kabuğa ve eşleşen yuvaya sırayla dokunulur.
-- **Uyuyan Yanardağ:** canlı renkli tomurcukların yanından geçerek bahçeleri uyandır. Kristal korosunda kristallere veya üç üst çiçeğe dokun, parmağını gezdir ya da basılı tut; üç çiçek sırayla açılır. Üçü de açılıp kuşlar uçunca sağdaki ışık izini takip ederek devam et. Yanlış nota ve süre cezası yoktur. Pırıl gerektiğinde eşlik eder. Lav kayığı aynı manzaralar ve kemerler boyunca 35 saniyede yol alır; parmağınla yukarı-aşağı yön verebilirsin.
+- **Uyuyan Yanardağ:** canlı renkli tomurcukların yanından geçerek bahçeleri uyandır. Pırıl'la çiçek uçuşunda altı büyük tomurcuğun her birine dokun: her dokunuş bir çiçeği açar ve açılan çiçek görünür kalır. Sıra, nota, dolum sayacı ve kaybetme yoktur. Hepsi açılınca Pırıl Feza'yı kıyıya indirir; sağa yürüyerek devam edilir. Çocuk beklerse Pırıl yardımcı olur. Lav kayığı aynı manzaralar ve kemerler boyunca 35 saniyede yol alır; parmağınla yukarı-aşağı yön verebilirsin.
 - **Lav nehri:** sal kendisi ilerler. Parmağını yukarıda veya aşağıda tutarak nehrin akışı içinde yol göster; ışıklı kemerlerin, lav şelalelerinin ve kuşların tadını çıkar. Bütün ışıkları yakalamak gerekmez.
 - **Zıplamak:** sol alttaki büyük yuvarlak düğmeye bas. Havadayken bir daha basınca Pırıl Feza'yı yukarı iter.
 - **Işık çiçekleri:** Feza dokununca açılır, çevre renklenir. Pırıl karanlık göllere ışık üfler, nilüfer yaprakları çıkar.
@@ -48,7 +48,7 @@ onları yalnızca ışık şarkısı uyandırır.
 - **Takılırsa:** Pırıl yolu gösterir; suya düşerse ya da bir yerde zorlanırsa Pırıl onu taşır.
 - **Saklı yollar:** parlayan yaprak kemerlerinin ardında ışık tohumları saklıdır.
 - Klavye (ebeveyn için): **oklar / A–D** yürür, **Boşluk / W / ↑** zıplar. İnci Denizi’nde **oklar / W–A–S–D** her yöne yüzdürür, **Boşluk** hızlandırır.
-  Yanardağın salında **↑/↓ veya W/S** yön verir; kristal korosunda **Boşluk veya E** ile de çalınabilir.
+  Yanardağın salında **↑/↓ veya W/S** yön verir; çiçek uçuşunda **Boşluk veya E** sıradaki kapalı çiçeği açar.
 
 ## Ebeveyn için notlar
 

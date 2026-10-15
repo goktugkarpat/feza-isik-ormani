@@ -6,7 +6,7 @@ Feza okuyamaz: ilerlemek yazıya, nota bilgisine veya doğru sırayı ezberlemey
 
 ## Hikâye ve görsel dil
 
-Kor Çiçeği uyumuş, dağın ışık bahçeleri solmuştur. Feza ve Pırıl bahçeleri canlandırır, kristallerle dağın şarkısını bulur,
+Kor Çiçeği uyumuş, dağın ışık bahçeleri solmuştur. Feza ve Pırıl bahçeleri canlandırır, birlikte uçup altı büyük tomurcuğu açar,
 lav nehrini geçer ve çiçeği uyandırır. Kraterde yumuşak lav fıskiyeleri ve yamaçlara geri düşen kor damlaları vardır;
 hasar, korkutucu patlama, sarsıntı veya ani ışık flaşı yoktur. Dağ çiçekler, ışıklar ve origami kuşlarla canlanır.
 Koyu mor bazalt, kızıl/mercan ve altın lav, yakut/magenta/mor çiçekler ve renkli kristaller; kâğıt katları, suluboya ve ince doku birlikte kullanılır.
@@ -19,7 +19,7 @@ Lav nehrinde gerçek bir kanyon, lav şelaleleri ve taş sal vardır. Yönlendir
 | `bolum5.js` | Izgara, yerleşim, `BOLUM`; `bl5*`. Genel harita adları diğer bölümlerle aynıdır, yalnız seçilen bölümün haritası yüklenir. |
 | `dunya5.js` | Arka plan, bazalt, lav, bitkiler ve önbellekler; `dn5*`, `DN5`. |
 | `volkan.js` | Bahçeler, bacalar, taş oyuncaklar, kapılar, Kor Çiçeği; `vk5*`, `VK5`. |
-| `kristal.js` | Üç aşamalı kristal mini oyunu; `kr5*`, `KR5`. |
+| `kristal.js` | Altı büyük çiçek ve Pırıl'la yerel uçuş mini oyunu; dosya adı uyumluluk için korunur, `kr5*`, `KR5`. |
 | `lavsal.js` | Sal yolculuğu, kemerler ve origami kuşlar; `ls5*`, `LAVSAL`. |
 | `muzik.js`, `ses.js`, `sesler.js` | Beşinci rüyaya özel beste, olay sesleri ve kayıtlı Türkçe konuşmalar. |
 | `oyun.js`, `sahne.js`, `arayuz.js`, `piril.js` | Bölüm seçimi, ortak fizik/kamera, rehberlik, giriş, sabah finali ve sonuç kartı. |
@@ -38,7 +38,7 @@ yüzme modu açılmaz. Ana patika, affedici zıplama ve Pırıl'ın mevcut kurta
 |---|---|---|
 | `koz` | 0–120 | İlk bahçe, bazalt patikalar ve sıcak taş oyuncakları. |
 | `buhar` | 120–235 | İkinci bahçe, buhar bacaları ve isteğe bağlı üst yollar. |
-| `kristal` | 235–300 | Beş kristalden oluşan koro ve sal kıyısı. |
+| `cicek` | 235–300 | Altı büyük çiçekle yerel uçuş ve sal kıyısı. |
 | `lav` | 300–425 | Sal ile lav nehri yolculuğu. |
 | `kalp` | 425–600 | Üçüncü bahçe, yüksek patika ve Kor Çiçeği. |
 
@@ -47,20 +47,26 @@ yüzme modu açılmaz. Ana patika, affedici zıplama ve Pırıl'ın mevcut kurta
 - `buharBaca`: basıldığında güvenli bir yukarı itiş verir; aynı bacada beklemek sonsuz zıplama döngüsü oluşturmaz.
 - `korBasamak`: esneyip zıplatan taş platform.
 - `volkanPerde`: `bagId` ile bahçeye veya mini oyuna bağlı fiziksel geçit; bağlı etkinlik bitince açılır.
-- `volkanMini`: 260. sütundaki kristal korosu; `KR5.aktif` etkin ve yakındaki nesneyi, aksi halde `null` döndürür.
+- `volkanMini`: 260. sütundaki çiçek uçuşu; `KR5.aktif` uçuş/iniş bitene kadar etkin nesneyi, aksi halde `null` döndürür.
 - `volkanSal`: 300. sütundaki yolculuk girişi; mini oyun tamamlanmadan başlamaz.
 - `korCicegi`: 565. sütundaki final; üç bahçe, mini oyun ve sal tamamlanınca başlayabilir.
 - `tohum`: isteğe bağlı keşif ödülü; ana görevin veya finalin şartı değildir. `volkanSus` yalnız manzara parçasıdır.
 
 ## Akış, kontroller ve kamera
 
-Başlangıç durumu `V5={bahce:0,mini:false,sal:false,final:false}`. İlk iki bahçe → kristal korosu → sal → üçüncü bahçe → Kor Çiçeği sırası izlenir.
+Başlangıç durumu `V5={bahce:0,mini:false,sal:false,final:false}`. İlk iki bahçe → çiçek uçuşu → sal → üçüncü bahçe → Kor Çiçeği sırası izlenir.
 `V5.bahce` tamamlanan bahçe sayısıdır; `mini` ve `sal` ilgili etkinlik tamamlanınca açılır.
 `V5.final` kutlamanın **başladığını** da belirtir; kutlamanın bitişi final nesnesinin `done` alanı ve `volkanTamam` olayıdır.
 
-Kristal korosunda beş kristale dokunulur, parmak üzerlerinde gezdirilir veya basılı tutulur. Üç aşamada çevre ve müzik değişir;
-yanlış nota yoktur. Boşluk/E klavye yedeğidir. Genel yürüme/zıplama ve Pırıl'ın uzak hedefe çağırması etkin mini oyunda durur;
-kamera kristal bahçesini çerçevede tutar. Çocuk beklerse Pırıl seyrek bir sesli ipucu verir ve notalarla eşlik ederek ilerlemeyi sağlar.
+Çiçek uçuşunda altı büyük tomurcuk bir arada görünür. Kapalı bir tomurcuğa tek dokunuş onu açar;
+açılmış çiçeğe tekrar dokunmak ilerleme eklemez. Altı çiçek de açılınca kısa kutlama ve güvenli iniş olur.
+Nota, tekrar dokunarak dolan sayaç ve üç aşamalı enstrüman oyunu kaldırılmıştır. Boşluk/E klavye yedeğidir.
+`P.ucus=o` normal fiziği devralır; mini oyunun kendi dikkat kutusu bahçeyi çerçeveler, sal koridoru kamerasına girmez.
+Genel yürüme/zıplama ve uzak hedef rehberliği uçuş boyunca kapalıdır. Çocuk beklerse Pırıl seyrek ve doğrudan yardım eder.
+Yanardağ bölümünde çiçek üzerinde veya genel arayüz katmanında öğretici el işareti çizilmez; diğer dört rüyanın ipuçları korunur.
+Kalkış 1,6 saniye, altı çiçek açıldıktan sonraki kutlama 2,2 saniye ve güvenli kıyıya dönüş 1,6 saniyedir.
+İlk yardım 8 saniyelik hareketsizlikten sonra tek çiçek açar; devam eden bekleyişte 7 saniye aralıkla birer çiçek açılır.
+Ekranda parmağı sabit tutmak ilerlemeyi tekrarlamaz; başka kapalı tomurcuğa sürüklemek yalnız o hedefi açar.
 
 Salda `P.ucus=o` kancası normal fiziği devralır; `o.adim(dt,girdi)` Feza'nın yerini günceller.
 Sal kendisi ileri gider; parmağın dünya yüksekliği veya ↑/↓/W/S nehir içinde yön verir. Zıplama düğmesi bu sırada gizlenir.
@@ -79,11 +85,12 @@ sabah sahnesinde tekrar edilmez. Kutlama bitişinden yaklaşık iki saniye sonra
 | `bolum5Basla` | Dünya açılışı; kısa müzik karşılaması. |
 | `korUyandi` | Bahçe nesnesi; `index`/`sira` 0–2. `SAYAC.kor` ve çevrenin ışığı güncellenir. |
 | `buharZip` | Gerçek itişi yapan baca/basamak nesnesi; yumuşak buhar sesi. |
-| `volkanMiniBasla` | `{o}`; yalnız bu olay mini oyunun sakin müzik düzenlemesini başlatır. |
-| `volkanKristal` | `{index,stage,help,strength}`; mini notası. Bahçeler `{index,source:'bahce'}`, sal ise `stage:1` ile aynı ses cevabını kullanır; bu iki kaynak mini oyun modunu açmaz. |
-| `volkanMiniAsama` | `{o,stage:1..3}`; aşama geçişi. Nota olayındaki `stage` ise 0–2'dir. |
-| `volkanMiniTamam` | `{o}`; geçit açılır, ana tema geri gelir. |
-| `lavSalBasla` | `{o,duration:64}`; sal müziği başlar. |
+| `volkanMiniBasla` | `{o}`; çiçek uçuşu başlar, normal dünya müziği devam eder. |
+| `volkanCicekAc` | `{o,index,opened,total:6,help}`; bir çiçek bir kez açılır, kısa yaprak/parıltı sesi. |
+| `volkanKristal` | Bahçe ve saldaki küçük taş sesleri için korunur; yeni mini oyun bu olayı üretmez. |
+| `volkanMiniAsama` | `{o,stage:1..3,cicek:true}`; yalnız uyumlu ortam ışığı verisi, oynanış aşaması veya nota görevi değildir. |
+| `volkanMiniTamam` | `{o}`; güvenli iniş tamamlanır, geçit açılır. |
+| `lavSalBasla` | `{o,duration:35}`; sal müziği başlar. |
 | `lavSalAn` | `{phase:'lift'|'surf'|'arch'|'landing',index?}`; seyrek sahne/ses cevabı. |
 | `lavSalBitti` | `{o}`; güvenli iniş, normal fizik ve ana müzik geri gelir. |
 | `volkanFinalBasla` | `{o,duration:26,box}`; çiçek kutlaması, kamera kutusu ve final müziği. |
@@ -94,7 +101,7 @@ sabah sahnesinde tekrar edilmez. Kutlama bitişinden yaklaşık iki saniye sonra
 “Dağın Nefesi” yeni bir F Lidyen bestesidir: sıcak 6/8 salınım, yumuşak taş/handpan tınısı, arp, flüt, yaylılar ve seyrek koro.
 Feza'nın inen üç notası ve Pırıl'ın altılı sıçrayışı bu rüyada yeniden işlenir. Ana ezgi 32 ölçü/76,8 saniye;
 sal düzenlemesi 14 ölçü/33,6 saniyelik ayrı bir forma sahiptir; aynı 6/8 tempoda giriş, yükseliş, kuşlar ve iniş cümleleri duyulur. Salın gerçek başlangıç/bitiş olayları müziği yönetir;
-bu uzunluklar çocuğa dayatılan bir oynanış sayacı değildir. Kristaller F majör pentatonikte cevap verir, eşlik çocuğun notalarına alan bırakır.
+bu uzunluklar çocuğa dayatılan bir oynanış sayacı değildir. Çiçek uçuşunda da aynı dünya müziği sürer; oyuncunun müzik çalması gerekmez.
 Patlama, sert vurmalı katmanı veya sürekli konuşma yoktur. Konuşma sırasında mevcut müzik kısma sistemi çalışır.
 
 Yeni Pırıl anahtarları: `p_v_uyku`, `p_v_giris`, `p_v_buhar`, `p_v_mini`, `p_v_mini_yardim`, `p_v_kristal_son`,
@@ -105,10 +112,8 @@ ilk ekleme sırasında önceki 106 ses kaydının MP3 içeriği aynı korunmuşt
 ## Süreler, performans ve doğrulama
 
 - Rahat ilk oynanış için **6–9 dakika tasarım hedefi** vardır; bu, ölçülmüş tam oynanış süresi veya hız garantisi değildir.
-- Kristal aşamaları sırayla 12/15/18 nota-değeriyle tamamlanır; doğru sıra şartı veya gizli asgari çalma süresi yoktur.
-  Her hedefin ardından 1,65 saniyelik müzikal açılma, en sonda 4,2 saniyelik çiçek/kuş kutlaması vardır.
-  Üç büyük tomurcuk dokunuşlarla dolar; bitişten sonra sağa uzanan ışık izi devam yönünü gösterir.
-  Basılı tutma ve Pırıl'ın sessizlikte yardımı da ilerletir; gerçek süre dokunuş hızına ve duraklamalara bağlıdır.
+- Altı ayrı tomurcuğun her biri tek dokunuşla açılır. Yalnız basılı beklemek çiçek sayısını artırmaz;
+  Pırıl'ın gecikmeli yardımı çocuğun takılmasını önler. Gerçek süre dokunuşlara ve duraklamalara bağlıdır.
   Salın kod süresi 1,2 saniye biniş + 32,4 saniye nehir + 1,4 saniye iniş, toplam 35 saniyedir.
   Yol, 44 ışık ve 5 kemer korunur; sahne anları normalize `routeU` ilerlemesine bağlıdır.
   Çiçek kutlaması 26 saniyedir. Bunlar oyun zamanlayıcılarıdır, CPU/GPU ölçümü değildir.
@@ -118,13 +123,13 @@ ilk ekleme sırasında önceki 106 ses kaydının MP3 içeriği aynı korunmuşt
   Dünya zemini 768 birimlik parçalarla çizilir; LRU en çok 12 arazi tuvali tutar. `dn5Isit()` atlas hazırlığını karelere yayar.
   Altı bazalt atlası yaklaşık 5,27 MiB tutar. Mini/salın 15 renk dizesi de açılışta sırayla önısıtılır;
   renk nicemlemesiyle 14 küçük ışık sprite'ı oluşur ve ilk etkileşimde tekrar üretilmez.
-  Mini oyunda ses dalgaları 18 öğeli havuzu yeniden kullanır; ses motorunun mevcut geçici ses sınırı korunur.
+  Mini oyunda altı çiçeğin sabit durum dizisi kullanılır; ses motorunun mevcut geçici ses sınırı korunur.
 - İlk çevrimdışı ses kontrollerinde ana tema, sal, kristal ve final çıktıları sonlu kaldı, clipping görülmedi.
   Hızlı kristal dokunuşları ve müzik modu geçişleri ayrı denendi. Önceki dört rüyanın kısa ses karşılaştırmaları eski nota sıralarını korudu;
   bu kontroller bütün bölümlerin oynanış testi yerine geçmez.
 - Test açılışları: `?sessiz&atla&bolum=5`, uyku girişi için `?sessiz&bolum=5&uyku`, isteğe bağlı altyazı için `&altyazi`.
   Görsel/fizik testleri sessiz yapılır; gerçek konuşma ve ses kilidi için ayrıca sesli, kullanıcı dokunuşlu kontrol gerekir.
-- Tam rota, kristallerde dokunma/sürükleme/basılı tutma, yardımlı ilerleme, salın yönlendirmesi/inişi, çiçek/sabah ve sonuç kartı;
+- Tam rota, altı farklı çiçeğe dokunma, açılmış hedefi tekrar seçme, yardımlı ilerleme, salın yönlendirmesi/inişi, çiçek/sabah ve sonuç kartı;
   yatay/dikey düzen, `file://` açılışı ve ilk çevrimiçi kurulumdan sonra çevrimdışı açılış birlikte doğrulanmalıdır.
   Önceki 1–4. rüyanın açılışları da kontrol edilir.
 

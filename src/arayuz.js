@@ -315,6 +315,7 @@ const ARAYUZ = (() => {
     yak('yuru', yuruH, girdi ? 6 : 3); yak('zipla', zipH, 3); yak('cift', ciftH, 3);
   }
   function ipucuCiz(tm) {
+    if (BOLUM_NO === 5) return;   // Yanardağda çiçeklerin ve doğal hareketlerin kendisi yol gösterir; öğretici el çizilmez.
     const boy = Math.min(H * 0.16, W * 0.13);
     if (uiSarkiEl.a > 0.01) {   // şarkı çiçeği: hangi çiçeğe basılacağını el gösterir
       g.globalCompositeOperation = 'lighter'; dglow('#d8c0ff', uiSarkiEl.x * DPR, uiSarkiEl.y * DPR, boy * 0.55, uiSarkiEl.a * 0.35); g.globalCompositeOperation = 'source-over';
@@ -983,7 +984,7 @@ const ARAYUZ = (() => {
     dene('ipucu', () => ipucuGuncelle(dt));
     zipT = Math.max(0, zipT - dt * 2.5);
     uiKilitT = P.kilit > 0 ? uiKilitT + dt : 0;   // kontrol yarım saniyeden uzun kilitliyse (sahne anı: ağaç, gökkuşağından kayış...) düğme işe yaramaz → gizle
-    dugmeA = clamp(dugmeA + (DURUM === 'oyun' && !P.ucus && !(typeof KR5 !== 'undefined' && KR5.aktif) && !(BOLUM_NO === 5 && typeof V5 !== 'undefined' && V5.final) && uiKilitT < 0.5 ? dt * 1.5 : -dt * 3), 0, 1);   // yolculuk, kristal korosu ve Kor Çiçeği kutlamasında zıplama düğmesi yok
+    dugmeA = clamp(dugmeA + (DURUM === 'oyun' && !P.ucus && !(typeof KR5 !== 'undefined' && KR5.aktif) && !(BOLUM_NO === 5 && typeof V5 !== 'undefined' && V5.final) && uiKilitT < 0.5 ? dt * 1.5 : -dt * 3), 0, 1);   // yolculuk, çiçek uçuşu ve Kor Çiçeği kutlamasında zıplama düğmesi yok
     if (dugmeA > 0.005) { dene('parmak', () => parmakCiz(tm, dt)); dene('dugme', () => dugmeCiz(tm, dt, dugmeA)); }
     dene('ipucuCiz', () => ipucuCiz(tm));
     dene('bildirim', () => bildirimCiz(tm));

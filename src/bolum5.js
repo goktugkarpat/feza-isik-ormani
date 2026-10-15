@@ -1,5 +1,5 @@
 /* bolum5.js — Uyuyan Yanardağ. Güvenli bazalt patikalar, üç yaşayan bahçe,
-   sıcak buhar oyunları, kristal müziği ve uzun lav yolculuğu. Klasik bölüm sözleşmesi. */
+   sıcak buhar oyunları, Pırıl'la çiçek uçuşu ve lav yolculuğu. Klasik bölüm sözleşmesi. */
 'use strict';
 const ROWS = 30, COLS = 600;
 const grid = Array.from({length:ROWS},()=>new Uint8Array(COLS));
@@ -25,7 +25,7 @@ for(const[a,b,r]of[[89,93,13],[97,101,11],[105,109,9],[125,129,14],[135,140,11],
 const BOLUM={
  ad:'Uyuyan Yanardağ',baslangic:{x:nx(6),y:yuzey(6)},
  bolgeler:[{ad:'koz',x0:0,x1:120*T},{ad:'buhar',x0:120*T,x1:235*T},
- {ad:'kristal',x0:235*T,x1:300*T},{ad:'lav',x0:300*T,x1:425*T},
+ {ad:'cicek',x0:235*T,x1:300*T},{ad:'lav',x0:300*T,x1:425*T},
  {ad:'kalp',x0:425*T,x1:COLS*T}],gol:null,gollar:[],
  sal:{x0:nx(300),x1:nx(425),yUst:200,yAlt:760},
  kor:{x:nx(565),y:yuzey(565)},korTop:3,
@@ -53,7 +53,7 @@ for(const[c,h,w]of[[29,210,106],[88,285,120],[101,250,110],[126,230,120],
 for(const[c,w,guc]of[[36,110,780],[112,120,830],[229,120,810],[441,115,800],[520,110,830]])
  nesne('korBasamak',c,yuzey(c),{w,h:18,guc});
 const bl5Mini=nesne('volkanMini',260,680,{r:150});
-nesne('volkanPerde',270,680,{bagId:bl5Mini.id,stil:'kristal'});
+nesne('volkanPerde',270,680,{bagId:bl5Mini.id,stil:'bahce'});
 nesne('volkanSal',300,680,{r:120,x1:BOLUM.sal.x1,yUst:200,yAlt:760});
 nesne('korCicegi',565,yuzey(565),{r:145});
 // İsteğe bağlı ışık tohumları: ana görev değil, bütün üst yolların küçük sürprizleri.

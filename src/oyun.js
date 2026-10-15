@@ -584,7 +584,7 @@ function stepPlayer(dt) {
     return;
   }
   if (P.kilit > 0) { P.kilit -= dt; axis = 0; jumpPressed = false; }   // sahne anlarında kontrol kısa süre kapalı
-  // Kristal korosunda dokunuşlar notalara gider; Feza yanlışlıkla bahçeden uzaklaşmaz.
+  // Çiçek uçuşunun giriş/inişinde dokunuşlar hedeflere gider; Feza yanlışlıkla bahçeden uzaklaşmaz.
   if (BOLUM_NO === 5 && typeof KR5 !== 'undefined' && KR5.aktif) { axis = 0; jumpPressed = false; P.buf = 0; }
   const agacBitti = typeof TREE !== 'undefined' && TREE && TREE.done || BOLUM_NO === 5 && typeof V5 !== 'undefined' && V5.final;
   if (agacBitti) { axis = 0; jumpPressed = false; P.buf = 0; }   // ağaç yandı: finale kadar kontrol yok
@@ -1015,7 +1015,7 @@ function omIlkGorus(px) {
 // Uçuş kamerası ağırlığı (0..1, yumuşak geçiş) ve uçuş yakınlığı: koridor (BOLUM.ucus yUst..yAlt) + pay ekrana sığsın
 const omUc = { w: 0, wv: 0, vx: 0, px: 0 };
 function omUcusKamera(dt, snap, px, py) {
-  const hw = P.ucus ? 1 : 0;
+  const hw = P.ucus && !(BOLUM_NO === 5 && P.ucus.tip === 'volkanMini') ? 1 : 0;
   if (snap || !(dt > 0)) { omUc.w = hw; omUc.wv = 0; omUc.vx = 0; }
   else {
     omUc.w = clamp(omSD(omUc.w, hw, omUc.wv, hw ? 0.55 : 0.7, dt), 0, 1); omUc.wv = omSdV;

@@ -121,7 +121,6 @@ const AU = (() => {
     deniz: { cb: 2, ak: ['BG', 'BD', 'BE', 'BA', 'BG', 'BB', 'BE', 'BS'] },
     ucus: { cb: 1, ak: ['BG', 'BA', 'BE', 'BD', 'BG', 'BA', 'BD', 'BS'] },
     volkan: { cb: 2, ak: ['VF', 'VC', 'VD', 'VG', 'VF', 'VA', 'VR', 'VC', 'VD', 'VA', 'VG', 'VC', 'VF', 'VR', 'VG', 'VF'] },
-    volkanKristal: { cb: 2, ak: ['VF', 'VR', 'VD', 'VC', 'VF', 'VG', 'VR', 'VF'] },
     volkanKalp: { cb: 2, ak: ['VR', 'VC', 'VD', 'VA', 'VF', 'VG', 'VC', 'VF'] },
     // 14 ölçü / 33,6 sn: 35 sn'lik sal yolculuğunda giriş, uçuş, doruk ve iniş duyulur.
     lavsal: { cb: 1, ak: ['VF', 'VF', 'VD', 'VA', 'VF', 'VR', 'VF', 'VG', 'VA', 'VC', 'VR', 'VG', 'VC', 'VF'] },
@@ -736,7 +735,7 @@ const AU = (() => {
   // sahne/hikâye durumu (olaylardan): rüya katmanı, Büyük Pofuduk aşaması, finalde atlama isteği, geçidin hareketi
   let ruya = 0, asama = 0, finalIstek = null, gecitHareket = 0, sabahKus = false;
   // orman modunda çalınacak bölüm: Büyük Pofuduk uyanınca açıklık şenliğe döner
-  const ormanAd = d => bolum5() ? (vFinal ? 'volkanFinal' : vSal ? 'lavsal' : vMini ? 'volkanKristal' : /kalp|kor/.test(volkanAlani()) && volkanAlani() !== 'koz' ? 'volkanKalp' : 'volkan') : bolum4() ? 'deniz' : bolum2() ? 'yildiz' : bolum3() ? (d && d.ucus ? 'ucus' : 'bulut') : bolge === 'aciklik' && d && d.uyandi ? 'senlik' : bolge;
+  const ormanAd = d => bolum5() ? (vFinal ? 'volkanFinal' : vSal ? 'lavsal' : /kalp|kor/.test(volkanAlani()) && volkanAlani() !== 'koz' ? 'volkanKalp' : 'volkan') : bolum4() ? 'deniz' : bolum2() ? 'yildiz' : bolum3() ? (d && d.ucus ? 'ucus' : 'bulut') : bolge === 'aciklik' && d && d.uyandi ? 'senlik' : bolge;
   let okuFn = oku;
 
   // ───────────────────────── ölçü planlayıcı ─────────────────────────
@@ -1089,14 +1088,8 @@ const AU = (() => {
     if (tam) korTasi(ns[2] - 12, t + 1.2, .021 * guc, -.12, B.tus, false);
   }
   function volkanCubuk(t, ak, bic, pi) {
-    const bar = pi * 2 + bic, alan = volkanAlani(), mini = progAd === 'volkanKristal';
+    const bar = pi * 2 + bic, alan = volkanAlani();
     const guc = .82 + vIsik * .18, kalp = progAd === 'volkanKalp';
-    if (mini) {
-      // Çocuğun beş kristalle çaldığı notalara alan bırakılır; oyun sesi müziğin solistidir.
-      if (bic === 0) { bas(ak.bas + 12, t, .037, 'uzun', BAR * 1.6); arp(ak.pad[1] + 12, t + .12, .018, -.3, 2.0); }
-      if (bic === 1) arp(ak.pad[3] + 12, t + 1.15, .015, .3, 2.0);
-      return;
-    }
     const phrase = kalp ? V_KALP_MEL[bar % 16] : V_MEL[bar % 32];
     const renk = alan === 'buhar' || (dongu % 2 === 0 && bar % 8 >= 4) ? 'nefes' : 'tas';
     volkanEzgi(phrase, t, bar, guc, renk);
@@ -1622,9 +1615,11 @@ const AU = (() => {
       // Gecikmeli, yumuşak ve uyumlu cevap: solist hep çocuk.
       if (stage === 2 && i % 2 === 0) arp(n - 12, t + .23, .02, (2 - i) * .16, 1.35, sfxG);
     },
-    volkanMiniAsama(t, e) {
-      const stage = cl(e && e.stage | 0, 1, 3), ns = stage === 1 ? [65, 69, 72] : stage === 2 ? [67, 71, 74] : [69, 72, 77];
-      ns.forEach((n, i) => korTasi(n, t + i * .18, .036, (i - 1) * .25, sfxG, true));
+    volkanCicekAc(t, e) {
+      // Tek çiçeğin açılması: kısa yaprak hışırtısı ve sıcak bir parıltı; çalınacak nota yok.
+      const pan = cl(((e && e.index) || 0) / 5 - .5, -.5, .5);
+      gur(t, .32, 'bandpass', 700, 1600, .65, .009, pan, .018, 1);
+      korTasi(77, t + .08, .026, pan, sfxG, false);
     },
     volkanMiniTamam(t) {
       [65, 69, 72, 77, 81].forEach((n, i) => korTasi(n, t + i * .14, .04, -.35 + i * .17, sfxG, true));
@@ -2749,7 +2744,7 @@ const AU = (() => {
       setTimeout(() => { if (performance.now() - kirpT > 700) cal('parilti', 1); }, 60);
       return;
     }
-    let ad = AD[k] || (bolum5() && /^(bolum5Basla|korUyandi|buharZip|volkanKristal|volkanMiniAsama|volkanMiniTamam|lavSalBasla|lavSalAn|lavSalBitti|volkanFinalBasla|volkanTamam)$/.test(k) ? k : null); if (!ad || !ac) return;
+    let ad = AD[k] || (bolum5() && /^(bolum5Basla|korUyandi|buharZip|volkanKristal|volkanCicekAc|volkanMiniTamam|lavSalBasla|lavSalAn|lavSalBitti|volkanFinalBasla|volkanTamam)$/.test(k) ? k : null); if (!ad || !ac) return;
     if (ad === 'su' && bolum3()) ad = 'bulutDus';   // Bölüm 3'te su yok
     if (ad === 'zipla' && bolum4()) ad = 'suAkinti'; // Bölüm 4'te zıplama yerine ışıklı akıntı süzülüşü
     if (v == null && (ad === 'isiltiTopla' || ad === 'kuzuRenk' || ad === 'gokkusagiParca')) v = { oto: 1 };   // sıra verilmediyse kendi sayacımız
@@ -2771,9 +2766,10 @@ const AU = (() => {
     OLAY.on('korUyandi', e => { if (!bolum5()) return; vBahce = Math.min(3, vBahce + 1); olaySes('korUyandi', e); });
     OLAY.on('buharZip', e => { if (bolum5()) olaySes('buharZip', e); });
     OLAY.on('volkanMiniBasla', () => { if (bolum5()) vMini = true; });
-    // Bahçeler ve sal da aynı akortlu kristal sesini kullanır: yalnız MiniBasla düzenlemeyi değiştirir.
+    // Bahçeler ve salın küçük taş sesleri korunur; yeni çiçek uçuşunda normal dünya teması sürer.
     OLAY.on('volkanKristal', e => { if (bolum5()) olaySes('volkanKristal', e); });
-    OLAY.on('volkanMiniAsama', e => { if (!bolum5()) return; vMiniAsama = e && e.stage || 1; olaySes('volkanMiniAsama', e); });
+    OLAY.on('volkanCicekAc', e => { if (bolum5()) olaySes('volkanCicekAc', e); });
+    OLAY.on('volkanMiniAsama', e => { if (bolum5()) vMiniAsama = e && e.stage || 1; });
     OLAY.on('volkanMiniTamam', () => { if (!bolum5()) return; vMini = false; vMiniAsama = 3; olaySes('volkanMiniTamam'); });
     OLAY.on('lavSalBasla', () => { if (!bolum5()) return; vSal = true; vSalT0 = zaman(); olaySes('lavSalBasla'); });
     OLAY.on('lavSalAn', e => { if (bolum5()) olaySes('lavSalAn', e); });
