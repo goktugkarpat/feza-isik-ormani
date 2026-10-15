@@ -1,7 +1,7 @@
 # Feza ve Pırıl: Işıklı Rüyalar ✨🐉
 
 5 yaşındaki Feza için yapılmış, Ori havasında (biraz da Gris) iki boyutlu, büyülü bir platform macerası.
-Feza uyku arkadaşı peluş ejderha Pırıl'a sarılıp uyur; Pırıl'ın gözleri açılır ve oda yavaş yavaş bir rüyaya dönüşür.
+Feza uyku arkadaşı peluş ejderha Pırıl'a sarılıp uyur; yatak animasyonu bitince seçilen rüya doğrudan başlar.
 **Her gece başka bir rüya:** Feza yatağında rüya baloncuklarından birine dokunur ve o rüyaya gider.
 Her rüya sabah Feza'nın yatağında uyanmasıyla biter; bitirilen rüyanın baloncuğunda altın yıldız çıkar.
 
@@ -20,7 +20,7 @@ Korkutucu hiçbir şey yoktur, kaybetmek yoktur. Feza okuma bilmediği için her
    vatozun sırtında ışıklı kemerlerden geçme ve Büyük İnci’yi uyandırma. Denizatı dostları finalde birlikte dans eder;
    mercan bahçeleri ve deniz canlıları harekete tepki verir. Her yöne yüzülür; kaybetmek ve oksijen sınırı yoktur.
 5. **Uyuyan Yanardağ** (sıcak akşam ışığı) — Bazalt patikalarda üç ışık bahçesini canlandırma, yumuşak buharla yükselme ve
-   Pırıl'la uçarken tek dokunuşla açılan altı büyük çiçek. Katlanmış taş sal üzerinde lav nehrinden geçilir; ışıklardan origami kuşlar doğar,
+   altı büyük tomurcuğa dokunup Pırıl'ın uçuşunu ve ışık nefesiyle çiçekleri açmasını izleme. Katlanmış taş sal üzerinde lav nehrinden geçilir; ışıklardan origami kuşlar doğar,
    büyük Güneşkuşu yolculuğa katılır. Sonunda Kor Çiçeği açılır ve dağ yeniden renklenir. Yeni müzik, sıcak taş tınıları ve
    Türkçe seslendirmeler bu rüya için hazırlandı; lav yolculuğunda düşmek, yanmak veya kaybetmek yoktur.
 
@@ -40,21 +40,23 @@ onları yalnızca ışık şarkısı uyandırır.
 - **Yürümek:** ekranın herhangi bir yerine parmağını koyup tut; Feza o tarafa yürür. Parmak yakınsa yavaş, uzaksa koşar.
 - **Rüyalara dönüş:** her bölümün sağ üstündeki ev/geri simgesini 1,2 saniye basılı tut. Kısa dokunmak çıkış yapmaz; tamamlanan rüyalar korunur.
 - **İnci Denizi:** ekranı basılı tutarak her yöne yüz. Sol alttaki balık düğmesi kısa bir yüzme hamlesi yapar; ahtapotun kabukları parmakla sürüklenir veya kabuğa ve eşleşen yuvaya sırayla dokunulur.
-- **Uyuyan Yanardağ:** canlı renkli tomurcukların yanından geçerek bahçeleri uyandır. Pırıl'la çiçek uçuşunda altı büyük tomurcuğun her birine dokun: her dokunuş bir çiçeği açar ve açılan çiçek görünür kalır. Sıra, nota, dolum sayacı ve kaybetme yoktur. Hepsi açılınca Pırıl Feza'yı kıyıya indirir; sağa yürüyerek devam edilir. Çocuk beklerse Pırıl yardımcı olur. Lav kayığı aynı manzaralar ve kemerler boyunca 35 saniyede yol alır; parmağınla yukarı-aşağı yön verebilirsin.
-- **Lav nehri:** sal kendisi ilerler. Parmağını yukarıda veya aşağıda tutarak nehrin akışı içinde yol göster; ışıklı kemerlerin, lav şelalelerinin ve kuşların tadını çıkar. Bütün ışıkları yakalamak gerekmez.
+- **Uyuyan Yanardağ'ın bahçeleri:** görünen canlı renkli tomurcuklara dokun veya yanlarından yürü. Üç bahçede de bu iki yol çalışır; Pırıl geride kalan tomurcuklar için yardımcı olur.
+- **Pırıl'la çiçek uçuşu:** altı büyük tomurcuğun her birine bir kez dokun. Pırıl seçtiğin çiçeğe uçar, ışık üfler; çiçek açılır ve içinden bir kâğıt kuşu çıkar. Hızlı dokunuşlar sıraya alınır, kaybolmaz. Açılmış veya sıraya alınmış çiçeğe tekrar dokunmak gerekmez. Doğru sıra, nota, dolum sayacı ve kaybetme yoktur. Hepsi açılınca kısa kutlamadan sonra kıyıya inilir; sağa yürüyerek devam edilir. Çocuk beklerse Pırıl yardımcı olur.
+- **Lav nehri:** sal 35 saniyelik yolculukta kendisi ilerler. Parmağını yukarıda veya aşağıda tutarak nehrin akışı içinde yol göster; ışıklı kemerlerin, lav şelalelerinin ve kuşların tadını çıkar. Bütün ışıkları yakalamak gerekmez.
 - **Zıplamak:** sol alttaki büyük yuvarlak düğmeye bas. Havadayken bir daha basınca Pırıl Feza'yı yukarı iter.
 - **Işık çiçekleri:** Feza dokununca açılır, çevre renklenir. Pırıl karanlık göllere ışık üfler, nilüfer yaprakları çıkar.
 - **Pofuduklar:** uyuyan Pofuduğun üstüne zıplayınca hapşırıp uyanır ve Feza'nın peşine takılır; bazıları zıplatma minderi ya da basamak olur.
 - **Takılırsa:** Pırıl yolu gösterir; suya düşerse ya da bir yerde zorlanırsa Pırıl onu taşır.
 - **Saklı yollar:** parlayan yaprak kemerlerinin ardında ışık tohumları saklıdır.
 - Klavye (ebeveyn için): **oklar / A–D** yürür, **Boşluk / W / ↑** zıplar. İnci Denizi’nde **oklar / W–A–S–D** her yöne yüzdürür, **Boşluk** hızlandırır.
-  Yanardağın salında **↑/↓ veya W/S** yön verir; çiçek uçuşunda **Boşluk veya E** sıradaki kapalı çiçeği açar.
+  Yanardağın salında **↑/↓ veya W/S** yön verir; çiçek uçuşunda **Boşluk veya E** sıradaki seçilmemiş tomurcuğu seçer.
 
 ## Ebeveyn için notlar
 
 - **Sessiz açmak:** adrese `?sessiz` ekle. Açılışı atlamak için `?atla`, altyazı için `?altyazi`.
 - **Doğrudan bir rüyayı açmak:** `?bolum=1`, `?bolum=2`, `?bolum=3`, `?bolum=4` veya `?bolum=5`.
-  Yanardağın uyku girişini de görmek için `?bolum=5&uyku`; sessiz deneme için `?sessiz&atla&bolum=5`.
+  Beşinde de yatak animasyonu tamamlanınca oyun doğrudan başlar; ayrıca oda dönüşümü, ikinci uyanış, ışıkla belirme veya kontrol beklemesi yoktur.
+  Ormanın yatak girişi yaklaşık 13,4 saniye, diğer rüyalarınki 7,85 saniyedir. Yatağı da atlayan sessiz deneme: `?sessiz&atla&bolum=5`.
 - **Kayıtları sıfırlamak:** seçim ekranında sol üst köşeye 3 saniye basılı tut. Bitirilen rüyalar cihazda saklanır, kilit yoktur.
 - **Performans:** dokunmatik cihazlarda oyun en çok 60, masaüstünde en çok 120 kare/sn çizer; oyun hızı her ekranda aynıdır.
   Büyük ekranlarda çözünürlük otomatik uyarlanır.

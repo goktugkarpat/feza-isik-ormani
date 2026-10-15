@@ -1,7 +1,8 @@
 # Bölüm 5 — Uyuyan Yanardağ
 
-Genel modül, fizik ve erişilebilirlik sözleşmesi `SPEC.md` içindedir. Bu belge beşinci rüyanın eklerini anlatır;
-önceki dört rüyanın kurallarını değiştirmez. Canvas 2D, klasik scriptler ve `file://` desteği korunur.
+Genel modül, fizik ve erişilebilirlik sözleşmesi `SPEC.md` içindedir. Bu belge beşinci rüyanın eklerini anlatır.
+Önceki dört rüyanın bölüm içeriği ve müzikleri korunur; ortak yataktan doğrudan giriş akışı beş rüyada da güncellenmiştir.
+Canvas 2D, klasik scriptler ve `file://` desteği korunur.
 Feza okuyamaz: ilerlemek yazıya, nota bilgisine veya doğru sırayı ezberlemeye dayanmaz. Korku, hasar ve başarısızlık yoktur.
 
 ## Hikâye ve görsel dil
@@ -43,7 +44,10 @@ yüzme modu açılmaz. Ana patika, affedici zıplama ve Pırıl'ın mevcut kurta
 | `kalp` | 425–600 | Üçüncü bahçe, yüksek patika ve Kor Çiçeği. |
 
 - `korBahce`: üç tomurcuğun canlanmasıyla tamamlanır; bahçeler 60, 174 ve 488. sütunlardadır.
-  Yakından geçiş ve gecikmeli yardım yanlışlıkla geride bırakılan tomurcukların ilerlemeyi durdurmasını önler.
+  Ekranda görünen tomurcuğun başına dokunmak onu seçer; Pırıl'ın kısa ışık nefesinden sonra açılır. Dokunma hedefi Feza'ya yatayda en çok 800,
+  düşeyde 350 dünya birimi uzaklıkta olmalıdır. Diğer ekran dokunuşları yürümeyi sürdürür; tomurcuğa yaklaşarak veya yanından yürüyerek açma da korunur.
+  Bahçe yakınında geçen 17 saniyeden sonra gecikmeli yardım devreye girer: ilk yardım yaklaşık 19,5 saniyede, sonraki yardımlar 2,5 saniye arayla gelir.
+  Böylece geride kalan bir tomurcuk için geri dönmek gerekmez.
 - `buharBaca`: basıldığında güvenli bir yukarı itiş verir; aynı bacada beklemek sonsuz zıplama döngüsü oluşturmaz.
 - `korBasamak`: esneyip zıplatan taş platform.
 - `volkanPerde`: `bagId` ile bahçeye veya mini oyuna bağlı fiziksel geçit; bağlı etkinlik bitince açılır.
@@ -58,15 +62,26 @@ Başlangıç durumu `V5={bahce:0,mini:false,sal:false,final:false}`. İlk iki ba
 `V5.bahce` tamamlanan bahçe sayısıdır; `mini` ve `sal` ilgili etkinlik tamamlanınca açılır.
 `V5.final` kutlamanın **başladığını** da belirtir; kutlamanın bitişi final nesnesinin `done` alanı ve `volkanTamam` olayıdır.
 
-Çiçek uçuşunda altı büyük tomurcuk bir arada görünür. Kapalı bir tomurcuğa tek dokunuş onu açar;
-açılmış çiçeğe tekrar dokunmak ilerleme eklemez. Altı çiçek de açılınca kısa kutlama ve güvenli iniş olur.
+Beş rüyada da yatak animasyonu bittiğinde doğrudan normal kontrol açılır. Bölüm 1'de giriş yaklaşık 13,4 saniye,
+diğer bölümlerde 7,85 saniyedir (`son=uyudu+0.6`). Odanın rüyaya dönüşmesi, Feza'nın ikinci kez uyanması ve sonradan gelen ışık/perde/kontrol kilidi yoktur.
+Bu yol rüya seçimi, yeniden oynama ve `?bolum=N` bağlantılarında aynıdır; yalnız `?atla` yatağı da atlar.
+İlk rüyada yatak anlatımı, diğerlerinde doğru rüyanın kısa uyku sözü bir kez söylenir. Bölüme ait başlangıç rehberliği korunur.
+Ormanın mevcut çizim önbellekleri tam ekran yatağın altında en çok 96 adımla hazırlanır; diğer bölümlerin mevcut önısıtması da yatak sırasında çalışır.
+
+Çiçek uçuşunda altı büyük tomurcuk bir arada görünür. Her birini tek dokunuşla seçmek yeterlidir;
+Pırıl seçildikleri sırayla yaklaşır, hedefe ışık üfler, çiçeği açar ve içinden bir kâğıt kuşu uçar.
+Hızlı dokunuşlar altı elemanlı sabit sıraya alınır; açılmış veya zaten seçilmiş tomurcuk tekrar eklenmez.
+Altı çiçek de açılıp son açılma animasyonu tamamlanınca bahçe canlanır, kısa kutlama ve güvenli iniş olur.
 Nota, tekrar dokunarak dolan sayaç ve üç aşamalı enstrüman oyunu kaldırılmıştır. Boşluk/E klavye yedeğidir.
 `P.ucus=o` normal fiziği devralır; mini oyunun kendi dikkat kutusu bahçeyi çerçeveler, sal koridoru kamerasına girmez.
 Genel yürüme/zıplama ve uzak hedef rehberliği uçuş boyunca kapalıdır. Çocuk beklerse Pırıl seyrek ve doğrudan yardım eder.
 Yanardağ bölümünde çiçek üzerinde veya genel arayüz katmanında öğretici el işareti çizilmez; diğer dört rüyanın ipuçları korunur.
-Kalkış 1,6 saniye, altı çiçek açıldıktan sonraki kutlama 2,2 saniye ve güvenli kıyıya dönüş 1,6 saniyedir.
-İlk yardım 8 saniyelik hareketsizlikten sonra tek çiçek açar; devam eden bekleyişte 7 saniye aralıkla birer çiçek açılır.
-Ekranda parmağı sabit tutmak ilerlemeyi tekrarlamaz; başka kapalı tomurcuğa sürüklemek yalnız o hedefi açar.
+Kalkış 1,6 saniye, kutlama 2,6 saniye ve güvenli kıyıya dönüş 1,6 saniyedir.
+Her seçili çiçekte yaklaşık 1,8 saniyelik hareket vardır: 0,8 saniye yaklaşma + 0,42 saniye nefes + 0,58 saniye açılma/kuş çıkışı.
+Çiçeğin açılma olayı nefesin 0,18. saniyesinde gerçekleşir; dokunulduğu anda çiçek sayısı artmaz.
+İlk yardım, oynanabilir uçuşta 8 saniye boşta bekledikten sonra bir çiçeği seçer ve aynı uçuş/nefes animasyonunu oynatır;
+devam eden boş bekleyişte 7 saniye sonra bir sonraki yardım gelir. Animasyon sırasında yardımın bekleme sayacı ilerlemez.
+Ekranda parmağı sabit tutmak ilerlemeyi tekrarlamaz; başka kapalı tomurcuğa sürüklemek o hedefi de sıraya alır.
 
 Salda `P.ucus=o` kancası normal fiziği devralır; `o.adim(dt,girdi)` Feza'nın yerini günceller.
 Sal kendisi ileri gider; parmağın dünya yüksekliği veya ↑/↓/W/S nehir içinde yön verir. Zıplama düğmesi bu sırada gizlenir.
@@ -85,8 +100,11 @@ sabah sahnesinde tekrar edilmez. Kutlama bitişinden yaklaşık iki saniye sonra
 | `bolum5Basla` | Dünya açılışı; kısa müzik karşılaması. |
 | `korUyandi` | Bahçe nesnesi; `index`/`sira` 0–2. `SAYAC.kor` ve çevrenin ışığı güncellenir. |
 | `buharZip` | Gerçek itişi yapan baca/basamak nesnesi; yumuşak buhar sesi. |
-| `volkanMiniBasla` | `{o}`; çiçek uçuşu başlar, normal dünya müziği devam eder. |
+| `volkanMiniBasla` | `{o,cicek:true,total:6}`; çiçek uçuşu başlar, normal dünya müziği devam eder. |
+| `volkanCicekSec` | `{o,index,help}`; benzersiz tomurcuk uçuş sırasına alınır. |
+| `volkanCicekNefes` | `{o,index,help}`; Pırıl hedefe ulaşmış, ışık nefesine başlamıştır. |
 | `volkanCicekAc` | `{o,index,opened,total:6,help}`; bir çiçek bir kez açılır, kısa yaprak/parıltı sesi. |
+| `volkanMiniBahce` | `{o,opened:6,total:6}`; son açılma biter, bahçe ve kuş kutlaması başlar. |
 | `volkanKristal` | Bahçe ve saldaki küçük taş sesleri için korunur; yeni mini oyun bu olayı üretmez. |
 | `volkanMiniAsama` | `{o,stage:1..3,cicek:true}`; yalnız uyumlu ortam ışığı verisi, oynanış aşaması veya nota görevi değildir. |
 | `volkanMiniTamam` | `{o}`; güvenli iniş tamamlanır, geçit açılır. |
@@ -112,8 +130,9 @@ ilk ekleme sırasında önceki 106 ses kaydının MP3 içeriği aynı korunmuşt
 ## Süreler, performans ve doğrulama
 
 - Rahat ilk oynanış için **6–9 dakika tasarım hedefi** vardır; bu, ölçülmüş tam oynanış süresi veya hız garantisi değildir.
-- Altı ayrı tomurcuğun her biri tek dokunuşla açılır. Yalnız basılı beklemek çiçek sayısını artırmaz;
-  Pırıl'ın gecikmeli yardımı çocuğun takılmasını önler. Gerçek süre dokunuşlara ve duraklamalara bağlıdır.
+- Altı ayrı tomurcuğun her biri tek dokunuşla seçilir; Pırıl'ın yaklaşma/nefes/açılma hareketi yaklaşık 1,8 saniye sürer.
+  Hızlı seçimler kaybolmaz; yalnız basılı beklemek çiçek sayısını artırmaz. Pırıl'ın gecikmeli yardımı çocuğun takılmasını önler.
+  Gerçek süre dokunuşlara, animasyonlara ve duraklamalara bağlıdır.
   Salın kod süresi 1,2 saniye biniş + 32,4 saniye nehir + 1,4 saniye iniş, toplam 35 saniyedir.
   Yol, 44 ışık ve 5 kemer korunur; sahne anları normalize `routeU` ilerlemesine bağlıdır.
   Çiçek kutlaması 26 saniyedir. Bunlar oyun zamanlayıcılarıdır, CPU/GPU ölçümü değildir.
@@ -124,14 +143,16 @@ ilk ekleme sırasında önceki 106 ses kaydının MP3 içeriği aynı korunmuşt
   Altı bazalt atlası yaklaşık 5,27 MiB tutar. Mini/salın 15 renk dizesi de açılışta sırayla önısıtılır;
   renk nicemlemesiyle 14 küçük ışık sprite'ı oluşur ve ilk etkileşimde tekrar üretilmez.
   Mini oyunda altı çiçeğin sabit durum dizisi kullanılır; ses motorunun mevcut geçici ses sınırı korunur.
-- İlk çevrimdışı ses kontrollerinde ana tema, sal, kristal ve final çıktıları sonlu kaldı, clipping görülmedi.
-  Hızlı kristal dokunuşları ve müzik modu geçişleri ayrı denendi. Önceki dört rüyanın kısa ses karşılaştırmaları eski nota sıralarını korudu;
+- Çiçek uçuşunda ana dünya bestesi devam eder; eski kristal/nota mini oyununun müzik programı kullanılmaz.
+  Önceki çevrimdışı ses kontrollerinde ana tema, sal ve final çıktıları sonlu kaldı, clipping görülmedi.
+  Eski kristal testi yeni çiçek uçuşunun doğrulaması sayılmaz. Önceki dört rüyanın kısa ses karşılaştırmaları eski nota sıralarını korudu;
   bu kontroller bütün bölümlerin oynanış testi yerine geçmez.
-- Test açılışları: `?sessiz&atla&bolum=5`, uyku girişi için `?sessiz&bolum=5&uyku`, isteğe bağlı altyazı için `&altyazi`.
+- Test açılışları: yatağı atlayarak `?sessiz&atla&bolum=5`, yatak girişiyle `?sessiz&bolum=5`, isteğe bağlı altyazı için `&altyazi`.
   Görsel/fizik testleri sessiz yapılır; gerçek konuşma ve ses kilidi için ayrıca sesli, kullanıcı dokunuşlu kontrol gerekir.
-- Tam rota, altı farklı çiçeğe dokunma, açılmış hedefi tekrar seçme, yardımlı ilerleme, salın yönlendirmesi/inişi, çiçek/sabah ve sonuç kartı;
+- Tam rota, üç bahçede görünür tomurcuğa dokunma ve normal yürüme, minide altı hızlı seçim ve sırayla uçuş/nefes/açılma,
+  açılmış veya sıradaki hedefi tekrar seçme, kuşların uçuşu, yardımlı ilerleme, salın yönlendirmesi/inişi, çiçek/sabah ve sonuç kartı;
   yatay/dikey düzen, `file://` açılışı ve ilk çevrimiçi kurulumdan sonra çevrimdışı açılış birlikte doğrulanmalıdır.
-  Önceki 1–4. rüyanın açılışları da kontrol edilir.
+  Beş rüyanın yataktan doğrudan kontrol açılması; seçim, bağlantı ve tekrar girişte ikinci ışık/uyanış veya bekleme olmaması ayrıca kontrol edilir.
 
 ## Kayıt ve geri dönüş
 

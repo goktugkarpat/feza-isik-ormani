@@ -232,8 +232,8 @@ const SES = (() => {
   const agacYandi = () => (typeof BOLUM_NO !== 'undefined' && BOLUM_NO === 2) ? false : !!(typeof TREE !== 'undefined' && TREE && TREE.done);
   // her talimatın "hâlâ yerinde mi?" koşulu (çalma anında bakılır)
   const KOSUL = {
-    p_v_mini: () => (typeof V5 === 'undefined' || !V5.mini) && (typeof KR5 === 'undefined' || !KR5.o || KR5.o.kr5.opened < KR5.o.kr5.flowers.length),
-    p_v_mini_yardim: () => typeof KR5 !== 'undefined' && !!KR5.aktif && KR5.o.kr5.phase === 'play' && KR5.o.kr5.opened < KR5.o.kr5.flowers.length,
+    p_v_mini: () => (typeof V5 === 'undefined' || !V5.mini) && (typeof KR5 === 'undefined' || !KR5.o || KR5.o.kr5.selected < KR5.o.kr5.flowers.length),
+    p_v_mini_yardim: () => typeof KR5 !== 'undefined' && !!KR5.aktif && KR5.o.kr5.phase === 'play' && KR5.o.kr5.selected < KR5.o.kr5.flowers.length,
     p_v_sal: () => typeof V5 === 'undefined' || !V5.sal,
     p_v_kalp: () => typeof V5 === 'undefined' || !V5.final,
     p_i_denizati: () => typeof DNZ === 'undefined' || DNZ.ati.some(o => !o.done),

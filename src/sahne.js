@@ -1200,6 +1200,14 @@ function shHuzme(gece, a, tm, renk) {
 }
 
 // ══════════════════ AÇILIŞ ══════════════════
+function shYatakPlani(P) {
+  P.dogrudan = true;
+  P.son = P.uyudu + 0.6;
+  const sonra = 1e9;
+  P.b2 = P.s2 = P.b3 = P.s3 = P.b4 = P.uyan = P.kalk = P.isik = P.dunya = P.bk0 = P.bk1 = P.bk2 = P.bk3 = sonra;
+  P.erime = 2.4;
+  return P;
+}
 function shGirisPlan() {
   const d1 = shSure('a_giris1'), d2 = shSure('a_giris2'), d3 = shSure('a_giris3'), dU = shSure('p_uyan', 4);
   const P = { karar: 0.7, acil: 2.6, s1: 1.6 };
@@ -1226,7 +1234,7 @@ function shGirisPlan() {
   P.bk1 = P.bk0 + 1.25;            // 'bakis' (bir göz kırpmasının içinde başlar)
   P.bk2 = P.bk1 + 3.46;            // 'bakis' biter (yine bir kırpmanın içinde)
   P.bk3 = P.bk2 + 1.3;             // gözler yeniden kapandı
-  return P;
+  return shYatakPlani(P);
 }
 function shKisaPlan() {
   const uk = sh.uykuK || 'p_y_uyku', var1 = typeof SES !== 'undefined' && SES.LINES && SES.LINES[uk], d = var1 ? shSure(uk, 2) : 0;
@@ -1237,7 +1245,7 @@ function shKisaPlan() {
   P.b2 = Math.max(P.uyudu + 0.5, P.s1 + d + 0.6); P.s2 = P.b2; P.b3 = P.b2 + 1.5; P.s3 = P.b3;
   P.erime = 2.4; P.b4 = P.b3 + P.erime; P.son = P.b4 + 2.3;
   const yok = 1e9; P.uyan = P.kalk = P.isik = P.dunya = P.bk0 = P.bk1 = P.bk2 = P.bk3 = yok;
-  return P;
+  return shYatakPlani(P);
 }
 // açılışta yatan Feza'nın pozu ve poz zamanı: [poz, pozTm] ya da null (yeni pozlar yoksa eski yüz ayarı kullanılır)
 function shYatisPoz(t, P, tm) {
@@ -1262,7 +1270,33 @@ function shCanliAyak() {
 // ekran pikseli → oda birimi (shEkranX/Y'nin tersi)
 const shOdaX = sx => ((sx - sh.tx) / sh.zoom - W / 2 - (sh.oxp || 0) + sh.fx) / sh.k0;
 const shOdaY = sy => ((sy - sh.ty) / sh.zoom + sh.fy) / sh.k0;
+function shGirisDogrudanGuncelle(dt) {
+  const t = sh.t, P = sh.plan;
+  if (sh.atla < 0) {
+    const key = sh.kisa ? sh.uykuK || 'p_y_uyku' : 'a_giris1';
+    if (!sh.sesler.yatak && t >= P.s1) { sh.sesler.yatak = 1; shSoyle(key); }
+    shBir('yatagaGir', P.yat1 - 2.5 / P.gir, 'yatagaGir');
+    shBir('yastik', P.yat1 - 2.2 / P.gir, 'yastik');
+    shBir('lambaKis', P.uyudu - 0.5, 'lambaKis');
+    shBir('uykuNefes', P.uyudu + 0.3, 'uykuNefes');
+    if (t >= P.ic) shAn('ic_cek');
+    if (t >= P.uyudu) shAn('uyudu');
+  }
+  if (t >= P.karar) shAn('oda');
+  sh.tam = t >= P.karar && t < P.son;
+  const yuz = sh.kisa || sh.atla >= 0 ? 0 : shEase(shSeg(t, P.uyku0 - 0.8, P.uyudu + 0.6));
+  const fx = shPX(lerp(-26, SH_FEZA.x - 3, yuz)), fy = shPY(lerp(56, SH_FEZA.y - 4, yuz));
+  const z = 1 + 0.08 * shEase(shSeg(t, P.karar, P.uyudu)) + 0.42 * yuz;
+  shKamera(fx, fy, z, lerp(fx, W * 0.45, yuz * 0.7), lerp(fy, H * 0.55, yuz * 0.7));
+  sh.nefesFaz = (sh.nefesFaz || 0) + dt * lerp(1.7, 1.15, shEase(shSeg(t, P.uyku0, P.uyudu + 1.5)));
+  sh.fzOlc = 1.18; sh.prOlc = 1; sh.prOyun = 0;
+  if (t >= P.son && sh.bitti) {
+    if (!sh.izlendi) { sh.izlendi = 1; try { localStorage.setItem(shGirisAnahtar(sh.gBolum || 1), '1'); } catch (e) {} }
+    const f = sh.bitti; sh.bitti = null; sh.mod = null; sh.tam = false; shGeceBirak(); f();
+  }
+}
 function shGirisGuncelle(dt) {
+  if (sh.plan.dogrudan) { shGirisDogrudanGuncelle(dt); return; }
   const t = sh.t, P = sh.plan;
   const ses = (k, at) => { if (!sh.sesler[k] && t >= at) { sh.sesler[k] = 1; shSoyle(shFk(k)); } };
   if (sh.kisa) { if (!sh.sesler.uyku && t >= P.s1) { sh.sesler.uyku = 1; shSoyle(sh.uykuK || 'p_y_uyku'); } }
@@ -1356,6 +1390,7 @@ function shZerreAkit(dt, tm) {
 function shPirilPozVar(p) { const k = 'P_' + p; if (shPozlar[k] === undefined) { try { shPozlar[k] = typeof pirilCizPoz === 'function' && String(pirilCizPoz).indexOf("'" + p + "'") >= 0; } catch (e) { shPozlar[k] = false; } } return shPozlar[k]; }
 function shPirilYer(t, P, tm) {
   const kuc = { x: shKucak.px, y: shKucak.py };
+  if (P.dogrudan) return { x: kuc.x, y: kuc.y, kucak: true, poz: shPirilPozVar('pelus_sik') ? 'pelus_sik' : 'pelus', u: 0.5 + 0.3 * Math.sin(tm * 1.5), f: 1, pat: 0 };
   const hav = { x: -22 + Math.sin(tm * 0.7) * 3, y: 36 + Math.sin(tm * 1.3) * 1.6 };
   const kulak = { x: -38.5, y: 48.6 + Math.sin(tm * 2.2) * 0.6 };
   const yan = { x: -24.5 + Math.sin(tm * 0.9) * 0.6, y: 41 + Math.sin(tm * 2.2) * 0.8 };   // Feza doğrulunca karşısında
@@ -1439,7 +1474,7 @@ function shGirisCiz(tm, dt) {
     }
     shGirisAcilis(tm, t, P); return;
   }
-  shHazir('oda'); const fon = shHazir(sh.fon || 'orman');
+  shHazir('oda'); const fon = P.dogrudan ? null : shHazir(sh.fon || 'orman');
   const p = SH_GECE;
   const m = shSeg(t, P.b3, P.b4);                         // erime ilerlemesi
   const halka = shEase(shSeg(m, 0.04, 0.72));
@@ -1545,7 +1580,7 @@ function shGirisCiz(tm, dt) {
   // açılışta karanlıktan beliriş
   const kar = 1 - shEase(shSeg(t, P.karar, P.acil));
   if (kar > 0) { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = `rgba(4,5,14,${kar})`; g.fillRect(0, 0, W, H); shZerreler(tm, 0.6 * kar, true); }
-  if (sh.kisa) {   // kısa giriş: rüya ışıl ışıl dolar, sonra yumuşakça kararır (bölüm karanlıktan açılır)
+  if (sh.kisa && !P.dogrudan) {   // eski dönüşüm planının kısa kapanışı; doğrudan yatak planında çalışmaz
     const u = shEase(shSeg(t, P.b4 + 1.0, P.son));
     if (u > 0) {
       g.setTransform(1, 0, 0, 1, 0, 0);
@@ -2098,6 +2133,7 @@ OLAY.on('dokunus', v => {
   if (!sh.atlanabilir || sh.t < 2 || sh.t >= P.b4) return;
   if (v && v.x != null) { const y = shAtlaYer(), d = DPR || 1; if (Math.hypot(v.x * d - y.x, v.y * d - y.y) > y.r * 1.5) return; }   // v: CSS px, shAtlaYer: tuval px
   sh.atla = sh.t; shSus();
+  if (P.dogrudan) { P.son = sh.t + 0.08; shAn('atlandi'); return; }
   // planı kısalt: hemen Pırıl uyandırır, ışık yükselir, dünya görünür
   P.b3 = Math.min(P.b3, sh.t); P.b4 = sh.t; P.erime = 0.001;
   if (sh.kisa) { P.son = sh.t + 1.8; }   // kısa giriş: rüya belirir, hemen yumuşakça kararıp bölüm açılır (parlama yok)
@@ -2111,7 +2147,7 @@ setTimeout(function shIsit() {
   if (!(W > 2 && H > 2)) { setTimeout(shIsit, 400); return; }   // tuval henüz boyutlanmadı: biraz sonra yine dene
   shGeceHazirla();
 }, 1200);
-function shGeceHazirla() { const k = () => DURUM === 'baslik' || sh.mod === 'giris' || sh.mod === 'secim'; shOnceden('oda', k); if (sh.mod !== 'secim') { shOnceden(sh.fon || 'orman', k); shOnceden(sh.tema === 'volkan' ? 'onPlanV' : sh.tema === 'deniz' ? 'onPlanI' : sh.tema === 'bulut' ? 'onPlanB' : 'onPlan', k); } }
+function shGeceHazirla() { const k = () => DURUM === 'baslik' || sh.mod === 'giris' || sh.mod === 'secim'; shOnceden('oda', k); if (sh.mod !== 'secim' && !(sh.plan && sh.plan.dogrudan) && sh.mod !== 'giris') { shOnceden(sh.fon || 'orman', k); shOnceden(sh.tema === 'volkan' ? 'onPlanV' : sh.tema === 'deniz' ? 'onPlanI' : sh.tema === 'bulut' ? 'onPlanB' : 'onPlan', k); } }
 
 // ══════════════════ YILDIZ GÖLÜ FONU (kısa uyku girişinde oda buraya erir) ══════════════════
 function shGolAdim() {

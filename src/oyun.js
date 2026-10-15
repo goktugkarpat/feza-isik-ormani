@@ -117,6 +117,8 @@ addEventListener('pagehide', omDuraklat); addEventListener('pageshow', omDurakla
 function omSesAc() { if ((started || DURUM === 'baslik') && typeof AU !== 'undefined' && AU && typeof AU.start === 'function') { try { AU.start(); } catch (e) { omHataBildir('AU.start', e); } } }
 cv.addEventListener('pointerup', omSesAc); cv.addEventListener('touchend', omSesAc, { passive: true });
 addEventListener('keydown', e => {
+  // Ebeveynin odakladığı menü düğmesini Space/Enter ile kullanması oyuna hareket vermesin.
+  if (e.target && /^(BUTTON|INPUT|SELECT|TEXTAREA|A)$/.test(e.target.tagName)) return;
   if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault();
   if (DURUM === 'baslik') { if (!omSecimAktif) begin(); else omSesAc(); return; }
   if (DURUM !== 'oyun') { if (!e.repeat) OLAY.emit('dokunus', {}); return; }
@@ -165,14 +167,11 @@ function begin() {
   if (typeof AU !== 'undefined' && AU && typeof AU.start === 'function') { try { AU.start(); } catch (e) { omHata('AU.start', e); } }
   try { localStorage.setItem('fezaIsikSon', String(BOLUM_NO)); } catch (e) {}   // başlıkta son oynanan bölüm parlak durur
   DURUM = 'giris'; OLAY.emit('durum', DURUM);
-  if (BOLUM_NO === 2 || BOLUM_NO === 3 || BOLUM_NO === 4 || BOLUM_NO === 5) {   // Bölüm 2/3: kısa uyku girişi (yeni sahne varsa; test bayrakları ?atla/?bolum= atlar, ?uyku zorlar) → ışıkla belirme
-    const basla = () => { const kesintisiz = false; if (kesintisiz) omSonKareYakala(); oyunaBasla(); omDevamGirisi(kesintisiz); };   // dalış ara sahnesi kaldırıldı: Bölüm 2/3/4 hepsi karanlıktan belirerek açılır   // Bölüm 4: dalış sahnesi bitince kararma yok, çapraz geçiş
-    if (typeof SAHNE !== 'undefined' && SAHNE && typeof SAHNE.secim === 'function' && typeof SAHNE.giris === 'function' && !Q.has('atla') && (!Q.has('bolum') || Q.has('uyku'))) { omSahneGiris = true; omPerde.a = omPerde.hedef = 1; omPerdeBek = { t0: now, iyi: 0 }; try { SAHNE.giris(basla, { bolum: BOLUM_NO, kisa: true }); } catch (e) { omHata('SAHNE.giris', e); basla(); } }   // yenileme sonrası ilk ~0,4 sn koyu, sonra uyku sahnesi görünür (sahne bitince omDevamGirisi perdeyi kapatıp açar)
-    else basla();
-    return;
-  }
-  if (Q.has('atla') || typeof SAHNE === 'undefined' || !SAHNE || typeof SAHNE.giris !== 'function') oyunaBasla();
-  else { try { SAHNE.giris(oyunaBasla, { bolum: 1, kisa: false }); } catch (e) { omHata('SAHNE.giris', e); oyunaBasla(); } }
+  const basla = () => { if (DURUM === 'oyun') return; omDevamGirisi(); oyunaBasla(); };
+  if (Q.has('atla') || typeof SAHNE === 'undefined' || !SAHNE || typeof SAHNE.giris !== 'function') { basla(); return; }
+  omSahneGiris = true; omPerde.a = omPerde.hedef = 1; omPerdeBek = { t0: now, iyi: 0 };
+  try { SAHNE.giris(basla, { bolum: BOLUM_NO, kisa: BOLUM_NO > 1 }); }
+  catch (e) { omHata('SAHNE.giris', e); basla(); }
 }
 function oyunaBasla() { if (DURUM === 'oyun') return; DURUM = 'oyun'; OLAY.emit('durum', DURUM); stepCam(0, true); }
 
@@ -1533,21 +1532,30 @@ function omAcilisCiz() {
   if (su > 0) { dglow(OM_ACL_R[3], fx, fy + 42, 130, su * (BOLUM_NO === 4 ? .12 : .45) * gir); }
   g.globalCompositeOperation = 'source-over';
 }
-function omDevamGirisi(kesintisiz) {
-  if (kesintisiz) {   // Bölüm 4: dalış sahnesinden gelindi: kararma yok, cümleler sahnede söylendi (tekrar yok), kontrol hemen
-    omPerde.a = omPerde.hedef = 0; omPerdeBek = null; omAcilis = null;
-    P.kilit = Math.max(P.kilit || 0, 0.25);
-    OLAY.emit('bolum4Basla'); OLAY.emit('gecisAsama', { ad: 'acilis', bolum: BOLUM_NO, kesintisiz: true });
-    return;
+function omDevamGirisi() {
+  // Yatak biter bitmez gerçek bölüm ve normal kontrol: ikinci belirme/kamera inişi yok.
+  omPerde.a = omPerde.hedef = 0; omPerdeBek = null; omAcilis = null; omGecisKare = null; omSahneGiris = false;
+  P.kilit = 0; P.buf = 0; omHepsiniBirak();
+  if (BOLUM_NO > 1) {
+    OLAY.emit('bolum' + BOLUM_NO + 'Basla');
+    omZamanla(0.25, () => { if (DURUM === 'oyun' && typeof SES !== 'undefined' && SES && SES.soyle) { try { SES.soyle(BOLUM_NO === 5 ? 'p_v_giris' : BOLUM_NO === 4 ? 'p_i_giris' : BOLUM_NO === 3 ? 'p_b_giris' : 'p_y_giris'); } catch (e) { omHataBildir('p_giris', e); } } });
   }
-  omPerde.a = 1; omPerde.hedef = 1; omPerde.hiz = 0.4;
-  omAcilis = { t0: now };
-  P.kilit = Math.max(P.kilit || 0, 4.2);
-  if (BOLUM_NO === 5) OLAY.emit('bolum5Basla'); else if (BOLUM_NO === 4) OLAY.emit('bolum4Basla'); else if (BOLUM_NO === 3) OLAY.emit('bolum3Basla'); else OLAY.emit('bolum2Basla');
-  OLAY.emit('gecisAsama', { ad: 'acilis', bolum: BOLUM_NO });
-  omZamanla(0.6, () => { omPerde.hedef = 0; omPerde.hiz = 0.42; });   // ilk 0,6 sn tam karanlık: tuvaller bu sırada hazırlanır
-  omZamanla(2.4, () => { if (typeof SES !== 'undefined' && SES && SES.soyle) { try { SES.soyle(BOLUM_NO === 5 ? 'p_v_giris' : BOLUM_NO === 4 ? 'p_i_giris' : BOLUM_NO === 3 ? 'p_b_giris' : 'p_y_giris'); } catch (e) { omHataBildir('p_giris', e); } } });
-  if (BOLUM_NO === 4) omZamanla(9, () => { if (DURUM === 'oyun' && typeof SES !== 'undefined' && SES.soyle) SES.soyle('p_i_yuz', { oncelik: 3 }); });
+  OLAY.emit('gecisAsama', { ad: 'oyun', bolum: BOLUM_NO, dogrudan: true });
+  if (BOLUM_NO === 4) omZamanla(8, () => { if (DURUM === 'oyun' && typeof SES !== 'undefined' && SES.soyle) SES.soyle('p_i_yuz', { oncelik: 3 }); });
+}
+let omYatakIsitAdim = 0;
+function omYatakIsit(SH, t) {
+  if (BOLUM_NO !== 1 || omYatakIsitAdim >= 96 || !SH || !SH._durum) return;
+  const a = SH._durum;
+  if (a.mod !== 'giris' || !a.tam || !a.plan || !a.plan.dogrudan || a.t >= a.plan.son - 0.25) return;
+  // Gerçek ormanın mevcut önbelleklerini tam ekran yatağın altında, bir katman/kare hazırla.
+  // Son yatak karesinde çizilmez; sonrasında oda veya ışık katmanı tutulmaz.
+  const adim = omYatakIsitAdim++ % 4;
+  if (adim === 0) omCagir('yatakFonHazir', typeof drawBackground === 'function' ? drawBackground : null, t);
+  else if (adim === 1) omCagir('yatakZeminHazir', typeof drawWorld === 'function' ? drawWorld : null, t);
+  else if (adim === 2) omCagir('yatakOnHazir', typeof drawForeground === 'function' ? drawForeground : null, t);
+  else omCagir('yatakKuyrukHazir', typeof drawVignette === 'function' ? drawVignette : null, t);
+  omTemizle();
 }
 function frame(ms) {
   const wt = ms / 1000;
@@ -1586,6 +1594,7 @@ function frame(ms) {
   let sahneTam = false, sahneOk = true;
   const SH = typeof SAHNE !== 'undefined' && SAHNE ? SAHNE : null;
   if (SH && typeof SH.tamEkran === 'function') { try { sahneTam = !!SH.tamEkran(); } catch (e) { omHata('SAHNE.tamEkran', e); sahneOk = false; } }
+  if (sahneTam) omYatakIsit(SH, t);
   if (!sahneTam) {
     omCagir('drawBackground', omDr('Background'), t);
     omCagir('drawMotes1', omDr('Motes'), t, 0, 0.75);

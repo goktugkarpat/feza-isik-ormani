@@ -1615,10 +1615,18 @@ const AU = (() => {
       // Gecikmeli, yumuşak ve uyumlu cevap: solist hep çocuk.
       if (stage === 2 && i % 2 === 0) arp(n - 12, t + .23, .02, (2 - i) * .16, 1.35, sfxG);
     },
+    volkanCicekSec(t, e) {
+      const pan = cl(((e && e.index) || 0) / 5 - .5, -.5, .5);
+      gur(t, .09, 'bandpass', 1100, 2400, .6, .006, .005, pan, 1);
+    },
+    volkanCicekNefes(t, e) {
+      const pan = cl(((e && e.index) || 0) / 5 - .5, -.5, .5);
+      gur(t, .43, 'bandpass', 420, 1400, .65, .014, .075, pan, 1);
+    },
     volkanCicekAc(t, e) {
       // Tek çiçeğin açılması: kısa yaprak hışırtısı ve sıcak bir parıltı; çalınacak nota yok.
       const pan = cl(((e && e.index) || 0) / 5 - .5, -.5, .5);
-      gur(t, .32, 'bandpass', 700, 1600, .65, .009, pan, .018, 1);
+      gur(t, .32, 'bandpass', 700, 1600, .65, .009, .018, pan, 1);
       korTasi(77, t + .08, .026, pan, sfxG, false);
     },
     volkanMiniTamam(t) {
@@ -2744,7 +2752,7 @@ const AU = (() => {
       setTimeout(() => { if (performance.now() - kirpT > 700) cal('parilti', 1); }, 60);
       return;
     }
-    let ad = AD[k] || (bolum5() && /^(bolum5Basla|korUyandi|buharZip|volkanKristal|volkanCicekAc|volkanMiniTamam|lavSalBasla|lavSalAn|lavSalBitti|volkanFinalBasla|volkanTamam)$/.test(k) ? k : null); if (!ad || !ac) return;
+    let ad = AD[k] || (bolum5() && /^(bolum5Basla|korUyandi|buharZip|volkanKristal|volkanCicekSec|volkanCicekNefes|volkanCicekAc|volkanMiniTamam|lavSalBasla|lavSalAn|lavSalBitti|volkanFinalBasla|volkanTamam)$/.test(k) ? k : null); if (!ad || !ac) return;
     if (ad === 'su' && bolum3()) ad = 'bulutDus';   // Bölüm 3'te su yok
     if (ad === 'zipla' && bolum4()) ad = 'suAkinti'; // Bölüm 4'te zıplama yerine ışıklı akıntı süzülüşü
     if (v == null && (ad === 'isiltiTopla' || ad === 'kuzuRenk' || ad === 'gokkusagiParca')) v = { oto: 1 };   // sıra verilmediyse kendi sayacımız
@@ -2768,6 +2776,8 @@ const AU = (() => {
     OLAY.on('volkanMiniBasla', () => { if (bolum5()) vMini = true; });
     // Bahçeler ve salın küçük taş sesleri korunur; yeni çiçek uçuşunda normal dünya teması sürer.
     OLAY.on('volkanKristal', e => { if (bolum5()) olaySes('volkanKristal', e); });
+    OLAY.on('volkanCicekSec', e => { if (bolum5()) olaySes('volkanCicekSec', e); });
+    OLAY.on('volkanCicekNefes', e => { if (bolum5()) olaySes('volkanCicekNefes', e); });
     OLAY.on('volkanCicekAc', e => { if (bolum5()) olaySes('volkanCicekAc', e); });
     OLAY.on('volkanMiniAsama', e => { if (bolum5()) vMiniAsama = e && e.stage || 1; });
     OLAY.on('volkanMiniTamam', () => { if (!bolum5()) return; vMini = false; vMiniAsama = 3; olaySes('volkanMiniTamam'); });
