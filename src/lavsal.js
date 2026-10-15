@@ -9,6 +9,7 @@ let ls5SalArt = null;
 let ls5RockArt = null;
 const ls5KristalArt = [];
 const ls5BloomArts = [];
+const ls5CrustArts = [];
 function ls5Soz(key) { if (typeof SES !== 'undefined' && SES.soyle) SES.soyle(key); }
 function ls5Poly(q, points, color) { q.fillStyle = color; q.beginPath(); for (let i = 0; i < points.length; i++) { if (i) q.lineTo(points[i][0], points[i][1]); else q.moveTo(points[i][0], points[i][1]); } q.closePath(); q.fill(); }
 function ls5RaftArt() {
@@ -63,6 +64,10 @@ function ls5GemArt(index) {
   ls5Poly(q, [[-23,-125],[0,-185],[0,-29],[-27,-22]], colors[2]);
   ls5Poly(q, [[0,-185],[27,-133],[30,-24],[0,0],[0,-29]], colors[1]);
   ls5Poly(q, [[0,-185],[7,-131],[0,-29],[-9,-128]], colors[0]);
+  q.save();q.beginPath();q.moveTo(-27,-22);q.lineTo(-23,-125);q.lineTo(0,-185);q.lineTo(27,-133);q.lineTo(30,-24);q.lineTo(0,0);q.closePath();q.clip();
+  const grain=rng(51421+index*119);for(let i=0;i<145;i++){q.fillStyle=i%3?'rgba(255,234,198,.06)':'rgba(42,26,69,.08)';q.fillRect(-29+grain()*60,-187+grain()*190,.3+grain()*.9,.3+grain()*.4);}q.restore();
+  q.strokeStyle='rgba(110,42,94,.25)';q.lineWidth=.65;q.beginPath();q.moveTo(-18,-114);q.lineTo(-13,-84);q.lineTo(-18,-57);q.moveTo(14,-102);q.lineTo(19,-69);q.lineTo(16,-38);q.stroke();
+  q.strokeStyle='rgba(255,143,100,.7)';q.lineWidth=1.4;q.beginPath();q.moveTo(-24,-22);q.lineTo(0,-1);q.lineTo(28,-23);q.stroke();
   q.strokeStyle = 'rgba(255,249,225,.8)'; q.lineWidth = 1.3; q.beginPath(); q.moveTo(-22,-123); q.lineTo(0,-181); q.lineTo(26,-132); q.moveTo(0,-181); q.lineTo(0,-29); q.lineTo(-25,-22); q.stroke();
   return ls5KristalArt[index] = c;
 }
@@ -76,6 +81,19 @@ function ls5BloomArt(index){
   for(let i=0;i<5;i++){q.save();q.rotate(i*Math.PI*2/5);ls5Poly(q,[[0,3],[-9,-8],[-6,-17],[2,-21],[11,-10]],petal);ls5Poly(q,[[0,3],[2,-21],[11,-10]],light);q.strokeStyle=shade;q.lineWidth=.45;q.beginPath();q.moveTo(0,2);q.lineTo(1,-17);q.stroke();q.restore();}
   q.fillStyle='#ffd16f';q.beginPath();q.arc(0,0,4,0,Math.PI*2);q.fill();
   return ls5BloomArts[id]=c;
+}
+function ls5CrustArt(index){
+  const id=index%3;if(ls5CrustArts[id])return ls5CrustArts[id];
+  const c=document.createElement('canvas');c.width=256;c.height=108;const q=c.getContext('2d');q.scale(2,2);q.translate(64,27);
+  const shift=id*3;
+  ls5Poly(q,[[-54,-1],[-33,-12-shift],[-11,-8],[6,-16],[34,-11+shift],[57,0],[33,13],[-7,17],[-39,11]],'#b83f52');
+  ls5Poly(q,[[-51,-2],[-33,-10-shift],[-11,-6],[6,-14],[34,-9+shift],[53,0],[31,10],[-7,14],[-38,8]],'#4e3a57');
+  ls5Poly(q,[[-47,-2],[-33,-10-shift],[-11,-6],[-8,2],[-31,5]],'#685064');
+  ls5Poly(q,[[-11,-6],[6,-14],[34,-9+shift],[16,1],[-8,2]],'#755267');
+  ls5Poly(q,[[-8,2],[16,1],[31,10],[-7,14]],'#49364f');
+  q.strokeStyle='#ff8c4d';q.lineWidth=1;q.beginPath();q.moveTo(-48,0);q.lineTo(-31,-6);q.moveTo(-10,-6);q.lineTo(-7,3);q.lineTo(4,7);q.lineTo(2,12);q.moveTo(17,0);q.lineTo(29,8);q.stroke();
+  q.strokeStyle='#ffd080';q.lineWidth=.5;q.beginPath();q.moveTo(-7,3);q.lineTo(4,7);q.moveTo(31,10);q.lineTo(47,3);q.stroke();
+  return ls5CrustArts[id]=c;
 }
 function ls5ShoreFlowers(o,tm){
   for(let shore=0;shore<2;shore++)for(let i=0;i<8;i++){
@@ -217,7 +235,14 @@ function ls5DrawGorge(o,tm){
     g.strokeStyle='rgba(255,240,190,.7)';g.lineWidth=1.1;
     for(let j=0;j<5;j++){const u=(tm*.3+j/5+i*.17)%1,yy=top+u*h,xx=x+Math.sin(u*8+i)*w*.15;g.beginPath();g.moveTo(xx-w*.24,yy);g.lineTo(xx+w*.23,yy+10+u*11);g.stroke();}
     dglow('#ffb58c',x,top+24,75,.13);dglow('#ffc994',x,bottom,94,.18);
-    for(let j=0;j<3;j++){const u=(tm*.16+j/3)%1;g.save();g.globalAlpha=Math.sin(u*Math.PI)*.13;g.fillStyle='#f3c5bc';g.beginPath();g.ellipse(x+Math.sin(tm+j)*16,bottom-16-u*92,25+u*32,12+u*17,-.35,0,Math.PI*2);g.fill();g.restore();}
+    // Dökülen eriyiğin kısa yayları: analitik, sabit sayıda; parçacık listesi büyümez.
+    for(let j=0;j<4;j++){
+      const u=(tm*.48+j/4+i*.13)%1,side=j%2?1:-1,reach=27+j*5;
+      g.save();g.globalAlpha=Math.sin(u*Math.PI)*.74;g.strokeStyle=j%2?'#ffb35e':'#f37957';g.lineWidth=1.45;g.beginPath();
+      for(let n=0;n<=7;n++){const t=Math.max(0,u-.25)+Math.min(u,.25)*n/7,xx=x+side*t*reach*1.6,yy=bottom-6-Math.sin(t*Math.PI)*(22+j*3);if(n)g.lineTo(xx,yy);else g.moveTo(xx,yy);}g.stroke();
+      const hx=x+side*u*reach*1.6,hy=bottom-6-Math.sin(u*Math.PI)*(22+j*3);g.fillStyle='#ffd084';g.beginPath();g.ellipse(hx,hy,2.4,1.4,side*.4,0,Math.PI*2);g.fill();g.restore();
+    }
+    for(let j=0;j<2;j++){const u=(tm*.24+j*.5)%1;g.save();g.globalAlpha=(1-u)*.35;g.strokeStyle='#ffba6a';g.lineWidth=1.1;g.beginPath();g.ellipse(x,bottom-1,22+u*47,3+u*5,0,0,Math.PI);g.stroke();g.restore();}
   }
 }
 function ls5DrawStream(o,tm){
@@ -225,10 +250,10 @@ function ls5DrawStream(o,tm){
   if(x1<=x0)return;
   // Sıcak nehir buharla kıvrılan bir kurdeleye dönüşür; sal asla boşlukta asılı görünmez.
   for(let layer=0;layer<3;layer++){
-    const top=layer===0?2:layer===1?8:19,thick=layer===0?80:layer===1?44:14;
+    const top=layer===0?2:layer===1?5:19,thick=layer===0?80:layer===1?62:14;
     g.fillStyle=['rgba(166,48,86,.94)','rgba(239,100,66,.96)','rgba(255,189,77,.98)'][layer];g.beginPath();
-    for(let i=0;i<=n;i++){const x=lerp(x0,x1,i/n),y=ls5StreamY(o,x,tm)+top+Math.sin(x*.011+layer)*3.8;if(i)g.lineTo(x,y);else g.moveTo(x,y);}
-    for(let i=n;i>=0;i--){const x=lerp(x0,x1,i/n);g.lineTo(x,ls5StreamY(o,x,tm)+top+thick+Math.sin(x*.007-tm*.7)*6+Math.sin(x*.017+layer)*thick*.11);}g.closePath();g.fill();
+    for(let i=0;i<=n;i++){const x=lerp(x0,x1,i/n),flow=layer===2?Math.sin(x*.017-tm*1.1)*6:0,y=ls5StreamY(o,x,tm)+top+Math.sin(x*.011+layer)*3.8+flow;if(i)g.lineTo(x,y);else g.moveTo(x,y);}
+    for(let i=n;i>=0;i--){const x=lerp(x0,x1,i/n),flow=layer===2?Math.sin(x*.017-tm*1.1)*6:0;g.lineTo(x,ls5StreamY(o,x,tm)+top+thick+Math.sin(x*.007-tm*.7)*6+Math.sin(x*.017+layer)*thick*.11+flow);}g.closePath();g.fill();
   }
   g.strokeStyle='rgba(255,220,139,.84)';g.lineWidth=1.6;g.beginPath();
   for(let i=0;i<=n;i++){const x=lerp(x0,x1,i/n),y=ls5StreamY(o,x,tm)+5;if(i)g.lineTo(x,y);else g.moveTo(x,y);}g.stroke();
@@ -238,6 +263,24 @@ function ls5DrawStream(o,tm){
     const x=i*145+(tm*64)%145,y=ls5StreamY(o,x,tm)+21+Math.sin(i*2.4+tm*.4)*8;
     g.strokeStyle='rgba(255,241,199,.46)';g.lineWidth=1.2;g.beginPath();g.moveTo(x-29,y);g.quadraticCurveTo(x-3,y-4,x+37,y+3);g.stroke();
     if(i%3===0){g.fillStyle='rgba(111,91,121,.42)';g.beginPath();g.moveTo(x-5,y+29);g.lineTo(x+20,y+21);g.lineTo(x+39,y+34);g.lineTo(x+13,y+43);g.fill();}
+  }
+  // Several narrow molten lanes wind around cooling crust, instead of a single flat yellow stripe.
+  const first=Math.floor((x0-tm*38)/135),last=Math.ceil((x1-tm*38)/135);
+  for(let i=first;i<=last;i++){
+    const x=i*135+tm*38,lane=(i%3+3)%3;
+    g.strokeStyle=lane===1?'rgba(255,218,126,.72)':'rgba(185,53,67,.5)';g.lineWidth=lane===1?1.5:2.2;g.beginPath();
+    for(let k=0;k<=10;k++){const u=k/10,xx=x+u*104,yy=ls5StreamY(o,xx,tm)+14+lane*21+Math.sin(u*Math.PI*2+i)*5+Math.sin(tm*.55+i)*3;if(k)g.lineTo(xx,yy);else g.moveTo(xx,yy);}g.stroke();
+  }
+  const c0=Math.floor((x0-tm*22)/238),c1=Math.ceil((x1-tm*22)/238);
+  for(let i=c0;i<=c1;i++){
+    const x=i*238+tm*22,index=(i%3+3)%3,front=i%2===0,y=ls5StreamY(o,x,tm)+(front?59:10),scale=.63+index*.12;
+    g.save();g.translate(x,y);g.rotate(Math.sin(i*2.1)*.09+Math.sin(tm*.4+i)*.018);g.drawImage(ls5CrustArt(index),-64*scale,-27*scale,128*scale,54*scale);g.restore();
+  }
+  // Basalt rims retain hot red lips; only their thin warm reflection is luminous.
+  for(let bank=0;bank<2;bank++){
+    g.strokeStyle=bank?'#7b314b':'#763347';g.lineWidth=bank?4.8:3.2;g.beginPath();
+    for(let i=0;i<=n;i++){const x=lerp(x0,x1,i/n),y=ls5StreamY(o,x,tm)+(bank?83+Math.sin(x*.007-tm*.7)*6+Math.sin(x*.017)*8.8:2+Math.sin(x*.011)*3.8);if(i)g.lineTo(x,y);else g.moveTo(x,y);}g.stroke();
+    g.strokeStyle=bank?'rgba(255,122,73,.74)':'rgba(255,205,117,.72)';g.lineWidth=1;g.stroke();
   }
 }
 function ls5Sunbird(o,tm){
@@ -287,7 +330,7 @@ TUR.kaydet('volkanSal',{
   kur(o){o.r=112;o.ry=40;o.kx=o.x;o.ky=o.y;o.mx=o.x+30;o.my=o.y+3;o.faz='bekle';o.t=0;o.total=0;o.rot=0;o.joy=0;o.pulse=0;o.phase=-1;o.done=false;o.prevY=o.my;o.jump=0;
     const k=BOLUM.sal||{};o.K={x0:Number.isFinite(k.x0)?k.x0:o.x,x1:Number.isFinite(k.x1)?k.x1:o.x+5000,yUst:200,yAlt:760};
     o.opt={aci:0,ruzgar:.3};
-    o.adim=(dt,input)=>ls5Adim(o,dt,input);ls5Content(o);ls5RaftArt();ls5RockTexture();for(let i=0;i<5;i++)ls5GemArt(i);for(let i=0;i<3;i++)ls5BloomArt(i);LAVSAL.o=o;},
+    o.adim=(dt,input)=>ls5Adim(o,dt,input);ls5Content(o);ls5RaftArt();ls5RockTexture();for(let i=0;i<5;i++)ls5GemArt(i);for(let i=0;i<3;i++){ls5BloomArt(i);ls5CrustArt(i);}LAVSAL.o=o;},
   dokun:ls5Basla,
   guncelle(o,dt){if(DURUM==='oyun'&&!P.ucus&&o.faz==='bekle'&&!o.done&&Math.abs(P.x-o.kx)<100&&Math.abs(P.y-o.ky)<95)ls5Basla(o);if(P.ucus===o)o.x=P.x;},
   ciz(o,tm){ls5ShoreFlowers(o,tm);if(o.faz==='bekle'||o.done){ls5DrawBoat(o,tm);return;}

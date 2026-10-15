@@ -3020,8 +3020,16 @@ function sh5Fon(x,w,h) {
   }
 }
 function sh5Canli(ox,oy,q,tm,a,hov) {
-  g.save();g.globalAlpha=a*.7;g.strokeStyle='#fff0c6';g.lineWidth=Math.max(1,q*.007);
-  for(let i=0;i<7;i++){const u=((tm*.12+i*.147)%1),xx=ox+q*(.59+Math.sin(i*4+u*3)*(.025+u*.07)),yy=oy+q*(.43-u*.3);g.globalAlpha=a*Math.sin(u*Math.PI)*.6;g.fillStyle=i%2?'#ffcca3':'#fff0ce';g.beginPath();g.ellipse(xx,yy,q*(.005+u*.003),q*(.01+u*.006),-.4,0,Math.PI*2);g.fill();}
+  g.save();g.lineCap='round';
+  // Baloncukta da lav yükselip dağın yamaçlarına geri döner; sabit sayıda analitik damla.
+  for(let i=0;i<12;i++){
+    const u=(tm*(.25+(i%3)*.025)+i*.173)%1,side=i%2?1:-1,spread=side*(.055+(i%4)*.022),height=.15+(i%3)*.032;
+    const x=ox+q*(.589+spread*u),y=oy+q*(.423+u*u*.11-Math.sin(u*Math.PI)*height);
+    const v=Math.max(0,u-.075),tx=ox+q*(.589+spread*v),ty=oy+q*(.423+v*v*.11-Math.sin(v*Math.PI)*height);
+    g.globalAlpha=a*Math.sin(u*Math.PI)*.9;g.strokeStyle='#ef573c';g.lineWidth=Math.max(1,q*.009);g.beginPath();g.moveTo(tx,ty);g.lineTo(x,y);g.stroke();
+    g.fillStyle=i%3?'#ffd36b':'#ff9a44';g.beginPath();g.ellipse(x,y,q*.0045,q*.007,-side*.35,0,Math.PI*2);g.fill();
+  }
+  g.globalAlpha=a*(.5+Math.sin(tm*1.6)*.09);g.fillStyle='#ffd96c';g.beginPath();g.ellipse(ox+q*.589,oy+q*.423,q*.049,q*.006,0,0,Math.PI*2);g.fill();
   g.restore();
 }
 SH_ONBELLEK.push('volkan','onPlanV');

@@ -5,7 +5,7 @@
 const KR5 = { o: null, ptr: -1, note: -1, px: 0, py: 0, hold: 0, get aktif() { return this.o && this.o.kr5 && this.o.kr5.active && !this.o.done && Math.abs(P.x-this.o.x)<540 && Math.abs(P.y-this.o.y)<320 ? this.o : null; } };
 const KR5_COLORS = ['#ffc065','#f56d98','#b67be3','#58d2c6','#ffdc79'];
 const KR5_FLOWERS = ['#df386d','#b6389e','#8745bf','#ed586c','#ba52c5'];
-const KR5_GOALS = [12,15,18], KR5_TIMES = [15,18,18];
+const KR5_GOALS = [12,15,18], KR5_STAGE_TURN = 1.65;
 let kr5StoneArt = null;
 const kr5GemArts=[];
 function kr5Poly(q,p,color){q.fillStyle=color;q.beginPath();for(let i=0;i<p.length;i++){if(i)q.lineTo(p[i][0],p[i][1]);else q.moveTo(p[i][0],p[i][1]);}q.closePath();q.fill();}
@@ -28,11 +28,15 @@ function kr5GardenArt(){
   kr5Poly(q,[[-161,15],[-22,8],[-13,42],[-121,32]],'#5e536f');
   kr5Poly(q,[[-22,8],[137,13],[77,33],[-13,42]],'#77617a');
   kr5Poly(q,[[137,13],[292,5],[260,29],[181,37],[77,33]],'#625671');
+  // Taşın alt katları sıcak lav ışığını yakalar; mor yüzler pembe bir sisle örtülmez.
+  kr5Poly(q,[[-268,22],[-222,35],[-121,32],[-13,42],[77,33],[181,37],[258,29],[243,34],[174,41],[74,38],[-12,47],[-124,37],[-223,40]],'rgba(228,104,88,.38)');
+  q.strokeStyle='rgba(255,179,108,.68)';q.lineWidth=.75;q.beginPath();q.moveTo(-252,29);q.lineTo(-220,33);q.lineTo(-123,30);q.moveTo(79,32);q.lineTo(180,35);q.lineTo(245,29);q.stroke();
   q.strokeStyle='rgba(250,208,165,.7)';q.lineWidth=1.1;
   q.beginPath();q.moveTo(-277,0);q.bezierCurveTo(-122,-16,114,-15,277,1);q.moveTo(-161,15);q.lineTo(-121,32);q.moveTo(-22,8);q.lineTo(-13,40);q.moveTo(137,13);q.lineTo(181,35);q.stroke();
   q.strokeStyle='rgba(242,199,157,.45)';q.lineWidth=1.1;
   for(let i=0;i<2;i++){q.beginPath();q.ellipse(0,0,260-i*15,18-i*3,0,Math.PI,Math.PI*2);q.stroke();}
   for(let i=0;i<50;i++){const xx=(r()-.5)*570,yy=30+r()*33;q.fillStyle=i%3?'#9d8a8f':'#dbc2a8';q.beginPath();q.ellipse(xx,yy,r()*2+.4,r()+.4,0,0,Math.PI*2);q.fill();}
+  for(let i=0;i<260;i++){q.fillStyle=i%2?'rgba(247,185,150,.04)':'rgba(40,27,66,.07)';q.fillRect(-280+r()*560,-19+r()*65,.4+r()*.9,.3+r()*.5);}
   // Frozen crystal flower roots. Living stems are layered over these as the child plays.
   for(let side=-1;side<=1;side+=2){q.strokeStyle='#827c97';q.lineWidth=2;q.beginPath();q.moveTo(side*5,0);q.bezierCurveTo(side*44,-52,side*106,-8,side*154,-60);q.stroke();}
   return kr5StoneArt=c;
@@ -45,17 +49,18 @@ function kr5Activate(o){
   OLAY.emit('volkanMiniBasla',{o});OLAY.emit('volkanMiniAsama',{o,stage:1});
 }
 function kr5AddWave(o,index,help,strength){
-  const k=o.kr5;if(!k.active||o.done||k.finish>0||DURUM!=='oyun')return;
+  const k=o.kr5;if(!k.active||o.done||k.finish>0||k.stageFinish>0||DURUM!=='oyun')return;
   const gem=k.gems[index];if(!gem||gem.cool>.02)return;
   gem.cool=.16;gem.pulse=1;gem.charge=Math.min(1,gem.charge+.22);gem.hit++;
-  k.notes+=strength;k.allNotes++;k.pulse=1;k.last=index;
+  k.notes=Math.min(KR5_GOALS[k.stage],k.notes+strength);k.allNotes++;k.pulse=1;k.last=index;
   if(!help){k.idle=0;k.userHits++;}else k.helpHits++;
   const slot=k.waves[k.waveI++%k.waves.length];slot.on=true;slot.t=0;slot.i=index;slot.stage=k.stage;slot.r=0;slot.help=help;
   if(k.stage===2){const bird=k.birds[index];bird.fly=1;bird.flash=1;}
   OLAY.emit('volkanKristal',{o,index,stage:k.stage,help:!!help,strength:clamp(strength,0,1)});
+  if(k.notes>=KR5_GOALS[k.stage]){k.stageFinish=.001;k.completed=k.stage+1;k.transition=1;if(typeof dragonHappy==='function')dragonHappy(o);}
 }
 function kr5NextStage(o){
-  const k=o.kr5;k.stage++;k.stageAge=0;k.notes=0;k.pulse=1;k.transition=1;
+  const k=o.kr5;k.stage++;k.stageAge=0;k.stageFinish=0;k.notes=0;k.pulse=1;k.transition=1;
   if(k.stage>=3){k.finish=.001;KR5.ptr=-1;KR5.note=-1;return;}
   OLAY.emit('volkanMiniAsama',{o,stage:k.stage+1});
   if(typeof dragonHappy==='function')dragonHappy(o);
@@ -81,10 +86,10 @@ function kr5Update(o,dt){
   if(typeof omDikkat==='function'&&k.kameraFn)omDikkat('kristalKoro',1.5,k.kameraFn,1,.48);
   k.age+=dt;k.stageAge+=dt;k.idle+=dt;k.helpClock+=dt;
   if(k.finish>0){k.finish+=dt;if(k.finish>=4.2)kr5Complete(o);return;}
+  // Hedef dolduğunda uzun bir süre sayacı beklenmez: kısa müzikal açılma, ardından yeni hareket.
+  if(k.stageFinish>0){k.stageFinish+=dt;if(k.stageFinish>=KR5_STAGE_TURN)kr5NextStage(o);return;}
   // Touch-and-hold also plays: small fingers need not repeatedly lift at exactly the right moment.
   if(KR5.ptr>=0&&KR5.o===o){KR5.hold+=dt;if(KR5.hold>.42){KR5.hold=0;const i=KR5.note>=0?KR5.note:k.last;kr5AddWave(o,i,false,.72);}}
-  const needed=KR5_GOALS[k.stage],minTime=KR5_TIMES[k.stage];
-  if(k.stageAge>=minTime&&k.notes>=needed){kr5NextStage(o);return;}
   // First Pırıl demonstrates one soft note, then accompanies. A silent child can always continue.
   if(k.idle>8&&k.helpClock>1.15){
     k.helpClock=0;
@@ -92,11 +97,11 @@ function kr5Update(o,dt){
     kr5AddWave(o,i,true,1);
     if(!k.helpSaid&&k.age>12){k.helpSaid=true;kr5Soz('p_v_mini_yardim');}
   }
-  if(k.stageAge>minTime+26&&k.idle>4&&k.notes<needed)k.notes=Math.min(needed,k.notes+dt*.65);
 }
 function kr5Flower(o,tm){
-  const k=o.kr5,full=o.done?1:k.finish>0?smooth(clamp(k.finish/3.1,0,1)):clamp((Math.min(k.stage,2)+Math.min(1,k.notes/(KR5_GOALS[k.stage]||18)))/3,0,1);
-  const cx=o.x,cy=o.y-255,open=.18+full*.82,glowA=.15+full*.17+k.pulse*.08;
+  const k=o.kr5,full=o.done||k.finish>0?1:clamp((Math.min(k.stage,2)+Math.min(1,k.notes/(KR5_GOALS[k.stage]||18)))/3,0,1);
+  const swell=k.finish>0&&!o.done?Math.sin(clamp(k.finish/4.2,0,1)*Math.PI)*.045:0;
+  const cx=o.x,cy=o.y-255,open=.18+full*.82+swell,glowA=.15+full*.17+k.pulse*.08;
   // Basalt gövde ve bakır dallar çiçeği yere bağlar; bir menü simgesi gibi havada asılı kalmaz.
   const stemTop=cy+14;
   kr5Poly(g,[[cx-30,o.y-7],[cx-14,o.y-84],[cx-22,o.y-150],[cx-7,stemTop],[cx+7,stemTop],[cx+13,o.y-146],[cx+7,o.y-88],[cx+30,o.y-7]],'#68476f');
@@ -105,6 +110,7 @@ function kr5Flower(o,tm){
   for(let side=-1;side<=1;side+=2)for(let j=0;j<3;j++){
     const sy=o.y-64-j*53,sz=17+full*9,tx=cx+side*(29+j%2*8),ty=sy-18;
     kr5Poly(g,[[cx,sy],[tx,ty-sz*.35],[tx+side*sz,ty],[tx,ty+sz*.7]],j%2?'#c15c9b':'#9562b3');
+    kr5Poly(g,[[cx,sy],[tx,ty+sz*.7],[tx+side*sz,ty]],j%2?'#973775':'#71418e');
     g.strokeStyle='rgba(255,222,180,.5)';g.lineWidth=.8;g.beginPath();g.moveTo(cx,sy);g.lineTo(tx+side*sz*.9,ty);g.stroke();
   }
   dglow('#ffd8a8',cx,cy,120+full*40,glowA);
@@ -114,8 +120,9 @@ function kr5Flower(o,tm){
     const a=-Math.PI/2+i*Math.PI*2/5+layer*Math.PI/5+Math.sin(tm*.55)*.025;
     g.save();g.rotate(a);g.scale(open*(layer?.72:1),open*(layer?.72:1));
     kr5Poly(g,[[0,7],[-29,-36],[-8,-96],[12,-112],[32,-48],[17,-7]],KR5_FLOWERS[(i+layer)%5]);
+    kr5Poly(g,[[0,7],[-29,-36],[-8,-96],[-5,-35]],layer?'#8d2d7c':'#792c79');
     kr5Poly(g,[[0,7],[-8,-96],[12,-112],[8,-32]],layer?'#ffb181':'#e990c6');
-    g.strokeStyle='rgba(255,248,217,.64)';g.lineWidth=1;g.beginPath();g.moveTo(0,6);g.lineTo(10,-106);g.stroke();g.restore();
+    g.strokeStyle='rgba(255,209,159,.62)';g.lineWidth=.9;g.beginPath();g.moveTo(0,6);g.lineTo(10,-106);g.moveTo(-3,-36);g.lineTo(-17,-42);g.moveTo(5,-58);g.lineTo(17,-72);g.stroke();g.restore();
   }
   g.fillStyle='#f9dfaa';g.beginPath();g.arc(0,0,12+full*5,0,Math.PI*2);g.fill();
   g.fillStyle='#fff5d7';g.beginPath();g.ellipse(-3,-4,6,4,-.5,0,Math.PI*2);g.fill();
@@ -125,17 +132,39 @@ function kr5Flower(o,tm){
     const gem=k.gems[i],p=kr5NotePosition(o,i),lit=o.done?1:clamp(gem.charge*.55+full*.45,0,1);
     g.strokeStyle=mixc('#6c6683',KR5_COLORS[i],lit,.38+lit*.36);g.lineWidth=1.2+lit*.5;g.beginPath();g.moveTo(p.x,p.y+6);g.bezierCurveTo(p.x,p.y-52,cx+(p.x-cx)*.4,cy+88,cx,cy+10);g.stroke();
   }
-  // Not a progress bar: three small mineral buds become three living blossoms.
+}
+function kr5StageBuds(o,tm){
+  const k=o.kr5;if(!k.active&&!o.done)return;
+  // Üç büyük tomurcuk okunmadan anlaşılır: her notada açılır, biteni açık kalır.
   for(let i=0;i<3;i++){
-    const on=o.done||k.stage>i||k.stage===i&&k.notes>KR5_GOALS[i]*.78;
-    const x=o.x+(i-1)*43,y=o.y-5;
-    for(let j=0;j<5;j++){const a=j*Math.PI*2/5;g.fillStyle=on?KR5_FLOWERS[(j+i)%5]:'#77618a';g.beginPath();g.ellipse(x+Math.cos(a)*8,y+Math.sin(a)*4,7,3.5,a*.5,0,Math.PI*2);g.fill();}
-    g.fillStyle=on?'#ffefbd':'#a79aa3';g.beginPath();g.arc(x,y,3,0,Math.PI*2);g.fill();
+    const progress=o.done||k.completed>i?1:k.stage===i?clamp(k.notes/KR5_GOALS[i],0,1):0;
+    const x=o.x+(i-1)*48,y=o.y-400,active=!o.done&&k.stage===i;
+    g.strokeStyle=active?'rgba(242,176,155,.64)':'rgba(156,115,164,.42)';g.lineWidth=1;g.beginPath();g.moveTo(o.x,o.y-367);g.quadraticCurveTo(x,o.y-375,x,y+12);g.stroke();
+    g.save();g.translate(x,y);g.rotate(Math.sin(tm*.8+i)*.035);
+    for(let j=0;j<5;j++){
+      const a=-Math.PI/2+j*Math.PI*2/5,part=clamp(progress*5-j,0,1),rr=5+part*8;
+      g.fillStyle=part>0?KR5_FLOWERS[(j+i)%5]:'#685174';g.strokeStyle=part>0?'#e792b1':'#aa7ca4';g.lineWidth=.7;
+      g.beginPath();g.ellipse(Math.cos(a)*rr*.65,Math.sin(a)*rr*.65,rr*.68,rr*.4,a,0,Math.PI*2);g.fill();g.stroke();
+    }
+    g.fillStyle=progress>=1?'#ffda7c':active?'#ddb276':'#8e718e';g.beginPath();g.arc(0,0,2.4+progress*1.7,0,Math.PI*2);g.fill();g.restore();
+    if(active&&k.stageFinish>0){const u=clamp(k.stageFinish/KR5_STAGE_TURN,0,1);g.save();g.globalAlpha=Math.sin(u*Math.PI)*.7;g.strokeStyle='#ffd58f';g.lineWidth=1.4;g.beginPath();g.arc(x,y,17+u*16,0,Math.PI*2);g.stroke();g.restore();}
   }
+}
+function kr5FinalJoy(o,tm){
+  const k=o.kr5;if(!(k.finish>0)||o.done)return;const u=clamp(k.finish/4.2,0,1),a=Math.sin(u*Math.PI);
+  for(let i=0;i<10;i++){const theta=i*Math.PI*2/10+u*.6,r=55+u*100;kr5Star(o.x+Math.cos(theta)*r,o.y-255+Math.sin(theta)*r*.68,4.5+a*2,tm*.45+i,KR5_COLORS[i%5],a*.9);}
+}
+function kr5ContinueCue(o,tm){
+  if(!o.done||DURUM!=='oyun'||P.ucus||P.x<o.x-520||P.x>o.x+520)return;
+  const x=Math.min(clamp(P.x+140,o.x-130,o.x+320),cam.x+VW-65),y=o.y-93;
+  const beat=.72+Math.sin(tm*3)*.15;
+  g.save();g.globalAlpha=beat;g.strokeStyle='#ffda91';g.lineWidth=3;g.lineCap='round';g.lineJoin='round';
+  for(let i=0;i<2;i++){const xx=x+i*17;g.beginPath();g.moveTo(xx-7,y-9);g.lineTo(xx+3,y);g.lineTo(xx-7,y+9);g.stroke();}g.restore();
+  for(let i=0;i<4;i++){const u=(tm*.5+i/4)%1;kr5Star(x-75+u*58,y+Math.sin(u*Math.PI)*5,3,tm*.3+i,'#ffce83',Math.sin(u*Math.PI)*.7);}
 }
 function kr5EdgeFlowers(o,tm){
   if(typeof ls5BloomArt!=='function')return;
-  const k=o.kr5,grow=o.done?1:clamp((Math.min(k.stage,2)+k.notes/(KR5_GOALS[k.stage]||18))/3,0,1);
+  const k=o.kr5,grow=o.done||k.finish>0?1:clamp((Math.min(k.stage,2)+k.notes/(KR5_GOALS[k.stage]||18))/3,0,1);
   for(let side=-1;side<=1;side+=2)for(let i=0;i<4;i++){
     const x=o.x+side*(224+i*19),sc=(.58+i%2*.14)*(.78+grow*.22);
     g.save();g.translate(x,o.y+7+(i%2)*4);g.rotate(Math.sin(tm*.85+i+side)*.045);g.drawImage(ls5BloomArt((i+(side>0?1:0))%3),-24*sc,-58*sc,48*sc,66*sc);g.restore();
@@ -146,6 +175,8 @@ function kr5DrawGem(o,i,tm){
   dglow(KR5_COLORS[i],p.x,center,73,.1+a.charge*.13+a.pulse*.16);
   kr5Poly(g,[[p.x-29,p.y+4],[p.x-20,p.y-10],[p.x+17,p.y-12],[p.x+29,p.y+3],[p.x+18,p.y+14],[p.x-19,p.y+14]],'#81778c');
   kr5Poly(g,[[p.x-29,p.y+4],[p.x-20,p.y-10],[p.x+17,p.y-12],[p.x+9,p.y+4]],'#b29aa3');
+  kr5Poly(g,[[p.x-29,p.y+4],[p.x+9,p.y+4],[p.x+18,p.y+14],[p.x-19,p.y+14]],'#70516d');
+  g.strokeStyle='rgba(251,145,97,.75)';g.lineWidth=.85;g.beginPath();g.moveTo(p.x-25,p.y+5);g.lineTo(p.x-17,p.y+12);g.lineTo(p.x+17,p.y+12);g.stroke();
   g.save();g.translate(p.x,p.y);g.rotate(Math.sin(tm*.85+i)*.018*(1+a.pulse));
   g.globalAlpha=.98;g.drawImage(kr5GemArt(i),-36*scale,-150*scale,72*scale,156*scale);g.globalAlpha=1;
   // Thin suspended copper ring catches the gesture and makes the touch area visible.
@@ -172,11 +203,12 @@ function kr5DrawMelody(o,tm){
 }
 function kr5BirdPosition(o,i,tm){
   const k=o.kr5,b=k.birds[i],fly=smooth(clamp(b.fly,0,1));
-  return {x:o.x+(i-2)*88+Math.sin(tm*.7+i)*16+Math.sin(fly*Math.PI)*45,y:o.y-340+Math.sin(tm*.9+i*1.4)*24-Math.sin(fly*Math.PI)*85};
+  const joy=k.finish>0&&!o.done?Math.sin(clamp(k.finish/4.2,0,1)*Math.PI):0;
+  return {x:o.x+(i-2)*88+Math.sin(tm*.7+i)*16+Math.sin(fly*Math.PI)*45+Math.sin(i*1.4)*joy*30,y:o.y-340+Math.sin(tm*.9+i*1.4)*24-Math.sin(fly*Math.PI)*85-joy*(35+i%2*20)};
 }
 function kr5DrawBirds(o,tm){
   const k=o.kr5;if(k.stage<2&&!o.done)return;
-  const appear=o.done?1:smooth(clamp(k.stageAge/2,0,1));
+  const appear=o.done||k.finish>0?1:smooth(clamp(k.stageAge/2,0,1));
   for(let i=0;i<5;i++){
     const p=kr5BirdPosition(o,i,tm),b=k.birds[i];
     if(typeof ls5Bird==='function')ls5Bird(p.x,p.y,.95+b.flash*.15,tm+i,KR5_COLORS[i],appear*.98);
@@ -186,7 +218,7 @@ function kr5DrawBirds(o,tm){
   }
 }
 function kr5Hint(o,tm){
-  const k=o.kr5;if(!k.active||o.done||k.idle<3.6||KR5.ptr>=0||k.finish>0)return;
+  const k=o.kr5;if(!k.active||o.done||k.idle<3.6||KR5.ptr>=0||k.finish>0||k.stageFinish>0)return;
   const i=Math.floor(tm/3.5)%5,p=k.stage===2?kr5BirdPosition(o,i,tm):kr5NotePosition(o,i),y=k.stage===2?p.y:p.y-63*k.gems[i].s,u=(tm%1.7)/1.7;
   g.save();g.globalAlpha=.55*(1-u);g.strokeStyle='#fff1c8';g.lineWidth=2.3;g.beginPath();g.arc(p.x,y,25+u*21,0,Math.PI*2);g.stroke();g.restore();
   // A small illustrated hand, rather than instructions a five-year-old cannot read.
@@ -224,7 +256,7 @@ addEventListener('keydown',e=>{
 },true);
 OLAY.on('durum',d=>{if(d!=='oyun'){KR5.ptr=-1;KR5.note=-1;KR5.hold=0;}});
 TUR.kaydet('volkanMini',{
-  kur(o){o.r=145;o.ry=95;o.done=false;o.kr5={active:false,age:0,stage:0,stageAge:0,notes:0,allNotes:0,userHits:0,helpHits:0,finish:0,idle:0,helpClock:0,helpSaid:false,pulse:0,transition:0,last:4,waveI:0,waves:[],gems:[],birds:[]};
+  kur(o){o.r=145;o.ry=95;o.done=false;o.kr5={active:false,age:0,stage:0,stageAge:0,stageFinish:0,completed:0,notes:0,allNotes:0,userHits:0,helpHits:0,finish:0,idle:0,helpClock:0,helpSaid:false,pulse:0,transition:0,last:4,waveI:0,waves:[],gems:[],birds:[]};
     o.kr5.kameraFn=typeof omDkEkle==='function'?()=>omDkEkle(o.x-310,o.y-420,o.x+310,o.y+45):null;
     for(let i=0;i<18;i++)o.kr5.waves.push({on:false,t:0,i:0,stage:0,r:0,help:false});
     for(let i=0;i<5;i++){o.kr5.gems.push({x:(i-2)*95,y:-12,s:.82+Math.sin(i/4*Math.PI)*.3,pulse:0,charge:0,hit:0,cool:0});o.kr5.birds.push({fly:0,flash:0});kr5GemArt(i);}
@@ -233,5 +265,5 @@ TUR.kaydet('volkanMini',{
   ciz(o,tm){const k=o.kr5;g.drawImage(kr5GardenArt(),o.x-310,o.y-72,620,180);kr5EdgeFlowers(o,tm);kr5Flower(o,tm);kr5DrawMelody(o,tm);
     for(let i=0;i<5;i++)kr5DrawGem(o,i,tm);kr5DrawBirds(o,tm);
     if(o.done)for(let i=0;i<7;i++){const u=(tm*.12+i/7)%1;kr5Star(o.x-235+i*76+Math.sin(tm*.8+i)*12,o.y-50-u*230,4,tm*.3+i,KR5_COLORS[i%5],Math.sin(u*Math.PI)*.6);}},
-  cizOn(o,tm){for(const w of o.kr5.waves)if(w.on)kr5DrawWave(o,w,tm);kr5Hint(o,tm);}
+  cizOn(o,tm){for(const w of o.kr5.waves)if(w.on)kr5DrawWave(o,w,tm);kr5StageBuds(o,tm);kr5FinalJoy(o,tm);kr5Hint(o,tm);kr5ContinueCue(o,tm);}
 });

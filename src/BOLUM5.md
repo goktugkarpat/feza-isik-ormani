@@ -7,7 +7,8 @@ Feza okuyamaz: ilerlemek yazıya, nota bilgisine veya doğru sırayı ezberlemey
 ## Hikâye ve görsel dil
 
 Kor Çiçeği uyumuş, dağın ışık bahçeleri solmuştur. Feza ve Pırıl bahçeleri canlandırır, kristallerle dağın şarkısını bulur,
-lav nehrini geçer ve çiçeği uyandırır. Dağ korkutucu biçimde patlamaz; çiçekler, ışıklar ve origami kuşlarla canlanır.
+lav nehrini geçer ve çiçeği uyandırır. Kraterde yumuşak lav fıskiyeleri ve yamaçlara geri düşen kor damlaları vardır;
+hasar, korkutucu patlama, sarsıntı veya ani ışık flaşı yoktur. Dağ çiçekler, ışıklar ve origami kuşlarla canlanır.
 Koyu mor bazalt, kızıl/mercan ve altın lav, yakut/magenta/mor çiçekler ve renkli kristaller; kâğıt katları, suluboya ve ince doku birlikte kullanılır.
 Lav nehrinde gerçek bir kanyon, lav şelaleleri ve taş sal vardır. Yönlendirme nehrin yatağı içinde kalır.
 
@@ -104,8 +105,11 @@ ilk ekleme sırasında önceki 106 ses kaydının MP3 içeriği aynı korunmuşt
 ## Süreler, performans ve doğrulama
 
 - Rahat ilk oynanış için **6–9 dakika tasarım hedefi** vardır; bu, ölçülmüş tam oynanış süresi veya hız garantisi değildir.
-- Kristal aşamalarının kodda en erken süreleri 15/18/18 saniyedir; 4,2 saniyelik kapanış da vardır.
-  Nota sayısı, yardım ve çocuğun duraklamaları gerçek süreyi değiştirebilir. Salın kod süresi 2 saniye biniş + 60 saniye nehir + 2 saniye iniştir.
+- Kristal aşamaları sırayla 12/15/18 nota-değeriyle tamamlanır; doğru sıra şartı veya gizli asgari çalma süresi yoktur.
+  Her hedefin ardından 1,65 saniyelik müzikal açılma, en sonda 4,2 saniyelik çiçek/kuş kutlaması vardır.
+  Üç büyük tomurcuk dokunuşlarla dolar; bitişten sonra sağa uzanan ışık izi devam yönünü gösterir.
+  Basılı tutma ve Pırıl'ın sessizlikte yardımı da ilerletir; gerçek süre dokunuş hızına ve duraklamalara bağlıdır.
+  Salın kod süresi 2 saniye biniş + 60 saniye nehir + 2 saniye iniştir.
   Çiçek kutlaması 26 saniyedir. Bunlar oyun zamanlayıcılarıdır, CPU/GPU ölçümü değildir.
 - Hedef iPad M1'de akıcı 60 FPS, masaüstünde mevcut profilin en çok 120 FPS sınırıdır. Donanım üzerinde ayrıca doğrulanmalıdır.
   CPU'da fizik/rota sözleşmesi testi veya sesin çevrimdışı işlenmesi, iPad'de çizim performansı kanıtı sayılmaz.
