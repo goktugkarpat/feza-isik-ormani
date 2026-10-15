@@ -464,7 +464,15 @@ const SES = (() => {
   }
   function sesKes(neden) {
     if (sesCalan) sesNot('kes', sesCalan.k, neden);
-    if (sesKaynak) { try { sesKaynak.g.gain.setTargetAtTime(0, sesKaynak.ac.currentTime, 0.05); sesKaynak.s.stop(sesKaynak.ac.currentTime + 0.3); } catch (e) {} }
+    if (sesKaynak) {
+      try {
+        const now = sesKaynak.ac.currentTime;
+        sesKaynak.g.gain.cancelScheduledValues(now);
+        sesKaynak.g.gain.setValueAtTime(Math.max(0.0001, sesKaynak.g.gain.value), now);
+        sesKaynak.g.gain.exponentialRampToValueAtTime(0.0001, now + 0.045);
+        sesKaynak.s.stop(now + 0.05);
+      } catch (e) {}
+    }
     sesBitti();
   }
   function sesBitti() {
@@ -504,10 +512,14 @@ const SES = (() => {
       if (ac) {
         try {
           const src = ac.createBufferSource(), gg = ac.createGain();
-          src.buffer = buf; gg.gain.value = kim === 'a' ? 1.0 : 0.95;
+          src.buffer = buf;
+          const hedefG = kim === 'a' ? 1.0 : 0.95, tStart = ac.currentTime + 0.12;
+          gg.gain.value = 0.0001;
+          gg.gain.setValueAtTime(0.0001, tStart);
+          gg.gain.exponentialRampToValueAtTime(hedefG, tStart + 0.04);
           src.connect(gg); gg.connect(AU.sesCikis());
           AU.kis(true, kim);
-          src.start(ac.currentTime + 0.12);   // müzik önce kısılsın
+          src.start(tStart);   // müzik önce kısılsın
           sesKaynak = { s: src, g: gg, ac };
           src.onended = () => { if (sesCalan === s) sesBitti(); };
         } catch (e) { ac = null; }
@@ -598,7 +610,9 @@ const SES = (() => {
     sesTik();
   });
   function sus() {   // sahne atlanınca vb.: susar ve sırayı boşaltır
-    sesSira = []; if (sesCalan) sesKes('sus');
+    sesSira = [];
+    if (sesCalan) sesKes('sus');
+    else if (typeof AU !== 'undefined' && AU.kis) AU.kis(false);
   }
   return { LINES, soyle, sus, konusuyor: () => !!sesCalan, sure: k => LINES[k] ? sesSure(k) : 0, kayit, sira: () => sesSira.map(s => s.k), _sinir: k => LINES[k] ? sesCumleSinirlari({ k, sure: sesSure(k) }).map(x => +x.toFixed(2)) : null };
 })();

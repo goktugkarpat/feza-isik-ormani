@@ -66,11 +66,11 @@ function dugmeYeri() {   // CSS px; 5 yaş başparmağı: iPad Pro'da çap ≈ 8
   const pay = r + 36;
   GIRDI.dugme.r = r; GIRDI.dugme.x = omGuvenli.sol + pay; GIRDI.dugme.y = innerHeight - omGuvenli.alt - pay;
 }
-// cömert isabet alanı: düğmenin 1.5 katı + sol alt köşe
+// cömert isabet alanı: 5 yaş başparmağı için düğmenin 1.8 katı + genişletilmiş sol alt köşe
 function dugmede(x, y) {
   const d = GIRDI.dugme;
-  if (Math.hypot(x - d.x, y - d.y) < d.r * 1.5) return true;
-  return x < d.x + d.r * 1.15 && y > d.y - d.r * 1.15;
+  if (Math.hypot(x - d.x, y - d.y) < d.r * 1.8) return true;
+  return x < d.x + d.r * 1.4 && y > d.y - d.r * 1.4;
 }
 function omYuva(id) { for (const t of OM_PARMAK) if (t.aktif && t.id === id) return t; return null; }
 cv.addEventListener('pointerdown', e => {
@@ -399,7 +399,7 @@ function omDusus(suda) {
 const OM_YARDIM = { ACIK: 24, FARK: 150 };
 // Bölüm 2 (suyun üstünde taştan taşa) ve Bölüm 3 (bulutlar): daha affedici fizik; Bölüm 1'e dokunmaz
 if (BOLUM_NO === 2 || BOLUM_NO === 3 || BOLUM_NO === 4) { Object.assign(OM, { COYOTE: 0.23, TAMPON: 0.2, HAVA_IVME: 2300, KENAR: 17 }); OM_YARDIM.ACIK = 80; OM_YARDIM.FARK = 190; }
-else { Object.assign(OM, { COYOTE: 0.18, HAVA_IVME: 1600, KENAR: 14 }); OM_YARDIM.ACIK = 36; }   // Bölüm 1: biraz daha affedici (5 yaş), ama ormanın hissi aynı
+else { Object.assign(OM, { COYOTE: 0.20, HAVA_IVME: 1600, KENAR: 15 }); OM_YARDIM.ACIK = 44; }   // Bölüm 1: biraz daha affedici (5 yaş), ama ormanın hissi aynı
 let omYardimIstek = 0;   // omHavaYardim ara sonucu (her adımda yeni kapanış fonksiyonu yok)
 function omYardimDene(kenar, top, s, lead) {   // kenar: platformun Feza'ya bakan x'i, top: üst y
   const acik = (kenar - lead) * s, dy = top - P.y;
@@ -458,6 +458,8 @@ function omDenizAdim(dt) {
   P.denizHamle = Math.max(0, (P.denizHamle || 0) - dt);
   P.denizBekle = Math.max(0, (P.denizBekle || 0) - dt);
   let dx = 0, dy = 0, force = 0;
+  const baseSpeed = OM.KOS * 1.08;
+  const speed = baseSpeed * (P.denizHamle > 0 ? 1.7 : 1.0);
   if (!locked) {
     if (GIRDI.hedefX !== null && GIRDI.hedefY !== null) {
       dx = cam.x + GIRDI.hedefX * DPR / S - P.x;
@@ -470,22 +472,90 @@ function omDenizAdim(dt) {
     const ky = (keys.ArrowDown || keys.KeyS ? 1 : 0) - (keys.ArrowUp || keys.KeyW ? 1 : 0);
     if (kx || ky) { const n = Math.hypot(kx, ky); dx = kx / n; dy = ky / n; force = 1; }
     if (jumpPressed && P.denizBekle <= 0) {
-      P.denizHamle = .5; P.denizBekle = 1.1;
-      if (!force) { dx = P.f || 1; dy = 0; force = .75; }
+      P.denizHamle = .5; P.denizBekle = 0.6;
+      if (!force) { dx = P.f || 1; dy = 0; force = 1; }
       P.denizDX = dx; P.denizDY = dy;
+      const dashSpeed = baseSpeed * 1.7;
+      P.vx = dx * dashSpeed;
+      P.vy = dy * dashSpeed;
       OLAY.emit('denizHamle', P);
-      burst(P.x - (P.f || 1) * 14, P.y - 24, 5, ['#b2eff0', '#e1faf3'], 25, .7, 3);
+      burst(P.x - (P.f || 1) * 14, P.y - 24, 10, ['#b2eff0', '#e1faf3', '#7fe3ea', '#ffffff'], 45, .8, 4);
+      if (typeof ripples !== 'undefined') ripples.push({ x: P.x, y: P.y - 20, r: 0, life: 0.8, small: true });
     }
   }
   jumpPressed = false;
-  if (P.denizHamle > 0 && !locked) { dx = lerp(Number.isFinite(P.denizDX) ? P.denizDX : (P.f || 1), dx, .35); dy = lerp(P.denizDY || 0, dy, .35); force = Math.max(force, .85); }
-  const speed = OM.KOS * (P.denizHamle > 0 ? 1.45 : 1), t = 1 - Math.exp(-dt * (force > 0 ? 9 : 10));
-  P.vx = lerp(P.vx, locked ? 0 : dx * speed * force, t);
-  P.vy = lerp(P.vy, locked ? 0 : dy * speed * force, t);
+  if (P.denizHamle > 0 && !locked) {
+    dx = lerp(Number.isFinite(P.denizDX) ? P.denizDX : (P.f || 1), dx, .38);
+    dy = lerp(P.denizDY || 0, dy, .38);
+    force = Math.max(force, .92);
+  }
+
+  // Işıklı su akıntıları (Current Streams) denetimi
+  let akX = 0, akY = 0, inCurrent = false;
+  if (typeof NESNELER !== 'undefined') {
+    for (let i = 0; i < NESNELER.length; i++) {
+      const o = NESNELER[i];
+      if (o.tip === 'suAkinti') {
+        const halfW = (o.w || 780) * 0.5, halfH = (o.h || 160) * 0.5;
+        if (Math.abs(P.x - o.x) < halfW && Math.abs(P.y - o.y) < halfH) {
+          inCurrent = true;
+          o.ic = true;
+          const strX = o.vx || 270;
+          const strY = (o.vy || 0) + (o.y - P.y) * 2.2;
+          akX = Math.max(akX, strX);
+          akY += strY;
+        } else {
+          o.ic = false;
+        }
+      }
+    }
+  }
+  P.denizAkinti = inCurrent;
+
+  if (inCurrent) {
+    // Akıntı koridorunda dengeli ve akıcı itiş
+    const targetVx = locked ? 0 : (dx * speed * force * 0.6 + akX);
+    const targetVy = locked ? 0 : (dy * speed * force * 0.8 + akY);
+    const t = 1 - Math.exp(-dt * 6.5);
+    P.vx = lerp(P.vx, targetVx, t);
+    P.vy = lerp(P.vy, targetVy, t);
+  } else if (force > 0) {
+    // Aktif yönlendirme: hızlı ve çevik hızlanma, tersine dönüşlerde daha da dinamik
+    const targetVx = locked ? 0 : dx * speed * force;
+    const targetVy = locked ? 0 : dy * speed * force;
+    const turnBoost = (P.vx * dx < 0 || P.vy * dy < 0) ? 1.35 : 1.0;
+    const rate = (P.denizHamle > 0 ? 12 : 8.5) * turnBoost;
+    const t = 1 - Math.exp(-dt * rate);
+    P.vx = lerp(P.vx, targetVx, t);
+    P.vy = lerp(P.vy, targetVy, t);
+  } else {
+    // Parmak bırakıldığında ani duruş yerine yumuşak su içi süzülme (water glide momentum)
+    const glideRate = P.denizHamle > 0 ? 1.6 : 2.4;
+    const t = 1 - Math.exp(-dt * glideRate);
+    P.vx = lerp(P.vx, locked ? 0 : 0, t);
+    P.vy = lerp(P.vy, locked ? 0 : 0, t);
+  }
+
   if (Math.abs(P.vx) > 12) P.f = Math.sign(P.vx);
   const vspd = Math.hypot(P.vx, P.vy);
-  if (!locked && vspd > 45 && Math.random() < dt * (P.denizHamle > 0 ? 14 : 7) && typeof parts !== 'undefined') {
-    parts.push({ x: P.x - (P.f || 1) * 8 + (Math.random() - .5) * 8, y: P.y - 20 - Math.random() * 12, vx: -P.vx * .12 + (Math.random() - .5) * 10, vy: -16 - Math.random() * 18, life: .55 + Math.random() * .35, max: .9, col: '#dcfaf5', size: 2.2 + Math.random() * 1.6 });
+  if (!locked && vspd > 45 && typeof parts !== 'undefined') {
+    const isDash = P.denizHamle > 0;
+    const partChance = dt * (isDash ? 36 : inCurrent ? 24 : 9);
+    if (Math.random() < partChance) {
+      const col = isDash
+        ? (Math.random() < 0.5 ? '#b2eff0' : '#ffffff')
+        : (inCurrent ? (Math.random() < 0.5 ? '#7ef3e6' : '#dcfefa') : '#dcfaf5');
+      parts.push({
+        x: P.x - (P.f || 1) * (isDash ? 18 : 8) + (Math.random() - .5) * (isDash ? 14 : 8),
+        y: P.y - 20 - Math.random() * 12,
+        vx: -P.vx * (isDash ? .22 : .12) + (Math.random() - .5) * (isDash ? 20 : 10),
+        vy: (isDash ? -P.vy * .15 : -16) - Math.random() * 18,
+        life: (isDash ? .7 : .55) + Math.random() * .35,
+        max: .9,
+        col: col,
+        size: (isDash ? 3.0 : 2.2) + Math.random() * 1.8
+      });
+    }
   }
   let nx = clamp(P.x + P.vx * dt, 24, COLS * T - 40), ny = clamp(P.y + P.vy * dt, sea.yUst + PH, sea.yAlt);
   const limit = typeof DENIZ !== 'undefined' && typeof DENIZ.gecitX === 'function' ? DENIZ.gecitX() : null;
@@ -969,7 +1039,7 @@ function stepCam(dt, snap) {
   }
   const VHg = VH / cam.zoom;   // görünen dünya yüksekliği
   // ileri bakış: yüz yönü + hız; yavaş dönsün ki yön değiştirince ekran savrulmasın
-  const sp = clamp(P.vx / OM.KOS, -1, 1);
+  const sp = clamp(P.vx / OM.KOS, BOLUM_NO === 4 ? -1.45 : -1, BOLUM_NO === 4 ? 1.45 : 1);
   const asp0 = W / Math.max(H, 1), pfy = clamp((1.2 - asp0) / 0.5, 0, 1);   // pfy: dikey (portre) ekran ağırlığı
   const bakHedef = P.f * (46 + VW * 0.17 * pfy) + sp * (64 + VW * 0.1 * pfy);   // portrede dar görüş: daha çok ileri bak (Feza kenara yapışmasın)
   omC.bak = snap ? bakHedef : lerp(omC.bak, bakHedef, 1 - Math.exp(-dt * (Math.abs(sp) > 0.3 ? 1.6 : 0.7)));
@@ -1052,12 +1122,14 @@ function stepCam(dt, snap) {
   else if (dt > 0) {
     omC.x = omSD(omC.x, tx, omC.vx, 0.3, dt); omC.vx = omSdV;
     omC.y = omSD(omC.y, ty, omC.vy, st, dt); omC.vy = omSdV;
-    // Feza asla ekran kenarına çok yaklaşmasın (hızlı sekmelerde)
+    // Feza asla ekran kenarına çok yaklaşmasın (hızlı sekmelerde sert sıçrama yerine yumuşak tampon)
     if (!(dw > 0 && omDk.fezaYok) && !(BOLUM_NO === 4 && typeof DENIZ !== 'undefined' && DENIZ.aktif)) {   // Eşleştirmede kabukların tamamı çerçevede kalır.
       const kp = Math.max(lerp(0.18, 0.06, dw), omC.kenar), kx0 = px - VW * (1 - kp), kx1 = px - VW * kp;
-      if (omC.x < kx0) omC.x = kx0; else if (omC.x > kx1) omC.x = kx1;
+      if (omC.x < kx0) { omC.x = lerp(omC.x, kx0, 1 - Math.exp(-dt * 18)); if (omC.x < kx0 - 24) omC.x = kx0 - 24; }
+      else if (omC.x > kx1) { omC.x = lerp(omC.x, kx1, 1 - Math.exp(-dt * 18)); if (omC.x > kx1 + 24) omC.x = kx1 + 24; }
       const ky0 = py - VHg * 0.94, ky1 = py - VHg * 0.22;
-      if (omC.y < ky0) omC.y = ky0; else if (omC.y > ky1) omC.y = ky1;
+      if (omC.y < ky0) { omC.y = lerp(omC.y, ky0, 1 - Math.exp(-dt * 16)); if (omC.y < ky0 - 20) omC.y = ky0 - 20; }
+      else if (omC.y > ky1) { omC.y = lerp(omC.y, ky1, 1 - Math.exp(-dt * 16)); if (omC.y > ky1 + 20) omC.y = ky1 + 20; }
     }
   }
   omC.x = clamp(omC.x, 0, maxX); omC.y = clamp(omC.y, -40, BOLUM_NO === 4 ? Math.max(-40, yMax) : yMax);

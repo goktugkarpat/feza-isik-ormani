@@ -108,6 +108,7 @@ blSoz(6.5, 'p_merhaba', 70, 22);
 nesne('cicek', 15, yuzey(15), { r: 34 });                       // ilk çiçek: başlangıçtan görünür, 10 kare ötede
 blSoz(19, 'p_zipla', 50, 27);                                    // ilk basamağın (22) hemen önü
 nesne('cicek', 32.5, yuzey(32), { r: 34 });                     // tepenin üstü
+nesne('cicek', 45.5, blDal(16), { r: 34 });                     // ilk dalda keşif çiçeği: dallara çıkma ödülü
 // 2. İlk Pofuduk
 const blPof1 = nesne('pofuduk', 67, yuzey(67), { tur: 'yol' }); // setten atlayan Feza tam üstüne düşer
 blSoz(61, 'p_uyuyor', 70, 68, blPof1);                          // setin ucunda: çukurdaki Pofuduk ekranda
@@ -145,7 +146,9 @@ blSoz(318, 'p_sakli', 70, 326);                                 // giriş dalı 
 nesne('tohum', 325.5, blDal(12), { r: 34 });                    // girişten görünen ikinci tohum
 nesne('tohum', 328, yuzey(328), { r: 50 });                     // ana yolda (herkes bulur): hemen üstteki dalda bir tohum daha görünür
 nesne('tohum', 339, blDal(9), { r: 34 });                       // saklı yolun tepesi
+nesne('tohum', 352.5, blDal(12), { r: 34 });                    // saklı yoldan iniş dalındaki ödül
 nesne('pofuduk', 351, yuzey(351), { tur: 'yol' });
+
 // 5b. Tepecik: basamaklı tırmanış, tepede çiçek, yumuşak iniş
 nesne('cicek', 374, yuzey(374), { r: 34 });
 // 6. Açıklık

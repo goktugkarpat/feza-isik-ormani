@@ -54,16 +54,17 @@ function ylYildizSprite(kind, ri) {   // kind: 'dim' | 'lit'
   return ylSp[key] = c;
 }
 // dim=0 sönük .. lit=1 parlak; sc: yarıçap çarpanı (1 → R=30)
-function ylYildizCiz(x, y, sc, rot, lit, ri, a) {
+function ylYildizCiz(x, y, sc, rot, lit, ri, a, scY) {
   const dim = ylYildizSprite('dim', 0), w = dim.width / YL_K * sc;
+  const h = scY !== undefined ? (dim.height / YL_K * scY) : w;
   g.save(); g.translate(x, y); if (rot) g.rotate(rot);
-  if (lit < 0.995) { g.globalAlpha = a * (1 - lit * 0.92); g.drawImage(dim, -w / 2, -w / 2, w, w); }
-  if (lit > 0.005) { g.globalAlpha = a * lit; g.drawImage(ylYildizSprite('lit', ri), -w / 2, -w / 2, w, w); }
+  if (lit < 0.995) { g.globalAlpha = a * (1 - lit * 0.92); g.drawImage(dim, -w / 2, -h / 2, w, h); }
+  if (lit > 0.005) { g.globalAlpha = a * lit; g.drawImage(ylYildizSprite('lit', ri), -w / 2, -h / 2, w, h); }
   g.restore(); g.globalAlpha = 1;
 }
 // sevimli yüz: yuz=0 uyuyor (kapalı gözler, minik ağız) … 1 uyanık (parlak gözler, gülümseme); sc = yıldız ölçeği
-function ylYuz(x, y, sc, rot, yuz, a, wink, kar) {   // kar: 0 gülen · 1 göz kırpan · 2 uykulu esneyen · 3 şaşkın · 4 kıkırdayan
-  g.save(); g.translate(x, y); if (rot) g.rotate(rot); g.scale(sc, sc); g.globalAlpha = a;
+function ylYuz(x, y, sc, rot, yuz, a, wink, kar, scY) {   // kar: 0 gülen · 1 göz kırpan · 2 uykulu esneyen · 3 şaşkın · 4 kıkırdayan
+  g.save(); g.translate(x, y); if (rot) g.rotate(rot); g.scale(sc, scY !== undefined ? scY : sc); g.globalAlpha = a;
   const op = clamp(yuz * 1.6 - 0.3, 0, 1), awake = yuz > 0.45, k = awake ? (kar || 0) : 0, col = yuz > 0.5 ? '#4a2c6e' : '#c8d2ff';
   g.lineCap = 'round';
   for (const ex of [-7, 7]) {
@@ -116,11 +117,13 @@ function ylSlotKur(o) {
   const e = { x: o.gokX, y: o.gokY, renk: YL_RENK[o.ri][3], boyut: o.boyut, uyandi: false, t: 0, ucuyor: false, o };
   o.yl = e; YILDIZLAR.push(e);
 }
+let ylPuddleGrad = null;
 function ylUyandir(o, zorla) {
   if (o.done && !zorla) return;
   o.done = true; o.dokundu = true; o.durum = 'uyaniyor'; o.t = 0; o.zorla = !!zorla;
-  o.sx = o.x; o.sy = o.y;
-  burst(o.x, o.y, 22, [YL_RENK[o.ri][3], '#ffffff', YL_RENK[o.ri][1]], 190, 1.3, 8);
+  o.sx = o.x; o.sy = o.y; o.origKar = o.kar; o.pingPop = false;
+  burst(o.x, o.y, 28, [YL_RENK[o.ri][3], '#ffffff', YL_RENK[o.ri][1], '#ffe08a'], 220, 1.4, 9);
+  burst(o.x, o.y, 16, ['#ffffff', '#a8f0ff', '#ffd0ec'], 130, 0.9, 5);
   ylSuHalka(o.x, ylSu() - 2); ylSuHalka(o.x, ylSu() - 2, true);
   o.yl.ucuyor = true;
   ylSfx('yildizUyan', o.ri);
@@ -130,7 +133,7 @@ function ylUyandir(o, zorla) {
 TUR.kaydet('yildiz', {
   kur(o) {
     o.durum = 'sonuk'; o.t = 0; o.lit = 0; o.ph = (o.x * 0.013) % 6.28; o.done = false;
-    o.iz = new Float32Array(40); o.izN = 0; o.izT = 0; o.rot = 0; o.rise = 0; o.sc = 1; o.son = 0;
+    o.iz = new Float32Array(40); o.izN = 0; o.izT = 0; o.rot = 0; o.rise = 0; o.sc = 1; o.scX = 1; o.scY = 1; o.son = 0;
     ylSlotKur(o);
   },
   dokun(o) { ylUyandir(o, false); },
@@ -139,15 +142,72 @@ TUR.kaydet('yildiz', {
     if (o.durum === 'sonuk') { o.lit = Math.max(0, o.lit - dt); return; }
     o.t += dt;
     if (o.durum === 'uyaniyor') {
-      const u = o.t / 1.0;
-      o.lit = ylEase(o.t / 0.6); o.rise = 34 * ylEase(u); o.sc = 0.92 + 0.5 * Math.sin(Math.min(1, u) * 1.9) ; o.rot = Math.sin(o.t * 9) * 0.12 * (1 - u);
-      if (Math.random() < dt * 40) burst(o.x + (Math.random() - 0.5) * 40, o.y - o.rise + (Math.random() - 0.5) * 30, 1, [YL_RENK[o.ri][3], '#ffffff'], 60, 0.9, 6);
-      if (o.t >= 1.0) {
+      const u = Math.min(1, o.t / 1.15);
+      o.lit = ylEase(o.t / 0.5);
+      // 3 aşamalı 'ping!' esneme/gerinme ve sevinç dansı
+      if (o.t < 0.42) {
+        // 1. Aşama: Uykulu dikey gerinme ve esneme (yawn/stretch)
+        o.kar = 2;
+        const p1 = o.t / 0.42;
+        o.scY = 1.0 + 0.38 * Math.sin(p1 * Math.PI);
+        o.scX = 1.0 - 0.22 * Math.sin(p1 * Math.PI);
+        o.rot = Math.sin(o.t * 8) * 0.12;
+      } else if (o.t < 0.65) {
+        // 2. Aşama: 'ping!' snap pop ve pırıltı fırlaması
+        if (!o.pingPop) {
+          o.pingPop = true;
+          ylSfx('yildizUyan', (o.ri + 1) % YL_RENK.length);
+          burst(o.x, o.y, 14, ['#ffffff', '#fff3a8', YL_RENK[o.ri][3]], 110, 0.7, 5);
+        }
+        o.kar = 4;
+        const p2 = (o.t - 0.42) / 0.23;
+        o.scX = 1.0 + 0.32 * Math.sin(p2 * Math.PI);
+        o.scY = 1.0 - 0.24 * Math.sin(p2 * Math.PI);
+        o.rot = (p2 - 0.5) * 0.28;
+      } else {
+        // 3. Aşama: Sevinçli gülümseme ve sönümlü elastik titreşim
+        const p3 = Math.min(1, (o.t - 0.65) / 0.5);
+        const damp = Math.exp(-4 * p3) * Math.cos(p3 * Math.PI * 4);
+        o.scX = 1.0 + 0.22 * Math.sin(p3 * Math.PI) + damp * 0.15;
+        o.scY = 1.0 + 0.22 * Math.sin(p3 * Math.PI) - damp * 0.15;
+        o.kar = o.origKar !== undefined ? o.origKar : 0;
+        o.rot = Math.sin(o.t * 14) * 0.18;
+      }
+
+      if (!o.zorla) {
+        // Feza'nın etrafında 3D yükselen spiral dansı (spiralTurns = 4.2)
+        const py = P.y - 34;
+        const spiralTurns = 4.2;
+        const ang = o.ph + u * Math.PI * 2 * spiralTurns;
+        const startDist = Math.hypot(o.sx - P.x, o.sy - py);
+        const baseOrbitR = 52 + (o.kar % 3) * 8;
+        const orbitR = lerp(startDist, baseOrbitR, smooth(u)) * (1 - 0.25 * u);
+        const climbY = 46 * ylEase(u);
+        const cx = lerp(o.sx, P.x, smooth(u));
+        const cy = lerp(o.sy, py, smooth(u)) - climbY;
+        o.x = cx + Math.cos(ang) * (orbitR * 0.95);
+        o.y = cy + Math.sin(ang) * (orbitR * 0.38);
+        o.rise = 0;
+        // 3D derinlik algısı
+        const depth = 1 + 0.16 * Math.sin(ang);
+        o.scX *= depth;
+        o.scY *= depth;
+      } else {
+        o.rise = 45 * ylEase(u);
+        o.x = o.sx + Math.sin(u * Math.PI * 2) * 12;
+        o.y = o.sy - o.rise;
+      }
+      o.sc = (o.scX + o.scY) * 0.5;
+
+      if (Math.random() < dt * 50) {
+        parca(o.x + (Math.random() - 0.5) * 16, o.y + (Math.random() - 0.5) * 16, (Math.random() - 0.5) * 40, -15 - Math.random() * 25, 0.8, Math.random() < 0.6 ? YL_RENK[o.ri][3] : '#ffffff', 4 + Math.random() * 4);
+      }
+      if (o.t >= 1.15) {
         o.durum = 'ucuyor'; o.t = 0;
-        // başlangıç: zorla uyandırılan uzak yıldız ekranın içinden/altından yükselir
-        o.px = o.x; o.py = o.y - o.rise;
+        o.px = o.x; o.py = o.y;
         if (o.zorla) { o.px = cam.x + VW * (0.08 + 0.84 * (o.fan === undefined ? 0.5 : o.fan)); o.py = cam.y + H / S + 30; o.lit = 1; }
         o.izN = 0; ylSfx('yildizYuksel', o.ri);
+        burst(o.px, o.py, 14, [YL_RENK[o.ri][3], '#ffffff'], 140, 0.9, 6);
       }
     } else if (o.durum === 'ucuyor') {
       const TT = 2.5 + (o.kar % 3) * 0.35 + (o.ri % 2) * 0.2, u = Math.min(1, o.t / TT), e = ylEase(u), tg = ylGok(o.gokX, o.gokY);
@@ -171,8 +231,11 @@ TUR.kaydet('yildiz', {
     if (o.birikinti) {   // tümsekte küçük gece su birikintisi (gökyüzünü yansıtır)
       g.save(); g.translate(o.x, su - 2);
       g.fillStyle = 'rgba(10,22,60,0.85)'; g.beginPath(); g.ellipse(0, 0, 54, 8, 0, 0, 6.283); g.fill();
-      const gr = g.createLinearGradient(-50, 0, 50, 0); gr.addColorStop(0, 'rgba(120,170,255,0)'); gr.addColorStop(0.5, 'rgba(160,200,255,0.45)'); gr.addColorStop(1, 'rgba(120,170,255,0)');
-      g.fillStyle = gr; g.beginPath(); g.ellipse(0, -1, 50, 5, 0, 0, 6.283); g.fill();
+      if (!ylPuddleGrad) {
+        const gr = ylPuddleGrad = g.createLinearGradient(-50, 0, 50, 0);
+        gr.addColorStop(0, 'rgba(120,170,255,0)'); gr.addColorStop(0.5, 'rgba(160,200,255,0.45)'); gr.addColorStop(1, 'rgba(120,170,255,0)');
+      }
+      g.fillStyle = ylPuddleGrad; g.beginPath(); g.ellipse(0, -1, 50, 5, 0, 0, 6.283); g.fill();
       g.strokeStyle = 'rgba(190,220,255,0.5)'; g.lineWidth = 1.2; g.beginPath(); g.ellipse(0, 0, 54, 8, 0, 0, 6.283); g.stroke();
       g.restore();
     }
@@ -200,13 +263,19 @@ TUR.kaydet('yildiz', {
   },
   cizOn(o, tm) {   // uyanma ve yükselme Feza'nın önünde
     if (o.durum === 'uyaniyor') {
-      const u = Math.min(1, o.t / 1.0), y = o.y - o.rise, pu = Math.sin(u * Math.PI);
+      const u = Math.min(1, o.t / 1.15), y = o.y - o.rise, pu = Math.sin(u * Math.PI);
+      const sx = o.scX || o.sc, sy = o.scY || o.sc;
       g.globalCompositeOperation = 'lighter';
-      dglow(YL_RENK[o.ri][3], o.x, y, 90 + 90 * pu, 0.5 * o.lit); dglow('#ffffff', o.x, y, 40 + 30 * pu, 0.55 * o.lit);
-      const rr = 40 + 120 * u; g.globalAlpha = 0.5 * (1 - u); g.strokeStyle = YL_RENK[o.ri][3]; g.lineWidth = 3; g.beginPath(); g.arc(o.x, y, rr, 0, 6.283); g.stroke(); g.globalAlpha = 1;
-      for (let i = 0; i < 6; i++) { const a = i * 1.047 + o.t * 2.4; ylGlint(o.x + Math.cos(a) * rr * 0.7, y + Math.sin(a) * rr * 0.7, 9 + 5 * pu, 0.8 * (1 - u * 0.6), a); }
+      dglow(YL_RENK[o.ri][3], o.x, y, 90 + 90 * pu, 0.52 * o.lit); dglow('#ffffff', o.x, y, 42 + 30 * pu, 0.58 * o.lit);
+      const rr = 34 + 110 * u; g.globalAlpha = 0.5 * (1 - u); g.strokeStyle = YL_RENK[o.ri][3]; g.lineWidth = 2.8; g.beginPath(); g.arc(o.x, y, rr, 0, 6.283); g.stroke(); g.globalAlpha = 1;
+      for (let i = 0; i < 6; i++) { const a = i * 1.047 + o.t * 3.2; ylGlint(o.x + Math.cos(a) * rr * 0.75, y + Math.sin(a) * rr * 0.75, 10 + 5 * pu, 0.85 * (1 - u * 0.5), a); }
+      if (o.t >= 0.42 && o.t < 0.65) {
+        const pingU = (o.t - 0.42) / 0.23;
+        ylGlint(o.x + 8 * sx, y - 8 * sy, 22 * Math.sin(pingU * Math.PI), 0.95 * (1 - pingU), o.t * 6);
+      }
       g.globalCompositeOperation = 'source-over';
-      ylYildizCiz(o.x, y, o.sc, o.rot, o.lit, o.ri, 1); ylYuz(o.x, y + 1, o.sc, o.rot, ylEase(o.t / 0.5), 1, true, o.kar);
+      ylYildizCiz(o.x, y, sx, o.rot, o.lit, o.ri, 1, sy);
+      ylYuz(o.x, y + 1, sx, o.rot, ylEase(o.t / 0.5), 1, Math.sin(o.t * 6) > 0.3, o.kar, sy);
     } else if (o.durum === 'ucuyor') {
       const x = o.x2, y = o.y2;
       if (x === undefined) return;
@@ -222,8 +291,57 @@ TUR.kaydet('yildiz', {
       const u = o.t / 1.6, tg = ylGok(o.gokX, o.gokY);
       g.globalCompositeOperation = 'lighter';
       dglow('#ffffff', tg.x, tg.y, 30 + 80 * u, 0.6 * (1 - u)); ylGlint(tg.x, tg.y, 40 * (1 - u) + 6, 0.8 * (1 - u), u * 2);
-      g.lineWidth = 2.5; g.strokeStyle = YL_RENK[o.ri][3];
-      for (let k = 0; k < 3; k++) { const v = clamp(u * 1.3 - k * 0.22, 0, 1); if (v > 0 && v < 1) { g.globalAlpha = 0.6 * (1 - v); g.beginPath(); g.arc(tg.x, tg.y, 14 + 80 * ylEase(v), 0, 6.283); g.stroke(); } }
+      // Geometrik 12 fasetli elmas faset halkası (diamond facet ring)
+      const N = 12;
+      for (let k = 0; k < 3; k++) {
+        const v = clamp(u * 1.3 - k * 0.22, 0, 1);
+        if (v > 0 && v < 1) {
+          const R = 14 + 86 * ylEase(v);
+          const rot = v * 0.65 + k * 0.22;
+          const aRing = (0.75 - k * 0.15) * (1 - v);
+          // 12-fasetli poligon dış çeper
+          g.beginPath();
+          for (let j = 0; j < N; j++) {
+            const aj = rot + (j * 2 * Math.PI) / N;
+            const vx = tg.x + Math.cos(aj) * R;
+            const vy = tg.y + Math.sin(aj) * R;
+            if (j === 0) g.moveTo(vx, vy); else g.lineTo(vx, vy);
+          }
+          g.closePath();
+          g.globalAlpha = aRing;
+          g.strokeStyle = YL_RENK[o.ri][3];
+          g.lineWidth = 2.4 * (1 - v * 0.45);
+          g.stroke();
+          // Işıltılı faset bağ kirişleri (struts) ve iç faset çemberi
+          if (k === 0) {
+            const rIn = R * 0.54;
+            g.beginPath();
+            for (let j = 0; j < N; j++) {
+              const aj = rot + (j * 2 * Math.PI) / N;
+              const ox = tg.x + Math.cos(aj) * R;
+              const oy = tg.y + Math.sin(aj) * R;
+              const ix = tg.x + Math.cos(aj + Math.PI / N) * rIn;
+              const iy = tg.y + Math.sin(aj + Math.PI / N) * rIn;
+              g.moveTo(ox, oy); g.lineTo(ix, iy);
+              g.lineTo(tg.x, tg.y);
+            }
+            g.globalAlpha = aRing * 0.5;
+            g.strokeStyle = '#ffffff';
+            g.lineWidth = 1.2;
+            g.stroke();
+            // Köşelerde prizmatik elmas pırıltıları
+            if (v < 0.85) {
+              const step = v > 0.45 ? 2 : 1;
+              for (let j = 0; j < N; j += step) {
+                const aj = rot + (j * 2 * Math.PI) / N;
+                const px = tg.x + Math.cos(aj) * R;
+                const py = tg.y + Math.sin(aj) * R;
+                ylGlint(px, py, (7 + 5 * (1 - v)) * (1 - v), 0.85 * (1 - v), aj + v * 3);
+              }
+            }
+          }
+        }
+      }
       g.globalAlpha = 1;
       let pr = null; for (const e of YILDIZLAR) if (e.uyandi && e.o !== o && e.t <= o.yl.t && (!pr || e.t > pr.t)) pr = e;
       if (pr) { const pp = ylGok(pr.x, pr.y), f = ylEase(Math.min(1, u * 2.2)); g.globalAlpha = 0.7 * (1 - u); g.strokeStyle = '#fff2c8'; g.lineWidth = 2; g.beginPath(); g.moveTo(tg.x, tg.y); g.lineTo(lerp(tg.x, pp.x, f), lerp(tg.y, pp.y, f)); g.stroke(); g.globalAlpha = 1; }

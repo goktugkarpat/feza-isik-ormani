@@ -24,7 +24,7 @@ function skNota(o, i, guc) {   // i. çiçeğin notası (ekran konumuna göre sa
   const p = skPx(skCx(o, i), skCy(o));
   skSfx('sarki', { n: o.notalar[i], g: guc, x: clamp(p.x / Math.max(innerWidth, 1) * 1.4 - 0.7, -0.7, 0.7) });
 }
-function skParla(o, i, v) { const k = o.sk; k.parla[i] = Math.max(k.parla[i], v); k.vur[i] = 1; skPofNota(o, 0); }
+function skParla(o, i, v) { const k = o.sk; k.parla[i] = Math.max(k.parla[i], v); k.vur[i] = Math.max(k.vur[i] || 0, 1.15); skPofNota(o, 0); }
 // uyuyan Pofuduk şarkıyla senkron hafifçe titrer, karnındaki ışık her doğru notada biraz daha parlar (pofuduk.js pfKarinIsik n.sarkiIsik / n.sarkiVur)
 function skPofNota(o, dogru) {
   const n = o.sk.pof; if (!n || !n.pf || n.uyandi) return;
@@ -134,6 +134,7 @@ function skBas(o, i) {
     k.bosT = 0; if (!k.oto) k.tekrar = 0;
     if (i === bek) {
       skParla(o, i, 1); skNota(o, i, 1.15); skKivilcim(o, i, 9); skIlkSay++; k.adim++; k.dogruSay = (k.dogruSay || 0) + 1; skPofNota(o, 1);
+      if (typeof drFx === 'function') drFx(skCx(o, i), skCy(o) - 15, 'star');
       if (k.adim >= k.mel.length) { skDur(o, 'dogru'); k.sonuc = 0; k.say = 0; }
     } else {   // yanlış: ceza yok. Çiçek hafifçe yanıp söner, hepsi yumuşakça kısılır, Pırıl aynı ezgiyi yeniden çalar
       skParla(o, i, 0.55); skSfx('sarkiOlmadi', { n: o.notalar[i], x: 0 }); k.yanlis++;
@@ -234,8 +235,8 @@ function skIsabet(cx, cy) {   // dokunulan (nesne, çiçek) ya da null
     if (o.tip !== 'sarki' || !o.sk || o.sk.ap < 0.6) continue;
     if (Math.abs(P.x - o.x) > 900) continue;
     for (let i = 0; i < 3; i++) {
-      const p = skPx(skCx(o, i), skCy(o) + 6), dx = cx - p.x, dy = (cy - p.y) * 0.8, d = Math.hypot(dx, dy);
-      if (d < Math.max(54, 50 * olc) && d < enD) { enD = d; en = { o, i }; }
+      const p = skPx(skCx(o, i), skCy(o) + 6), dx = cx - p.x, dy = (cy - p.y) * 0.72, d = Math.hypot(dx, dy);
+      if (d < Math.max(72, 66 * olc) && d < enD) { enD = d; en = { o, i }; }
     }
   }
   return en;

@@ -165,10 +165,11 @@ function dn3SunPos() {
 }
 function dn3Sun(tm) {
   const x = DN3.sx, y = DN3.sy, r = DN3.sr, br = 0.92 + 0.08 * Math.sin(tm * 0.45), m = Math.max(W, H);
+  const flyGlow = 1 + 0.35 * DN3.fly;
   g.globalCompositeOperation = 'lighter';
-  dn3Eg('#ffc89a', x, y, m * 0.75, m * 0.42, 0.22 * br);
-  dn3Eg('#ffe2b0', x, y, r * 7, r * 6, 0.4 * br);
-  dn3Eg('#fff2d0', x, y, r * 3, r * 3, 0.5 * br);
+  dn3Eg('#ffc89a', x, y, m * 0.75 * flyGlow, m * 0.42 * flyGlow, (0.22 + 0.08 * DN3.fly) * br);
+  dn3Eg('#ffe2b0', x, y, r * 7 * flyGlow, r * 6 * flyGlow, (0.4 + 0.12 * DN3.fly) * br);
+  dn3Eg('#fff2d0', x, y, r * 3 * flyGlow, r * 3 * flyGlow, 0.5 * br);
   g.globalCompositeOperation = 'source-over';
   const s = dn3SunSpr(), rr = r * 1.6; g.drawImage(s, x - rr, y - rr, rr * 2, rr * 2);
 }
@@ -430,6 +431,62 @@ function dn3Birds(tm) {
   g.globalAlpha = 1;
 }
 
+let dn3CanyonC = null;
+function dn3CanyonBake() {
+  if (dn3CanyonC) return dn3CanyonC;
+  const P = 2400, Ht = 300, Hb = 320;
+  const cTop = dn3Cv(P, Ht), xt = cTop.getContext('2d');
+  const cBot = dn3Cv(P, Hb), xb = cBot.getContext('2d');
+  const Rt = rng(101), Rb = rng(202);
+  const gap = u => smooth(clamp((Math.abs(u - 0.51) - 0.065) / 0.09, 0, 1));
+  xt.lineCap = 'round'; xt.lineJoin = 'round';
+  for (let px = 0; px < P; px += 35) {
+    const u = px / P, gp = gap(u);
+    if (gp <= 0.02) continue;
+    const depth = (140 + Rt() * 110) * gp, r = (32 + Rt() * 45) * gp;
+    for (let t = 0; t < 3; t++) {
+      const ly = depth * (0.25 + t * 0.32), lr = r * (1 - t * 0.18);
+      xt.save(); xt.translate(2, -2); xt.globalAlpha = 0.5; xt.fillStyle = '#ffda78';
+      xt.beginPath(); xt.arc(px, ly, lr + 2.5, 0, 6.283); xt.fill(); xt.restore();
+      const gr = xt.createRadialGradient(px + lr * 0.25, ly - lr * 0.3, 0, px, ly, lr);
+      gr.addColorStop(0, '#fff4d4'); gr.addColorStop(0.5, '#ea9eb5'); gr.addColorStop(1, '#7a5a92');
+      xt.fillStyle = gr; xt.beginPath(); xt.arc(px, ly, lr, 0, 6.283); xt.fill();
+    }
+    xt.fillStyle = '#7a5a92'; xt.fillRect(px - 20, 0, 42, depth * 0.4);
+  }
+  xb.lineCap = 'round'; xb.lineJoin = 'round';
+  for (let px = 0; px < P; px += 35) {
+    const u = px / P, gp = gap(u);
+    if (gp <= 0.02) continue;
+    const height = (160 + Rb() * 120) * gp, r = (35 + Rb() * 48) * gp, baseY = Hb;
+    for (let t = 0; t < 3; t++) {
+      const ly = baseY - height * (0.25 + t * 0.32), lr = r * (1 - t * 0.16);
+      xb.save(); xb.translate(2, -2); xb.globalAlpha = 0.55; xb.fillStyle = '#ffd670';
+      xb.beginPath(); xb.arc(px, ly, lr + 2.5, 0, 6.283); xb.fill(); xb.restore();
+      const gr = xb.createRadialGradient(px + lr * 0.25, ly - lr * 0.3, 0, px, ly, lr);
+      gr.addColorStop(0, '#fff6db'); gr.addColorStop(0.52, '#f0a4bd'); gr.addColorStop(1, '#825e98');
+      xb.fillStyle = gr; xb.beginPath(); xb.arc(px, ly, lr, 0, 6.283); xb.fill();
+    }
+    xb.fillStyle = '#825e98'; xb.fillRect(px - 20, baseY - height * 0.4, 42, height * 0.5 + 4);
+  }
+  return dn3CanyonC = { top: cTop, bot: cBot, P, Ht, Hb };
+}
+function dn3DrawCanyon(tm) {
+  const C = dn3CanyonBake();
+  const fl = Math.max(DN3.fly, DN3.reg ? DN3.reg.ucus * 0.7 : 0);
+  if (fl <= 0.01) return;
+  const f = 0.55, Pw = C.P * S, ox = ((-(cam.x * f + (DN3.drift || 0) * 8) * S) % Pw + Pw) % Pw;
+  const dhT = C.Ht * S, dhB = C.Hb * S;
+  const topY = Math.min(0, (-cam.y * f * 0.25) * S);
+  const botY = Math.max(H - dhB, H - dhB - (cam.y * f * 0.25) * S);
+  g.globalAlpha = fl * 0.92;
+  for (let x0 = ox - Pw; x0 < W; x0 += Pw) {
+    g.drawImage(C.top, x0, topY, Pw + 1, dhT);
+    g.drawImage(C.bot, x0, botY, Pw + 1, dhB);
+  }
+  g.globalAlpha = 1;
+}
+
 // ═══════════ dn3Background ═══════════
 function dn3Hy() {
   const g0 = (DN3.GREF - cam.y) * S, ref = 0.7 * H; DN3.dyS = isFinite(g0) ? clamp(g0 - ref, -0.6 * H, 1.6 * H) : 0;
@@ -455,12 +512,13 @@ function dn3Background(tm) {
   dn3Shapes(tm);
   dn3Islands(tm, false);
   dn3DrawLayer(DN3_LAY[1], 1, tm);
-  dn3Rays(tm, (0.17 + 0.12 * reg.ucus + 0.1 * fin) * (1 - 0.4 * reg.tepe));
+  dn3Rays(tm, (0.17 + 0.22 * DN3.fly + 0.12 * reg.ucus + 0.1 * fin) * (1 - 0.35 * reg.tepe));
   dn3Birds(tm);
   dn3Islands(tm, true);
   dn3DrawLayer(DN3_LAY[2], 1, tm);
-  g.globalCompositeOperation = 'lighter'; dn3Eg('#ffd8a8', DN3.sx, hy + 20 * S, W * 0.6, 120 * S, 0.22 + 0.1 * Math.sin(tm * 0.45)); g.globalCompositeOperation = 'source-over';   // güneşin bulut denizine vuran ışığı
+  g.globalCompositeOperation = 'lighter'; dn3Eg('#ffd8a8', DN3.sx, hy + 20 * S, W * (0.6 + 0.25 * DN3.fly), (120 + 40 * DN3.fly) * S, (0.22 + 0.12 * DN3.fly) + 0.1 * Math.sin(tm * 0.45)); g.globalCompositeOperation = 'source-over';   // güneşin bulut denizine vuran ışığı
   dn3DrawLayer(DN3_LAY[3], 1, tm);
+  if (DN3.fly > 0.005 || (reg && reg.ucus > 0.02)) dn3DrawCanyon(tm);   // uçuş koridoru boyunca görkemli kanyon duvarları
   dn3DrawLayer(DN3_LAY[4], 1, tm);
   if (reg.a > 0.01 && reg.tepe < 0.99) { g.globalCompositeOperation = 'lighter'; dn3Eg(reg.hex, W * 0.5, hy + 60 * S, W * 0.8, 160 * S, 0.1 * reg.a * (1 - reg.tepe)); g.globalCompositeOperation = 'source-over'; }
   if (reg.tepe > 0.01) { dn3Eg('#ff9a86', W * 0.5, hy + 40 * S, W * 0.85, 240 * S, 0.2 * reg.tepe); dn3Eg('#ffb070', DN3.sx, hy, W * 0.5, 120 * S, 0.14 * reg.tepe); }   // Tepe: doygun mercan-altın ton (normal karışım; beyazlatmaz)
@@ -872,9 +930,10 @@ function dn3Foreground(tm) {
     if (a < 0.02) continue; g.globalAlpha = a; g.drawImage(sp.c, wx * S, H - 150 * s * S + 20 * S, 520 * s * S, 300 * s * S);
   }
   // uçuşta: yanından hızla geçen büyük sis bulutları (hız hissi), Feza'nın üstüne gelmez
-  if (fly > 0.05) for (let n = 0; n < 2; n++) {
-    const sp = DN3_FG.puff[n], span = 2600, wx = ((n * 1300 - cam.x * 2.2 - tm * 40) % span + span) % span - 700; if (wx > VW + 60) continue;
-    const s = 1.6, cxs = (wx + 260 * s) * S, yy = n ? H - 120 * S : -60 * S, a = 0.5 * fly * dn3Foc(cxs, yy + 100 * S) * dn3Foc(cxs, yy);
+  if (fly > 0.05) for (let n = 0; n < 3; n++) {
+    const sp = DN3_FG.puff[n % 3], span = 2600, wx = ((n * 900 - cam.x * (2.0 + n * 0.3) - tm * (38 + n * 12)) % span + span) % span - 700; if (wx > VW + 60) continue;
+    const s = 1.45 + (n % 2) * 0.3, cxs = (wx + 260 * s) * S, yy = n === 1 ? H - 110 * S : (n === 2 ? H * 0.45 : -70 * S);
+    const a = (n === 2 ? 0.22 : 0.48) * fly * dn3Foc(cxs, yy + 100 * S) * dn3Foc(cxs, yy);
     if (a < 0.02) continue; g.globalAlpha = a; g.drawImage(sp.c, wx * S, yy - (n ? 0 : 140 * S), 520 * s * S, 300 * s * S * (n ? 1 : 0.8));
   }
   g.globalAlpha = 1;

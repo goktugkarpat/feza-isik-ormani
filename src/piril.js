@@ -207,18 +207,29 @@ OLAY.on('ziplatti', o => {
 });
 OLAY.on('ziplama', () => { dragonInit(); D.jumps++; });
 OLAY.on('ciftZiplama', () => { dragonInit(); D.ciftT = D.t; });
+function drDokunAlkis(sure) {
+  dragonInit();
+  if (!drPlaying() || !drFree() || D.talkT > 0 || (D.t - (D.alkT || -99) < 2.5)) return;
+  D.alkT = D.t; drMode('alkis'); D.alkDur = sure || 1.35;
+  D.alkSide = Math.sign(D.x - P.x) || -P.f; D.clapPh = 0;
+  D.expr = 'happy'; D.exprT = sure || 1.35;
+}
 OLAY.on('inis', v => {   // büyük zıplamadan (çift zıplama / zıplatan bulut) sonra yere inince ara sıra önüne dönüp alkışlar
   dragonInit(); if (!v || P.ucus) return;
   const buyuk = D.t - (D.ciftT || -99) < 2.2 || (v.siddet || 0) >= 480;
   if (!buyuk || D.t - (D.alkT || -99) < 22 || Math.random() > 0.4 || !drPlaying() || !drFree() || D.talkT > 0) return;
-  D.alkT = D.t; drMode('alkis'); D.alkDur = 1.5; D.alkSide = Math.sign(D.x - P.x) || -P.f; D.clapPh = 0;
+  drDokunAlkis(1.5);
 });
-OLAY.on('isilti', () => { dragonInit(); D.bkSev = 1; });   // Bölüm 3 uçuşu: Feza ışıltı topladı
+OLAY.on('isilti', () => { dragonInit(); D.bkSev = 1; drDokunAlkis(1.1); });   // Bölüm 3 uçuşu: Feza ışıltı topladı
 OLAY.on('kuzu', v => {   // Bölüm 3: kuzucuk renklendi → onun renginde kalpler/yıldızlarla sevinç turu (cümleleri ses.js söyler)
   dragonInit(); const o = v && v.o; if (!o || !isFinite(o.x) || !isFinite(o.y)) return;
   D.kzRenk = DR_GOK[((v.renkI | 0) % 7 + 7) % 7]; D.kzRenkT = 2.6; D.since = 0;
   if (!drBusy() && D.mode !== 'sekil') dragonHappy({ x: o.x, y: o.y - 20 });
+  drDokunAlkis(1.4);
 });
+for (const ev of ['denizati', 'denizatiOyun', 'vatozKemer', 'dokun:sedefKabuk', 'dokun:cicek', 'dokun:tohum']) {
+  OLAY.on(ev, () => drDokunAlkis(1.3));
+}
 OLAY.on('agac', () => { dragonInit(); D.danceAfter = true; });
 OLAY.on('durum', d => { dragonInit(); if (d === 'final') D.danceAfter = true; });
 OLAY.on('kayboldu', () => { dragonInit(); if (drPlaying() && drFree() && D.guideCd <= 0) drGuide(); });
@@ -454,9 +465,44 @@ function stepDragon(dt) {
   if (D.ucusOldu) drUcusBitti();
   if (BOLUM_NO === 4 && P.deniz) { drDenizAdim(dt); return; }
   D.t += dt; D.modeT += dt; if (D.flare > 0) D.flare = Math.max(0, D.flare - dt / 0.9);
+  // sigorta: hiçbir Pırıl modu Feza'yı sonsuza dek kilitlemesin (yardim ≤3 sn, tasi ≤8 sn, P.kilit sürekli >2,5 sn olamaz)
+  if (DURUM === 'oyun' && !P.ucus && P.kilit > 0 && D.mode !== 'tasi') { D.kilitSay = (D.kilitSay || 0) + dt; if (D.kilitSay > 2.5) { P.kilit = 0; D.kilitSay = 0; if (D.mode === 'yardim') drMode('follow'); } } else D.kilitSay = 0;
+  if (D.mode === 'yardim' && D.modeT > 3) { P.kilit = 0; drMode('follow'); }
+  if (D.mode === 'tasi' && D.modeT > 8) { P.kilit = 0; P.fade = 0; D.tasiyor = false; drMode('follow'); }
   const wx = Math.sin(D.t * 0.71) * 9 + Math.sin(D.t * 1.93) * 3, wy = Math.sin(D.t * 1.31) * 5 + Math.sin(D.t * 0.53) * 4;
-  let tx = P.x - P.f * 40 + wx, ty = P.y - 112 + wy;
-  let k = 28, damp = 8.5, direct = false, hopW = 0, flapW = 0, rollW = 0;
+  // Feza durduğunda omzunun yanında tatlıca havada asılı kalma (hover / perching)
+  const fzDur = P.ground && P.idle > 0.8 && Math.abs(P.vx) < 20 && drFree() && D.mode !== 'otur';
+  D.omuzW = lerp(D.omuzW || 0, fzDur ? 1 : 0, 1 - Math.exp(-dt * 3.2));
+  const tx0 = P.x - P.f * 40 + wx, ty0 = P.y - 112 + wy;
+  let tx = lerp(tx0, P.x - P.f * 27 + wx * 0.35, D.omuzW), ty = lerp(ty0, P.y - 72 + wy * 0.45, D.omuzW);
+  let k = lerp(28, 38, D.omuzW), damp = lerp(8.5, 11, D.omuzW), direct = false, hopW = 0, flapW = D.omuzW > 0.05 ? lerp(3.1, 2.1, D.omuzW) : 0, rollW = 0;
+  // Feza hızlı koştuğunda arkasından yetişmek için heyecanla kanat çırpma ve rüzgâr girdabı
+  const fzFast = Math.abs(P.vx) > 155;
+  const distFz = Math.hypot(tx - D.x, ty - D.y);
+  const chaseTarget = (fzFast && distFz > 45 && drFree()) ? 1 : 0;
+  D.chaseW = lerp(D.chaseW || 0, chaseTarget, 1 - Math.exp(-dt * 5.5));
+  if (D.chaseW > 0.05) {
+    k = lerp(k, 88, D.chaseW);
+    damp = lerp(damp, 14, D.chaseW);
+    flapW = lerp(flapW, 9.6, D.chaseW);
+    D.tiltWant = clamp(P.vx * 0.0016, -0.32, 0.32);
+    if (D.chaseW > 0.3 && Math.random() < dt * 25 && typeof parts !== 'undefined') {
+      parts.push({
+        x: D.x - (D.face || 1) * 16 + (Math.random() - 0.5) * 8,
+        y: D.y + 4 + (Math.random() - 0.5) * 8,
+        vx: -(D.face || 1) * (45 + Math.random() * 45),
+        vy: -12 + Math.sin(D.t * 16) * 28,
+        life: 0.42, max: 0.42,
+        col: Math.random() < 0.5 ? '#e8dcff' : '#ffffff',
+        size: 3.2
+      });
+    }
+    if (D.chaseW > 0.65 && Math.random() < dt * 5 && typeof ripples !== 'undefined') {
+      ripples.push({ x: D.x - (D.face || 1) * 18, y: D.y + 4, r: 4, life: 0.35, small: true });
+    }
+  }
+  const curv = clamp((D.vy || 0) * 0.0012 + Math.sin(D.ph || 0) * 0.14 * (1 - (D.glide || 0)), -0.25, 0.25);
+  D.spineW = lerp(D.spineW || 0, curv, 1 - Math.exp(-dt * 8));
   D.tiltWant = null; D.grip = lerp(D.grip, D.mode === 'tasi' && D.grabbed ? 1 : 0, 1 - Math.exp(-dt * 14));
   D.guideCd -= dt; D.playCd -= dt; D.yayCd -= dt; if (D.kzRenkT > 0) D.kzRenkT -= dt; D.lookAtT -= dt; D.faceHold -= dt; D.idleCd -= dt;
   let awayW = 0, sqW = 0, spinW = null;
@@ -507,7 +553,9 @@ function stepDragon(dt) {
       const d = Math.abs(h.x - P.x) + Math.max(0, P.y - h.y) * 0.5;
       if (d < D.bestD - 40) { D.bestD = d; D.stuckT = 0; D.jumps = 0; }
       else if (P.idle < 3) D.stuckT += dt;
-      if (D.stuckT > 10 && D.jumps >= 3 && P.ground && D.assistCd <= 0 && (drFree() || D.mode === 'yol')) {
+      const miniDevam = typeof omPerde !== 'undefined' && omPerde.a > 0.02;   // mini oyun perdesi sürerken yardım yok
+      if (miniDevam) { D.stuckT = 0; D.jumps = 0; }
+      else if (D.stuckT > 10 && D.jumps >= 3 && P.ground && D.assistCd <= 0 && (drFree() || D.mode === 'yol')) {
         const tg = drAssistTarget(P.x, P.y);
         D.stuckT = 0; D.jumps = 0;
         if (tg) { drMode('yardim'); D.yt = tg; D.assistCd = 35; P.kilit = Math.max(P.kilit || 0, 1.4); D.expr = 'happy'; D.exprT = 1; drEncourage(); }
@@ -1060,7 +1108,7 @@ function stepDragon(dt) {
   // Feza'nın yüzünü asla kapatmasın: başının üstündeki bölgeye inerse yumuşakça yukarı itilir
   // (itme hamlesi, taşıma, dalış ve zıplama turu kendi yollarını bilir)
   if (P.fade <= 0 && D.mode !== 'push' && D.mode !== 'tasi' && D.mode !== 'yardim' && D.mode !== 'dalis' && D.mode !== 'yay' && D.mode !== 'otur') {
-    const hx = Math.abs(D.x - P.x), minY = P.y - 104 + clamp((hx - 20) / 22, 0, 1) * 70;
+    const hx = Math.abs(D.x - P.x), minY = P.y - 104 + clamp((hx - 16) / 20, 0, 1) * lerp(70, 40, D.omuzW || 0);
     if (D.y > minY && D.y < P.y + 10) { D.y = lerp(D.y, minY, 1 - Math.exp(-dt * 14)); if (D.vy > 0) D.vy *= Math.exp(-dt * 10); }
   }
 
@@ -1149,11 +1197,14 @@ function stepDragon(dt) {
   if (D.mode === 'push') { lx = 10; ly = -60; }
   const ll = Math.hypot(lx, ly) || 1;
   D.lookX = lerp(D.lookX, lx / ll, 1 - Math.exp(-dt * 10)); D.lookY = lerp(D.lookY, ly / ll, 1 - Math.exp(-dt * 10));
-  D.headTilt = lerp(D.headTilt, clamp(D.lookY * 0.22, -0.18, 0.2) - D.tilt * 0.4 - D.yawn * 0.22, 1 - Math.exp(-dt * 6));
+  const curiousTilt = (D.omuzW ? (0.16 * Math.sin(D.t * 1.6) - 0.08) * D.omuzW : 0) + (D.mode === 'merak' ? 0.18 * Math.sin(D.t * 2.1) : 0);
+  D.headTilt = lerp(D.headTilt, clamp(D.lookY * 0.24 + curiousTilt, -0.22, 0.26) - D.tilt * 0.4 - D.yawn * 0.22, 1 - Math.exp(-dt * 6));
   D.pose = lerp(D.pose, D.mode === 'push' ? 1 : 0, 1 - Math.exp(-dt * (D.mode === 'push' ? 25 : 8)));
   D.stretch = Math.max(D.stretch, D.yawn * 0.8);
 
-  D.exprT -= dt; if (D.exprT <= 0 && D.mode !== 'happy' && D.mode !== 'push') D.expr = 'normal';
+  D.exprT -= dt;
+  if (D.omuzW > 0.5 && P.idle > 1.6 && Math.sin(D.t * 1.4) > -0.2 && D.exprT <= 0) { D.expr = 'happy'; D.exprT = 0.35; }
+  else if (D.exprT <= 0 && D.mode !== 'happy' && D.mode !== 'push') D.expr = 'normal';
   D.blinkT -= dt; if (D.blinkT < -0.14) D.blinkT = D.blink2 ? 1.6 + Math.random() * 3.4 : (Math.random() < 0.22 ? 0.12 : 1.6 + Math.random() * 3.4), D.blink2 = !D.blink2 && D.blinkT < 0.2;   // ara sıra çift göz kırpma
 
   // taşırken: Feza pençelerden sarkar (feza.js D.tasiyor ve D.pence'ye bakabilir)
@@ -1165,14 +1216,15 @@ function stepDragon(dt) {
     if (typeof FZ_CARRY !== 'undefined' && P.a_carryT !== undefined) P.a_carryT = FZ_CARRY * (D.grabbed ? 0.3 : 0.05);
   }
 
-  // kuyruk zinciri (gecikmeli takip)
+  // kuyruk zinciri (gecikmeli takip & tatlı kuyruk kıvrımı)
   let prev = drLocal(D.tailRX, 6);
   if (Math.hypot(prev.x - D.tail[0].x, prev.y - D.tail[0].y) > 80) drResetTail();
   D.tail[0].x = prev.x; D.tail[0].y = prev.y;
   const sxx = D.fs, ct = Math.cos(D.tilt), st = Math.sin(D.tilt);
   for (let i = 1; i < DR_TAIL_N; i++) {
     const u = i / (DR_TAIL_N - 1);
-    const ang = Math.PI - 0.95 + u * 2.15 + Math.sin(D.t * 3.2 - u * 3.2) * 0.32 * (0.4 + u) + D.glide * 0.3 + D.grip * 1.5 + D.sTl.a * u * 0.9 + D.spin;
+    const omuzCurl = (D.omuzW || 0) * (0.5 * u * u + Math.sin(D.t * 2.4 - u * 2) * 0.18);
+    const ang = Math.PI - 0.95 + u * 2.15 + Math.sin(D.t * 3.2 - u * 3.2) * 0.32 * (0.4 + u) + D.glide * 0.3 + D.grip * 1.5 + D.sTl.a * u * 0.9 + D.spin + omuzCurl;
     const dlx = Math.cos(ang), dly = Math.sin(ang);
     const dwx = sxx * (dlx * ct - dly * st), dwy = dlx * st + dly * ct;
     const p = D.tail[i];
@@ -1548,8 +1600,16 @@ function drEar(x, rot, s) {   // yeşil yüzgeç kulak (arkası taraklı); yerel
   x.beginPath(); x.moveTo(1.2, 1.4); x.quadraticCurveTo(1.8, -5, 0.6, -10.6);
   x.quadraticCurveTo(-1.6, -9.4, -3, -7.4); x.quadraticCurveTo(-4.8, -6.6, -5.2, -4.2);
   x.quadraticCurveTo(-6.6, -3, -6.4, -0.6); x.quadraticCurveTo(-3, 0.6, 1.2, 1.4); x.closePath();
-  const gr = x.createLinearGradient(0, 0, -3, -9); gr.addColorStop(0, DR_COL.limeD); gr.addColorStop(1, DR_COL.limeL);
-  x.fillStyle = gr; x.fill(); x.strokeStyle = 'rgba(80,110,20,0.8)'; x.lineWidth = 0.6; x.stroke();
+  const gr = x.createLinearGradient(0, 0, -3, -9); gr.addColorStop(0, DR_COL.limeD); gr.addColorStop(0.55, DR_COL.lime); gr.addColorStop(1, DR_COL.limeL);
+  x.fillStyle = gr; x.fill();
+  // narin yüzgeç ışığı & kılçıkları (kulak yüzgecinin masalsı dokusu)
+  x.strokeStyle = 'rgba(235,255,190,0.45)'; x.lineWidth = 0.38; x.lineCap = 'round';
+  x.beginPath();
+  x.moveTo(0.6, 0.2); x.quadraticCurveTo(1.0, -4.8, 0.4, -9.8);
+  x.moveTo(0.1, 0.4); x.quadraticCurveTo(-1.6, -3.8, -2.7, -6.8);
+  x.moveTo(-0.4, 0.6); x.quadraticCurveTo(-2.8, -2.4, -4.6, -3.8);
+  x.stroke();
+  x.strokeStyle = 'rgba(75,105,18,0.85)'; x.lineWidth = 0.6; x.stroke();
   x.restore();
 }
 function drChin(x, mx) {   // önden limon yeşili çene: karından yukarı yumuşak "U" (köşesiz)
@@ -1729,11 +1789,12 @@ function drSide(x, tm) {   // yandan görünüş (sağa bakan yerel uzay)
   drBlobs(x, DR_SPINE_S, C.crest, C.crestD, 1.3);
   const bg = x.createRadialGradient(0, -2, 1, -1, 4, 14);
   bg.addColorStop(0, C.purL); bg.addColorStop(0.6, C.pur); bg.addColorStop(1, C.purD);
-  const bodyP = () => {   // armut gövde: boyun ince, karın/kalça tombul
-    x.beginPath(); x.moveTo(-4.8, -6.4);
-    x.bezierCurveTo(-8.6, -3, -11.4, 5, -10, 10.4); x.bezierCurveTo(-8.8, 14.6, -3.4, 15.4, 0.4, 15.2);
-    x.bezierCurveTo(5.4, 15, 9.8, 12.2, 9.8, 6.6); x.bezierCurveTo(9.8, 1, 7.6, -4.4, 4.6, -6.6);
-    x.bezierCurveTo(1.6, -8.6, -2.6, -8.4, -4.8, -6.4); x.closePath();
+  const spc = D.spineW || 0;
+  const bodyP = () => {   // armut gövde: boyun ince, karın/kalça tombul (uçuş kıvrımları)
+    x.beginPath(); x.moveTo(-4.8, -6.4 + spc * 3.5);
+    x.bezierCurveTo(-8.6 - spc * 4, -3, -11.4 - spc * 3, 5, -10, 10.4); x.bezierCurveTo(-8.8, 14.6, -3.4, 15.4, 0.4, 15.2);
+    x.bezierCurveTo(5.4, 15, 9.8 + spc * 3.5, 12.2, 9.8 + spc * 2.5, 6.6); x.bezierCurveTo(9.8, 1, 7.6 + spc * 3.5, -4.4, 4.6, -6.6 + spc * 3.5);
+    x.bezierCurveTo(1.6, -8.6, -2.6, -8.4, -4.8, -6.4 + spc * 3.5); x.closePath();
   };
   x.fillStyle = bg; bodyP(); x.fill();
   x.strokeStyle = C.line; x.lineWidth = 0.8; x.stroke();
@@ -1831,9 +1892,9 @@ function drHeadSide(x, tm) {   // yandan kafa (sağa bakan yerel uzay; boyun ekl
   }
   x.restore();
   x.restore();
-  // yeşil yüzgeç kulak (gözün arkasında)
-  const ef = Math.sin(tm * 3.1) * 0.1 + (D.expr === 'happy' ? Math.sin(tm * 14) * 0.12 : 0) - D.yawn * 0.25 - D.plush * 0.3;
-  x.save(); x.translate(1.4, -11.6); drEar(x, -0.7 + ef + (D.sEr ? D.sEr.a : 0) - D.gasp * 0.35, 0.64); x.restore();
+  // yeşil yüzgeç kulak (gözün arkasında): canlı yüzgeç kıpırtısı & omuzda tatlı dinleme
+  const ef = Math.sin(tm * 3.1) * 0.12 + (D.expr === 'happy' ? Math.sin(tm * 14) * 0.16 : 0) - D.yawn * 0.25 - D.plush * 0.3 + (D.omuzW ? Math.sin(tm * 4.2) * 0.1 * D.omuzW : 0);
+  x.save(); x.translate(1.4, -11.6); drEar(x, -0.7 + ef + (D.sEr ? D.sEr.a : 0) - D.gasp * 0.35 + (D.omuzW ? -0.15 * D.omuzW : 0), 0.64); x.restore();
   if (D.gasp > 0.3) {   // ürkme: başın üstünde iki kısa "şaşkınlık" çizgisi
     x.strokeStyle = `rgba(255,255,255,${0.85 * clamp((D.gasp - 0.3) / 0.3, 0, 1)})`; x.lineWidth = 1; x.lineCap = 'round';
     x.beginPath(); x.moveTo(9, -27.5); x.lineTo(8, -31.5); x.moveTo(13.4, -26.4); x.lineTo(15.4, -29.8); x.moveTo(16.6, -23.6); x.lineTo(19.8, -25.4); x.stroke();
@@ -2291,36 +2352,132 @@ function pirilCizPoz(ctx, x, y, olcek, poz, tm, u) {
 function drDenizAdim(dt) {
   if (!Number.isFinite(dt) || dt < 0) return;
   D.t += dt; D.modeT += dt; drTalkStep(dt);
-  D.suSevT = Math.max(0, (D.suSevT || 0) - dt); D.suGosterT = Math.max(0, (D.suGosterT || 0) - dt); D.suYardimT = Math.max(0, (D.suYardimT || 0) - dt);
+  D.suSevT = Math.max(0, (D.suSevT || 0) - dt);
+  D.suGosterT = Math.max(0, (D.suGosterT || 0) - dt);
+  D.suYardimT = Math.max(0, (D.suYardimT || 0) - dt);
+  D.suDashT = Math.max(0, (D.suDashT || 0) - dt);
+
+  const dashing = (P.denizHamle || 0) > 0 || (D.suDashT || 0) > 0;
+  if ((P.denizHamle || 0) > 0) {
+    D.suDashT = Math.max(D.suDashT || 0, P.denizHamle + 0.18);
+  }
+
   if (!D.suIlkGosterildi && DURUM === 'oyun') {
     const ilk = NESNELER.find(o => o.tip === 'denizati' && !o.done);
-    if (ilk && Math.hypot(ilk.x - P.x, ilk.y - P.y + 40) < 420) { D.suIlkGosterildi = true; D.suGosterT = 3.2; D.suGosterO = ilk; D.expr = 'happy'; D.exprT = 1.2; drPulse(ilk.x, ilk.y - 42, 26, 2); }
+    if (ilk && Math.hypot(ilk.x - P.x, ilk.y - P.y + 40) < 420) {
+      D.suIlkGosterildi = true; D.suGosterT = 3.2; D.suGosterO = ilk; D.expr = 'happy'; D.exprT = 1.2; drPulse(ilk.x, ilk.y - 42, 26, 2);
+    }
   }
 
   let h = null; try { h = drHedef(); } catch (e) {}
-  const idle = (P.idle || 0) > 7 && h && Math.hypot(h.x - P.x, h.y - P.y) < 850;
+  const settled = !dashing && (P.idle > 1.2 || (Math.hypot(P.vx, P.vy) < 24 && (P.denizHamle || 0) <= 0));
   const finalTarget = typeof INCI !== 'undefined' && INCI.active ? INCI.hedefPiril() : null;
   const guide = D.suGosterT > 0 && D.suGosterO && !D.suGosterO.done, help = guide && D.suYardimT > 0, celebrate = D.suSevT > 0;
-  const gx = finalTarget ? finalTarget.x : help ? D.suGosterO.x - 35 : guide ? lerp(P.x, D.suGosterO.x, 0.68) : idle ? lerp(P.x, h.x, 0.32) : P.x - (P.f || 1) * 64;
-  const gy = finalTarget ? finalTarget.y : help ? D.suGosterO.y - 90 : guide ? lerp(P.y - 110, D.suGosterO.y - 85, 0.68) : idle ? lerp(P.y - 110, h.y - 70, 0.32) : P.y - 116;
-  const joy = finalTarget ? INCI.joy : celebrate ? Math.sin(clamp((2.6 - D.suSevT) / 2.6, 0, 1) * Math.PI) : 0;
-  const tx = gx + Math.sin(D.t * 0.8) * 5 + Math.sin(D.t * 4) * joy * 5, ty = Math.max(cam.y + 50, Math.min(gy, Math.abs(D.x - P.x) < 85 ? P.y - 126 : gy) + Math.sin(D.t * 1.3) * 4 - Math.abs(Math.sin(D.t * 4.2)) * joy * 10);
-  const px = D.x, py = D.y, k = 1 - Math.exp(-dt * 4.2);
-  D.x = lerp(D.x, tx, k); D.y = lerp(D.y, ty, k); D.vx = dt > 0 ? (D.x - px) / dt : 0; D.vy = dt > 0 ? (D.y - py) / dt : 0;
-  const facing = guide ? Math.sign(D.suGosterO.x - D.x) || 1 : idle ? Math.sign(h.x - D.x) || P.f : Math.abs(D.vx) > 20 ? Math.sign(D.vx) : P.f || 1;
+
+  let pointX = 0, pointY = 0, pointDist = 0, pointing = false;
+  if (settled && h && !finalTarget && DURUM === 'oyun' && !celebrate && !guide) {
+    pointX = h.x - P.x; pointY = (h.y - 30) - P.y;
+    pointDist = Math.hypot(pointX, pointY);
+    if (pointDist > 24) pointing = true;
+  }
+
+  let gx, gy;
+  if (finalTarget) {
+    gx = finalTarget.x; gy = finalTarget.y;
+  } else if (dashing) {
+    const raceSide = (P.denizDX && Math.abs(P.denizDX) > 0.1 ? Math.sign(P.denizDX) : (P.f || 1));
+    const raceDY = Number.isFinite(P.denizDY) ? P.denizDY : 0;
+    gx = P.x + raceSide * 55 + Math.sin(D.t * 6.5) * 12;
+    gy = P.y - 52 + raceDY * 35 + Math.sin(D.t * 8.5) * 8;
+  } else if (help) {
+    gx = D.suGosterO.x - 35; gy = D.suGosterO.y - 90;
+  } else if (guide) {
+    gx = lerp(P.x, D.suGosterO.x, 0.68); gy = lerp(P.y - 110, D.suGosterO.y - 85, 0.68);
+  } else if (pointing) {
+    const dirNorm = 1 / Math.max(1, pointDist);
+    const leadDist = clamp(pointDist * 0.38, 55, 115);
+    gx = P.x + pointX * dirNorm * leadDist + Math.sin(D.t * 1.5) * 6;
+    gy = P.y - 72 + pointY * dirNorm * leadDist * 0.5 + Math.sin(D.t * 2.0) * 5;
+  } else {
+    gx = P.x - (P.f || 1) * 64; gy = P.y - 116;
+  }
+
+  const joy = finalTarget ? INCI.joy : celebrate ? Math.sin(clamp((2.6 - D.suSevT) / 2.6, 0, 1) * Math.PI) : dashing ? 0.9 : 0;
+  const tx = gx + Math.sin(D.t * 0.8) * 5 + Math.sin(D.t * 4) * joy * 5;
+  const ty = Math.max(cam.y + 50, Math.min(gy, Math.abs(D.x - P.x) < 85 ? P.y - 126 : gy) + Math.sin(D.t * 1.3) * 4 - Math.abs(Math.sin(D.t * 4.2)) * joy * 10);
+  const px = D.x, py = D.y, k = 1 - Math.exp(-dt * (dashing ? 7.5 : 4.2));
+  D.x = lerp(D.x, tx, k); D.y = lerp(D.y, ty, k);
+  D.vx = dt > 0 ? (D.x - px) / dt : 0; D.vy = dt > 0 ? (D.y - py) / dt : 0;
+
+  const facing = dashing ? (P.denizDX && Math.abs(P.denizDX) > 0.1 ? Math.sign(P.denizDX) : P.f || 1) : guide ? Math.sign(D.suGosterO.x - D.x) || 1 : pointing ? Math.sign(pointX) || P.f || 1 : Math.abs(D.vx) > 20 ? Math.sign(D.vx) : P.f || 1;
   if (D.tt < 0 && facing !== D.face) { D.tt = 0; D.face0 = D.face; D.tTo = facing; }
   if (D.tt >= 0) { D.tt += dt / 0.34; if (D.tt >= 0.5) D.face = D.tTo; if (D.tt >= 1) D.tt = -1; }
   drTurnPose(D.tt, D.face0, D.face); D.f = D.face; D.ft = facing;
+
+  if (D.suDashT > 0) {
+    const spinProg = clamp(1 - (D.suDashT / 0.65), 0, 1);
+    D.spin = smooth(spinProg) * Math.PI * 2 * (D.face || 1);
+    if (Math.random() < dt * 26) {
+      D.iz.push({
+        x: D.x + (Math.random() - 0.5) * 14,
+        y: D.y + (Math.random() - 0.5) * 14,
+        life: 0.55, max: 0.55,
+        ph: Math.random() * 6.28,
+        col: Math.random() < 0.5 ? '#baffec' : '#ffd9fa'
+      });
+    }
+  } else {
+    D.spin = lerp(D.spin || 0, 0, 1 - Math.exp(-dt * 12));
+    if (Math.abs(D.spin) < 0.01) D.spin = 0;
+  }
+
   D.tilt = lerp(D.tilt, clamp(D.vy / 550, -0.25, 0.25) + (finalTarget ? Math.sin(INCI.t * 2.15) * joy * .16 : 0), 1 - Math.exp(-dt * 6));
-  D.flapRate = lerp(D.flapRate, 1.25 + clamp(Math.hypot(D.vx, D.vy) / 300, 0, 1) + joy * 1.4, k);
-  D.ph += dt * D.flapRate * Math.PI * 2; D.bob = Math.sin(D.ph) * 0.9; D.wingA = 0.82; D.glide = 0.27; D.wingSO = true; D.glowA = 0.32 + joy * 0.35;
-  D.spd = Math.hypot(D.vx, D.vy); D.mode = 'follow'; D.pose = 0; D.grip = 0; D.beckon = guide ? 0.65 : joy * (finalTarget ? .8 : .42); D.dz = lerp(D.dz, 1, k); D.stretch = 0;
-  D.lookX = lerp(D.lookX, guide ? 0.9 : 0.75, k); D.lookY = lerp(D.lookY, guide ? clamp((D.suGosterO.y - 42 - D.y) / 100, -0.55, 0.55) : idle ? 0.2 : clamp(P.vy / 250, -0.5, 0.5), k);
-  D.headTilt = lerp(D.headTilt, D.lookY * 0.2 - D.tilt * 0.25 + Math.sin(D.t * 1.7) * 0.018, k); D.headRoll = Math.sin(D.ph - 0.5) * 0.018;
+  D.flapRate = lerp(D.flapRate, 1.25 + clamp(Math.hypot(D.vx, D.vy) / 280, 0, 1) + joy * 1.8 + (dashing ? 2.5 : 0), k);
+  D.ph += dt * D.flapRate * Math.PI * 2; D.bob = Math.sin(D.ph) * 0.9; D.wingA = 0.82; D.glide = dashing ? 0.1 : 0.27; D.wingSO = true;
+  D.glowA = 0.32 + joy * 0.45;
+  D.spd = Math.hypot(D.vx, D.vy); D.mode = 'follow'; D.pose = 0; D.grip = 0;
+
+  D.beckon = guide ? 0.65 : pointing ? 0.95 : joy * (finalTarget ? .8 : .42);
+  D.dz = lerp(D.dz, 1, k); D.stretch = dashing ? 0.15 : 0;
+
+  D.lookX = lerp(D.lookX, guide ? 0.9 : pointing ? 1.0 : dashing ? 0.95 : 0.75, k);
+  D.lookY = lerp(D.lookY, guide ? clamp((D.suGosterO.y - 42 - D.y) / 100, -0.55, 0.55) : pointing ? clamp(pointY / 220, -0.6, 0.6) : dashing ? clamp(D.vy / 300, -0.5, 0.5) : clamp(P.vy / 250, -0.5, 0.5), k);
+  D.headTilt = lerp(D.headTilt, pointing ? (0.16 * Math.sin(D.t * 2.4)) : (D.lookY * 0.2 - D.tilt * 0.25 + Math.sin(D.t * 1.7) * 0.018), k);
+  D.headRoll = Math.sin(D.ph - 0.5) * 0.018;
+
+  if (pointing) {
+    D.suIsaretT = (D.suIsaretT || 0) + dt;
+    if (D.suIsaretT > 1.8) {
+      D.suIsaretT = 0;
+      drPulse(D.x + D.face * 18, D.y - 4, 32, 1.4);
+      if (pointDist > 110) {
+        for (let i = 0; i < 3; i++) {
+          D.iz.push({
+            x: D.x + D.face * (18 + i * 14),
+            y: D.y - 4 + (pointY / Math.max(1, pointDist)) * (i * 10),
+            life: 1.1, max: 1.1,
+            ph: i,
+            col: '#fff2a8'
+          });
+        }
+      }
+    }
+  } else {
+    D.suIsaretT = 0;
+  }
+
   D.blinkT -= dt; if (D.blinkT < -0.14) D.blinkT = 2.2 + Math.random() * 3;
-  D.exprT -= dt; if (celebrate || help || finalTarget) { D.expr = 'happy'; D.exprT = 0.25; } else if (D.exprT <= 0) D.expr = 'normal';
+  D.exprT -= dt;
+  if (celebrate || help || finalTarget || dashing) {
+    D.expr = 'happy'; D.exprT = 0.25;
+  } else if (pointing) {
+    D.expr = (Math.sin(D.t * 1.6) > 0.2) ? 'happy' : 'normal';
+  } else if (D.exprT <= 0) {
+    D.expr = 'normal';
+  }
+
   drSpring(D.sCr, -D.vx / 1800, 12, 0.5, dt); drSpring(D.sEr, -D.vy / 1600, 13, 0.5, dt);
-  drSpring(D.sTl, Math.sin(D.ph) * 0.12, 10, 0.5, dt); drSpring(D.sSq, 0, 14, 0.5, dt);
+  drSpring(D.sTl, Math.sin(D.ph) * 0.12, 10, 0.5, dt); drSpring(D.sSq, dashing ? 0.2 : 0, 14, 0.5, dt);
   let prev = drLocal(D.tailRX, 6); if (Math.hypot(prev.x - D.tail[0].x, prev.y - D.tail[0].y) > 70) drResetTail(); D.tail[0].x = prev.x; D.tail[0].y = prev.y;
   for (let i = 1; i < DR_TAIL_N; i++) {
     const u = i / (DR_TAIL_N - 1), a = Math.PI - 0.75 + u * 1.9 + Math.sin(D.ph * 0.85 - u * 4.4) * (0.18 + clamp(D.spd / 260, 0, 1) * 0.09);
@@ -2345,17 +2502,45 @@ function drDenizKanatResmi() {
   return drSuKanatC = c;
 }
 function drDenizKanat(x, far, tm) {
-  const phase = D.ph + (far ? 0.4 : 0), stroke = Math.sin(phase), sweep = -2.96 + stroke * 0.43;
-  const sc = far ? 0.75 : 1.02, c = drDenizKanatResmi();
-  x.save(); x.translate(far ? 1.5 : -2, far ? -6.5 : -5); x.rotate(sweep); x.scale(sc * (1 + Math.cos(phase) * 0.045), sc * (0.78 + 0.16 * (stroke + 1) * 0.5));
-  x.globalCompositeOperation = 'source-over'; x.globalAlpha = far ? 0.57 : 0.88; x.drawImage(c, -1.16, -13, c.width / 6, c.height / 6); x.restore();
+  const boost = (D.suDashT || 0) > 0 ? 0.22 : 0;
+  const phase = D.ph + (far ? 0.4 : 0), stroke = Math.sin(phase), sweep = -2.96 + stroke * (0.43 + boost);
+  const sc = (far ? 0.75 : 1.02) * (1 + boost * 0.15), c = drDenizKanatResmi();
+  x.save(); x.translate(far ? 1.5 : -2, far ? -6.5 : -5); x.rotate(sweep);
+  x.scale(sc * (1 + Math.cos(phase) * (0.045 + boost * 0.05)), sc * (0.78 + 0.16 * (stroke + 1) * 0.5 + boost * 0.4));
+  x.globalCompositeOperation = 'source-over'; x.globalAlpha = far ? (0.57 + boost * 0.2) : (0.88 + boost * 0.1);
+  x.drawImage(c, -1.16, -13, c.width / 6, c.height / 6); x.restore();
 }
+
+OLAY.on('denizHamle', () => {
+  if (BOLUM_NO !== 4) return; dragonInit();
+  D.suDashT = 0.65;
+  D.suTaklaDir = (P.denizDX && Math.abs(P.denizDX) > 0.1 ? Math.sign(P.denizDX) : (P.f || 1));
+  D.expr = 'happy'; D.exprT = 0.8;
+  D.sEr.v += 3.5; D.sCr.v += 2.8;
+  drSfx('dbl');
+  for (let i = 0; i < 6; i++) {
+    D.iz.push({
+      x: D.x + (Math.random() - 0.5) * 16,
+      y: D.y + (Math.random() - 0.5) * 16,
+      life: 0.6, max: 0.6,
+      ph: Math.random() * 6.28,
+      col: i % 2 ? '#baffec' : '#ffd9fa'
+    });
+  }
+});
 
 OLAY.on('denizati', e => {
   if (BOLUM_NO !== 4) return; dragonInit();
   const o = e && (e.o || e); D.suSevT = 2.6; D.suSevO = o; D.suGosterT = 0; D.suYardimT = 0;
   D.expr = 'happy'; D.exprT = 2.6; D.sEr.v += 2.8; D.sCr.v += 2.1; D.sTl.v += 2.2;
   for (let i = 0; i < 7; i++) { const a = i * 0.897, life = 0.65 + (i % 3) * 0.1; D.iz.push({ x: D.x + Math.cos(a) * 14, y: D.y + Math.sin(a) * 14, life, max: life, ph: i * 1.7, col: i % 2 ? '#ffda7d' : '#d6b3ff' }); }
+});
+
+OLAY.on('denizatiOyun', e => {
+  if (BOLUM_NO !== 4) return; dragonInit();
+  D.suSevT = 2.4; D.expr = 'happy'; D.exprT = 2.4;
+  D.sEr.v += 2.5; D.sCr.v += 2.2;
+  for (let i = 0; i < 5; i++) { const a = i * 1.25, life = 0.6; D.iz.push({ x: D.x + Math.cos(a) * 12, y: D.y + Math.sin(a) * 12, life, max: life, ph: i * 1.5, col: '#ffea9f' }); }
 });
 
 OLAY.on('denizatiYardim', e => {

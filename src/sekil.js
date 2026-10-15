@@ -11,7 +11,7 @@
    Pırıl: piril.js'te 'sekil' modu yoksa takim.js'in 'takim' modu (D.tkO = vekil nokta) kullanılır.
    Önek: skl* (sk* sarki.js'te dolu). */
 'use strict';
-const SKL_HAYVAN = ['tavsan', 'balina', 'fil', 'kus', 'ayicik', 'feza'];
+const SKL_HAYVAN = ['tavsan', 'balina', 'fil', 'kus', 'ayicik', 'kalp', 'yildiz', 'feza'];
 const SKL_N = 26;          // bulut başına kabarık daire sayısı (morf için sabit)
 const SKL_R = 108;         // bulut yarıçapı (dünya birimi; birim şekil uzayında 1)
 const SKL_YUK = 198;       // bulut merkezinin zeminden yüksekliği
@@ -23,6 +23,8 @@ const SKL_RENK = {
   fil: ['#ebe0ff', '#b09ad8', '#fdfaff', '#ffd08e'],
   kus: ['#ffeedb', '#e5ac98', '#fffbf3', '#ffc47a'],
   ayicik: ['#ffeed6', '#ddae8c', '#fffaf1', '#ffc47a'],
+  kalp: ['#ffe2ee', '#e098be', '#fff9fc', '#ff9ac0'],
+  yildiz: ['#fff4d2', '#ddb258', '#fffdf5', '#ffd766'],
   feza: ['#fff0e6', '#e3aeb0', '#fffbf7', '#ffcf8c'],
 };
 const SKL_GOK = ['#ff8a8a', '#ffb870', '#ffe07a', '#9be59a', '#8cc8ff', '#b59cff'];   // gökkuşağı bantları (pastel)
@@ -31,7 +33,7 @@ const SKL = { sira: null, soz1: false, soz2: false, soz3: false, akt: null, ptr:
 function sklListe(sira) {   // oturumda bir kez karışır: 1. yer 2 hayvan, 2. yer 2 hayvan + sürpriz (Feza)
   if (!SKL.sira) {
     const kar = x => { for (let i = x.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; const q = x[i]; x[i] = x[j]; x[j] = q; } return x; };
-    const gos = kar(['balina', 'fil']), dig = kar(['tavsan', 'kus', 'ayicik']);   // her yerde bir "gösterili" hayvan (gökkuşağı / çiçek)
+    const gos = kar(['balina', 'fil']), dig = kar(['tavsan', 'kus', 'ayicik', 'kalp', 'yildiz']);   // her yerde bir "gösterili" hayvan (gökkuşağı / çiçek)
     const a = kar([gos[0], dig[0]]).concat(kar([gos[1], dig[1]]));
     SKL.sira = a;
   }
@@ -107,6 +109,31 @@ function sklPoz(ad, t, a, out) {
     sklC(-0.3, 0.82, 0.22); sklC(0.3, 0.82, 0.22);
     out.yx = 0; out.yy = -0.58; out.ys = 0.9; out.yon = 0; out.mutlu = a > 0 && t > 2.4 ? 1 : 0;
     rot = ga * 0.09 * Math.sin(t * 2.4); dy = -ga * 0.05 * Math.abs(Math.sin(t * 4.8));
+  } else if (ad === 'kalp') {
+    const cir = Math.sin(t * 9.5), kn = -2.4 + ga * 0.7 * cir;
+    // Kalp ana kütlesi (üst iki yuvarlak lob + alt koni)
+    sklC(-0.35, -0.32, 0.44); sklC(0.35, -0.32, 0.44); sklC(0, -0.05, 0.52);
+    sklC(-0.25, 0.35, 0.38); sklC(0.25, 0.35, 0.38); sklC(0, 0.68, 0.28); sklC(0, 0.92, 0.16);
+    // İki tatlı bulut kanadı (canlandığında kanat çırpar)
+    sklZincir(-0.48, -0.15, kn - 0.2, -0.3, 3, 0.52, 0.22, 0.13);
+    sklZincir(0.48, -0.15, -Math.PI - kn + 0.2, 0.3, 3, 0.52, 0.22, 0.13);
+    out.yx = 0; out.yy = -0.05; out.ys = 0.85; out.yon = 0; out.mutlu = 1;
+    // Kalp atışı ve kanat salınımı
+    const nabiz = ga * Math.sin(t * 8) * 0.06;
+    dy = -ga * (0.12 + 0.08 * Math.sin(t * 3)); rot = ga * 0.06 * Math.sin(t * 2.5);
+    sx = 1 + nabiz; sy = 1 - nabiz;
+  } else if (ad === 'yildiz') {
+    const cir = Math.sin(t * 10), kn = -2.6 + ga * 0.65 * cir;
+    // Tombul 5 köşeli bulut yıldızı
+    sklC(0, 0, 0.52);
+    sklC(0, -0.82, 0.32); sklC(0.78, -0.26, 0.32); sklC(-0.78, -0.26, 0.32);
+    sklC(0.48, 0.66, 0.32); sklC(-0.48, 0.66, 0.32);
+    // İki minik peri bulut kanadı
+    sklZincir(-0.52, 0.05, kn, -0.2, 3, 0.46, 0.2, 0.12);
+    sklZincir(0.52, 0.05, -Math.PI - kn, 0.2, 3, 0.46, 0.2, 0.12);
+    out.yx = 0; out.yy = -0.02; out.ys = 0.82; out.yon = 0; out.mutlu = 1;
+    dy = -ga * (0.14 + 0.09 * Math.sin(t * 3.2)); rot = ga * 0.08 * Math.sin(t * 2);
+    const tw = ga * Math.sin(t * 6) * 0.05; sx = 1 + tw; sy = 1 - tw;
   } else {   // 'feza' (sürpriz): kocaman kafa, kabarık saç, iki kolla el sallar
     const w = ga * smooth(clamp(t / 0.6, 0, 1)), z = ga * Math.abs(Math.sin(t * 3.4));
     sklC(0, -0.56, 0.44); sklC(0, 0.12, 0.36); sklC(0, 0.38, 0.34);
@@ -203,7 +230,54 @@ function sklGuncelle(o, dt) {
   for (let i = 0; i < SKL_N; i++) { k.jv[i] += (-k.j[i] * 170 - k.jv[i] * 9) * dt; k.j[i] += k.jv[i] * dt; }
   k.vur = Math.max(0, k.vur - dt * 2.5);
   sklParcaGuncelle(o, dt);
-  for (let i = k.ucan.length - 1; i >= 0; i--) { const u = k.ucan[i]; u.t += dt; u.u += dt / 7.5; const hz = 1 + 1.6 * Math.max(0, 1 - u.u * 4); u.x += (40 + 30 * u.u) * hz * dt; u.y -= (40 + 40 * u.u) * hz * dt; if (u.u >= 1) k.ucan.splice(i, 1); }
+  for (let i = k.ucan.length - 1; i >= 0; i--) {
+    const u = k.ucan[i];
+    u.sure = (u.sure || 0) + dt;
+    u.t += dt;
+    u.u += dt / 7.5;
+    if (u.sure < 1.3) {
+      // 1. Aşama: Feza'ya veda selamı (tatlı el sallama, hafifçe yükselip süzülme)
+      const sT = u.sure / 1.3;
+      u.x += Math.sin(u.sure * 3.5) * 12 * dt;
+      u.y -= (22 + 16 * sT) * dt;
+      u.rot = Math.sin(u.sure * 7.5) * 0.14;   // neşeyle sağa sola sallanarak selam verir
+      u.sx = 1 + Math.sin(u.sure * 15) * 0.05;
+      u.sy = 1 - Math.sin(u.sure * 15) * 0.05;
+      if (Math.random() < dt * 9 && k.pk.length < 150) {
+        k.pk.push({ x: u.x + (Math.random() - 0.5) * 36, y: u.y - 12, vx: (Math.random() - 0.5) * 35, vy: -45 - Math.random() * 25, l: 0.8, m: 0.8, c: '#ffd56a', r: 3, tip: Math.random() < 0.5 ? 'yildiz' : 'kalp' });
+      }
+    } else if (u.sure < 2.5) {
+      // 2. Aşama: Akrobatik 360° takla (tam bir artistik somersault ve altın konfeti patlaması)
+      const ft = (u.sure - 1.3) / 1.2;
+      u.y -= (70 * Math.sin(ft * Math.PI) + 25) * dt;
+      u.x += (40 + 20 * ft) * dt;
+      u.rot = -Math.PI * 2 * smooth(ft);   // akrobatik geriye 360° tam takla
+      const sq = Math.sin(ft * Math.PI);
+      u.sx = 1 + 0.22 * sq;
+      u.sy = 1 - 0.16 * sq;
+      if (ft >= 0.48 && !u.taklaBurst) {
+        u.taklaBurst = true;
+        k.halka.push({ x: u.x, y: u.y, l: 0.55, l0: 0.55, b: 3.2 });
+        for (let q = 0; q < 18; q++) {
+          const ang = q * (Math.PI * 2 / 18), sp = 90 + Math.random() * 70;
+          k.pk.push({ x: u.x, y: u.y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - 25, l: 0.85, m: 0.85, c: SKL_GOK[q % 6], r: 3 + Math.random() * 2.5, tip: q % 2 === 0 ? 'yildiz' : null });
+        }
+      }
+    } else {
+      // 3. Aşama: Gökyüzünde süzülüş (doğrulur, yıldız tozu ve yumuşak bulut buharı bırakarak uzaklaşır)
+      u.rot = lerp(u.rot || 0, 0, dt * 6);
+      u.sx = lerp(u.sx || 1, 1, dt * 6);
+      u.sy = lerp(u.sy || 1, 1, dt * 6);
+      const hz = 1 + 1.6 * Math.max(0, 1 - u.u * 4);
+      u.x += (48 + 35 * u.u) * hz * dt + Math.cos(u.t * 2.4) * 18 * dt;
+      u.y -= (55 + 65 * u.u) * hz * dt;
+      if (Math.random() < dt * 18 && k.pk.length < 150) {
+        const tip = Math.random() < 0.45 ? 'yildiz' : (u.ad === 'kalp' && Math.random() < 0.5 ? 'kalp' : null);
+        k.pk.push({ x: u.x + (Math.random() - 0.5) * 28, y: u.y + (Math.random() - 0.5) * 20, vx: -25 - Math.random() * 25, vy: 15 + Math.random() * 20, l: 0.7, m: 0.7, c: '#fff6c2', r: 2.5 + Math.random() * 2, tip });
+      }
+    }
+    if (u.u >= 1) k.ucan.splice(i, 1);
+  }
   // gizlenen göz (yalnız şekilsizken): "biri saklanıyor"
   if (k.pv < 0.45 && (k.durum === 'bekle' || k.durum === 'ov')) {
     if (k.goz) { k.goz.t += dt; if (k.goz.t > 1.6) k.goz = null; }
@@ -269,7 +343,7 @@ function sklCanlan(o) {
 }
 function sklUcur(o) {   // canlı hayvan gökyüzüne süzülür, yerine yeni bulut gelir
   const k = o.skl;
-  k.ucan.push({ ad: sklHayvan(o), x: k.cx, y: k.cy, t: k.t + 100, u: 0, s: SKL_R, d: k.d.slice() });
+  k.ucan.push({ ad: sklHayvan(o), x: k.cx, y: k.cy, t: k.t + 100, u: 0, s: SKL_R, d: k.d.slice(), sure: 0, rot: 0, sx: 1, sy: 1, taklaBurst: false });
   k.i++; k.p = 0; k.pv = 0; k.gor = 0;
   if (!sklPirilVar()) D.tkKut = false; else D.sklKut = false;
   sklDur(o, 'ara');
@@ -299,6 +373,8 @@ function sklCanliGuncelle(o, dt) {   // hayvana özel etkiler (dünya koordinat�
     k.onceH = h;
   } else if (ad === 'kus' && SKL_POZ.mutlu > 0.5 && pr(0.42)) sklKalp(k, yx + SKL_R * 0.4, yy - 6, 'nota', 1);   // şarkı söyler
   else if (ad === 'ayicik' && t > 2.4 && pr(0.5)) sklKalp(k, yx + (Math.random() - 0.5) * 40, yy - SKL_R * 0.6, 'kalp', 1);   // sarılma kalpleri
+  else if (ad === 'kalp' && pr(0.34)) sklKalp(k, yx + (Math.random() - 0.5) * 36, yy - SKL_R * 0.45, 'kalp', 2);   // kanatlanan kalp sevinç saçıyor
+  else if (ad === 'yildiz' && pr(0.3)) sklKalp(k, yx + (Math.random() - 0.5) * 44, yy - SKL_R * 0.5, 'yildiz', 2);   // parıldayan yıldız ışıldıyor
   else if (ad === 'feza' && pr(0.38)) sklKalp(k, yx + (Math.random() - 0.5) * SKL_R * 1.4, yy - SKL_R * 0.4, Math.random() < 0.5 ? 'kalp' : 'yildiz', 1);
 }
 const SKL_KALP = ['#ff8fb8', '#ff9fd0', '#ffb3a0'], SKL_NOTA = ['#9f86ff', '#ff8fb8', '#6fc3ff', '#ffb35e'];
@@ -324,15 +400,21 @@ function sklParcaGuncelle(o, dt) {
   if (k.pk.length > 160) k.pk.splice(0, k.pk.length - 160);
 }
 // ovma/dokunma etkisi: (ux,uy) birim uzayda; g = güç (dokunuş 1, ovma küçük)
+const SKL_PERI = ['#fffde6', '#ffd2ea', '#c4eaff', '#e6caff', '#ffe8b4'];
 function sklOvEtki(o, ux, uy, gg) {
   const k = o.skl;
-  for (let i = 0; i < SKL_N; i++) { const b = k.b[i], d = Math.hypot(b.x - ux, b.y - uy); if (d < 0.9) k.jv[i] += (1 - d / 0.9) * 2.4 * gg; }
+  for (let i = 0; i < SKL_N; i++) { const b = k.b[i], d = Math.hypot(b.x - ux, b.y - uy); if (d < 0.9) k.jv[i] += (1 - d / 0.9) * 2.8 * gg; }
   const wx = k.cx + ux * SKL_R, wy = k.cy + uy * SKL_R;
-  const n = Math.round(4 + 4 * gg);
-  for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, s = 40 + Math.random() * 110; k.pk.push({ x: wx, y: wy, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 30, l: 0.6 + Math.random() * 0.5, m: 1.1, c: i % 3 ? '#fff4c8' : (i % 2 ? '#ffc9e0' : '#c9d8ff'), r: 2.5 + Math.random() * 2.5 }); }
-  if (k.pof.length < 14) k.pof.push({ x: wx + (Math.random() - 0.5) * 20, y: wy, r: 10 + 10 * gg, l: 0.55, m: 0.55 });
-  if (gg >= 1 && k.halka.length < 6) k.halka.push({ x: wx, y: wy, l: 0.5 });
-  k.vur = Math.min(1, k.vur + 0.4 * gg);
+  const n = Math.round(5 + 6 * gg);
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * 6.283, s = 40 + Math.random() * 120;
+    const periCol = SKL_PERI[Math.floor(Math.random() * SKL_PERI.length)];
+    const tip = (gg >= 0.7 && Math.random() < 0.35) ? 'yildiz' : null;
+    k.pk.push({ x: wx, y: wy, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 32, l: 0.65 + Math.random() * 0.5, m: 1.15, c: periCol, r: 2.6 + Math.random() * 2.8, tip });
+  }
+  if (k.pof.length < 16) k.pof.push({ x: wx + (Math.random() - 0.5) * 20, y: wy, r: 12 + 12 * gg, l: 0.6, m: 0.6 });
+  if (gg >= 0.8 && k.halka.length < 6) k.halka.push({ x: wx, y: wy, l: 0.52 });
+  k.vur = Math.min(1, k.vur + 0.45 * gg);
 }
 function sklIlerle(o, miktar, ux, uy, gg) {   // girdi → ilerleme (+ ses, etki)
   const k = o.skl;
@@ -440,6 +522,8 @@ function sklYuzCiz(cx, cy, R, a, ad, al, tm, ph) {
   if (ad === 'tavsan') { g.fillStyle = '#ff9fbf'; g.beginPath(); g.ellipse(mx, y + 0.07 * s, 0.03 * s, 0.022 * s, 0, 0, 6.283); g.fill(); }
   else if (ad === 'ayicik') { g.fillStyle = '#7a5466'; g.beginPath(); g.ellipse(mx, y + 0.17 * s, 0.055 * s, 0.038 * s, 0, 0, 6.283); g.fill(); }
   else if (ad === 'kus') { g.fillStyle = '#ffb35e'; g.beginPath(); g.moveTo(x + 0.27 * s, y + 0.02 * s); g.lineTo(x + 0.46 * s, y + 0.08 * s); g.lineTo(x + 0.27 * s, y + 0.14 * s); g.closePath(); g.fill(); }
+  else if (ad === 'kalp') { g.fillStyle = '#ff6f98'; g.beginPath(); g.arc(mx, y + 0.05 * s, 0.025 * s, 0, 6.283); g.fill(); }
+  else if (ad === 'yildiz') { g.fillStyle = '#ffbe3b'; g.beginPath(); g.arc(mx, y + 0.05 * s, 0.028 * s, 0, 6.283); g.fill(); }
   g.restore(); g.globalAlpha = 1;
 }
 // a dizisini doldurur: şekilsiz (b) ile hayvan pozu (SKL_POZ) arasında, her daire kendi gecikmesiyle; gor: belirme (0..1)
@@ -488,6 +572,71 @@ function sklCicekCiz(o, tm) {
     if (c.t < 1.2) { g.globalCompositeOperation = 'lighter'; dglow(c.c, c.x, by - h, 26, (1 - c.t / 1.2) * 0.6); g.globalCompositeOperation = 'source-over'; }
   }
 }
+function sklYildizSekilCiz(cx, cy, r) {
+  g.beginPath();
+  for (let j = 0; j < 10; j++) {
+    const an = -1.5708 + j * 0.6283, rr = j % 2 ? r * 0.44 : r;
+    const px = cx + Math.cos(an) * rr, py = cy + Math.sin(an) * rr;
+    if (j === 0) g.moveTo(px, py); else g.lineTo(px, py);
+  }
+  g.closePath();
+  g.fill();
+  g.stroke();
+}
+function sklAltinYildizCemberi(k, tm, katman) {
+  if (k.durum !== 'canlan') return;
+  const belir = smooth(clamp(k.t / 0.65, 0, 1));
+  const son = clamp((5.2 - k.t) / 0.8, 0, 1);
+  const al = belir * son;
+  if (al <= 0.02) return;
+  const Rx = SKL_R * (1.35 + 0.06 * Math.sin(k.t * 3.2));
+  const Ry = SKL_R * (0.42 + 0.02 * Math.sin(k.t * 3.2));
+  const tilt = -0.18;
+  const cx = k.cx, cy = k.cy + 10;
+  const donme = tm * 2.2;
+  const nYildiz = 7;
+  g.save();
+  g.translate(cx, cy);
+  g.rotate(tilt);
+  if (katman === 0) {
+    g.strokeStyle = 'rgba(255, 228, 130, ' + (0.42 * al).toFixed(3) + ')';
+    g.lineWidth = 3.2;
+    g.beginPath();
+    g.ellipse(0, 0, Rx * belir, Ry * belir, 0, Math.PI, 2 * Math.PI);
+    g.stroke();
+  } else {
+    g.strokeStyle = 'rgba(255, 242, 160, ' + (0.75 * al).toFixed(3) + ')';
+    g.lineWidth = 4.2;
+    g.beginPath();
+    g.ellipse(0, 0, Rx * belir, Ry * belir, 0, 0, Math.PI);
+    g.stroke();
+    g.strokeStyle = 'rgba(255, 255, 255, ' + (0.85 * al).toFixed(3) + ')';
+    g.lineWidth = 1.8;
+    g.beginPath();
+    g.ellipse(0, 0, Rx * belir, Ry * belir, 0, 0, Math.PI);
+    g.stroke();
+  }
+  for (let i = 0; i < nYildiz; i++) {
+    const a = donme + i * (Math.PI * 2 / nYildiz);
+    const sn = Math.sin(a);
+    if (katman === 0 && sn >= 0) continue;
+    if (katman === 1 && sn < 0) continue;
+    const sx = Math.cos(a) * Rx * belir;
+    const sy = sn * Ry * belir;
+    const derinlik = (0.78 + 0.32 * Math.max(0, sn)) * belir;
+    const tw = 1 + 0.22 * Math.sin(tm * 9 + i * 1.8);
+    const r = 7.5 * derinlik * tw;
+    g.globalCompositeOperation = 'lighter';
+    dglow('#ffd700', sx, sy, r * 3.2, 0.58 * al);
+    dglow('#ffffff', sx, sy, r * 1.4, 0.75 * al);
+    g.globalCompositeOperation = 'source-over';
+    g.fillStyle = '#ffdf5d';
+    g.strokeStyle = 'rgba(255, 255, 255, ' + (0.95 * al).toFixed(3) + ')';
+    g.lineWidth = 1.5;
+    sklYildizSekilCiz(sx, sy, r);
+  }
+  g.restore();
+}
 function sklCiz(o, tm) {
   const k = o.skl;
   sklCicekCiz(o, tm);
@@ -496,10 +645,20 @@ function sklCiz(o, tm) {
     sklPoz(u.ad, u.t, 1, SKL_POZ);
     const er = clamp((u.u - 0.7) / 0.3, 0, 1);
     for (let i = 0; i < SKL_N; i++) { const q = SKL_POZ[i], c = SKL_CIZ[i]; c.x = q.x; c.y = q.y; c.r = q.r * (er > 0 ? smooth(clamp(1 - er * 1.6 + u.d[i] * 0.6, 0, 1)) : 1); }
-    SKL_CIZ.yx = SKL_POZ.yx; SKL_CIZ.yy = SKL_POZ.yy; SKL_CIZ.ys = SKL_POZ.ys; SKL_CIZ.yon = SKL_POZ.yon; SKL_CIZ.kvN = SKL_POZ.kvN; SKL_CIZ.kv.set(SKL_POZ.kv); SKL_CIZ.rot = SKL_POZ.rot; SKL_CIZ.mutlu = SKL_POZ.mutlu;
+    SKL_CIZ.yx = SKL_POZ.yx; SKL_CIZ.yy = SKL_POZ.yy; SKL_CIZ.ys = SKL_POZ.ys; SKL_CIZ.yon = SKL_POZ.yon; SKL_CIZ.kvN = SKL_POZ.kvN; SKL_CIZ.kv.set(SKL_POZ.kv); SKL_CIZ.rot = SKL_POZ.rot; SKL_CIZ.mutlu = 1;
     const R = u.s * lerp(1, 0.55, smooth(u.u));
-    sklBulutCiz(u.x, u.y, R, SKL_CIZ, SKL_N, sklRenkler(u.ad, 1), 0, tm);
-    sklYuzCiz(u.x, u.y, R, SKL_CIZ, u.ad, 1 - smooth(clamp(er * 2, 0, 1)), tm, 1.3);
+    g.save();
+    g.translate(u.x, u.y);
+    if (u.rot) g.rotate(u.rot);
+    if (u.sx || u.sy) g.scale(u.sx || 1, u.sy || 1);
+    // Göğe süzülürken etrafındaki kutsal altın-şeftali ışıltı hâlesi
+    g.globalCompositeOperation = 'lighter';
+    dglow('#ffe29a', 0, 0, R * 2.4, 0.28 * (1 - er));
+    dglow('#ffc0d8', 0, 0, R * 1.6, 0.18 * (1 - er));
+    g.globalCompositeOperation = 'source-over';
+    sklBulutCiz(0, 0, R, SKL_CIZ, SKL_N, sklRenkler(u.ad, 1), 0.12 * (1 - er), tm);
+    sklYuzCiz(0, 0, R, SKL_CIZ, u.ad, 1 - smooth(clamp(er * 2, 0, 1)), tm, 1.3);
+    g.restore();
   }
   if (k.durum === 'bitti' || (k.durum === 'ara')) return;
   const ad = sklHayvan(o), canli = k.durum === 'canlan';
@@ -513,10 +672,12 @@ function sklCiz(o, tm) {
   dglow('#fff3e0', k.cx, k.cy, SKL_R * 2.6, 0.4 + 0.08 * Math.sin(k.ph * 1.7));   // arkasında sıcak hale (fondan ayrışır)
   g.globalCompositeOperation = 'lighter'; dglow('#ffc8a0', k.cx, k.cy, SKL_R * 2.2, 0.12 + 0.06 * Math.sin(k.ph * 1.7)); g.globalCompositeOperation = 'source-over';
   const isik = canli ? 0.15 * (1 - clamp(k.t / 1.5, 0, 1)) + 0.05 : (0.08 + 0.07 * Math.sin(k.ph * 2.1)) * (1 - k.pv * 0.5) + k.vur * 0.12;
+  if (canli) sklAltinYildizCemberi(k, tm, 0);
   sklBulutCiz(k.cx, k.cy, R, a, SKL_N, sklRenkler(ad, canli ? 1 : smooth(k.pv)), isik, tm);
   const yuzA = canli ? 1 : smooth(clamp((k.pv - 0.72) / 0.28, 0, 1));
   if (k.kikir > 0 && canli) a.mutlu = 1;   // dokununca kıkırdar
   sklYuzCiz(k.cx, k.cy, R, a, ad, yuzA, tm, k.ph);
+  if (canli) sklAltinYildizCemberi(k, tm, 1);
   if (k.goz && yuzA < 0.05) sklGozCiz(k);
 }
 function sklGozCiz(k) {   // bulutun içinden bakan iki küçük göz (belirir, bir kez kırpar, kaybolur)
@@ -623,5 +784,13 @@ function sklDetay(a, ad) {
   else if (ad === 'balina') {   // karın çizgileri
     g.strokeStyle = 'rgba(150,140,210,0.3)'; g.lineWidth = 0.025;
     for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(0.05 + i * 0.08, 0.5 + i * 0.07); g.quadraticCurveTo(0.45, 0.62 + i * 0.05, 0.8, 0.42 + i * 0.03); g.stroke(); }
+  } else if (ad === 'kalp') {
+    // Kalbin göğsünde sıcak ışıltı yayı
+    g.strokeStyle = 'rgba(255,255,255,0.7)'; g.lineWidth = 0.03;
+    g.beginPath(); g.arc(0, 0.05, 0.22, 0.2, Math.PI - 0.2); g.stroke();
+  } else if (ad === 'yildiz') {
+    // Yıldızın merkezinde sıcak altın çekirdek halkası
+    g.strokeStyle = 'rgba(255,248,180,0.75)'; g.lineWidth = 0.032;
+    g.beginPath(); g.arc(0, 0.02, 0.2, 0, 6.283); g.stroke();
   }
 }

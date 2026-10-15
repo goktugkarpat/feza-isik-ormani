@@ -336,6 +336,11 @@ function pfParcaGuncelle(dt) {
     else if (q.tip === 2) { q.vx *= Math.exp(-dt * 1.4); q.vy = q.vy * Math.exp(-dt * 1.8) + 70 * dt; q.vx += Math.sin(q.ph * 4) * 60 * dt; q.rot += q.vr * dt; }
     else if (q.tip === 4) { q.vx = q.vx * Math.exp(-dt * 2) + Math.cos(q.ph * 5) * 50 * dt; q.vy = lerp(q.vy, -46, 1 - Math.exp(-dt * 3)); }
     else if (q.tip === 5) { q.vx *= Math.exp(-dt * 1.6); q.vy = q.vy * Math.exp(-dt * 1.6) - 14 * dt; q.rot += q.vr * dt; }
+    else if (q.tip === 6) {   // feather loft: havada süzülen minik tüy (hava yastığı salınımı, çok yavaş süzülüş)
+      q.vx = q.vx * Math.exp(-dt * 1.8) + Math.sin(q.ph * 3.6) * 36 * dt;
+      q.vy = lerp(q.vy, 18, 1 - Math.exp(-dt * 2.2));
+      q.rot = Math.sin(q.ph * 2.6) * 0.85 + q.vr * 0.2;
+    }
     else { q.vx *= Math.exp(-dt * 4); q.vy *= Math.exp(-dt * 4); q.vy -= 8 * dt; }
     q.x += q.vx * dt; q.y += q.vy * dt;
   }
@@ -366,6 +371,37 @@ function pfParcaCiz() {
       g.beginPath();
       for (let k = 0; k <= 16; k++) { const th = q.rot + k * 0.42 * q.col, rr = s * 0.42 * (1 - k / 19); const X = q.x + Math.cos(th) * rr, Y = q.y + Math.sin(th) * rr * 0.8; if (k) g.lineTo(X, Y); else g.moveTo(X, Y); }
       g.stroke();
+    } else if (q.tip === 6) {   // feather loft: peluş minik tüy ve ışık tozu süzülüşü
+      const s = q.s * Math.min(1, (q.max - q.life) * 5) * (0.88 + 0.12 * Math.sin(q.ph * 6));
+      const al = Math.min(1, a * 2.2) * Math.min(1, (q.max - q.life) * 4);
+      g.save(); g.translate(q.x, q.y); g.rotate(q.rot);
+      const roll = 0.42 + 0.58 * Math.abs(Math.cos(q.ph * 3.0));
+      g.scale(1, roll);
+      g.globalAlpha = al * 0.92;
+      g.fillStyle = q.col || '#fff4f8';
+      g.beginPath();
+      g.ellipse(0, 0, s * 1.6, s * 0.72, -0.2, 0, 6.283);
+      g.fill();
+      g.strokeStyle = '#ffffff';
+      g.lineWidth = Math.max(0.8, s * 0.14);
+      g.beginPath();
+      g.moveTo(-s * 1.4, s * 0.2);
+      g.quadraticCurveTo(0, -s * 0.1, s * 1.4, -s * 0.25);
+      g.stroke();
+      g.strokeStyle = q.col || '#fff4f8';
+      g.lineWidth = Math.max(0.6, s * 0.1);
+      for (let b = -3; b <= 3; b++) {
+        const bx = b * s * 0.32, by = -b * s * 0.05;
+        g.beginPath(); g.moveTo(bx, by); g.lineTo(bx - s * 0.28, by - s * 0.45); g.stroke();
+        g.beginPath(); g.moveTo(bx, by); g.lineTo(bx + s * 0.24, by + s * 0.4); g.stroke();
+      }
+      g.restore();
+      g.globalCompositeOperation = 'lighter';
+      dglow(q.col || '#ffffff', q.x, q.y, s * 2.4, al * 0.38);
+      if (Math.sin(q.ph * 7) > 0.65) {
+        dglow('#ffffff', q.x, q.y, s * 1.2, al * 0.75);
+      }
+      g.globalCompositeOperation = 'source-over';
     } else if (q.tip === 2) {
       const spr = pfYaprak(q.col), s = q.s;
       g.globalAlpha = Math.min(1, a * 2.5);
@@ -843,7 +879,13 @@ function pfKarinIsik2(o, tm, cy) {   // Bölüm 2: sönükken soluk mavi-mor kar
       dglow('#cfd8ff', o.x, by, 20, 0.45); dglow('#f4f0ff', o.x, by, 6, 0.8);
       dglow('#cfd8ff', o.x, by + 16, 12, 0.35 * (1 - b)); dglow('#cfd8ff', o.x, by + 28, 8, 0.2 * (1 - b));
     }
-  } else if (p.durum !== 'uyaniyor' || p.bloom > 0 || (o.sarkiIsik || 0) > 0.05) {
+  } else if (p.durum === 'uyaniyor') {
+    const t = p.uT || 0, prep = smooth(clamp(t / 0.92, 0, 1)), bloom = smooth(clamp((t - 0.92) / 0.5, 0, 1));
+    const rad = 34 + prep * 26 + bloom * 40, a = 0.2 + prep * 0.28 + bloom * 0.6;
+    dglow(p.pal.i, o.x, cy, rad, a);
+    dglow('#ffe9a8', o.x, cy, rad * 0.5, a * 0.75);
+    if (bloom > 0.01) dglow('#ffffff', o.x, cy, 14, bloom * 0.9);
+  } else if (p.bloom > 0 || (o.sarkiIsik || 0) > 0.05) {
     const b = Math.max(smooth(clamp(p.bloom, 0, 1)), o.sarkiIsik || 0), r = 0.5 + 0.5 * Math.sin(tm * 3 + o.x * 0.013);
     dglow(p.pal.i, o.x, cy, 54 + 12 * pu, (0.3 + 0.12 * pu) * b);
     dglow('#ffe9a8', o.x, cy, 24 + 4 * r, 0.3 * b);
@@ -872,10 +914,19 @@ function pfKarinIsik(o, tm) {
       dglow('#ffd9a0', o.x, by, 20, 0.5); dglow('#fff3d6', o.x, by, 6, 0.8);   // sıcak, küçük
       dglow('#fff2b8', o.x, by + 16, 12, 0.35 * (1 - b)); dglow('#fff2b8', o.x, by + 28, 8, 0.2 * (1 - b));
     }
-  } else if (p.durum !== 'uyaniyor' || p.bloom > 0 || (o.sarkiIsik || 0) > 0.05) {
+  } else if (p.durum === 'uyaniyor') {
+    // uyanışta karnın sıcak nefesle canlanıp açılması
+    const t = p.uT || 0, prep = smooth(clamp(t / 0.92, 0, 1)), bloom = smooth(clamp((t - 0.92) / 0.5, 0, 1));
+    const rad = 30 + prep * 25 + bloom * 35, a = 0.16 + prep * 0.26 + bloom * 0.58;
+    dglow(p.pal.i, o.x, cy, rad, a);
+    dglow('#fffbe6', o.x, cy, rad * 0.45, a * 0.72);
+    if (bloom > 0.01) dglow('#ffffff', o.x, cy, 13, bloom * 0.85);
+  } else if (p.bloom > 0 || (o.sarkiIsik || 0) > 0.05) {
     const b = Math.max(smooth(clamp(p.bloom, 0, 1)), o.sarkiIsik || 0), pu = 0.5 + 0.5 * Math.sin(tm * 2.2 + o.x * 0.01);
-    dglow(p.pal.i, o.x, cy, 48 + 10 * pu, (0.26 + 0.12 * pu) * b);
-    dglow('#fffbe6', o.x, cy, 20, 0.35 * b);
+    const pul = 0.5 + 0.5 * Math.sin(tm * 3.0 + (p.sira || 0) * 0.7);
+    dglow(p.pal.i, o.x, cy, 50 + 14 * pu, (0.32 + 0.14 * pu) * b);
+    dglow('#fffbe6', o.x, cy, 22 + 6 * pul, 0.42 * b);
+    dglow('#ffffff', o.x, cy, 9, 0.26 * b);
   }
   g.globalCompositeOperation = 'source-over';
 }
@@ -948,16 +999,36 @@ function pfUyanisAnim(o, p, dt) {
     if (!p.hapsu) {
       p.hapsu = true; p.sqH = 0; p.rot = 0; pfZipla(p, 9);
       const hx = o.x + f * 22, hy = o.y - (o.tur === 'basamak' ? PF_BAS_H * p.boy + 30 * (1 - p.boy) : 24) + 4;
-      pfPirilti(hx, hy, 14, [p.pal.i, '#ffffff', p.pal.a, '#fff3b0'], 230, 0.9, 10, f > 0 ? 0 : Math.PI, 1.3);
-      for (let i = 0; i < 4; i++) pfParca(3, hx + f * i * 8, hy, f * (90 + i * 50), (Math.random() - 0.5) * 40, 0.6, 10 + i * 3, p.pal.i);
-      burst(o.x, o.y - 24, 10, [p.pal.i, p.pal.a], 150, 1.0, 6);
+      pfPirilti(hx, hy, 16, [p.pal.i, '#ffffff', p.pal.a, '#fff3b0'], 240, 1.2, 10, f > 0 ? 0 : Math.PI, 1.3);
+      for (let i = 0; i < 4; i++) pfParca(3, hx + f * i * 8, hy, f * (90 + i * 50), (Math.random() - 0.5) * 40, 0.7, 10 + i * 3, p.pal.i);
+      // feather loft: havada yavaşça süzülen minik tüy ve ışık tozları
+      for (let i = 0; i < 12; i++) {
+        const fa = (f > 0 ? 0 : Math.PI) + (Math.random() - 0.5) * 1.5;
+        const fSp = 50 + Math.random() * 100;
+        const fCol = i % 3 === 0 ? '#ffffff' : (i % 2 === 0 ? p.pal.l : p.pal.i);
+        pfParca(6, hx + (Math.random() - 0.5) * 12, hy + (Math.random() - 0.5) * 10, Math.cos(fa) * fSp, Math.sin(fa) * fSp - 35, 2.8 + Math.random() * 1.2, 5 + Math.random() * 3.5, fCol);
+      }
+      for (let i = 0; i < 10; i++) {
+        const da = Math.random() * 6.283, dSp = 30 + Math.random() * 65;
+        pfParca(0, hx, hy, Math.cos(da) * dSp, Math.sin(da) * dSp - 25, 2.2 + Math.random() * 0.9, 4 + Math.random() * 4, i % 2 ? '#ffe6a0' : '#ffffff');
+      }
+      burst(o.x, o.y - 24, 12, [p.pal.i, p.pal.a, '#fff8e8'], 160, 1.1, 7);
       if (typeof AU !== 'undefined') AU.sfx('hapsu', 1);
     }
     p.bloom = smooth(Math.min(1, (t - 0.92) / 0.5));
     if (o.tur === 'yol' || p.sessiz) { const k = clamp((t - 0.92) / 0.6, 0, 1); p.olc = lerp(1, PF_OLC, smooth(k)) + 0.07 * Math.sin(Math.PI * clamp(k * 1.7, 0, 1)) * (1 - k); }
     if (t < 1.05) { p.goz = 'sik'; p.agiz = 'hapsu'; }
     else { p.goz = t < 1.5 ? 'mutlu' : 'acik'; p.agiz = 'acik'; p.agizB = 0.6; p.pati = lerp(p.pati, 1, 1 - Math.exp(-dt * 10)); p.patiS += dt * 14; }
-    if (t > 1.1 && !p.sevinc && o.tur !== 'basamak') { p.sevinc = true; p.jv = -260; }
+    if (t > 1.08 && !p.sevinc && o.tur !== 'basamak') { p.sevinc = true; p.jv = -320; }
+    if (p.sevinc && t >= 1.08 && t <= 1.65 && o.tur !== 'basamak') {
+      const ku = (t - 1.08) / 0.57;
+      p.rot = -f * Math.sin(ku * Math.PI) * Math.PI * 2;
+      p.sqH = 0.16 * Math.sin(ku * Math.PI);
+      p.goz = 'mutlu'; p.agiz = 'gulus';
+      if (Math.random() < dt * 26) {
+        pfParca(0, o.x + (Math.random() - 0.5) * 18, o.y + p.jy - 16, (Math.random() - 0.5) * 44, -20 - Math.random() * 26, 0.7, 5 + Math.random() * 3, p.pal.i);
+      }
+    }
   }
   // basamak: Feza'nın altında uzar (onu yukarı taşır)
   if (o.tur === 'basamak' && !p.sessiz) pfBasamakBoy(o, p, smooth(clamp((t - 0.12) / 0.7, 0, 1)));
@@ -989,10 +1060,19 @@ function pfTakip(o, p, dt) {
   let tx, ty, yer = true, bos = false;
   const bekle = P.idle > 0.8 && P.ground && P.fade <= 0;
   const slot = pfSlotBul(i);
-  if (slot) { tx = slot.x; ty = slot.y; }
+  if (slot) {
+    tx = slot.x; ty = slot.y;
+    if (!p.sihir) {
+      // Feza'yı takip ederken aralarındaki mesafenin organik nefes alma gibi esnemesi
+      const breath = Math.sin(now * 1.8 + i * 1.35) * (7 + (i % 3) * 3);
+      const stretch = Math.min(18, Math.abs(P.vx) * 0.05) * (P.f || 1);
+      tx += breath - stretch;
+    }
+  }
   else if (p.sihir) { tx = p.aex; ty = p.aey; }
   else {   // uygun yer yok: olduğu yerde bekler — ama yalnız yerdeyse; değilse en yakın zemine (ya da Feza'nın yanına) süzülür
     tx = o.x; ty = p.yt;
+
     if (pfYerBul(o.x, p.yt, 8) === null && !pfUstteCisim(o.x, p.yt)) {
       const yy = pfZeminAlti(o.x, p.yt);
       if (yy !== null && yy - p.yt < 400) ty = yy;
@@ -1294,16 +1374,18 @@ function pfSlotHesapla(dt) {
     let arka = 0, on = 0;
     for (let i = 0; i < n && yakinN < PF_YAKIN_N; i++) {
       const s = PF_SLOTLAR[i];
+      const breathOfs = Math.sin(now * 1.6 + i * 1.2) * 5;
       for (let deneme = 0; deneme < 4 && !s.var; deneme++) {
         const onde = (i % 2 === 1) !== (deneme % 2 === 1), k = (onde ? on : arka) + (deneme >> 1);
         if (k > 2) continue;
-        const sx = P.x + (onde ? 1 : -1) * P.f * (54 + k * 44) * yakin, yy = pfYerBul(sx, P.y, 24);
+        const sx = P.x + (onde ? 1 : -1) * P.f * (54 + k * 44 + breathOfs) * yakin, yy = pfYerBul(sx, P.y, 24);
         if (yy !== null && pfYerUygun(sx, yy, n)) { s.x = sx; s.y = yy; s.var = true; s.yakin = true; yakinN++; if (onde) on++; else arka++; }
       }
     }
   }
-  // geri kalanlar: iz boyunca, sırayla
-  let dMin = 60, yakinIz = yakinN, gorunur = yakinN;   // gorunur: ekranda Feza'nın yakınında kalanlar (en çok PF_GORUNUR_N)
+  // geri kalanlar: iz boyunca, sırayla (organik esneme ile nefes alan mesafe)
+  const breathDist = Math.sin(now * 1.5) * 6;   // (i henüz tanımlı değil: nefes tüm iz için ortak)
+  let dMin = 60 + breathDist, yakinIz = yakinN, gorunur = yakinN;   // gorunur: ekranda Feza'nın yakınında kalanlar (en çok PF_GORUNUR_N)
   let i = 0;
   const sonrakiBos = () => { while (i < n && PF_SLOTLAR[i].var) i++; return i < n; };
   if (sonrakiBos()) pfIzTara((x, y, d) => {
@@ -1555,7 +1637,7 @@ function pfSahne(F) {
   }
   for (let j = 0; yer.length < n; j++) yer.push({ x: clamp(fx + (j % 2 ? -1 : 1) * (G0 + 14 + j * 9), L, R), arka: 1 });   // çok dar: (olmamalı)
   yer.sort((a, b) => a.x - b.x);
-  F.yer = yer.map(q => ({ x: q.x, y: pfYerBul(q.x, y, 30) ?? y, sira: 0, derin: 0, arka: q.arka }));
+  F.yer = yer.map(q => { const yb = pfYerBul(q.x, y, 30); return { x: q.x, y: yb !== null ? yb : y, sira: 0, derin: 0, arka: q.arka }; });
   const uz = F.yer.slice().sort((a, b) => (a.arka - b.arka) || (Math.abs(a.x - fx) - Math.abs(b.x - fx)));
   // hafif yay: Feza'nın yanındakiler önde, dıştakiler azıcık geride; arka sıra belirgin geride ve küçük (yalnız çizim; zemin aynı)
   const yanN = Math.max(1, Math.max(nL, nR) - 1);

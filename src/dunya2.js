@@ -220,6 +220,7 @@ const DN2_AUR = [
   { c0: '#4cffd2', c1: '#5a7cff', u0: 0.12, u1: 0.74, y: 0.27, h: 0.36, ph: 0, sp: 0.17, a: 1 },
   { c0: '#a98aff', c1: '#ff7ad8', u0: 0.38, u1: 1.04, y: 0.22, h: 0.3, ph: 2.1, sp: 0.13, a: 0.85 },
   { c0: '#5fffd0', c1: '#3aa8ff', u0: -0.06, u1: 0.5, y: 0.34, h: 0.28, ph: 4.2, sp: 0.21, a: 0.7 },
+  { c0: '#ffd0a6', c1: '#b67aff', u0: 0.22, u1: 0.88, y: 0.24, h: 0.32, ph: 3.4, sp: 0.11, a: 0.8 },
 ];
 function dn2Aurora(tm, hyOff) {   // perde dilimleri eğik (kayma dönüşümü) çizilir: alt kenar kesintisiz dalgalanır, merdiven görünmez; daha az dilim → daha ucuz
   const au = (0.045 + 0.62 * Math.pow(DN2.fill, 0.9) + 0.25 * DN2.full) * (1 + 0.2 * (DN2.reg ? DN2.reg.gol : 0)) + 0.5 * Math.exp(-(now - (DN2.lastPut || -99)) * 0.7) * (now - (DN2.lastPut || -99) < 6 ? 1 : 0); if (au < 0.03) return;
@@ -478,15 +479,49 @@ function dn2MoonSpr() {
   if (dn2MoonC) return dn2MoonC; const c = dn2MoonC = dn2Cv(96, 96), x = c.getContext('2d'); x.fillStyle = '#eef3ff'; x.beginPath(); x.arc(48, 48, 30, 0, 6.283); x.fill();
   x.globalCompositeOperation = 'destination-out'; x.beginPath(); x.arc(48 + 17, 48 - 9, 26, 0, 6.283); x.fill(); return c;
 }
+const dn2MoonRoadGC = { g: null, top: NaN, span: NaN };
+// Ay yolunda su yüzeyinde kırılan elmas yakamoz parçacıkları (dn2Yakamoz)
+function dn2Yakamoz(mx, top, span, am, tm) {
+  const ykCount = 38;
+  const sp = dn2StarSpr('#ffffff');
+  for (let i = 0; i < ykCount; i++) {
+    const u = Math.pow(((i * 0.618033 + tm * 0.02) % 1), 1.25);
+    const y = top + 2 * S + u * span;
+    const spread = (14 + u * 125) * S;
+    const xx = mx + Math.sin(i * 17.3 + tm * 0.8) * spread;
+    const wavePhase = tm * 3.4 + i * 2.1 + Math.sin(u * 12);
+    const glint = Math.pow(Math.max(0, Math.sin(wavePhase)), 6);
+    if (glint < 0.04) continue;
+    const col = i % 4 === 0 ? '#ffffff' : (i % 3 === 0 ? '#d4f2ff' : (i % 2 === 0 ? '#ffeebc' : '#c4e0ff'));
+    const sz = (3.2 + u * 6.2) * S * glint;
+    dn2Eg(col, xx, y, sz * 2.4, sz * 0.65, glint * 0.72 * am);
+    if (glint > 0.4) {
+      const rot = tm * 1.6 + i * 0.8;
+      g.save(); g.translate(xx, y); g.rotate(rot);
+      g.globalAlpha = (glint - 0.4) * 1.9 * am;
+      g.drawImage(sp, -sz * 1.4, -sz * 1.4, sz * 2.8, sz * 2.8);
+      g.restore();
+    }
+  }
+}
 function dn2MoonRoad(x0, x1, y0, tm) {   // suda ayın geniş, titreşen ışık yolu (suyun orta-üst bandı) + hilalin yansıması
   const S_ = DN2_SK; if (!S_.A) return; const mx = 0.72 * W, hy = DN2.hy; if (mx < x0 - 80 || mx > x1 + 80) return;
   g.save(); g.beginPath(); g.rect(x0, y0, x1 - x0, H - y0); g.clip(); g.globalCompositeOperation = 'lighter';
   const am = 0.7 + 0.3 * DN2.fill, n = 30, top = Math.max(y0, hy), span = (H - top) * 0.62;
   dn2Eg('#a8bcff', mx, top + span * 0.45, 70 * S, span * 0.6, 0.14 * am);   // geniş yumuşak ışık
-  { const cg = g.createLinearGradient(0, top, 0, top + span * 1.1); cg.addColorStop(0, 'rgba(210,222,255,0.36)'); cg.addColorStop(0.7, 'rgba(210,222,255,0.1)'); cg.addColorStop(1, 'rgba(210,222,255,0)'); g.fillStyle = cg; g.globalAlpha = am * (0.75 + 0.25 * Math.sin(tm * 1.7)); g.fillRect(mx - 9 * S, top, 18 * S, span * 1.1); g.globalAlpha = 1; }
+  const C = dn2MoonRoadGC;
+  if (C.g === null || C.top !== top || C.span !== span) {
+    const cg = C.g = g.createLinearGradient(0, top, 0, top + span * 1.1);
+    cg.addColorStop(0, 'rgba(210,222,255,0.36)');
+    cg.addColorStop(0.7, 'rgba(210,222,255,0.1)');
+    cg.addColorStop(1, 'rgba(210,222,255,0)');
+    C.top = top; C.span = span;
+  }
+  g.fillStyle = C.g; g.globalAlpha = am * (0.75 + 0.25 * Math.sin(tm * 1.7)); g.fillRect(mx - 9 * S, top, 18 * S, span * 1.1); g.globalAlpha = 1;
   for (let i = 0; i < n; i++) { const u = Math.pow(i / n, 1.15), y = top + 3 * S + u * span, ww = (22 + u * 120) * S * (0.45 + 0.55 * Math.sin(tm * 2.0 + i * 1.9) ** 2), xx = mx + Math.sin(tm * 0.8 + i * 2.3) * (4 + u * 30) * S;
     dn2Eg('#eef3ff', xx, y, ww, (1.6 + u * 2.4) * S, Math.min(1, (0.95 - u * 0.5) * am) * (0.45 + 0.55 * Math.sin(tm * 2.6 + i) ** 2)); }
-  // (hilalin suda yansıması gökyüzü yansımasının içinde zaten var; ayrıca çizilmiyor)
+  // kırılan elmas yakamoz parçacıkları (dn2Yakamoz)
+  dn2Yakamoz(mx, top, span, am, tm);
   g.restore(); g.globalCompositeOperation = 'source-over';
 }
 // ay ışığı hüzmeleri: hilalden aşağı-sola yelpaze gibi açılan çok yumuşak ışık şeritleri (tek önbellekli sprite, döndürülerek)
@@ -982,6 +1017,13 @@ function dn2LakeBuild(G) {
     const k = LK.kinds[Math.floor(R() * LK.kinds.length)], by = bedY(x); if (by < G.su + 26) continue;
     G.flora.push({ k, v: Math.floor(R() * 3), x, y: by + 3, s: (0.75 + R() * 0.5) * clamp((by - G.su) / 110, 0.45, 1), ph: R() * 6, c: LK.fl[Math.floor(R() * LK.fl.length)], fl: R() < 0.5 ? -1 : 1 });
   }
+  G.lotus = [];
+  const lotusCount = clamp(Math.round((G.x1 - G.x0) / 360), 3, 7);
+  for (let i = 0; i < lotusCount; i++) {
+    const lx = lerp(G.x0 + 60, G.x1 - 60, (i + 0.5 + (R() - 0.5) * 0.35) / lotusCount);
+    const col = ['#9efff2', '#dfbeff', '#ffb8ea', '#ffe2a0'][i % 4];
+    G.lotus.push({ x: lx, ph: R() * 6.28, s: 0.9 + R() * 0.35, col });
+  }
 }
 function dn2Water(tm) {   // dünya dönüşümünde, zeminden önce: su gövdesi + dip + batık ışıklar
   const vx0 = cam.x - 40, vx1 = cam.x + VW + 40, bot = cam.y + H / S + 20;
@@ -1032,6 +1074,46 @@ function dn2Water(tm) {   // dünya dönüşümünde, zeminden önce: su gövdes
         g.save(); g.translate(x, y); g.scale(1, 0.38); g.rotate(rot); g.fillStyle = i % 3 ? '#ffb8e4' : '#e0b8ff'; g.globalAlpha = 0.75; g.beginPath(); g.ellipse(0, 0, s * 1.6, s, 0, 0, 6.283); g.fill(); g.fillStyle = '#fff0fa'; g.globalAlpha = 0.5; g.beginPath(); g.ellipse(-s * 0.4, -s * 0.2, s * 0.6, s * 0.35, 0, 0, 6.283); g.fill(); g.restore(); }
       g.globalAlpha = 1;
     }
+    // su yüzünde yüzen kristal nilüferler (masalsı pırıltı)
+    if (G.lotus) {
+      for (let i = 0; i < G.lotus.length; i++) {
+        const lt = G.lotus[i], bob = Math.sin(tm * 1.4 + lt.ph) * 2;
+        const lx = lt.x + Math.sin(tm * 0.5 + lt.ph) * 6, ly = G.su + 2 + bob, s = lt.s;
+        if (lx < vx0 - 40 || lx > vx1 + 40) continue;
+        const pul = 0.6 + 0.4 * Math.sin(tm * 2.2 + lt.ph);
+        // yüzen kristal nilüferlerin etrafında genişleyen narin su halkaları
+        g.save(); g.globalCompositeOperation = 'lighter';
+        for (let q = 0; q < 2; q++) {
+          const rq = ((tm * 0.32 + lt.ph * 0.3 + q * 0.5) % 1);
+          const rRad = (12 + rq * 44) * s;
+          g.strokeStyle = lt.col;
+          g.lineWidth = 1.1;
+          g.globalAlpha = 0.42 * (1 - rq);
+          g.beginPath();
+          g.ellipse(lx, G.su + 2, rRad, rRad * 0.22, 0, 0, 6.283);
+          g.stroke();
+        }
+        g.restore();
+        g.globalCompositeOperation = 'lighter';
+        dn2Eg(lt.col, lx, G.su + 3, 36 * s, 10 * s, 0.35 * pul);
+        dn2Eg('#ffffff', lx, ly - 3, 10 * s, 5 * s, 0.45 * pul);
+        g.globalCompositeOperation = 'source-over';
+        g.save(); g.translate(lx, ly + 1); g.scale(s, s * 0.35);
+        g.fillStyle = 'rgba(12,24,64,0.75)'; g.beginPath(); g.ellipse(0, 0, 20, 16, 0, 0, 6.283); g.fill();
+        g.strokeStyle = dn2Hx(lt.col, 0.4); g.lineWidth = 1.2; g.stroke();
+        g.restore();
+        g.save(); g.translate(lx, ly - 2); g.scale(s, s);
+        for (let p = -2; p <= 2; p++) {
+          const ang = p * 0.28, h = (p === 0 ? 14 : Math.abs(p) === 1 ? 11 : 8);
+          g.save(); g.rotate(ang);
+          g.fillStyle = p === 0 ? '#ffffff' : dn2Hx(lt.col, 0.85);
+          g.beginPath(); g.moveTo(0, 2); g.lineTo(-2.5, -h * 0.4); g.lineTo(0, -h); g.lineTo(2.5, -h * 0.4); g.closePath(); g.fill();
+          g.strokeStyle = '#ffffff'; g.lineWidth = 0.7; g.stroke();
+          g.restore();
+        }
+        g.restore();
+      }
+    }
   }
   g.globalCompositeOperation = 'lighter';
   for (const o of NESNELER) {   // yıldız taşları / adalar: altlarında yumuşak renkli ışıma halkası
@@ -1060,9 +1142,71 @@ function dn2SunkStars(tm) {
   }
   g.globalCompositeOperation = 'source-over';
 }
+// ── Feza göl kenarında koşarken su sıçramalarının yıldız tozu gibi parıldaması ──
+const DN2_SPLASH = [];
+let dn2SplLastT = 0;
+function dn2StarSplashes(tm, dt) {
+  if (typeof P === 'undefined' || !P || DURUM !== 'oyun') return;
+  for (let i = 0; i < DN2.lakes.length; i++) {
+    const G = DN2.lakes[i];
+    if (P.x >= G.x0 - 15 && P.x <= G.x1 + 15 && Math.abs(P.y - G.su) < 24 && Math.abs(P.vx) > 40) {
+      if (now - dn2SplLastT > 0.055) {
+        dn2SplLastT = now;
+        for (let k = 0; k < 2; k++) {
+          if (DN2_SPLASH.length > 50) break;
+          const sign = -Math.sign(P.vx) || -1;
+          const spX = sign * (25 + Math.random() * 55) + (Math.random() - 0.5) * 20;
+          const spY = -40 - Math.random() * 65;
+          const col = Math.random() < 0.45 ? '#ffffff' : Math.random() < 0.75 ? '#b8f2ff' : '#ffe8a8';
+          DN2_SPLASH.push({
+            x: P.x + (Math.random() - 0.5) * 12,
+            y: G.su - 2 - Math.random() * 4,
+            vx: spX,
+            vy: spY,
+            life: 0.6 + Math.random() * 0.45,
+            max: 0.6 + Math.random() * 0.45,
+            col,
+            s: 2.2 + Math.random() * 2.2,
+            su: G.su
+          });
+        }
+      }
+      break;
+    }
+  }
+  if (!DN2_SPLASH.length) return;
+  const sp = dn2StarSpr('#ffffff');
+  g.globalCompositeOperation = 'lighter';
+  for (let i = DN2_SPLASH.length - 1; i >= 0; i--) {
+    const q = DN2_SPLASH[i];
+    q.life -= dt;
+    if (q.life <= 0 || q.y > q.su + 6) {
+      if (q.y >= q.su - 2 && dn2Rings.length < 32 && Math.random() < 0.4) {
+        dn2Rings.push({ x: q.x, y: q.su, t: now, big: false });
+      }
+      DN2_SPLASH.splice(i, 1);
+      continue;
+    }
+    q.vy += 190 * dt;
+    q.x += q.vx * dt;
+    q.y += q.vy * dt;
+    const a = q.life / q.max;
+    const rad = q.s * (0.6 + 0.4 * a);
+    dn2Eg(q.col, q.x, q.y, rad * 3, rad * 1.5, a * 0.8);
+    if (a > 0.45) {
+      g.save(); g.translate(q.x, q.y);
+      g.globalAlpha = (a - 0.45) * 1.7;
+      g.drawImage(sp, -rad * 1.5, -rad * 1.5, rad * 3, rad * 3);
+      g.restore();
+    }
+  }
+  g.globalCompositeOperation = 'source-over';
+}
 const dn2RefC = dn2Cv(2, 2);
+let dn2PetalsLastT = 0;
 function dn2Petals(tm) {   // karakterlerden sonra: su yüzeyi (Feza'nın yansıması, halkalar, ışıltı)
   if (!dn2Ok()) return; if (!isFinite(tm)) tm = 0;
+  const dt = clamp(now - (dn2PetalsLastT || now), 0, 0.05); dn2PetalsLastT = now;
   dn2Init();
   // (Feza üstüne ek ışık katmanı yok: karakter hâlesini FEZA ajanı yönetir)
   for (const G of DN2.lakes) {
@@ -1097,6 +1241,7 @@ function dn2Petals(tm) {   // karakterlerden sonra: su yüzeyi (Feza'nın yansı
     g.restore(); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
   }
   g.setTransform(S, 0, 0, S, -cam.x * S, -cam.y * S); dn2OpenSeeds(tm);
+  dn2StarSplashes(tm, dt);
   g.setTransform(1, 0, 0, 1, 0, 0);
 }
 

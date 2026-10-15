@@ -94,41 +94,248 @@ TUR.kaydet('bulutZip', {
     o.w = o.w || 110; const h = o.h || 18;   // ≤ 18: zeminde yürürken engel olmaz, üstüne çıkınca kendiliğinden zıplatır (kenar affı)
     o.ust = o.y; o.y = o.ust + h;
     o.cisim = { w: o.gom ? o.w : o.w - 8, h, tip: 'ziplat', guc: o.guc || 960, aktif: true, dx: 0, dy: 0 };
-    o.e = 0; o.ev = 0; o.ph = (o.x * 0.013) % 6.28; o.seed = 3 + Math.floor(o.x / 17) % 40; o.parla = 0; o.pT = Math.random() * 2;
-    o.pr = []; for (let i = 0; i < 4; i++) o.pr.push({ x: 0, y: 0, t: -1 - i * 0.6, h: 0 });
+    o.e = 0; o.ev = 0; o.wob = 0; o.wobT = 0; o.ph = (o.x * 0.013) % 6.28; o.seed = 3 + Math.floor(o.x / 17) % 40; o.parla = 0; o.pT = Math.random() * 2;
+    o.pr = []; for (let i = 0; i < 5; i++) o.pr.push({ x: 0, y: 0, t: -1 - i * 0.5, h: 0 });
+    o.buhar = []; o.halkalar = [];
+    o.puffRings = []; o.ruzgar = []; o.hamurPuf = [];
+    o.ayakDep = 0; o.ayakDepV = 0; o.ayakX = o.x;
   },
   ustune(o, vy) {
     const v = clamp((vy || 400) / 900, 0.3, 1);
-    o.ev = Math.min(o.ev, 0) - (6 + 5 * v); o.parla = 1;
+    o.ev = Math.min(o.ev, 0) - (8.2 + 5.8 * v); o.parla = 1; o.wob = 1; o.wobT = 0;
     buSfx('bulutZip', v); OLAY.emit('bulutZip', o);
-    burst(o.x + (P.x - o.x) * 0.5, o.ust - 2, 9, BU_R_ZIP, 110, 0.8, 6);
+    const cx = o.x + (P.x - o.x) * 0.45;
+    burst(cx, o.ust - 2, 14, BU_R_ZIP, 130, 0.85, 7);
+    // Pofuduk hamur buharı: basılınca iki yana doğru tatlı pamuk bulutçuğu kabarır
+    for (const s of [-1, 1]) {
+      for (let i = 0; i < 3; i++) {
+        o.buhar.push({
+          x: cx + s * (10 + i * 12), y: o.ust - 2 + (Math.random() - 0.5) * 4,
+          vx: s * (55 + Math.random() * 75 + i * 20), vy: -20 - Math.random() * 40,
+          r: 10 + Math.random() * 8, t: 0, max: 0.7 + Math.random() * 0.35,
+          col: i % 2 ? '#fff3f8' : '#ffffff'
+        });
+      }
+    }
+    // Pamuk şekeri gibi kabararak dağılan minik puf bulutçuğu halkaları (puffRings)
+    for (let ri = 0; ri < 2; ri++) {
+      const nPuffs = 9 + ri * 3, puffs = [];
+      for (let pi = 0; pi < nPuffs; pi++) {
+        const an = (pi / nPuffs) * BU_PI2 + (Math.random() - 0.5) * 0.25;
+        puffs.push({
+          an,
+          r0: 8 + Math.random() * 6,
+          col: pi % 2 === 0 ? '#ffffff' : (pi % 4 === 1 ? '#ffe8f4' : '#ffd4ea'),
+          wob: Math.random() * BU_PI2,
+          vy: -14 - Math.random() * 22
+        });
+      }
+      o.puffRings.push({
+        cx, cy: o.ust + 4,
+        r: 12 + ri * 8,
+        maxR: (o.w * (0.54 + ri * 0.18)) * (0.8 + 0.35 * v),
+        t: -ri * 0.05,
+        max: 0.65 + ri * 0.16,
+        rot: Math.random() * BU_PI2,
+        rotV: (ri % 2 === 0 ? 1 : -1) * (0.7 + Math.random() * 0.6),
+        puffs
+      });
+    }
+    o.halkalar.push({ r: 10, maxR: o.w * 0.62, t: 0, max: 0.55 });
+    // Feza havaya fırlatıldığında arkasından göğe savrulan tatlı rüzgâr çizgileri
+    const nRuz = 9 + Math.round(v * 6);
+    for (let i = 0; i < nRuz; i++) {
+      const rx = cx + (Math.random() - 0.5) * (o.w * 0.44);
+      o.ruzgar.push({
+        x: rx, y: o.ust - 4,
+        vx: (Math.random() - 0.5) * 30 + (rx - cx) * 0.6,
+        vy: -580 - Math.random() * 420 - v * 300,
+        l: 40 + Math.random() * 56,
+        w: 2.0 + Math.random() * 1.5,
+        t: 0, max: 0.5 + Math.random() * 0.32,
+        col: ['#ffffff', '#fff4fa', '#ffdcf2', '#e4f7ff'][i % 4],
+        curv: (Math.random() - 0.5) * 16
+      });
+    }
   },
   guncelle(o, dt) {
-    // yay (squash & stretch): yarı-örtük Euler, küçük adımlar
+    // hamur yay fiziği (squash & stretch): hacim korumalı yarı-örtük Euler yaylanması
     let kalan = Math.min(dt, 0.1);
-    while (kalan > 1e-4) { const d = Math.min(kalan, 1 / 120); o.ev += (-260 * o.e - 8 * o.ev) * d; o.e += o.ev * d; kalan -= d; }
-    o.e = clamp(o.e, -0.5, 0.45); o.parla = Math.max(0, o.parla - dt * 1.6);
+    while (kalan > 1e-4) { const d = Math.min(kalan, 1 / 120); o.ev += (-240 * o.e - 7.5 * o.ev) * d; o.e += o.ev * d; kalan -= d; }
+    o.e = clamp(o.e, -0.56, 0.5); o.parla = Math.max(0, o.parla - dt * 1.5);
+    o.wobT += dt; o.wob = Math.max(0, o.wob - dt * 2.5);
+    // Bulut üzerinde yürürken ayak basılan yerde yumuşak hamur çökmesi ve geri yaylanması
+    const ustte = (P.ground && Math.abs(P.x - o.x) < o.w * 0.52 && Math.abs(P.y - o.ust) < 18);
+    if (ustte) {
+      o.ayakX = lerp(o.ayakX || o.x, P.x, 1 - Math.exp(-dt * 15));
+      const yuruyor = Math.abs(P.vx || 0) > 18;
+      const hedefDep = 5.5 + (yuruyor ? 3.2 : 0);
+      o.ayakDepV = (o.ayakDepV || 0) + (-220 * ((o.ayakDep || 0) - hedefDep) - 13 * (o.ayakDepV || 0)) * dt;
+      o.ayakDep = (o.ayakDep || 0) + o.ayakDepV * dt;
+      if (yuruyor && Math.random() < dt * 14 && o.hamurPuf.length < 16) {
+        o.hamurPuf.push({
+          x: P.x + (Math.random() - 0.5) * 8, y: o.ust + o.ayakDep - 2,
+          vx: -P.f * (16 + Math.random() * 24), vy: -14 - Math.random() * 18,
+          r: 4.2 + Math.random() * 3.4, t: 0, max: 0.44 + Math.random() * 0.22,
+          col: Math.random() < 0.5 ? '#ffffff' : '#ffdced'
+        });
+      }
+    } else {
+      // geri yaylanma (elastic overshoot rebound)
+      o.ayakDepV = (o.ayakDepV || 0) + (-250 * (o.ayakDep || 0) - 10 * (o.ayakDepV || 0)) * dt;
+      o.ayakDep = (o.ayakDep || 0) + o.ayakDepV * dt;
+    }
+    for (let i = o.hamurPuf.length - 1; i >= 0; i--) {
+      const hp = o.hamurPuf[i]; hp.t += dt;
+      if (hp.t >= hp.max) { o.hamurPuf.splice(i, 1); continue; }
+      hp.x += hp.vx * dt; hp.y += hp.vy * dt; hp.r += dt * 5;
+      hp.vx *= Math.exp(-dt * 3); hp.vy = hp.vy * Math.exp(-dt * 2) - 8 * dt;
+    }
     if (!buEkranda(o.x, 300)) return;
-    for (const p of o.pr) {   // yukarı süzülen minik pırıltılar ("buradan yukarı!")
+    for (const p of o.pr) {   // yukarı süzülen minik göksel pırıltılar ("buradan yukarı!")
       p.t += dt;
-      if (p.t > 1.4) { p.t = -Math.random() * 0.8; p.x = (Math.random() - 0.5) * o.w * 0.7; p.h = 40 + Math.random() * 40; }
+      if (p.t > 1.4) { p.t = -Math.random() * 0.8; p.x = (Math.random() - 0.5) * o.w * 0.75; p.h = 42 + Math.random() * 45; }
+    }
+    // bulut buharı parçacıkları
+    for (let i = o.buhar.length - 1; i >= 0; i--) {
+      const b = o.buhar[i]; b.t += dt;
+      if (b.t >= b.max) { o.buhar.splice(i, 1); continue; }
+      b.vx *= Math.exp(-dt * 3.8); b.vy = b.vy * Math.exp(-dt * 2.8) - 18 * dt;   // hafif yukarı süzülüş
+      b.x += b.vx * dt; b.y += b.vy * dt; b.r += dt * 12;
+    }
+    // pamuk şekeri puf halkaları (puffRings)
+    for (let i = o.puffRings.length - 1; i >= 0; i--) {
+      const pr = o.puffRings[i]; pr.t += dt;
+      if (pr.t < 0) continue;
+      if (pr.t >= pr.max) { o.puffRings.splice(i, 1); continue; }
+      pr.r += (pr.maxR - pr.r) * (1 - Math.exp(-dt * 8));
+      pr.rot += pr.rotV * dt;
+    }
+    // rüzgar çizgileri güncellemesi
+    for (let i = o.ruzgar.length - 1; i >= 0; i--) {
+      const rz = o.ruzgar[i]; rz.t += dt;
+      if (rz.t >= rz.max) { o.ruzgar.splice(i, 1); continue; }
+      rz.x += rz.vx * dt; rz.y += rz.vy * dt;
+      rz.vy *= Math.exp(-dt * 2.2);
+    }
+    for (let i = o.halkalar.length - 1; i >= 0; i--) {
+      const h = o.halkalar[i]; h.t += dt;
+      if (h.t >= h.max) { o.halkalar.splice(i, 1); continue; }
+      h.r += (h.maxR - h.r) * (1 - Math.exp(-dt * 9));
     }
   },
   ciz(o, tm) {
     const w = o.w, nefes = Math.sin(tm * 2.2 + o.ph) * 0.02, e = o.e;
-    const sy = 1 + e * 0.75 + nefes, sx = 1 - e * 0.32 - nefes * 0.5;
+    const jiggle = Math.sin(o.wobT * 18) * o.wob * 0.055;
+    // Hacim koruyan esneme: basılınca yana doğru tatlı hamur gibi genişler (squash), fırlatırken uzar (stretch)
+    const sy = clamp(1 + e * 0.85 + nefes + jiggle, 0.44, 1.52);
+    const sx = clamp((1 / Math.sqrt(Math.max(0.28, sy))) - nefes * 0.25 - jiggle * 0.4, 0.65, 1.48);
     g.globalCompositeOperation = 'lighter';
-    dglow('#ffb8d8', o.x, o.ust + 14, w * 0.85, 0.22 + 0.25 * o.parla);
+    dglow('#ffb8d8', o.x, o.ust + 14, w * 0.88, 0.22 + 0.28 * o.parla);
     g.globalCompositeOperation = 'source-over';
     const sp = buBulut(w, o.cisim.h, 'zip', o.seed);
     buBulutCiz(sp, o.x, o.ust, w, sx, sy);
-    // yanaklarda pembe yay izi: iki minik kıvrım (esnek olduğunu anlatır)
     const yu = o.ust + 18 - 18 * sy;
-    g.strokeStyle = 'rgba(232,120,170,0.45)'; g.lineWidth = 2; g.lineCap = 'round';
-    for (const s of [-1, 1]) { const cx = o.x + s * w * 0.22 * sx; g.beginPath(); g.moveTo(cx - 6, yu + 12); g.quadraticCurveTo(cx, yu + 8 - e * 6, cx + 6, yu + 12); g.stroke(); }
+    // Bulut üzerinde yürürken ayak basılan yerdeki yumuşak hamur çökmesi ve yaylanma oluğu
+    if (Math.abs(o.ayakDep || 0) > 0.35) {
+      const fx = o.ayakX || o.x, dep = (o.ayakDep || 0) * sy, dentW = 28 * sx;
+      g.save();
+      g.strokeStyle = 'rgba(215, 115, 160, ' + clamp(Math.abs(dep) * 0.08, 0, 0.42).toFixed(3) + ')';
+      g.lineWidth = 2.4 * sx; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(fx - dentW, yu + 1);
+      g.quadraticCurveTo(fx, yu + 1 + dep, fx + dentW, yu + 1);
+      g.stroke();
+      g.strokeStyle = 'rgba(255, 255, 255, ' + clamp(Math.abs(dep) * 0.12, 0, 0.65).toFixed(3) + ')';
+      g.lineWidth = 1.3 * sx;
+      g.beginPath(); g.moveTo(fx - dentW * 0.78, yu - 0.5);
+      g.quadraticCurveTo(fx, yu - 0.5 + dep * 0.62, fx + dentW * 0.78, yu - 0.5);
+      g.stroke();
+      g.restore();
+    }
+    // yanaklarda pembe yay izi: esneyip sıkışan tatlı yanak gamzeleri
+    g.strokeStyle = 'rgba(232,120,170,0.48)'; g.lineWidth = 2.2; g.lineCap = 'round';
+    for (const s of [-1, 1]) {
+      const cx = o.x + s * w * 0.22 * sx;
+      g.beginPath(); g.moveTo(cx - 7 * sx, yu + 12);
+      g.quadraticCurveTo(cx, yu + 8 - e * 8, cx + 7 * sx, yu + 12); g.stroke();
+    }
+    // bulut buharı: pofuduk beyaz-pembe buhar yumakları
+    if (o.buhar.length) {
+      for (const b of o.buhar) {
+        const u = b.t / b.max, al = (1 - u) * Math.min(1, b.t * 8) * 0.65;
+        if (al < 0.01) continue;
+        g.globalAlpha = al; g.fillStyle = b.col;
+        g.beginPath();
+        g.arc(b.x - b.r * 0.28, b.y, b.r * 0.65, 0, BU_PI2);
+        g.arc(b.x + b.r * 0.28, b.y, b.r * 0.65, 0, BU_PI2);
+        g.arc(b.x, b.y - b.r * 0.22, b.r * 0.8, 0, BU_PI2);
+        g.fill();
+      }
+      g.globalAlpha = 1;
+    }
+    // pamuk şekeri puf halkaları (puffRings)
+    if (o.puffRings.length) {
+      for (const pr of o.puffRings) {
+        if (pr.t <= 0) continue;
+        const u = pr.t / pr.max, al = (1 - u) * Math.min(1, pr.t * 8) * 0.8;
+        if (al < 0.01) continue;
+        const rx = pr.r * sx, ry = pr.r * 0.28 * sy;
+        for (const pf of pr.puffs) {
+          const an = pf.an + pr.rot;
+          const px = pr.cx + Math.cos(an) * rx;
+          const py = pr.cy + Math.sin(an) * ry + pf.vy * u;
+          const rNow = (pf.r0 + u * 13) * (0.8 + 0.2 * Math.sin(u * 5 + pf.wob));
+          g.globalAlpha = al * 0.88; g.fillStyle = pf.col;
+          g.beginPath();
+          g.arc(px, py, rNow * 0.7, 0, BU_PI2);
+          g.arc(px - rNow * 0.35, py + rNow * 0.1, rNow * 0.55, 0, BU_PI2);
+          g.arc(px + rNow * 0.35, py + rNow * 0.1, rNow * 0.55, 0, BU_PI2);
+          g.fill();
+        }
+      }
+      g.globalAlpha = 1;
+    }
+    // ayak basma puf tozları
+    if (o.hamurPuf.length) {
+      for (const hp of o.hamurPuf) {
+        const u = hp.t / hp.max, al = (1 - u) * Math.min(1, hp.t * 9) * 0.7;
+        if (al < 0.01) continue;
+        g.globalAlpha = al; g.fillStyle = hp.col;
+        g.beginPath(); g.arc(hp.x, hp.y, hp.r, 0, BU_PI2); g.arc(hp.x + hp.r * 0.3, hp.y - hp.r * 0.2, hp.r * 0.7, 0, BU_PI2); g.fill();
+      }
+      g.globalAlpha = 1;
+    }
+    // esneme halkaları ve göksel ışıltılar
     g.globalCompositeOperation = 'lighter';
-    for (const p of o.pr) if (p.t > 0) { const u = p.t / 1.4; buPirilti(o.x + p.x + Math.sin(u * 6 + p.h) * 4, yu - 4 - u * p.h, 2.6 + 2 * Math.sin(u * Math.PI), Math.sin(u * Math.PI) * 0.75, u * 2); }
-    if (o.parla > 0.02) { const u = 1 - o.parla; g.globalAlpha = 0.6 * o.parla; g.strokeStyle = '#ffd6ea'; g.lineWidth = 2.4; g.beginPath(); g.ellipse(o.x, yu + 6, w * (0.4 + 0.5 * u), 6 + 10 * u, 0, 0, BU_PI2); g.stroke(); g.globalAlpha = 1; }
+    for (const h of o.halkalar) {
+      const u = h.t / h.max, al = (1 - u) * 0.6;
+      if (al < 0.01) continue;
+      g.globalAlpha = al; g.strokeStyle = '#ffd6ea'; g.lineWidth = 2.8 * (1 - u) + 0.6;
+      g.beginPath(); g.ellipse(o.x, o.ust + 14, h.r * sx, h.r * 0.25 * sy, 0, 0, BU_PI2); g.stroke();
+    }
+    // Feza havaya fırlatıldığında rüzgâr çizgileri
+    if (o.ruzgar && o.ruzgar.length) {
+      g.save(); g.lineCap = 'round';
+      for (const rz of o.ruzgar) {
+        const u = rz.t / rz.max, al = (1 - u) * Math.min(1, rz.t * 12) * 0.78;
+        if (al < 0.01) continue;
+        g.globalAlpha = al; g.strokeStyle = rz.col; g.lineWidth = rz.w * (1 - u * 0.45);
+        g.beginPath(); g.moveTo(rz.x, rz.y);
+        const midY = rz.y + rz.l * 0.5, endY = rz.y + rz.l;
+        g.quadraticCurveTo(rz.x + rz.curv, midY, rz.x, endY);
+        g.stroke();
+      }
+      g.restore();
+    }
+    g.globalAlpha = 1;
+    for (const p of o.pr) if (p.t > 0) {
+      const u = p.t / 1.4;
+      buPirilti(o.x + p.x + Math.sin(u * 6 + p.h) * 4, yu - 4 - u * p.h, 2.6 + 2 * Math.sin(u * Math.PI), Math.sin(u * Math.PI) * 0.8, u * 2);
+    }
+    if (o.parla > 0.02) {
+      const u = 1 - o.parla; g.globalAlpha = 0.65 * o.parla; g.strokeStyle = '#ffd6ea'; g.lineWidth = 2.4;
+      g.beginPath(); g.ellipse(o.x, yu + 6, w * (0.4 + 0.5 * u), 6 + 10 * u, 0, 0, BU_PI2); g.stroke(); g.globalAlpha = 1;
+    }
     g.globalCompositeOperation = 'source-over';
   },
 });
@@ -139,7 +346,8 @@ TUR.kaydet('bulutYuzen', {
     o.w = o.w || 150; const h = 4;
     o.x0 = o.x; o.y0 = o.y; o.ax = o.ax || 0; o.ay = o.ay || 0; o.sure = o.sure || 5; o.t = (o.faz || 0) * o.sure;
     o.y = o.y0 + h; o.cisim = { w: o.w - 12, h, tip: 'ustten', aktif: true, dx: 0, dy: 0 };
-    o.seed = 5 + Math.floor(o.x / 23) % 40; o.sz = 0; o.on = false; o.yon = 0; o.ph = (o.x * 0.011) % 6.28;
+    o.seed = 5 + Math.floor(o.x / 23) % 40; o.sz = 0; o.szE = 0; o.szV = 0; o.on = false; o.yon = 0; o.ph = (o.x * 0.011) % 6.28;
+    o.ayakDep = 0; o.ayakDepV = 0; o.ayakX = o.x; o.hamurPuf = [];
   },
   guncelle(o, dt) {
     o.t += dt;
@@ -149,14 +357,45 @@ TUR.kaydet('bulutYuzen', {
     o.cisim.dx = nx_ - o.x; o.cisim.dy = ny - o.y; o.x = nx_; o.y = ny;
     o.yon = lerp(o.yon, dt > 0 ? clamp((o.cisim.dx + o.cisim.dy) / Math.max(dt, 1e-3) / 60, -1, 1) : 0, 1 - Math.exp(-dt * 6));
     const st = buUst(o);
-    if (st && !o.on) burst(P.x, o.y - 6, 6, ['#fff1dc', '#ffffff'], 60, 0.7, 5);
-    o.on = st; o.sz = lerp(o.sz, st ? 3 : 0, 1 - Math.exp(-dt * 9));
+    if (st && !o.on) {
+      burst(P.x, o.y - 6, 8, ['#fff1dc', '#ffffff', '#ffd8ea'], 70, 0.75, 5);
+      o.szV = 3.6;
+    }
+    o.on = st;
+    // yumuşak hamur yaylanması (Feza üstüne basınca tatlıca esner ve geri yaylanır)
+    o.szV += (-190 * o.szE - 9 * o.szV) * dt; o.szE += o.szV * dt;
+    o.sz = clamp((st ? 3.5 : 0) + o.szE, -2.5, 7);
+    // Yürürken ayak basılan yerin yerel hamur çöküşü
+    if (st) {
+      o.ayakX = lerp(o.ayakX || o.x, P.x, 1 - Math.exp(-dt * 14));
+      const yuruyor = Math.abs(P.vx || 0) > 18;
+      const hedefDep = 4.2 + (yuruyor ? 2.5 : 0);
+      o.ayakDepV += (-210 * (o.ayakDep - hedefDep) - 13 * o.ayakDepV) * dt;
+      o.ayakDep += o.ayakDepV * dt;
+      if (yuruyor && Math.random() < dt * 12 && o.hamurPuf.length < 12) {
+        o.hamurPuf.push({
+          x: P.x + (Math.random() - 0.5) * 6, y: o.y - 4 + o.ayakDep,
+          vx: -P.f * (14 + Math.random() * 20), vy: -12 - Math.random() * 14,
+          r: 3.8 + Math.random() * 2.8, t: 0, max: 0.4 + Math.random() * 0.2,
+          col: Math.random() < 0.5 ? '#ffffff' : '#ffe9d6'
+        });
+      }
+    } else {
+      o.ayakDepV += (-230 * o.ayakDep - 11 * o.ayakDepV) * dt;
+      o.ayakDep += o.ayakDepV * dt;
+    }
+    for (let i = o.hamurPuf.length - 1; i >= 0; i--) {
+      const hp = o.hamurPuf[i]; hp.t += dt;
+      if (hp.t >= hp.max) { o.hamurPuf.splice(i, 1); continue; }
+      hp.x += hp.vx * dt; hp.y += hp.vy * dt; hp.r += dt * 4;
+      hp.vx *= Math.exp(-dt * 3); hp.vy = hp.vy * Math.exp(-dt * 2) - 8 * dt;
+    }
   },
   ciz(o, tm) {
-    const w = o.w, ust = o.y - 4 + o.sz * 0.5;
-    if (o.gorunum === 'tuy') { buDevTuy(o, ust + Math.sin(tm * 1.8 + (o.faz || 0) * 6.28) * 3 + o.sz * 1.6, tm); return; }   // görsel salınım + basınca esneme
+    const w = o.w, ust = o.y - 4 + o.sz * 0.6;
+    if (o.gorunum === 'tuy') { buDevTuy(o, ust + Math.sin(tm * 1.8 + (o.faz || 0) * 6.28) * 3 + o.sz * 1.5, tm); return; }   // görsel salınım + basınca esneme
     g.globalCompositeOperation = 'lighter';
-    dglow('#ffd2a0', o.x, ust + 16, w * 0.7, 0.2);
+    dglow('#ffd2a0', o.x, ust + 16, w * 0.72, 0.22);
     g.globalCompositeOperation = 'source-over';
     // hareket izi: arkada üç ince bulut tülü
     const yon = o.yon;
@@ -166,6 +405,32 @@ TUR.kaydet('bulutYuzen', {
     }
     if (typeof dn3Bulut === 'function') dn3Bulut(o.x, ust, w, 20, { seed: o.seed });   // zeminin ince bulutlarıyla aynı görünüm (basılır olduğu belli)
     else buBulutCiz(buBulut(w, 22, 'yuzen', o.seed), o.x, ust, w, 1, 1);
+    // Yürürken ayak basılan yerin yerel hamur çökme çukuru
+    if (Math.abs(o.ayakDep || 0) > 0.3) {
+      const fx = o.ayakX || o.x, dep = o.ayakDep, dentW = 22;
+      g.save();
+      g.strokeStyle = 'rgba(220, 160, 140, ' + clamp(Math.abs(dep) * 0.08, 0, 0.4).toFixed(3) + ')';
+      g.lineWidth = 2.2; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(fx - dentW, ust + 1);
+      g.quadraticCurveTo(fx, ust + 1 + dep, fx + dentW, ust + 1);
+      g.stroke();
+      g.strokeStyle = 'rgba(255, 255, 255, ' + clamp(Math.abs(dep) * 0.12, 0, 0.6).toFixed(3) + ')';
+      g.lineWidth = 1.2;
+      g.beginPath(); g.moveTo(fx - dentW * 0.75, ust - 0.4);
+      g.quadraticCurveTo(fx, ust - 0.4 + dep * 0.6, fx + dentW * 0.75, ust - 0.4);
+      g.stroke();
+      g.restore();
+    }
+    // ayak basma puf tozları
+    if (o.hamurPuf && o.hamurPuf.length) {
+      for (const hp of o.hamurPuf) {
+        const u = hp.t / hp.max, al = (1 - u) * Math.min(1, hp.t * 9) * 0.65;
+        if (al < 0.01) continue;
+        g.globalAlpha = al; g.fillStyle = hp.col;
+        g.beginPath(); g.arc(hp.x, hp.y, hp.r, 0, BU_PI2); g.arc(hp.x + hp.r * 0.3, hp.y - hp.r * 0.2, hp.r * 0.65, 0, BU_PI2); g.fill();
+      }
+      g.globalAlpha = 1;
+    }
   },
 });
 
@@ -383,7 +648,8 @@ TUR.kaydet('gokkusagi', {
     p.closePath(); o.kirp = p;
     o.ayak = [];   // yayın orta çizgisinin zeminden çıktığı / zemine değdiği iki nokta (ışık bulutları)
     for (const yon of [1, -1]) for (let i = 0; i <= 180; i++) { const a = yon > 0 ? Math.PI - i * Math.PI / 180 : i * Math.PI / 180, q = buYay(o, o.R - o.bant * 3.5, a); if (q.y < buYuzeyY(q.x) - 2) { o.ayak.push(q); break; } }
-    o.grad = null; o.yildizlar = [];
+    o.grad = null; o.yildizlar = []; o.kayIz = [];
+    o.rainbowSparks = []; o.tunelRings = []; o.tunelT = 0;
     for (let i = 0; i < 26; i++) o.yildizlar.push({ a: Math.PI * (0.08 + 0.84 * Math.random()), r: o.R - Math.random() * o.bant * 7, ph: Math.random() * 6.28 });
   },
   guncelle(o, dt) {
@@ -433,16 +699,82 @@ TUR.kaydet('gokkusagi', {
       if (u >= 1) { o.evre = BU_GK_EVRE.kay; o.tk = t; o.fi = 0; o.v = 70; P.poz = 'kayma'; buSfx('kayma', 1); OLAY.emit('kayma', o); }
     }
     if (o.evre === BU_GK_EVRE.kay) {
-      o.v = Math.min(o.v + 150 * dt, 420); o.fi += o.v * dt / o.R;
+      o.v = Math.min(o.v + 155 * dt, 440); o.fi += o.v * dt / o.R;
       const p = buYay(o, o.R, Math.PI / 2 - o.fi);
       P.x = p.x; P.y = p.y; P.vx = o.v * Math.cos(o.fi); P.vy = 0; P.ground = false; P.f = 1; P.poz = 'kayma'; P.kaymaAci = o.fi;
-      if (Math.random() < dt * 15) parca(P.x - 10, P.y - 4, -60 - Math.random() * 60, -20 - Math.random() * 40, 0.9, BU_R_GK[Math.floor(Math.random() * 8)], 5 + Math.random() * 5);
-      if (p.y >= buYuzeyY(p.x) - 1 || o.fi > 1.4) {   // yere indi
+      // Gökkuşağı kaydırağı izi: arkada kalan prizmatik neşe parçacıkları ve ışık izi noktaları
+      if (!o.kayIz) o.kayIz = [];
+      o.kayIz.push({ x: P.x, y: P.y, fi: o.fi, t: now });
+      while (o.kayIz.length > 60) o.kayIz.shift();
+
+      // Gökkuşağı kaydırağı: ayakların altından fışkıran 7 renkli gökkuşağı kıvılcımları (rainbowSparks)
+      const nSp = Math.round(3 + (o.v / 90));
+      for (let s = 0; s < nSp; s++) {
+        const colI = Math.floor(Math.random() * 7);
+        const spAci = o.fi + Math.PI / 2 + (Math.random() - 0.5) * 1.35;
+        const spHiz = 90 + Math.random() * 210 + o.v * 0.5;
+        o.rainbowSparks.push({
+          x: P.x - Math.cos(o.fi) * 8 + (Math.random() - 0.5) * 12,
+          y: P.y - Math.sin(o.fi) * 8 + (Math.random() - 0.5) * 8,
+          vx: -Math.cos(spAci) * spHiz + (Math.random() - 0.5) * 40,
+          vy: -Math.sin(spAci) * spHiz - 25 - Math.random() * 50,
+          r: 3.2 + Math.random() * 3.6,
+          t: 0,
+          max: 0.42 + Math.random() * 0.38,
+          col: BU_GK[colI],
+          colAcik: BU_GK_ACIK[colI],
+          rot: Math.random() * BU_PI2,
+          rotV: (Math.random() - 0.5) * 14
+        });
+      }
+
+      // Hızlandıkça arkada kalan parlak renkli hız tüneli (tunelRings)
+      const hizOran = clamp((o.v - 110) / 280, 0, 1);
+      o.tunelT = (o.tunelT || 0) + dt;
+      if (hizOran > 0.04 && o.tunelT > 0.035) {
+        o.tunelT = 0;
+        o.tunelRings.push({
+          x: P.x, y: P.y, fi: o.fi,
+          v: o.v, hizOran,
+          t: 0, max: 0.55 + 0.35 * hizOran,
+          w: o.bant * (1.1 + 0.9 * hizOran)
+        });
+        while (o.tunelRings.length > 28) o.tunelRings.shift();
+      }
+
+      if (Math.random() < dt * 42) {
+        const c = BU_GK[Math.floor(Math.random() * 7)];
+        const nx_ = -Math.cos(o.fi) * 14 + (Math.random() - 0.5) * 8, ny_ = -Math.sin(o.fi) * 14 + (Math.random() - 0.5) * 8;
+        parca(P.x + nx_, P.y + ny_, -Math.cos(o.fi) * (80 + Math.random() * 90), -Math.sin(o.fi) * 60 - 25, 1.2, c, 5 + Math.random() * 5);
+      }
+      if (Math.random() < dt * 26) {
+        parca(P.x - 12, P.y - 4, -40 - Math.random() * 70, -20 - Math.random() * 30, 0.85, '#ffffff', 4 + Math.random() * 4);
+      }
+      if (p.y >= buYuzeyY(p.x) - 1 || o.fi > 1.4) {   // yere indi: zafer ışıltıları ve neşe patlaması
         P.y = buYuzeyY(p.x); P.vy = 0; P.vx = Math.min(o.v, 260); P.ground = true; P.poz = null; P.kaymaAci = 0;
-        burst(P.x, P.y - 4, 12, BU_R_GK, 150, 1.0, 7); OLAY.emit('inis', { x: P.x, y: P.y, siddet: 500 });
+        burst(P.x, P.y - 4, 22, BU_R_GK, 180, 1.2, 9);
+        for (let i = 0; i < 7; i++) {
+          parca(P.x, P.y - 6, (Math.random() - 0.5) * 220, -70 - Math.random() * 90, 1.5, BU_GK[i], 8 + Math.random() * 4);
+        }
+        OLAY.emit('inis', { x: P.x, y: P.y, siddet: 500 });
         o.evre = BU_GK_EVRE.son; o.tSon = t;
       }
     }
+
+    // Kıvılcımları ve hız tüneli halkalarını güncelle
+    for (let i = o.rainbowSparks.length - 1; i >= 0; i--) {
+      const sp = o.rainbowSparks[i]; sp.t += dt;
+      if (sp.t >= sp.max) { o.rainbowSparks.splice(i, 1); continue; }
+      sp.x += sp.vx * dt; sp.y += sp.vy * dt;
+      sp.rot += sp.rotV * dt;
+      sp.vx *= Math.exp(-dt * 2.8);
+      sp.vy = sp.vy * Math.exp(-dt * 2.2) + 90 * dt;
+    }
+    for (let i = o.tunelRings.length - 1; i >= 0; i--) {
+      const tr = o.tunelRings[i]; tr.t += dt;
+      if (tr.t >= tr.max) { o.tunelRings.splice(i, 1); }
+    }
+
     if (o.evre === BU_GK_EVRE.son && !o.done && t - o.tSon >= BU_T.sonBekle) {
       o.done = true; o.uyandi = true; P.kilit = Math.max(P.kilit || 0, 4);
       OLAY.emit('gokkusagiTamam', o);
@@ -481,6 +813,116 @@ TUR.kaydet('gokkusagi', {
       if (!bekle && u < 1) { const p = buYay(o, r, Math.PI - Math.PI * u); g.globalAlpha = 1; g.globalCompositeOperation = 'lighter'; dglow(BU_GK_ACIK[i], p.x, p.y, 34, 0.45); dglow('#ffffff', p.x, p.y, 12, 0.4); g.globalCompositeOperation = 'source-over'; }
     }
     g.globalAlpha = 1;
+
+    // Hızlandıkça arkada kalan parlak renkli hız tüneli (hizTuneli)
+    if (o.tunelRings && o.tunelRings.length > 1) {
+      g.save();
+      g.globalCompositeOperation = 'lighter';
+      const nTr = o.tunelRings.length;
+      for (let k = 0; k < nTr; k++) {
+        const tr = o.tunelRings[k];
+        const u = tr.t / tr.max;
+        const al = (1 - u) * tr.hizOran * 0.75;
+        if (al < 0.01) continue;
+        const col = BU_GK[k % 7], colAcik = BU_GK_ACIK[k % 7];
+        // Tünel halkası: kaydırak yüzeyine dik eliptik ışık çemberi
+        g.save();
+        g.translate(tr.x, tr.y);
+        g.rotate(tr.fi);
+        const rRing = (20 + u * 45) * (1 + tr.hizOran * 0.8);
+        g.strokeStyle = col;
+        g.lineWidth = (3.5 * (1 - u) + 1.2) * tr.hizOran;
+        g.globalAlpha = al * 0.85;
+        g.beginPath();
+        g.ellipse(0, 0, rRing * 0.35, rRing, 0, 0, BU_PI2);
+        g.stroke();
+        // Merkez beyaz ışıma
+        g.strokeStyle = '#ffffff';
+        g.lineWidth = 1.6 * (1 - u);
+        g.globalAlpha = al * 0.6;
+        g.beginPath();
+        g.ellipse(0, 0, rRing * 0.28, rRing * 0.85, 0, 0, BU_PI2);
+        g.stroke();
+        g.restore();
+      }
+      // Hız tüneli hiper-ışık kaburgaları (warp streaks)
+      g.lineCap = 'round';
+      for (let st = 0; st < 5; st++) {
+        const col = BU_GK[(st * 2) % 7];
+        const ofs = (st - 2) * 16;
+        g.strokeStyle = col;
+        g.lineWidth = 2.2;
+        g.beginPath();
+        for (let k = 0; k < nTr; k++) {
+          const tr = o.tunelRings[k], u = k / (nTr - 1);
+          const px = tr.x - Math.sin(tr.fi) * ofs;
+          const py = tr.y + Math.cos(tr.fi) * ofs;
+          g.globalAlpha = u * 0.55 * tr.hizOran;
+          if (k === 0) g.moveTo(px, py); else g.lineTo(px, py);
+        }
+        g.stroke();
+      }
+      g.restore();
+    }
+
+    // Feza kayarken arkasında kalan prizmatik 7 renkli ışık şeritleri
+    if (o.kayIz && o.kayIz.length > 1) {
+      g.save();
+      g.lineCap = 'round'; g.lineJoin = 'round';
+      const nIz = o.kayIz.length;
+      for (let st = 0; st < 7; st++) {
+        const col = BU_GK[st], ofs = (st - 3) * (o.bant * 0.28);
+        g.globalCompositeOperation = 'lighter';
+        g.strokeStyle = col;
+        g.lineWidth = o.bant * 0.42;
+        g.beginPath();
+        for (let k = 0; k < nIz; k++) {
+          const pt = o.kayIz[k], u = k / (nIz - 1);
+          const dx = pt.x - o.cx, dy = pt.y - o.cy, dist = Math.hypot(dx, dy) || 1;
+          const rx = pt.x + (dx / dist) * ofs, ry = pt.y + (dy / dist) * ofs;
+          g.globalAlpha = u * u * 0.7;
+          if (k === 0) g.moveTo(rx, ry); else g.lineTo(rx, ry);
+        }
+        g.stroke();
+      }
+      g.globalCompositeOperation = 'lighter';
+      for (let k = 0; k < nIz; k += 4) {
+        const pt = o.kayIz[k], u = k / (nIz - 1), tw = 0.5 + 0.5 * Math.sin(tm * 6 + k);
+        buPirilti(pt.x + (Math.sin(k * 2) * 5), pt.y + (Math.cos(k * 3) * 5), 3 + 3 * tw, u * tw * 0.85, tm + k);
+      }
+      g.restore();
+    }
+
+    // Ayakların altından fışkıran 7 renkli gökkuşağı kıvılcımları (rainbowSparks)
+    if (o.rainbowSparks && o.rainbowSparks.length) {
+      g.save();
+      g.globalCompositeOperation = 'lighter';
+      for (const sp of o.rainbowSparks) {
+        const u = sp.t / sp.max;
+        const al = (1 - u) * Math.min(1, sp.t * 12);
+        if (al < 0.01) continue;
+        // Parlayan dış renk halesi
+        dglow(sp.col, sp.x, sp.y, sp.r * 3.5, al * 0.6);
+        // 4 kollu prizmatik yıldız kıvılcımı
+        g.globalAlpha = al;
+        g.fillStyle = sp.colAcik || '#ffffff';
+        g.save();
+        g.translate(sp.x, sp.y);
+        g.rotate(sp.rot);
+        const rNow = sp.r * (1 - u * 0.3);
+        g.beginPath();
+        g.moveTo(0, -rNow);
+        g.quadraticCurveTo(rNow * 0.15, -rNow * 0.15, rNow, 0);
+        g.quadraticCurveTo(rNow * 0.15, rNow * 0.15, 0, rNow);
+        g.quadraticCurveTo(-rNow * 0.15, rNow * 0.15, -rNow, 0);
+        g.quadraticCurveTo(-rNow * 0.15, -rNow * 0.15, 0, -rNow);
+        g.fill();
+        g.restore();
+      }
+      g.restore();
+      g.globalAlpha = 1;
+    }
+
     if (!bekle && tumu > 0) {
       // parlak üst kenar (kaydırak yüzeyi) + ışıltılar
       g.globalCompositeOperation = 'lighter';

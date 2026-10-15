@@ -869,7 +869,7 @@ const ARAYUZ = (() => {
       const cx = kx, cy = L.by;   // kartın altında, kartı örtmeden
       const vur = Math.pow(Math.max(0, Math.sin(tm * 3.4)), 6);   // kalp atışı gibi kısa nabız
       const sc = uiBack(uiSeg(q, 0, 0.55)) * (1 + 0.035 * Math.sin(tm * 1.7) + 0.06 * vur);
-      tekrarYer = { x: cx / DPR, y: cy / DPR, r: R * 1.4 / DPR };
+      tekrarYer = { x: cx / DPR, y: cy / DPR, r: R * 1.8 / DPR };
       g.globalCompositeOperation = 'lighter';
       dglow('#ffcf80', cx, cy, R * (2.2 + 0.3 * Math.sin(tm * 1.7) + 0.3 * vur), (0.35 + 0.15 * vur) * Math.min(1, q * 2));
       for (let k = 0; k < 2; k++) { const hq = ((tm + k * 0.9) % 1.8) / 1.8; halka(cx, cy, R * (1.05 + hq * 0.45), (1 - hq) * 0.55 * Math.min(1, q), R * 0.06 * (1 - hq) + 1, '255,230,180'); }

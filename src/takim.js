@@ -184,6 +184,24 @@ function tkSegMes(ax, ay, bx, by, px, py) {   // p noktasının a-b doğru parç
 function tkSur(o, x, y) {
   const k = o.tk; if (!k.drag) return;
   const d = k.drag, px = d.px, py = d.py; d.x = x; d.y = y; d.px = x; d.py = y;
+  const dist = Math.hypot(x - px, y - py);
+  if (dist > 1.5) {   // çizgi çekerken parıldayan yıldız tozu izi
+    const nDust = Math.min(3, Math.ceil(dist / 9));
+    for (let s = 0; s < nDust; s++) {
+      const u = s / nDust;
+      const sx = lerp(px, x, u) + (Math.random() - 0.5) * 8;
+      const sy = lerp(py, y, u) + (Math.random() - 0.5) * 8;
+      k.pk.push({
+        x: sx, y: sy,
+        vx: (Math.random() - 0.5) * 24,
+        vy: -12 - Math.random() * 24,
+        l: 0.6 + Math.random() * 0.4,
+        m: 1.0,
+        c: Math.random() < 0.5 ? '#fff4b8' : (Math.random() < 0.75 ? TK_AQUA : '#ffffff'),
+        r: 2.4 + Math.random() * 2.4
+      });
+    }
+  }
   const nk = tkNoktalar(k), sq = k.sek.seq, R = tkR() * 1.2;   // yakalama cömert (hızlı geçişte parmağın yolu da sayılır)
   let guv = 0;
   while (k.drag && k.n < sq.length && guv++ < 4) {
@@ -357,16 +375,28 @@ function tkGokCiz(o, tm) {
       tkCizCizgi(A.x, A.y, B.x, B.y, smooth(u), TK_AQUA, 3, al * 0.85);
     }
   }
-  if (sira || kut) {   // Feza'nın bağladığı çizgiler (altın)
+  if (sira || kut || k.bitti) {   // Feza'nın bağladığı çizgiler (altın ve elmas ışıldaması)
     for (let j = 0; j < sq.length - 1; j++) {
-      const bagli = kut || j < k.n - 1; if (!bagli) continue;
-      const A = nk[sq[j]], B = nk[sq[j + 1]], u = kut ? 1 : (k.e[j] === undefined ? 1 : smooth(k.e[j]));
-      const pulse = k.durum === 'dogru' ? 0.85 + 0.15 * Math.sin(tm * 7 - j) : 1;
+      const bagli = kut || k.bitti || j < k.n - 1; if (!bagli) continue;
+      const A = nk[sq[j]], B = nk[sq[j + 1]], u = (kut || k.bitti) ? 1 : (k.e[j] === undefined ? 1 : smooth(k.e[j]));
+      const pulse = (k.durum === 'dogru' || k.bitti) ? 0.85 + 0.15 * Math.sin(tm * 6 - j) : 1;
+      tkCizCizgi(A.x, A.y, B.x, B.y, u, '#ffe08a', 6.5, a * 0.35 * pulse);
       tkCizCizgi(A.x, A.y, B.x, B.y, u, '#ffd36a', 3.4, a * pulse);
+      tkCizCizgi(A.x, A.y, B.x, B.y, u, '#ffffff', 1.4, a * 0.75 * pulse);
     }
   }
   // sürüklenen çizgi + silinenler
-  if (k.drag && onceki >= 0) { const A = nk[onceki]; tkCizCizgi(A.x, A.y, k.drag.x, k.drag.y, 1, '#ffe9a8', 3.2, a * 0.9); dglow('#fff2b8', k.drag.x, k.drag.y, 34, 0.5 * a); }
+  if (k.drag && onceki >= 0) {
+    const A = nk[onceki];
+    tkCizCizgi(A.x, A.y, k.drag.x, k.drag.y, 1, '#ffe9a8', 3.4, a * 0.95);
+    tkCizCizgi(A.x, A.y, k.drag.x, k.drag.y, 1, '#ffffff', 1.4, a * 0.85);
+    dglow('#fff2b8', k.drag.x, k.drag.y, 38, 0.6 * a);
+    dglow('#ffffff', k.drag.x, k.drag.y, 16, 0.85 * a);
+    for (let q = 0; q < 3; q++) {
+      const qa = tm * 4 + q * 2.09;
+      dglow(q % 2 ? '#fffbe6' : TK_AQUA, k.drag.x + Math.cos(qa) * 14, k.drag.y + Math.sin(qa) * 14, 9, 0.45 * a);
+    }
+  }
   for (const s of k.sil) tkCizCizgi(s.x0, s.y0, s.x1, s.y1, 1, '#ffe9a8', 3, a * s.a * 0.8);
   // öğretici ışık: boşta bekleyince bir ışık noktası önceki noktadan sıradakine süzülür (el yok, yazı yok)
   if (sira && !k.drag && k.bosT > 2.5 && sonraki >= 0) {
@@ -441,6 +471,11 @@ function tkSolen(k, nk, sq, tm, a) {   // ekran uzayı (CSS px · DPR dönüşü
     for (let z = 0; z < 6; z++) { const w = clamp(u - z * 0.035, 0, 1); dglow(z ? '#ffe9a8' : '#ffffff', s.x + dx * w, s.y - (160 + q * 20) * w + 40 * w * w, 12 - z * 1.6, (1 - z / 6) * (1 - u) * 0.9 * a); }
     dglow('#fff2b8', x, yy, 26, (1 - u) * 0.5 * a);
   }
+  // tamamlanan şeklin köşe noktalarında elmas kristal parıltıları
+  for (let q = 0; q < nk.length; q++) {
+    const pt = nk[q];
+    ylGlint(pt.x, pt.y, 16 * A, 0.8 * A, tm * 2 + q * 1.5);
+  }
   g.globalCompositeOperation = 'source-over';
 }
 function tkYildizCiz(x, y, r, lit, tm, a, vur) {   // nokta: sönükken beyazımsı-mavi küçük yıldız, yanınca altın
@@ -454,6 +489,14 @@ function tkYildizCiz(x, y, r, lit, tm, a, vur) {   // nokta: sönükken beyazım
 }
 
 // ── gökte küçük canlı versiyon (altın): yıldız balığı yüzer · kuğu süzülür · kaplumbağa yüzer ──
+let tkHayvanGrad = null;
+function tkHayvanGradGet() {
+  if (!tkHayvanGrad) {
+    const gr = tkHayvanGrad = g.createLinearGradient(0, -1, 0, 1);
+    gr.addColorStop(0, TK_ALTIN[0]); gr.addColorStop(0.55, TK_ALTIN[1]); gr.addColorStop(1, TK_ALTIN[2]);
+  }
+  return tkHayvanGrad;
+}
 function tkHayvanCiz(o, tm, u, a) {
   const k = o.tk, y = tkYer, ad = k.sek.ad, s = y.hw * 0.17;
   const fade = Math.min(1, u * 5) * Math.min(1, (1 - u) * 4) * a;
@@ -462,7 +505,7 @@ function tkHayvanCiz(o, tm, u, a) {
   g.save(); g.translate(x, yy); g.globalAlpha = fade;
   g.globalCompositeOperation = 'lighter'; dglow('#ffe9a8', 0, 0, s * 3.4, 0.45); g.globalCompositeOperation = 'source-over';
   g.scale(s, s); g.lineJoin = 'round'; g.lineCap = 'round';
-  const gr = g.createLinearGradient(0, -1, 0, 1); gr.addColorStop(0, TK_ALTIN[0]); gr.addColorStop(0.55, TK_ALTIN[1]); gr.addColorStop(1, TK_ALTIN[2]);
+  const gr = tkHayvanGradGet();
   g.fillStyle = gr; g.strokeStyle = 'rgba(255,248,214,0.95)'; g.lineWidth = 0.09;
   const goz = (ex, ey, r) => { g.fillStyle = '#3a2a1a'; g.beginPath(); g.arc(ex, ey, r, 0, 6.283); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(ex - r * 0.3, ey - r * 0.3, r * 0.35, 0, 6.283); g.fill(); g.fillStyle = gr; };
   if (ad === 'denizYildizi') {
