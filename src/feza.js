@@ -852,7 +852,10 @@ function drawFeza(tm) {
   } else {
     if (deniz) { x.translate(0, -32); x.rotate((P.a_suA || 0) * P.a_side * (u < 1 ? smooth(clamp(Math.abs(u - 0.5) * 2, 0, 1)) : 1)); x.translate(0, 32); }
     x.scale(fsc * R.sx * FZ_SC, R.sy * FZ_SC);
-    if (P.a_spin) { x.translate(0, -30); x.rotate(P.a_spin); x.translate(0, 30); }
+    if (P.a_spin) {   // Suda takla ayakların/başın değil, toplanan gövdenin merkezinden döner.
+      const cx = deniz ? R.hx : 0, cy = deniz ? P.a_hipY - 6.2 : -30;
+      x.translate(cx, cy); x.rotate(P.a_spin); x.translate(-cx, -cy);
+    }
     fzFS = P.a_side < 0 ? -1 : 1;
     if (hb2) FZ.hair = FZ_HAIR_B2;
     try { if (front) fzDrawFront(x, tm); else fzDraw(x, tm);
@@ -1011,6 +1014,7 @@ function fezaInit() {
   P.a_t = 0; P.a_face = P.f; P.a_side = P.f; P.a_turnU = 1; P.a_turnTo = P.f; P.a_turnDur = 0.16; P.a_front = false; P.a_fu = 0; P.a_state = 'idle'; P.a_sw = 1; P.a_wasG = P.ground; P.a_prevVy = 0;
   P.a_landT = 9; P.a_landP = 0; P.a_take = 0; P.a_skid = 0; P.a_skidDir = 1; P.a_idle = 0; P.a_waveDir = 1;
   P.a_lookT = 1.2; P.a_look = 0; P.a_blink = 2.5; P.a_lidM = 1; P.a_spin = 0;
+  P.a_suHamleT = 9; P.a_suHamleSide = P.f || 1; P.a_suHamleSign = 1; P.a_suTuck = 0; P.a_suExtend = 0;
   P.a_hx = P.a_hy = P.a_hvx = P.a_hvy = 0; P.a_hipY = -(FZ_TH + FZ_SH + FZ_FT); P.a_hipV = 0;
   P.a_ph = 0; P.a_launch = 0; P.a_launchBig = false; P.a_stomp = 0; P.a_cheerT = 9; P.a_cheerO = null; P.a_cheerDir = 1;
   P.a_push = 0; P.a_bump = 0; P.a_carryT = 9; P.a_wasCarry = false; P.a_ox = 0; P.a_oy = 0; P.a_elX = P.x; P.a_elY = P.y; P.a_tutun = 0;
@@ -1110,6 +1114,7 @@ function fezaUpdate(dt) {
   if (!(dt > 0)) return;
   dt = Math.min(dt, 0.05);
   const t = (P.a_t += dt), sp = Math.abs(P.vx), vy = P.vy;
+  if (P.ucus) { P.a_suHamleT = 9; P.a_suTuck = P.a_suExtend = 0; }   // Vatoza binerken eski takla sonradan yeniden başlamaz.
   if (BOLUM_NO === 4 && P.deniz && !P.ucus) { fzDenizAdim(dt, t); return; }
   {   // gökkuşağından kayma (Bölüm 3, P.poz === 'kayma'): yön ve eğim konum değişiminden (ya da P.kaymaAci'den), yumuşatılmış
     const kx = P.rx ?? P.x, ky = P.ry ?? P.y, dx = kx - P.a_kpx, dy = ky - P.a_kpy, kay = P.poz === 'kayma'; P.a_kpx = kx; P.a_kpy = ky;
@@ -2253,22 +2258,60 @@ function fzSuHedef(R, ph, moving, dash, tm) {
   R.air = 1;
 }
 function fzSuAci(a, b) { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; }
+// Hamle fiziğine dokunmayan eklem pozu: 0,5 sn takla + 0,18 sn suya yeniden uzanma.
+function fzSuHamlePoz(R, age, ph, moving) {
+  const tuck = smooth(clamp(age / .075, 0, 1)) * (1 - smooth(clamp((age - .29) / .2, 0, 1)));
+  const extend = smooth(clamp((age - .33) / .13, 0, 1)) * (1 - smooth(clamp((age - .5) / .18, 0, 1)));
+  P.a_suTuck = tuck; P.a_suExtend = extend;
+  R.lt1 += fzSuAci(R.lt1, 2.16) * tuck; R.lt2 += fzSuAci(R.lt2, -2.48) * tuck;
+  R.bt1 += fzSuAci(R.bt1, 1.94) * tuck; R.bt2 += fzSuAci(R.bt2, -2.36) * tuck;
+  R.lt1 = lerp(R.lt1, .08, extend); R.lt2 = lerp(R.lt2, -.12, extend);
+  R.bt1 = lerp(R.bt1, -.05, extend); R.bt2 = lerp(R.bt2, -.16, extend);
+  const arm = lerp(R.arm, 1, tuck); R.arm = lerp(arm, 1.13, extend);
+  for (let i = 0; i < 2; i++) {
+    const sx = i ? -.8 : 1.2, sy = i ? -11.8 : -11.4, a = i ? 'ba1' : 'la1', b = i ? 'ba2' : 'la2';
+    // Geçiş elin yolu üzerinde yapılır; ±π sınırında dirsekler ters yöne sıçramaz.
+    const phase = ph + i * Math.PI; fzSuYay(phase, FZ_SU_EL);
+    let hx = lerp(8 + Math.sin(phase) * 2.2, FZ_SU_EL[0], moving), hy = lerp(-8.8 + Math.cos(phase) * 2.1, FZ_SU_EL[1], moving);
+    hx = lerp(hx, i ? 7 : 9.2, tuck); hy = lerp(hy, i ? -5.7 : -4.2, tuck);
+    const reach = extend * (i ? .92 : 1);
+    hx = lerp(hx, i ? -.8 : 3.8, reach); hy = lerp(hy, i ? -23.6 : -25.7, reach);
+    fzSideIK(sx, sy, hx, hy, R.arm, FZ_IKO); R[a] = FZ_IKO[0]; R[b] = FZ_IKO[1];
+  }
+  R.lean = lerp(R.lean, .23, tuck); R.lean = lerp(R.lean, -.025, extend);
+  R.head = lerp(R.head, .34, tuck); R.head = lerp(R.head, -.1, extend);
+  R.sx = lerp(R.sx, 1.035, tuck); R.sy = lerp(R.sy, .965, tuck);
+  R.sx = lerp(R.sx, .98, extend); R.sy = lerp(R.sy, 1.035, extend);
+  R.shr = lerp(R.shr, .55, tuck); R.hOpen = lerp(R.hOpen, .2, tuck);
+  R.happy = Math.max(R.happy, .65 * tuck + .35 * extend); R.mSmile = 1;
+  R.mOpen = lerp(R.mOpen, .2, tuck); R.brow = lerp(R.brow, .42, tuck);
+}
 function fzDenizAdim(dt, t) {
-  const R = P.a_R, total = Math.hypot(P.vx, P.vy), speed = clamp(total / 250, 0, 1), k = 1 - Math.exp(-dt * 16);
+  if (!(dt > 0) || !Number.isFinite(dt)) return;
+  const interrupted = P.kilit > 0 || DURUM !== 'oyun' || (typeof DENIZ !== 'undefined' && DENIZ.aktif) || (typeof INCI !== 'undefined' && INCI.active);
+  P.a_suHamleT = interrupted ? 9 : Math.min(9, P.a_suHamleT + dt);
+  const age = P.a_suHamleT, hamle = age < .68, rolling = age < .5;
+  const R = P.a_R, total = Math.hypot(P.vx, P.vy), speed = clamp(total / 250, 0, 1), k = 1 - Math.exp(-dt * (hamle ? 28 : 16));
   const oldMoving = P.a_suMoving || 0, targetMoving = smooth(clamp((total - 12) / 120, 0, 1)), decay = Math.exp(-dt * 5);
   P.a_suMoving = targetMoving + (oldMoving - targetMoving) * decay;
   const movingTime = targetMoving * dt + (oldMoving - targetMoving) * (1 - decay) / 5;
   const friend = P.a_suSevT > 0 && total < 40 ? P.a_suSevO : null;
-  const moving = P.a_suMoving, side = friend && Math.abs(friend.x - P.x) > 30 ? Math.sign(friend.x - P.x) : Math.abs(P.vx) > 24 ? Math.sign(P.vx) : P.f || 1, dash = clamp((P.denizHamle || 0) / 0.5, 0, 1);
+  const moving = P.a_suMoving, side = rolling ? P.a_suHamleSide : friend && Math.abs(friend.x - P.x) > 30 ? Math.sign(friend.x - P.x) : Math.abs(P.vx) > 24 ? Math.sign(P.vx) : P.f || 1, dash = rolling ? clamp(1 - age / .5, 0, 1) : 0;
   if (friend) P.f = side;
   if (P.a_turnU == null) P.a_turnU = 1;
-  if (P.a_turnU >= 1 && P.a_side !== side) { P.a_turnU = 0; P.a_suTo = side; }
-  if (P.a_turnU < 1) { P.a_turnU = Math.min(1, P.a_turnU + dt / 0.38); if (P.a_turnU >= 0.5) P.a_side = P.a_suTo; }
+  if (rolling) {   // Dönüşün ortasında ayna yönü değişip dünya taklasını tersine çevirmesin.
+    P.a_suTo = P.a_suHamleSide; P.a_side = P.a_suHamleSide;
+    P.a_turnU = Math.min(1, P.a_turnU + dt / .1);
+  } else {
+    if (P.a_turnU >= 1 && P.a_side !== side) { P.a_turnU = 0; P.a_suTo = side; }
+    if (P.a_turnU < 1) { P.a_turnU = Math.min(1, P.a_turnU + dt / .38); if (P.a_turnU >= .5) P.a_side = P.a_suTo; }
+  }
   P.a_fu = 0; P.a_ox = P.a_oy = P.a_lf = 0;
 
-  // Dash anında pürüzsüz yunus burgusu (barrel roll): 0..0.5 sn süresince yumuşak 360° dönüş
-  const dashU = clamp(1 - (P.denizHamle || 0) / 0.5, 0, 1);
-  const rollSpin = (P.denizHamle > 0) ? (dashU - Math.sin(dashU * 6.2831853) / 6.2831853) * 6.2831853 : 0;
+  // Önce toplanır, sonra hızlanarak döner; son açı tam turda kalır, açılma sırasında sıçramaz.
+  const dashU = clamp((age - .065) / .435, 0, 1);
+  const rollEase = dashU * dashU * dashU * (dashU * (dashU * 6 - 15) + 10);
+  const rollSpin = hamle ? rollEase * Math.PI * 2 * P.a_suHamleSign : 0;
   P.a_spin = rollSpin;
 
   P.a_suPh = (P.a_suPh || 0) + dt * (1.4 + dash * 2.2) + movingTime * 3.4;
@@ -2276,11 +2319,12 @@ function fzDenizAdim(dt, t) {
   // Yön suya bakar: yükselirken gövde doğrulur, alçalırken baş yumuşakça öne dalar.
   const aim = 1.34 + clamp(P.vy / Math.max(100, Math.abs(P.vx)) * 0.44, -1.04, 0.58);
   P.a_suA = lerp(P.a_suA || 0, lerp(0.12 + Math.sin(t * 1.2) * 0.035, aim, moving), 1 - Math.exp(-dt * (dash > 0 ? 8 : 5)));
-  fzSuHedef(FZ_SU_T, ph, moving, dash, t);
+  fzSuHedef(FZ_SU_T, ph, moving, 0, t);
+  if (hamle) fzSuHamlePoz(FZ_SU_T, age, ph, moving); else P.a_suTuck = P.a_suExtend = 0;
   P.a_suSevT = Math.max(0, (P.a_suSevT || 0) - dt);
   const party = typeof INCI !== 'undefined' && INCI.active ? INCI.joy : 0;
   const salute = P.a_suSevT > 0 ? Math.sin(clamp(P.a_suSevT / 2.6, 0, 1) * Math.PI) * (1 - moving * .72) : 0;
-  const joy = Math.max(party, salute);
+  const joy = Math.max(party, salute) * (1 - P.a_suTuck) * (1 - P.a_suExtend);
   if (joy > .001) {
     // Su içinde de sevinç okunur: bir kol dostuna uzanır, diğeri yumuşakça el sallar.
     fzSideIK(1.2, -11.4, 11.2 + Math.sin(t * 6.2) * 1.2, -23.8 + Math.cos(t * 6.2) * 1.4, 1.18, FZ_IKO);
@@ -2295,13 +2339,18 @@ function fzDenizAdim(dt, t) {
   FZ_SU_T.gx = P.a_turnU < 0.5 ? -0.85 : 0.78; FZ_SU_T.gy = friend ? clamp(((friend.dnz ? friend.dnz.hy : friend.y - 42) - (P.y - 57)) / 180, -.4, .4) : clamp(P.vy / 500, -0.3, 0.3);
   // Baş, dönüşte önce yeni yöne bakar; orta anda yüz kameraya dönerken gövde doğrulur.
   FZ_SU_T.head += (P.a_turnU < 1 ? -0.13 * Math.sin(P.a_turnU * Math.PI) : 0);
-  for (let i = 0; i < FZ_KEYS.length; i++) { const key = FZ_KEYS[i], old = Number.isFinite(R[key]) ? R[key] : FZ_SU_T[key], delta = FZ_SU_ANG.indexOf(key) >= 0 ? fzSuAci(old, FZ_SU_T[key]) : FZ_SU_T[key] - old; R[key] = old + delta * k; }
-  P.a_hipY = -17.7 + Math.sin(ph * 2) * moving * 0.12; P.a_kenar = true; P.a_noFar = false;
+  for (let i = 0; i < FZ_KEYS.length; i++) {
+    const key = FZ_KEYS[i], old = Number.isFinite(R[key]) ? R[key] : FZ_SU_T[key], delta = FZ_SU_ANG.indexOf(key) >= 0 ? fzSuAci(old, FZ_SU_T[key]) : FZ_SU_T[key] - old;
+    // Kısa toparlanmada eklem hızları saniyeyle sınırlı; yüksek Hz'de de aynı yumuşak yay çizilir.
+    const maxStep = age < .9 ? (FZ_VMAX[key] || 0) * dt : 0;
+    R[key] = old + (maxStep ? clamp(delta * k, -maxStep, maxStep) : delta * k);
+  }
+  P.a_hipY = -17.7 + Math.sin(ph * 2) * moving * 0.12 - P.a_suTuck * .65; P.a_kenar = true; P.a_noFar = false;
   P.a_blink -= dt; if (P.a_blink < -0.13) P.a_blink = 2.2 + Math.random() * 3;
   P.a_lidM = lerp(P.a_lidM, P.a_blink < 0 ? 0 : 1, 1 - Math.exp(-dt * 35));
-  P.a_cl = lerp(0.16 * Math.sin(ph * 1.3 - 0.8) + moving * 0.12, -0.6 * dash, dash);
-  P.a_hx = lerp(P.a_hx || 0, lerp(-1.25 * moving + 0.14 * Math.sin(ph * 0.7), -3.2, dash), k);
-  P.a_hy = lerp(P.a_hy || 0, lerp(-P.vy * 0.002 + 0.18 * Math.sin(ph * 0.6), Math.sin(rollSpin) * 1.4, dash), k);
+  P.a_cl = (0.16 * Math.sin(ph * 1.3 - 0.8) + moving * .12) * (1 - P.a_suTuck * .65) - P.a_suTuck * .2 - P.a_suExtend * .12;
+  P.a_hx = lerp(P.a_hx || 0, -1.25 * moving + .14 * Math.sin(ph * .7) - P.a_suTuck * .8 - P.a_suExtend * 1.3, k);
+  P.a_hy = lerp(P.a_hy || 0, -P.vy * .002 + .18 * Math.sin(ph * .6) + Math.sin(rollSpin) * P.a_suTuck * .8, k);
 }
 
 // Baloncuk gövdeye değil kafa eklemine bağlıdır: eğilme, boyun dönüşü ve saç salınımını birlikte izler.
@@ -2324,6 +2373,12 @@ function fzNefesZari(x, tm, front) {
   x.beginPath(); x.ellipse(cx, cy, rx + breath, ry - breath * 0.55, tilt, 0.4, 1.1); x.stroke(); x.restore();
 }
 
+OLAY.on('denizHamle', () => {
+  if (BOLUM_NO !== 4 || !P.deniz || !P.a_R || P.ucus || P.kilit > 0 || DURUM !== 'oyun') return;
+  P.a_suHamleT = 0; P.a_suHamleSide = P.a_side || P.f || 1;
+  const dir = Math.abs(P.denizDX || 0) > .12 ? Math.sign(P.denizDX) : P.a_suHamleSide;
+  P.a_suHamleSign = dir * P.a_suHamleSide;
+});
 function fzDenizSevin(e) {
   if (BOLUM_NO !== 4 || !P.deniz) return;
   const o = e && (e.o || e); if (!o || Math.abs(o.x - P.x) > 520) return;

@@ -50,8 +50,10 @@ const INCI = (() => {
         let ex=o.x+[-145,-55,50,140,215][i]*widths,ey=o.y+[-280,-340,-350,-305,-225][i];
         ex=lerp(ex,o.x+Math.cos(angle)*180*widths,orbit);ey=lerp(ey,o.y-247+Math.sin(angle)*90,orbit);
         ex=lerp(ex,o.x+220-i*75-(t-14)*32,procession);ey=lerp(ey,o.y-302+Math.sin((t-14)*1.5-i*.6)*28+i*13,procession);
-        const prevX=a.x;a.x=lerp(o.x-600-i*95,ex,u)+Math.sin(t*2.15+i*.68)*joy()*11;a.y=lerp(o.y-250-i*23,ey,u)-Math.abs(Math.sin(t*2.15+i*.68))*joy()*15;
-        const facing=orbit>.1||procession>.1?(a.x-prevX<0?-1:1):i>1?-1:1;a.pose.face=lerp(a.pose.face,facing,1-Math.exp(-dt*8));a.pose.sev=joy()*.9;a.pose.bulT=t+i*.28;a.pose.takla=orbit>.1?Math.sin((t-8)*3.2+i)*.35:0;
+        const prevX=a.x;a.x=lerp(o.x-600-i*95,ex,u)+Math.sin(t*2.15+i*.68)*joy()*11;a.y=lerp(o.y-250-i*23,ey,u)-(1-Math.cos(t*2.15+i*.68))*joy()*7.5;
+        // Yön değişince kâğıt gibi incelmez; küçük yatış ve baş/kuyruk takibi yüzüşü taşır.
+        const vx=dt>0?(a.x-prevX)/dt:0, facing=orbit>.1||procession>.1?(Math.abs(vx)>14?(vx<0?-1:1):a.pose.face):i>1?-1:1;
+        a.pose.face=facing;a.pose.lean=lerp(a.pose.lean||0,clamp(vx*-.001,-.13,.13),1-Math.exp(-dt*5));a.pose.sev=joy()*.9;a.pose.bulT=t+i*.28;a.pose.takla=Math.sin((t-8)*2.8+i)*.24*orbit;
       }
       if(t>=.7&&!(k.events&1)){k.events|=1;OLAY.emit('inciKabuk',{o});if(typeof SES!=='undefined')SES.soyle('p_i_inci_uyan',{oncelik:4});}
       if(t>=7&&!(k.events&2)){k.events|=2;OLAY.emit('inciDostlar',{o});if(typeof SES!=='undefined')SES.soyle('p_i_dostlar',{oncelik:4});}

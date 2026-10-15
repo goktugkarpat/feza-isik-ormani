@@ -71,7 +71,27 @@ const sh = {
 };
 
 // ── ölçüler & dönüşümler ──
+// Ana ekrana eklenen iPad'de durum çubuğu tuvalin üzerine gelebilir. Yalnız seçim ekranının
+// başlık/balon katmanı aşağı iner; oda resmi ve oyun içi kamera esnetilmez, kesilmez.
+const shSecGuvenli = { kirli: true, ust: 0, alt: 0, asagi: 0 };
+function shSecGuvenliOlc() {
+  shSecGuvenli.kirli = false;
+  let ust = 0, alt = 0;
+  if (typeof document !== 'undefined' && document.body) {
+    const e = document.createElement('div');
+    e.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)';
+    document.body.appendChild(e);
+    const css = getComputedStyle(e); ust = parseFloat(css.paddingTop) || 0; alt = parseFloat(css.paddingBottom) || 0;
+    e.remove();
+  }
+  // Aynı ekran oranında masaüstü ve iPad aynı yerleşimi kullanır. Tasarımın 32 CSS piksellik
+  // üst boşluğu hep korunur; cihaz daha büyük bir güvenli alan bildirirse onun altına geçilir.
+  const pay = Math.max(32, ust + 8);
+  shSecGuvenli.ust = ust; shSecGuvenli.alt = alt;
+  shSecGuvenli.asagi = Math.min(pay * H / Math.max(1, innerHeight), H * 0.09);
+}
 function shOlc() {
+  if (shSecGuvenli.kirli) shSecGuvenliOlc();
   sh.k0 = H / 100; sh.wu = 100 * W / H;
   // dar (dikey) ekranda oda sağa kayar: yatak tam görünsün (yatay ekranda kayma yok). Bölüm 3 sabahında daha az kayar:
   // pencere (gökkuşağı) de görünsün
@@ -2069,7 +2089,7 @@ OLAY.on('dokunus', v => {
   else { P.uyan = sh.t + 0.25; P.kalk = sh.t + 0.3; P.isik = sh.t; P.dunya = sh.t + 0.6; P.son = P.dunya + 1.6; }
   shAn('atlandi');
 });
-OLAY.on('boyut', () => { sh.bw = -1; });
+OLAY.on('boyut', () => { sh.bw = -1; shSecGuvenli.kirli = true; if (sh.sec && !sh.sec.secili) sh.sec.pos.length = 0; });
 // başlık ekranındayken oda ve orman fonunu önceden hazırla ve bir kez boyat (dokununca takılma olmasın)
 setTimeout(function shIsit() {
   if (DURUM !== 'baslik' || sh.mod) return;
@@ -2548,12 +2568,13 @@ function shBalonCam(d, col) {   // sedef sabun köpüğü gibi cam kabuk: sedefl
 }
 // düzen: [{x,y,d}] ekran pikseli; 1-5 balon. Tek sırada hafif yay (ortadakiler yukarıda), dikey ekranda daha geniş alan
 function shSecimYer(n) {
-  const yatay = W > H * 1.1, mn = Math.min(W, H);
+  const yatay = W > H * 1.1, mn = Math.min(W, H), asagi = shSecGuvenli.asagi;
   if (n === 4) {
     const fs = Math.min(H * 0.1, W * 0.088), top = H * (yatay ? 0.025 : 0.035) + fs * 1.62;
-    if (yatay) { const d = Math.min(W * 0.185, H * 0.31), y = top + d * 0.57; return [0, 1, 2, 3].map(i => ({ x: W * (0.17 + i * 0.22), y, d })); }
-    const d = Math.min(W * 0.26, H * 0.155, (H * 0.49 - top) / 2.4), y0 = top + d * 0.61, dy = d * 1.24;
-    return [0, 1, 2, 3].map(i => ({ x: W * (i % 2 ? 0.7 : 0.3), y: y0 + Math.floor(i / 2) * dy, d }));
+    // İlk ve son rüya biraz yukarıda: soldaki balon Feza'nın yüzünü kapatmaz, ortadakiler yerinde kalır.
+    if (yatay) { const d = Math.min(W * 0.185, H * 0.31), y = top + d * 0.57 + asagi, kenar = Math.min(32 * H / Math.max(1, innerHeight), d * 0.2); return [0, 1, 2, 3].map(i => ({ x: W * (0.17 + i * 0.22), y: y - (i === 0 || i === 3 ? kenar : 0), d })); }
+    const d = Math.min(W * 0.26, H * 0.155, (H * 0.49 - top) / 2.4), y0 = top + d * 0.61, dy = d * 1.24, kenar = Math.min(20 * H / Math.max(1, innerHeight), d * 0.2);
+    return [0, 1, 2, 3].map(i => ({ x: W * (i % 2 ? 0.7 : 0.3), y: y0 + Math.floor(i / 2) * dy + asagi - (i === 0 || i === 3 ? kenar : 0), d }));
   }
   const A = yatay ? { x0: W * 0.06, y0: H * 0.172, w: W * 0.88, h: H * 0.34 } : { x0: W * 0.025, y0: H * 0.175, w: W * 0.95, h: H * 0.3 };
   const maxD = mn * (n <= 2 ? 0.4 : yatay ? 0.33 : 0.36);
@@ -2573,7 +2594,7 @@ function shSecimYer(n) {
     const rowW = inRow * en.cw, x0 = A.x0 + (A.w - rowW) / 2;
     const k = inRow > 1 ? (ci - (inRow - 1) / 2) / ((inRow - 1) / 2) : 0, yay = en.rows === 1 ? d * 0.1 * (1 - k * k) : 0;
     const y = en.rows === 1 ? tb + d * 0.6 + d * 0.1 - yay : Math.max(A.y0 + (r + 0.5) * en.ch, tb + d * 0.6 + r * en.ch);
-    out.push({ x: x0 + (ci + 0.5) * en.cw, y, d });
+    out.push({ x: x0 + (ci + 0.5) * en.cw, y: y + asagi, d });
   }
   return out;
 }
@@ -2581,15 +2602,18 @@ let shBaslikC = null;
 function shBaslikSprite() {   // "Feza ve Pırıl" + altyazı: arayuz.js başlığının stili (Georgia, mor-krem degrade, ışıma)
   if (shBaslikC && shBaslikC.W === W && shBaslikC.H === H) return shBaslikC;
   const fs = Math.round(Math.min(H * 0.1, W * 0.088)), fs2 = Math.round(fs * 0.38), h = Math.round(fs * 2.3), pad = fs * 0.55, FS = 'Georgia, "Times New Roman", serif';
+  // Ana başlığın üzerinde biraz daha nefes: yazıları birbirine yaklaştır, balonları aşağı itme.
+  // Kısa ekranlarda bu boşluklar da yazı boyuyla küçülür; font ve oranlar aynı kalır.
+  const anaPay = Math.min(12 * H / Math.max(1, innerHeight), fs * 0.2), altPay = Math.min(4 * H / Math.max(1, innerHeight), fs * 0.07);
   const mk = () => { const c = document.createElement('canvas'); c.width = W; c.height = h; return c; };
   const metin = mk(), glow = mk();
   const yaz = (x, renk) => {
     x.textAlign = 'center'; x.textBaseline = 'alphabetic'; x.font = `400 ${fs}px ${FS}`;
-    if (renk) { const gr = x.createLinearGradient(0, pad * 0.4, 0, pad + fs * 0.2); gr.addColorStop(0, '#fbf6ff'); gr.addColorStop(0.5, '#e6d6ff'); gr.addColorStop(1, '#bfa0f4'); x.fillStyle = gr; }
-    x.fillText('Feza ve Pırıl', W / 2, pad + fs * 0.2);
+    if (renk) { const gr = x.createLinearGradient(0, pad * 0.4 + anaPay, 0, pad + fs * 0.2 + anaPay); gr.addColorStop(0, '#fbf6ff'); gr.addColorStop(0.5, '#e6d6ff'); gr.addColorStop(1, '#bfa0f4'); x.fillStyle = gr; }
+    x.fillText('Feza ve Pırıl', W / 2, pad + fs * 0.2 + anaPay);
     x.font = `italic 400 ${fs2}px ${FS}`;
-    if (renk) { const gr = x.createLinearGradient(0, pad + fs * 0.5, 0, pad + fs * 1.05); gr.addColorStop(0, '#fff6dc'); gr.addColorStop(1, '#bff4ff'); x.fillStyle = gr; }
-    x.fillText('Her gece başka bir rüya', W / 2, pad + fs * 0.88);
+    if (renk) { const gr = x.createLinearGradient(0, pad + fs * 0.5 - altPay, 0, pad + fs * 1.05 - altPay); gr.addColorStop(0, '#fff6dc'); gr.addColorStop(1, '#bff4ff'); x.fillStyle = gr; }
+    x.fillText('Her gece başka bir rüya', W / 2, pad + fs * 0.88 - altPay);
   };
   const gx = glow.getContext('2d');
   for (const [blur, col] of [[fs * 0.5, 'rgba(160,120,255,0.9)'], [fs * 0.2, 'rgba(220,200,255,0.9)']]) {
@@ -2613,6 +2637,7 @@ function shSecimBaslat(opts, onSec) {
   S2.opts.forEach((o, i) => setTimeout(() => { if (sh.mod === 'secim' && sh.sec === S2 && !S2.secili) { try { shBoya(shBalonIc(o.ikon, shHiQ())); } catch (e) {} } }, 3400 + i * 900));
 }
 function shSecimDokun(cx, cy) {   // CSS pikseli
+  shOlc();
   const S2 = sh.sec; if (sh.mod !== 'secim' || !S2 || S2.secili || sh.t < 0.6) return false;
   const px = cx / innerWidth * W, py = cy / innerHeight * H;
   let yer = S2.pos; if (!yer || yer.length !== S2.opts.length) { yer = shSecimYer(S2.opts.length).map((b, i) => { const f = shSecimOfs(i, sh.t, b.d); return { x: b.x + f.x, y: b.y + f.y, d: b.d, hazir: 1 }; }); }
@@ -2736,7 +2761,7 @@ function shSecimCiz(tm, dt) {
   shZerreler(tm, 0.45, true);
   const gir = shEase(shSeg(t, 0, 1.5)), yz = 1 - shEase(shSeg(sec, 0, 0.3));
   // başlık
-  const B = shBaslikSprite(), by = H * (W > H * 1.1 ? 0.025 : 0.035) - H * 0.02 * shEase(shSeg(sec, 0, 0.4)), nf = 0.72 + 0.22 * Math.sin(tm * 1.3);
+  const B = shBaslikSprite(), by = H * (W > H * 1.1 ? 0.025 : 0.035) + shSecGuvenli.asagi - H * 0.02 * shEase(shSeg(sec, 0, 0.4)), nf = 0.72 + 0.22 * Math.sin(tm * 1.3);
   g.globalAlpha = Math.min(1, gir * yz * nf); g.drawImage(B.glow, 0, by);
   g.globalAlpha = gir * yz; g.drawImage(B.metin, 0, by); g.globalAlpha = 1;
   // baloncuklar

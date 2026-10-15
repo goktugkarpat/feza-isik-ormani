@@ -65,92 +65,79 @@ function dnzSedefYildizlar(x, y, col, n) {
     });
   }
 }
+// Her oyun başlangıcında tek yol sabitlenir: Feza yüzmeye devam edince takla yörüngesi sıçramaz.
+function dnzAtBasla(o) {
+  const k = o.dnz;
+  k.odulX = k.hx; k.odulY = k.hy;
+  k.odulDir = P.x < k.hx ? -1 : 1; k.face = k.odulDir;
+  k.takla = 0; k.sqx = k.sqy = 1; k.tailCoil = k.tailWhip = k.lean = 0;
+  k.ring1 = k.ring2 = k.ring3 = false;
+}
+// Beşinci dereceden geçiş: hem hız hem ivme evrelerin iki ucunda sıfırdır.
+function dnzAtGecis(u) { u = clamp(u, 0, 1); return u * u * u * (u * (u * 6 - 15) + 10); }
 function dnzAtOdul(o, dt) {
   const k = o.dnz;
-  dt = dt || 0.016;
-  if (!k.halkalar) k.halkalar = [];
+  if (!Number.isFinite(dt) || dt < 0) return;
   for (let i = k.halkalar.length - 1; i >= 0; i--) {
     k.halkalar[i].t += dt;
     if (k.halkalar[i].t > k.halkalar[i].maxT) k.halkalar.splice(i, 1);
   }
-  const t = k.bulT, dur = 3.2;
-  const homeX = o.x, homeY = o.y - 42;
+  const t = k.bulT, dur = 3.6, T1 = .38, T2 = 2.04, T3 = 2.62;
+  const homeX = o.x + Math.sin(k.t * 1.4 + k.seed) * 8;
+  const homeY = o.y - 42 + Math.sin(k.t * 1.1 + k.seed) * 6;
   if (t > dur) {
-    k.takla = 0; k.sqx = k.sqy = 1; k.tailCoil = 0; k.tailWhip = 0; k.prevTakla = 0;
-    const targetX = homeX + Math.sin(k.t * 1.4 + k.seed) * 8;
-    const targetY = homeY + Math.sin(k.t * 1.1 + k.seed) * 6;
-    k.hx += (targetX - k.hx) * (1 - Math.exp(-dt * 4));
-    k.hy += (targetY - k.hy) * (1 - Math.exp(-dt * 4));
+    k.takla = 0; k.sqx = k.sqy = 1; k.tailCoil = k.tailWhip = 0;
+    k.hx += (homeX - k.hx) * (1 - Math.exp(-dt * 4));
+    k.hy += (homeY - k.hy) * (1 - Math.exp(-dt * 4));
+    k.lean += (0 - k.lean) * (1 - Math.exp(-dt * 5));
     return;
   }
-  const fezaX = P.x, fezaY = P.y - 25;
-  const dFeza = Math.hypot(fezaX - homeX, fezaY - homeY);
-  const reach = Math.min(1, 350 / Math.max(1, dFeza));
-  const cx = lerp(homeX, fezaX, reach);
-  const cy = lerp(homeY, fezaY, reach);
-  const dir = k.face || (cx < homeX ? -1 : 1) || 1;
-  const A0 = dir > 0 ? Math.PI * 0.85 : Math.PI * 0.15;
-  const eio = u => u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;   // ease-in-out (kübik)
-  const prevT = k.prevTakla || 0;
-  // zaman çizelgesi (sn): hazırlık 0.45 → takla 1.45 → iniş/sallanma 0.7 → eve dönüş (kalan)
-  const T1 = 0.45, T2 = T1 + 1.45, T3 = T2 + 0.7;
-  k.sqx = 1; k.sqy = 1;
-  if (t < T1) {   // anticipation: geriye gerilir, çömelir, kuyruk kıvrılır
-    const p = smooth(t / T1), back = Math.sin(p * Math.PI * 0.5);
-    const reachX = cx + Math.cos(A0) * 65, reachY = cy + Math.sin(A0) * 45;
-    k.hx = lerp(homeX, lerp(homeX, reachX, 0.55), p);
-    k.hy = lerp(homeY, lerp(homeY, reachY, 0.55), p) + back * 10 - Math.sin(p * Math.PI) * 6;
-    k.takla = -0.34 * dir * back;
-    k.sqx = 1 + 0.07 * back; k.sqy = 1 - 0.09 * back; k.tailCoil = back;
-  } else if (t < T2) {
-    const loopU = (t - T1) / (T2 - T1), e = eio(loopU);
-    const ang = A0 + e * Math.PI * 2 * dir;
-    const rx = 68, ry = 52;
-    // hazırlıktan yumuşak giriş: yarıçap ilk anda küçükten açılır
-    const open = smooth(clamp(loopU / 0.18, 0, 1));
-    const sx = lerp(homeX, cx + Math.cos(A0) * 65, 0.55), sy = lerp(homeY, cy + Math.sin(A0) * 45, 0.55);
-    k.hx = lerp(sx, cx + Math.cos(ang) * rx, open);
-    k.hy = lerp(sy + 10, cy + Math.sin(ang) * ry - 8, open);
-    k.takla = lerp(-0.34 * dir, 0, open) + 0.35 * dir * open + e * Math.PI * 2 * dir;
-    const sp = Math.min(1, Math.abs(k.takla - prevT) / Math.max(dt, 1e-3) / 9);   // dönüş hızına göre squash-stretch
-    k.sqx = 1 + 0.16 * sp; k.sqy = 1 - 0.12 * sp; k.tailCoil = 0; k.tailWhip = sp;
-    if (loopU >= 0.18 && !k.ring1) {
+  const dir = k.odulDir, sx = k.odulX, sy = k.odulY, lx = sx - dir * 11, ly = sy + 8;
+  k.lean = 0; k.sqx = k.sqy = 1;
+  if (t < T1) {   // Küçük bir hazırlık: kuyruk toparlanır, gövde nefes alır.
+    const p = dnzAtGecis(t / T1);
+    k.hx = lerp(sx, lx, p); k.hy = lerp(sy, ly, p);
+    k.takla = -.22 * dir * p; k.tailCoil = p; k.tailWhip = 0;
+    k.sqx = 1 + .045 * p; k.sqy = 1 - .045 * p;
+  } else if (t < T2) {   // Tek kesintisiz oval takla; giriş ve çıkış aynı noktada ve aynı hızda.
+    const u = (t - T1) / (T2 - T1), e = dnzAtGecis(u), a = e * Math.PI * 2;
+    const speed = 16 * u * u * (1 - u) * (1 - u);
+    k.hx = lx + dir * Math.sin(a) * 68;
+    k.hy = ly - (1 - Math.cos(a)) * 47;
+    k.takla = -dir * (a + .22 * Math.cos(Math.PI * e));
+    const tuck = 1 - smooth(clamp(u / .18, 0, 1));
+    k.sqx = 1 + .045 * tuck + .09 * speed;
+    k.sqy = 1 - .045 * tuck - .065 * speed;
+    k.tailCoil = tuck; k.tailWhip = speed;
+    if (u >= .18 && !k.ring1) {
       k.ring1 = true;
-      k.halkalar.push({ x: cx, y: cy - 10, t: 0, maxT: 2.2, r0: 24, r1: 135, renk: k.renk });
-      dnzSevinc(k.hx, k.hy, k.renk, 8);
-      dnzSedefYildizlar(cx, cy - 10, k.renk, 14);
+      k.halkalar.push({ x: sx, y: sy - 30, t: 0, maxT: 2.2, r0: 24, r1: 135, renk: k.renk });
+      dnzSevinc(k.hx, k.hy, k.renk, 8); dnzSedefYildizlar(sx, sy - 30, k.renk, 14);
     }
-    if (loopU >= 0.52 && !k.ring2) {
+    if (u >= .52 && !k.ring2) {
       k.ring2 = true;
-      k.halkalar.push({ x: cx, y: cy - 10, t: 0, maxT: 2.2, r0: 28, r1: 150, renk: '#fff5c2' });
-      dnzSevinc(k.hx, k.hy, '#ffffff', 10);
-      dnzSedefYildizlar(cx, cy - 10, '#ffffff', 16);
+      k.halkalar.push({ x: sx, y: sy - 30, t: 0, maxT: 2.2, r0: 28, r1: 150, renk: '#fff5c2' });
+      dnzSevinc(k.hx, k.hy, '#ffffff', 10); dnzSedefYildizlar(sx, sy - 30, '#ffffff', 16);
     }
-    if (loopU >= 0.82 && !k.ring3) {
+    if (u >= .82 && !k.ring3) {
       k.ring3 = true;
       k.halkalar.push({ x: k.hx, y: k.hy, t: 0, maxT: 1.8, r0: 16, r1: 85, renk: k.renk });
       dnzSedefYildizlar(k.hx, k.hy, k.renk, 12);
     }
-    if (Math.random() < dt * 40 && typeof parts !== 'undefined') {   // kabarcık/ışık yayı
-      parts.push({ x: k.hx + (Math.random() - 0.5) * 8, y: k.hy + 6 + (Math.random() - 0.5) * 8, vx: (Math.random() - 0.5) * 24, vy: -10 - Math.random() * 22, life: 0.8, max: 0.8, col: Math.random() < 0.5 ? k.renk : '#e9fffb', size: 2.4 + Math.random() * 1.6 });
+    if (Math.random() < dt * 22 && typeof parca === 'function') {
+      parca(k.hx + (Math.random() - .5) * 8, k.hy + 10, (Math.random() - .5) * 18, -12 - Math.random() * 18, .8, Math.random() < .5 ? k.renk : '#e9fffb', 2.4 + Math.random() * 1.6);
     }
-  } else if (t < T3) {   // iniş: yavaşlayan aşma ve geri sallanma (sönümlü yay), squash→recover
-    const su = (t - T2), endAng = A0 + Math.PI * 2 * dir;
-    const leaveX = cx + Math.cos(endAng) * 65, leaveY = cy + Math.sin(endAng) * 45;
-    const ov = Math.exp(-su * 5.5) * Math.cos(su * 15);
-    k.hx = lerp(leaveX, homeX, smooth(clamp(su / (T3 - T2), 0, 1)) * 0.35);
-    k.hy = lerp(leaveY, homeY, smooth(clamp(su / (T3 - T2), 0, 1)) * 0.35) + 10 * Math.exp(-su * 5) * Math.sin(su * 10);
-    k.takla = Math.PI * 2 * dir + 0.35 * dir * (1 - smooth(clamp(su / 0.25, 0, 1))) + 0.26 * dir * ov * (dir > 0 ? 1 : 1);
-    k.sqx = 1 - 0.07 * Math.exp(-su * 6) * Math.cos(su * 16); k.sqy = 1 + 0.09 * Math.exp(-su * 6) * Math.cos(su * 16);
-    k.tailWhip = Math.exp(-su * 3);
+  } else if (t < T3) {   // Takladan küçük bir reveransa ve ileri süzülüşe; keskin iniş yok.
+    const p = dnzAtGecis((t - T2) / (T3 - T2)), breath = Math.sin(p * Math.PI);
+    k.hx = lerp(lx, sx + dir * 15, p); k.hy = lerp(ly, sy - 5, p) - breath * 5;
+    k.takla = -Math.PI * 2 * dir + .22 * dir * (1 - p) - .07 * dir * breath;
+    k.sqx = 1 - .035 * breath; k.sqy = 1 + .04 * breath;
+    k.tailCoil = 0; k.tailWhip = .22 * breath;
   } else {
-    const rt = smooth(clamp((t - T3) / Math.max(0.1, dur - T3), 0, 1));
-    const su = T3 - T2, endAng = A0 + Math.PI * 2 * dir;
-    const mx = lerp(cx + Math.cos(endAng) * 65, homeX, 0.35), my = lerp(cy + Math.sin(endAng) * 45, homeY, 0.35);
-    k.hx = lerp(mx, homeX, rt); k.hy = lerp(my, homeY, rt) + Math.sin(rt * Math.PI) * 10;
-    k.takla = Math.PI * 2 * dir; k.tailWhip = 0;
+    const p = dnzAtGecis((t - T3) / (dur - T3));
+    k.hx = lerp(sx + dir * 15, homeX, p); k.hy = lerp(sy - 5, homeY, p) - Math.sin(p * Math.PI) * 7;
+    k.takla = -Math.PI * 2 * dir; k.tailCoil = k.tailWhip = 0;
   }
-  k.prevTakla = k.takla;
 }
 function dnzKabukSprite(i) {
   if (dnzKabukSpr[i]) return dnzKabukSpr[i];
@@ -185,42 +172,41 @@ function dnzAtSprite(renk) {
 }
 function dnzAtOyna(o) {
   const k = o.dnz; if (!o.done || k.playCd > 0 || DURUM !== 'oyun') return false;
-  k.playCd = 4.2; k.bulT = 0; k.sev = 3.4; k.ring1 = false; k.ring2 = false; k.ring3 = false;
-  k.face = P.x < k.hx ? -1 : 1;
+  k.playCd = 4.6; k.bulT = 0; k.sev = 3.8; dnzAtBasla(o);
   if (!k.halkalar) k.halkalar = [];
   k.halkalar.push({ x: P.x, y: P.y - 25, t: 0, maxT: 2.6, r0: 22, r1: 145, renk: k.renk });
   dnzSevinc(k.hx, k.hy, k.renk, 16); dnzSes(.28);
-  OLAY.emit('denizatiOyun', { o, x: k.hx, y: k.hy, sure: 3.4 }); return true;
+  OLAY.emit('denizatiOyun', { o, x: k.hx, y: k.hy, sure: 3.8 }); return true;
 }
 function dnzAtCiz(c, x, y, s, tm, renk, mutlu, seed, k) {
   const spr = dnzAtSprite(renk), joy = k && k.sev > .1 ? Math.min(1, k.sev) : 0, invitation = k ? k.invite || 0 : 0, moment = k ? k.bulT : 0;
   const takla = k ? (k.takla || 0) : 0;
   c.save(); c.translate(x, y + Math.sin(tm * 1.6 + seed) * 4 + Math.sin(tm * 0.62 + seed * 1.7) * 2.2);   // nefes alan çift sinüs salınımı
-  c.rotate(Math.sin(tm * 1.3 + seed) * .055 + Math.sin(moment * 5) * .18 * joy - invitation * .07 + takla);
-  c.scale(s * (k ? k.face : 1) * (k && k.sqx || 1), s * (k && k.sqy || 1));
+  c.rotate(Math.sin(tm * 1.3 + seed) * .055 + Math.sin(moment * 3.4) * .075 * joy - invitation * .05 + (k && k.lean || 0) + takla);
+  c.scale(s * (k && k.face < 0 ? -1 : 1) * (k && k.sqx || 1), s * (k && k.sqy || 1));
   // The prehensile tail opens to greet Feza, coils again, then draws a playful little spiral.
-  const relax = invitation * .32 + joy * (.3 + .25 * Math.sin(moment * 4.5)), sway = Math.sin(tm * 1.7 + seed) * 4 + (k ? (k.tailWhip || 0) * Math.sin(tm * 13) * 7 - (k.tailCoil || 0) * 6 + joy * Math.sin(moment * 9) * 3.5 : 0);
+  const relax = invitation * .32 + joy * (.3 + .25 * Math.sin(moment * 4.5)), sway = Math.sin(tm * 1.7 + seed) * 4 + (k ? (k.tailWhip || 0) * Math.sin(tm * 5.8 + seed) * 5 - (k.tailCoil || 0) * 7 - (k.lean || 0) * 14 + joy * Math.sin(moment * 4.8 + seed) * 2.5 : 0);
   c.lineCap = 'round'; c.strokeStyle = '#77a2ae'; c.lineWidth = 8.2; c.beginPath(); c.moveTo(14, 52); c.bezierCurveTo(18 + sway, 67, -2 + sway, 70, 18 + sway, 79);
   for (let i = 0; i <= 24; i++) { const u = i / 24, ang = -.52 + u * Math.PI * (1.9 - relax * .7), r = 19 * (1 - u * .79), xx = 2 + Math.cos(ang) * r + sway, yy = 89 + Math.sin(ang) * r * (.82 + relax * .3) + relax * 7; c.lineTo(xx, yy); } c.stroke(); c.strokeStyle = dnzAtTailPal.get(renk); c.lineWidth = 5.8; c.stroke(); c.strokeStyle = 'rgba(255,242,211,.32)'; c.lineWidth = 1.2; c.stroke();
   c.drawImage(spr, 0, 65, 160, 71, -80, -10, 160, 71);
   const fin = Math.sin(tm * (12.5 + joy * 6) + seed), spread = 1 + invitation * .22 + joy * .32;
-  c.save(); c.translate(-20, -1); c.scale(spread, 1); c.fillStyle = 'rgba(236,255,240,.61)'; c.beginPath(); c.moveTo(0, -3); c.bezierCurveTo(-8, -17, -32 - fin * 4, -20, -25, 0); c.quadraticCurveTo(-17, 18, 0, -3); c.fill(); c.strokeStyle = 'rgba(105,155,167,.42)'; c.lineWidth = .9; for (let i = 0; i < 4; i++) { c.beginPath(); c.moveTo(0, -3); c.quadraticCurveTo(-13, -11 + i * 6, -23 - fin * 2, -13 + i * 6); c.stroke(); } c.restore();
+  c.save(); c.translate(-20, -1); c.rotate(fin * .09); c.scale(spread, .9 + fin * .1); c.fillStyle = 'rgba(236,255,240,.61)'; c.beginPath(); c.moveTo(0, -3); c.bezierCurveTo(-8, -17, -32 - fin * 4, -20, -25, 0); c.quadraticCurveTo(-17, 18, 0, -3); c.fill(); c.strokeStyle = 'rgba(105,155,167,.42)'; c.lineWidth = .9; for (let i = 0; i < 4; i++) { c.beginPath(); c.moveTo(0, -3); c.quadraticCurveTo(-13, -11 + i * 6, -23 - fin * 2, -13 + i * 6); c.stroke(); } c.restore();
   // Neck and face are articulated separately from the belly and tail.
-  c.save(); c.translate(0, -12); c.rotate(Math.sin(tm * 1.7 + seed) * .035 + Math.sin(moment * 4.3) * .11 * joy + invitation * .085); c.drawImage(spr, 0, 0, 160, 65, -80, -63, 160, 65);
+  c.save(); c.translate(0, -12); c.rotate(Math.sin(tm * 1.7 + seed) * .035 + Math.sin(moment * 3.1) * .07 * joy + invitation * .075 - (k && k.lean || 0) * .55); c.drawImage(spr, 0, 0, 160, 65, -80, -63, 160, 65);
   const blink = Math.sin(tm * .86 + seed * 2.2) > .992 ? 1 : 0; dnzGoz(c, 7, -14, 7, blink, mutlu && Math.sin(moment * 3.7) > .1, invitation * .7, joy ? -.3 : 0); c.strokeStyle = 'rgba(97,120,131,.72)'; c.lineWidth = 1.1; c.beginPath(); c.moveTo(2, -26 - joy); c.quadraticCurveTo(7, -28 - joy * 3, 12, -26 - joy); c.stroke(); dnzOval(c, 16, 0, 6.3, 3.5, 'rgba(247,156,178,.56)');
   c.strokeStyle = '#567788'; c.lineWidth = 1.45; c.beginPath(); if (joy > .1 && moment < .32) { dnzOval(c, 34, -3, 2.3, 3.2, '#657e8e'); } else { c.moveTo(28, -3); c.quadraticCurveTo(33, joy ? 4 : 1, 38, -4); c.stroke(); } c.restore(); c.restore();
 }
 function dnzAtBul(o) {
   if (o.done || DURUM !== 'oyun' || P.fade > 0) return;
-  o.done = true; o.dnz.sev = 3.8; o.dnz.bulT = 0; o.dnz.uyan = 1; o.dnz.playCd = 4.5;
-  o.dnz.ring1 = false; o.dnz.ring2 = false; o.dnz.ring3 = false;
+  o.done = true; o.dnz.sev = 4; o.dnz.bulT = 0; o.dnz.uyan = 1; o.dnz.playCd = 4.8;
+  dnzAtBasla(o);
   if (!o.dnz.halkalar) o.dnz.halkalar = [];
   o.dnz.halkalar.push({ x: P.x, y: P.y - 25, t: 0, maxT: 2.8, r0: 22, r1: 155, renk: o.dnz.renk });
   dnzSevinc(o.x, o.y - 42, o.dnz.renk, 20); if (D.tkO === o.dnz.pr && typeof drMode === 'function') { D.tkO = null; drMode('follow'); } OLAY.emit('denizati', { o, x: o.x, y: o.y - 42, renk: o.dnz.renk, sure: 3.8 });
   if (typeof dragonHappy === 'function') dragonHappy(o);
 }
 TUR.kaydet('denizati', {
-  kur(o) { o.r = 140; o.ry = 42; o.dnz = { t: 0, sev: 0, bulT: 0, takla: 0, ring1: false, ring2: false, ring3: false, halkalar: [], yardim: 0, hint: 0, invite: 0, playCd: 0, face: -1, uyan: 0, pr: { x: o.x + 20, y: o.y + 90 }, renk: dnzPal[DNZ.ati.length % 5], seed: DNZ.ati.length * 1.63, hx: o.x, hy: o.y - 42, floor: typeof yuzey === 'function' ? yuzey(Math.floor(o.x / T)) : 1000 }; dnzAtSprite(o.dnz.renk); for (const color of ['#fff1be', '#fff8d9', '#cbfff1', o.dnz.renk]) glow(color); if (typeof sklElSprite === 'function') sklElSprite(); DNZ.ati.push(o); },
+  kur(o) { o.r = 140; o.ry = 42; o.dnz = { t: 0, sev: 0, bulT: 0, takla: 0, ring1: false, ring2: false, ring3: false, halkalar: [], yardim: 0, hint: 0, invite: 0, playCd: 0, face: -1, uyan: 0, pr: { x: o.x + 20, y: o.y + 90 }, renk: dnzPal[DNZ.ati.length % 5], seed: DNZ.ati.length * 1.63, hx: o.x, hy: o.y - 42, lean: 0, floor: typeof yuzey === 'function' ? yuzey(Math.floor(o.x / T)) : 1000 }; dnzAtSprite(o.dnz.renk); for (const color of ['#fff1be', '#fff8d9', '#cbfff1', o.dnz.renk]) glow(color); if (typeof sklElSprite === 'function') sklElSprite(); DNZ.ati.push(o); },
   dokun: dnzAtBul,
   guncelle(o, dt) {
     const k = o.dnz; k.t += dt; k.sev = Math.max(0, k.sev - dt); k.playCd = Math.max(0, k.playCd - dt);
@@ -238,10 +224,11 @@ TUR.kaydet('denizati', {
     if (DURUM !== 'oyun') return;
     const curTarget = dist < 450 ? Math.max(0, 1 - dist / 450) : 0;
     k.curiosity = (k.curiosity || 0) + (curTarget - (k.curiosity || 0)) * (1 - Math.exp(-dt * 2.6));
-    const curAngle = Math.atan2((P.y - 30) - (o.y - 42), P.x - o.x);
-    const curDist = k.curiosity * 46;
-    k.hx = o.x + Math.cos(curAngle) * curDist + Math.sin(k.t * 1.4 + k.seed) * 8;
-    k.hy = o.y - 42 + Math.sin(curAngle) * (curDist * 0.42) + Math.sin(k.t * 1.1 + k.seed) * 6;
+    const dx = P.x - o.x, dy = P.y - 30 - (o.y - 42), drift = 1 - Math.exp(-dt * 3.4), px = k.hx;
+    const tx = o.x + clamp(dx / 190, -1, 1) * k.curiosity * 42 + Math.sin(k.t * 1.4 + k.seed) * 8;
+    const ty = o.y - 42 + clamp(dy / 140, -1, 1) * k.curiosity * 20 + Math.sin(k.t * 1.1 + k.seed) * 6;
+    k.hx = lerp(k.hx, tx, drift); k.hy = lerp(k.hy, ty, drift);
+    if (dt > 0) k.lean = lerp(k.lean, clamp((k.hx - px) / dt * -.003, -.12, .12), 1 - Math.exp(-dt * 5));
     if (dist < 520) {
       k.hint += dt;
       if (Math.abs(P.x - o.x) > 85) k.face = P.x < o.x ? -1 : 1;
