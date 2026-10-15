@@ -861,7 +861,6 @@ function shBattaniye(p, b, tm, nefes, otur = 0) {
     for (let xx = x1 + 1; xx >= x0 - 1; xx -= 0.8) g.lineTo(xx, ust(xx) + 2.9 + Math.sin(xx * 1.7) * 0.18);
     g.closePath(); g.fillStyle = p.blanketHi; g.globalAlpha = va * 0.42; g.fill();
     g.strokeStyle = p.blanketD; g.lineWidth = 0.22; g.globalAlpha = va * 0.55; g.beginPath(); for (let xx = x0 - 1; xx <= x1 + 1; xx += 0.8) g.lineTo(xx, ust(xx) + 2.9 + Math.sin(xx * 1.7) * 0.18); g.stroke();
-    g.setLineDash([0.5, 0.4]); g.strokeStyle = p.star; g.lineWidth = 0.14; g.globalAlpha = va * 0.5; g.beginPath(); for (let xx = x0 - 1; xx <= x1 + 1; xx += 0.8) g.lineTo(xx, ust(xx) + 1.75); g.stroke(); g.setLineDash([]);
     g.lineCap = 'round';
     for (let k = 0; k < 3; k++) {
       g.strokeStyle = p.blanketD; g.lineWidth = 0.34; g.globalAlpha = va * (0.34 - k * 0.06); g.beginPath();
@@ -1216,13 +1215,7 @@ function shKisaPlan() {
   P.uyku0 = P.yat1;
   P.dalK = 1.3; P.uyudu = P.uyku0 + 3.05 / P.dalK; P.ic = P.uyudu - 1.1;
   P.b2 = Math.max(P.uyudu + 0.5, P.s1 + d + 0.6); P.s2 = P.b2; P.b3 = P.b2 + 1.5; P.s3 = P.b3;
-  P.erime = sh.tema === 'deniz' ? 2.1 : 2.4; P.b4 = P.b3 + P.erime; P.son = P.b4 + (sh.tema === 'deniz' ? 2.8 : 2.3);
-  if (sh.tema === 'deniz') {
-    P.acil = 0.8; P.s1 = 1.1; P.yat0 = 0.8; P.walk = 1.3; P.gir = 4.4 / 1.8; P.land = P.walk + 0.9 / P.gir; P.yat1 = 3.1;
-    P.uyku0 = P.yat1; P.dalK = 1.8; P.uyudu = P.uyku0 + 3.05 / P.dalK; P.ic = P.uyudu - 1;
-    P.b2 = 5.1; P.s2 = P.b2; P.b3 = 6.1; P.s3 = P.b3; P.erime = 2.1; P.b4 = 8.2;
-    P.yuzT = Math.max(8.2, 3.5 + shSure('p_i_giris', 4.8) + 0.3); P.son = Math.max(P.b4 + 3, P.yuzT + shSure('p_i_yuz', 7.4) + 0.8);   // yüzme cümlesi bitince (sessiz bekleme yok) oyuna kesintisiz geçilir
-  }
+  P.erime = 2.4; P.b4 = P.b3 + P.erime; P.son = P.b4 + 2.3;
   const yok = 1e9; P.uyan = P.kalk = P.isik = P.dunya = P.bk0 = P.bk1 = P.bk2 = P.bk3 = yok;
   return P;
 }
@@ -1254,7 +1247,6 @@ function shGirisGuncelle(dt) {
   const ses = (k, at) => { if (!sh.sesler[k] && t >= at) { sh.sesler[k] = 1; shSoyle(shFk(k)); } };
   if (sh.kisa) { if (!sh.sesler.uyku && t >= P.s1) { sh.sesler.uyku = 1; shSoyle(sh.uykuK || 'p_y_uyku'); } }
   else if (sh.atla < 0) { ses('a_giris1', P.s1); ses('a_giris2', P.s2); ses('a_giris3', P.s3); }
-  if (sh.tema === 'deniz') { ses('p_i_giris', 3.5); ses('p_i_yuz', P.yuzT || 8.6); }
   if (!sh.kisa) ses('p_uyan', P.uyan);
   if (sh.atla < 0) {   // yatak odası sesleri (akşam)
     shBir('yatagaGir', P.yat1 - 2.5 / P.gir, 'yatagaGir'); shBir('yastik', P.yat1 - 2.2 / P.gir, 'yastik');
@@ -1419,7 +1411,6 @@ function shOnPlan(a) {
 }
 function shGirisCiz(tm, dt) {
   const t = sh.t, P = sh.plan;
-  if (sh.tema === 'deniz' && !sh.denizBase && t >= P.b3) { shDenizGirisCiz(tm, t, P); return; }
   if (!sh.tam) {
     if (t < P.karar) {   // başlık → gece: zerreler süzülmeye devam eder, ekran yumuşakça kararır
       g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = `rgba(4,5,14,${sh.dan ? 1 : shEase(t / P.karar)})`; g.fillRect(0, 0, W, H);
@@ -3037,10 +3028,14 @@ function shDenizGirisCiz(tm, t, P0) {
   // Büyük su damlaları yukarı yükselir; parlak çizgi değil, saydam kabuk ve ufak yansıma.
   g.setTransform(1, 0, 0, 1, 0, 0); g.strokeStyle = 'rgba(137,239,228,0.45)'; g.lineWidth = Math.max(1, sc * 0.6);
   for (let i = 0; i < 9; i++) { const bx = W * (0.08 + i * 0.108) + Math.sin(tm * 0.4 + i) * W * 0.012, by = H * (0.85 - ((tm * 0.07 + i * 0.103) % 0.76)), r = sc * (4 + i % 3 * 2); g.globalAlpha = u * 0.7; g.beginPath(); g.arc(bx, by, r, 0, Math.PI * 2); g.stroke(); }
-  const enter = shEase(shSeg(u, 0.25, 0.9)), fx = W * (0.24 + 0.17 * enter), fy = H * (0.6 - 0.08 * enter) + Math.sin(tm * 1.5) * sc * 2;
+  const enter = shEase(shSeg(u, 0.25, 0.9));
+  // son ~2 sn: kamera/karakterler oyunun başlangıç çerçevesine (Feza ve Pırıl'ın oyundaki ekran yeri ve boyu) yumuşakça oturur
+  const kk = shEase(shSeg(t, P0.son - 2.0, P0.son - 0.15)), LF = shCanliFeza(), LD = (typeof D !== 'undefined' && typeof cam !== 'undefined') ? { x: (D.x - cam.x) * S, y: (D.y - cam.y) * S } : null;
+  const fx0 = W * (0.24 + 0.17 * enter), fy0 = H * (0.6 - 0.08 * enter) + Math.sin(tm * 1.5) * sc * 2;
+  const fx = lerp(fx0, LF.x, kk), fy = lerp(fy0, LF.y + 30 * S, kk), fsc = lerp(sc * 1.7, S * 1.4, kk);
   g.globalAlpha = enter;
-  if (typeof fezaCizPoz === 'function') fezaCizPoz(g, fx, fy, sc * 1.7, 'yuzme', tm, null, { vy: -18, isik: 0 });
-  if (typeof pirilCizPoz === 'function') pirilCizPoz(g, fx - sc * 20, fy - sc * 90, sc * 1.8, 'ucus', tm);
+  if (typeof fezaCizPoz === 'function') fezaCizPoz(g, fx, fy, fsc, 'yuzme', tm, null, { vy: -18, isik: 0 });
+  if (typeof pirilCizPoz === 'function') pirilCizPoz(g, lerp(fx0 - sc * 20, LD ? LD.x : fx0 - sc * 20, kk), lerp(fy0 - sc * 90, LD ? LD.y : fy0 - sc * 90, kk), lerp(sc * 1.8, S * 1.0, kk), 'ucus', tm);
   g.globalAlpha = 1;
   if (enter > 0.65 && typeof dnzAtCiz === 'function' && typeof DNZ !== 'undefined' && DNZ.ati[0]) {
     const o = DNZ.ati[0], px = W * 0.72, py = H * 0.51 + Math.sin(tm * 1.1) * sc * 5;

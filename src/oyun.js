@@ -166,7 +166,7 @@ function begin() {
   try { localStorage.setItem('fezaIsikSon', String(BOLUM_NO)); } catch (e) {}   // başlıkta son oynanan bölüm parlak durur
   DURUM = 'giris'; OLAY.emit('durum', DURUM);
   if (BOLUM_NO === 2 || BOLUM_NO === 3 || BOLUM_NO === 4) {   // Bölüm 2/3: kısa uyku girişi (yeni sahne varsa; test bayrakları ?atla/?bolum= atlar, ?uyku zorlar) → ışıkla belirme
-    const basla = () => { const kesintisiz = BOLUM_NO === 4 && omSahneGiris; if (kesintisiz) omSonKareYakala(); oyunaBasla(); omDevamGirisi(kesintisiz); };   // Bölüm 4: dalış sahnesi bitince kararma yok, çapraz geçiş
+    const basla = () => { const kesintisiz = false; if (kesintisiz) omSonKareYakala(); oyunaBasla(); omDevamGirisi(kesintisiz); };   // dalış ara sahnesi kaldırıldı: Bölüm 2/3/4 hepsi karanlıktan belirerek açılır   // Bölüm 4: dalış sahnesi bitince kararma yok, çapraz geçiş
     if (typeof SAHNE !== 'undefined' && SAHNE && typeof SAHNE.secim === 'function' && typeof SAHNE.giris === 'function' && !Q.has('atla') && (!Q.has('bolum') || Q.has('uyku'))) { omSahneGiris = true; omPerde.a = omPerde.hedef = 1; omPerdeBek = { t0: now, iyi: 0 }; try { SAHNE.giris(basla, { bolum: BOLUM_NO, kisa: true }); } catch (e) { omHata('SAHNE.giris', e); basla(); } }   // yenileme sonrası ilk ~0,4 sn koyu, sonra uyku sahnesi görünür (sahne bitince omDevamGirisi perdeyi kapatıp açar)
     else basla();
     return;
@@ -1362,7 +1362,7 @@ function omSonKareYakala() { try { const c = document.createElement('canvas'); c
 function omGecisKareCiz() {
   const K = omGecisKare; if (!K) return;
   if (K.t0 < 0) K.t0 = now;
-  const u = (now - K.t0) / 1.0; if (u >= 1) { omGecisKare = null; return; }
+  const u = (now - K.t0) / 0.25; if (u >= 1) { omGecisKare = null; return; }
   g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1 - smooth(clamp(u, 0, 1)); g.globalCompositeOperation = 'source-over'; g.drawImage(K.c, 0, 0, W, H); g.globalAlpha = 1;
 }
 function omPerdeBekle(raw) {

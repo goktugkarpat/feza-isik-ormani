@@ -2266,11 +2266,7 @@ function drPelusDoku(c, tm, pl) {
   const op = c.globalCompositeOperation; c.globalCompositeOperation = 'lighter';
   drGlow(c, '#efe0ff', -5, -20, 11, 0.16); drGlow(c, '#e8ffd0', 2, 4, 14, 0.07);   // başın üstünde kadife parlaması, karında hafif ışık
   c.globalCompositeOperation = op;
-  // dikiş izleri: alın/yüz hattı, karın kenarı, kol ve bacak ekleri (kısa tireli çizgiler)
-  c.strokeStyle = 'rgba(255,248,255,0.55)'; c.lineWidth = 0.55; c.lineCap = 'round'; c.setLineDash([1.6, 1.5]);
-  c.beginPath(); c.arc(0.5, -4.5, 11.4, -2.55, -0.62); c.stroke();                       // kafa dikişi (alın üstünden kulaktan kulağa)
-  c.beginPath(); c.moveTo(-8.6, 13.8); c.quadraticCurveTo(0, 16.8, 8.6, 13.8); c.stroke();   // karın altı dikişi
-  c.setLineDash([]);
+  // (kesik çizgili dikiş izleri kaldırıldı: ebeveyn anlamsız buldu)
   c.restore();
 }
 function pirilCizPoz(ctx, x, y, olcek, poz, tm, u) {
