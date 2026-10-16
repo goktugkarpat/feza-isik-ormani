@@ -7,9 +7,12 @@
    12 halkalık oyun yolundan sonra "büyük final koşusu": midilli çok hızlanır, kenarlardan ışık hızı çizgileri akar, yoldaki fenerler
    geçtikçe yanar, altın kemer halkaları art arda kendiliğinden toplanır; yolun ucunda midilli büyük bir sıçrayışla (sinematik
    yavaşlama) kalenin köprüsü önüne süzülerek iner, yıldız tozu patlar; sonra Feza'yı indirir (V6.mini, OLAY 'halkaBitti').
+   Her toplanan halkada midilli biraz hızlanır (+HK_HB birim/sn, ~0,6 sn'de yumuşak geçiş; kaçırılan halkada hız düşmez) ve kısa bir
+   "hız patlaması" görünür (yeleden uzayan altın ışık izi, midillinin çevresinde rüzgâr çizgileri, toynaklardan kıvılcım).
+   Yolculuk ~80-90 sn; final koşusu hızı (HK_VF) halkalarla kazanılan en yüksek hızdan da çok yüksektir.
    Kaybetme, ceza, süre baskısı yok: ~12 sn dokunulmazsa sıradaki halka parlar ve Pırıl ona uçup gösterir; ~20 sn dokunulmazsa
    (ya da yolun sonuna az yer kaldıysa) Pırıl halkaları kendisi toplar; final koşusu her durumda gelir, yani yolculuk asla takılmaz.
-   Sanal yol: haritadaki boşluk (~4500 birim) ~70 sn'lik hızlı koşuya yetmez. Bu yüzden yol, halkalar, fenerler ve tozlar "sanal yol"
+   Sanal yol: haritadaki boşluk (~4500 birim) ~80-90 sn'lik hızlı koşuya yetmez. Bu yüzden yol, halkalar, fenerler ve tozlar "sanal yol"
    (o.v) üzerinde durur; dünyaya o.dx kaymasıyla çizilir (dünya x = sanal + o.dx). Midillinin dünya x'i (o.mx = hkEsle) başta ve sonda
    sanalla birebir (uçurum ve iniş düzlüğü yola yapışık), ortada yavaş ilerler: kamera ve uzak dünya yavaş, yol katmanı hızlı akar.
    HALKA.kayma() = yol katmanının dünyaya göre fazladan kayması (paralaks için, dunya6 isterse kullanır).
@@ -23,8 +26,9 @@
 'use strict';
 const HK_TOP = 12;                                   // toplanacak halka (sayaç ışıkları)
 const HK_BINIS = 1.6, HK_INIS = 1.7, HK_SIC = 2.9;   // biniş, iniş, final sıçrayışı (sn)
-const HK_LY = 17400, HK_LF = 9400;                   // sanal yol: oyun bölümü, final koşusu (birim)
-const HK_V0 = 300, HK_V1 = 420, HK_VF = 1080;        // koşu hızı: başta, oyun sonunda, finalde (birim/sn)
+const HK_LY = 29200, HK_LF = 9400;                   // sanal yol: oyun bölümü, final koşusu (birim)
+const HK_V0 = 300, HK_V1 = 340, HK_VF = 1080;        // koşu hızı: taban (başta → oyun sonunda), finalde (birim/sn)
+const HK_HB = 20, HK_HB_K = 5;                       // her toplanan halkada +20 birim/sn (~%6,7); ~0,6 sn'de yumuşak geçiş (kaçırınca düşmez)
 const HK_A0 = 520, HK_B0 = 700, HK_B1 = 800, HK_E = 1150;   // sanal→dünya eşlemesi: baştaki/sondaki birebir parça ve geçişler
 const HK_IPUCU = 12, HK_YARDIM = 20;                 // dokunulmadan geçen süre: ipucu / Pırıl kendisi toplar
 const HK_MOLC = 1;            // midilliCiz ölçeği (s = 1'de sırt ≈ 60 birim)
@@ -39,10 +43,10 @@ const HK_KOYU = ['#c98a2c', '#c0559a', '#7f5bc0', '#3d93b5'];
 const HK_TOZ = ['#fff4c8', '#ffd77a', '#ff9fcf', '#c9a2ff', '#9fe8ff'];
 // Halka dizisi (sanal konum, tür, yükseklik = denetim noktasının üstü, renk). Tür: tek · mer (merdiven) · suz (kanatlı süzülen) · yil (yıldız halkası)
 const HK_DIZI = [
-  [1300, 'tek', 72, 0], [2750, 'tek', 92, 1], [4250, 'suz', 100, 3],
-  [5750, 'mer', 60, 0], [6100, 'mer', 105, 1], [6450, 'mer', 150, 2],
-  [8050, 'tek', 120, 3], [9600, 'yil', 118, 0], [11150, 'suz', 135, 2],
-  [12650, 'mer', 70, 1], [13000, 'mer', 125, 3], [14700, 'yil', 140, 0]];
+  [1300, 'tek', 72, 0], [3820, 'tek', 92, 1], [6420, 'suz', 100, 3],
+  [9030, 'mer', 60, 0], [9410, 'mer', 105, 1], [9790, 'mer', 150, 2],
+  [13000, 'tek', 120, 3], [15700, 'yil', 118, 0], [18400, 'suz', 135, 2],
+  [21000, 'mer', 70, 1], [21420, 'mer', 125, 3], [24500, 'yil', 140, 0]];
 const HK_KEMER = 8, HK_KEMER_V = 4300, HK_KEMER_ARA = 250;   // final altın kemeri: oyun yolundan sonra +4300'den başlar
 const HK_FENER_ARA = 600, HK_FFENER_ARA = 320;               // fener direkleri: oyun yolunda / final koşusunda (hızla yanar)
 const HALKA = {
@@ -211,7 +215,7 @@ function hkKur(o) {
   if (!(K.r > 0.02 && K.r <= 1) || vE - HK_B1 < HK_A0 + HK_B0) K.lin = (xJ - xs) / vJ;
   o.K = K;
   o.kx = o.x; o.y0 = o.y; o.faz = 'bekle'; o.t = 0; o.total = 0; o.done = false; o.hk = { bitti: false }; o.skl = o.hk;
-  o.v = 0; o.vOn = 0; o.dx = xs; o.spd = 0; o.ts = 1;
+  o.v = 0; o.vOn = 0; o.dx = xs; o.spd = 0; o.ts = 1; o.sb = 0; o.hb = 0; o.hbH = 0; o.pat = 0;
   o.mx = o.x; o.my = o.y; o.h = 0; o.vh = 0; o.rot = 0; o.kos = 0; o.kosM = 0; o.joy = 0; o.idle = 0; o.bas = false; o.n = 0; o.isik = 0;
   o.mt = 0; o.ft = 0; o.pt = 0; o.sq = 0; o.sqv = 0; o.egil = 0; o.sevT = 0; o.tk = 0; o.tkYon = 1; o.kirp = 0; o.bonus = 0; o.kalk = 0;
   o.zorYardim = false; o.prX = 0; o.prY = 0; o.prW = 0; o.ipucu = 0; o.halkaA = 0; o.kacan = 0; o.gidisT = 0;
@@ -235,7 +239,7 @@ function hkKur(o) {
 function hkBasla(o) {
   if (!o || o.done || o.faz !== 'bekle' || P.ucus || DURUM !== 'oyun' || P.fade > 0) return;
   if (typeof D !== 'undefined' && D.mode === 'tasi') return;
-  o.faz = 'binis'; o.t = 0; o.total = 0; o.px0 = P.x; o.py0 = P.y; o.idle = 0; o.bas = false; o.h = 0; o.vh = 0; o.v = 0; o.vOn = 0; o.dx = o.K.xs; o.spd = 0;
+  o.faz = 'binis'; o.t = 0; o.total = 0; o.px0 = P.x; o.py0 = P.y; o.idle = 0; o.bas = false; o.h = 0; o.vh = 0; o.v = 0; o.vOn = 0; o.dx = o.K.xs; o.spd = 0; o.sb = 0; o.hb = 0; o.hbH = 0; o.pat = 0;
   P.ucus = o; P.vx = P.vy = 0; P.kilit = 0; P.fade = 0; P.buf = 0; HALKA.o = o;
   if (typeof SAYAC !== 'undefined') SAYAC.halkaTop = HK_TOP;
   if (typeof omHepsiniBirak === 'function') omHepsiniBirak();
@@ -267,10 +271,14 @@ function hkAdim(o, dt, input) {
     const sx = o.mx + HK_SEDX, sy = o.my - HK_SIRT;
     P.x = lerp(o.px0, sx, atla); P.y = lerp(o.py0, sy, atla) - Math.sin(atla * Math.PI) * 46;
     for (const r of o.halkalar) hkHalkaYer(o, r);
-    if (u >= 1) { o.faz = 'yol'; o.t = 0; o.idle = 0; o.spd = 120; }
+    if (u >= 1) { o.faz = 'yol'; o.t = 0; o.idle = 0; o.spd = 120; o.sb = 120; o.hb = 0; }
   } else if (o.faz === 'yol' || o.faz === 'hiz') {
-    const hedef = o.faz === 'yol' ? lerp(HK_V0, HK_V1, smooth(clamp(o.v / HK_LY, 0, 1))) : HK_VF;
-    o.spd = lerp(o.spd, hedef, 1 - Math.exp(-dt * (o.faz === 'hiz' ? 0.95 : 1.1)));
+    if (o.faz === 'yol') {   // taban hız + halkalardan kazanılan hız (her halkada yumuşakça artar, hiç düşmez)
+      o.sb = lerp(o.sb, lerp(HK_V0, HK_V1, smooth(clamp(o.v / HK_LY, 0, 1))), 1 - Math.exp(-dt * 1.1));
+      o.hb = lerp(o.hb, o.hbH, 1 - Math.exp(-dt * HK_HB_K));
+      o.spd = o.sb + o.hb;
+    } else o.spd = lerp(o.spd, HK_VF, 1 - Math.exp(-dt * 0.95));
+    o.pat = Math.max(0, o.pat - dt / 1.1);
     o.vOn = o.v; o.v += o.spd * dt;
     o.mx = K.xs + hkEsle(K, o.v); o.dx = o.mx - o.v;
     // zıplama: dokununca sıçrar, basılı tutunca yavaş yükselir, bırakınca yumuşak iner
@@ -411,6 +419,10 @@ function hkTopla(o, r, kim) {
   hkTozPatla(r.x, r.y, 10, 90, o.spd * 0.7, yil ? 1 : 0);
   if (yil) o.bonus = 1.8;
   o.sqv += 3;
+  if (o.faz === 'yol') {   // hız patlaması: midilli biraz hızlanır; toynaklardan kıvılcım, yeleden uzun ışık izi, rüzgâr çizgileri
+    o.hbH += HK_HB; o.pat = 1;
+    for (let i = 0; i < 16; i++) hkTozAt(o.mx - 26 + Math.random() * 44, o.my - 3, -120 - Math.random() * 200, -60 - Math.random() * 130, 0.5 + Math.random() * 0.4, Math.random() < 0.6 ? 1 : 0, 1.6 + Math.random() * 1.6, 320);
+  }
   hkKivilcim(o, r.x, r.y, o.n - 1);
   hkSfx('halka', o.n);
   OLAY.emit('halka', { n: Math.min(o.n, HK_TOP), top: HK_TOP, x: r.x, y: r.y, kim, o, tip: r.tip });
@@ -666,6 +678,13 @@ function hkMidilliCiz(o, x, y, rot, tm) {
   m.kos = o.kosM || 0; m.zipla = clamp(o.h / 70, 0, 1); m.parilti = 1;
   dglow('#ffd7f0', x, y - 30, 78 + 30 * (o.hizA || 0), 0.28 + 0.12 * (o.hizA || 0));
   if (o.hizA > 0.05 || o.bonus > 0) { const k = Math.max(o.hizA, o.bonus / 1.8); dglow(HK_TOZ[2 + ((tm * 3) | 0) % 3], x - 20, y - 36, 70, 0.22 * k); }
+  if (o.pat > 0.02 && o.faz === 'yol') {   // hız patlaması: midillinin çevresinde geriye kayan rüzgâr çizgileri
+    const a = Math.min(1, o.pat * 1.6), u = 1 - o.pat;
+    g.lineCap = 'round'; g.strokeStyle = 'rgba(255,250,240,' + (0.75 * a).toFixed(2) + ')'; g.lineWidth = 2.6; g.beginPath();
+    for (let i = 0; i < 6; i++) { const yy = y - 12 - i * 17 + (i % 2) * 6, x0 = x + 40 - (i * 37 % 50) - u * 170, l = 50 + (i * 23 % 40) + u * 40; g.moveTo(x0, yy); g.lineTo(x0 - l, yy); }
+    g.stroke();
+    dglow('#fff4c8', x - 10, y - 40, 90, 0.3 * a);
+  }
   const sq = clamp(o.sq || 0, -1, 1);
   g.save(); g.translate(x, y); g.rotate(rot); g.scale(1 - 0.05 * sq, 1 + 0.07 * sq);
   if (typeof midilliCiz === 'function') { try { midilliCiz(g, 0, 0, HK_MOLC, tm, m); g.restore(); return; } catch (e) { g.restore(); g.save(); g.translate(x, y); g.rotate(rot); } }
@@ -698,6 +717,8 @@ function hkIzCiz(o, tm) {   // yele ve kuyruktan uzun ışık şeridi: üst üst
     for (let j = 0; j < m; j++) { const i = (o.izI - 1 - j + 42) % 42, x = A[i * 2] + dx, y = A[i * 2 + 1] + Math.sin(j * 0.55 - tm * 9) * j * 0.12; if (j) g.lineTo(x, y); else g.moveTo(x, y); }
     g.stroke();
   };
+  const pt = o.pat > 0 ? Math.sin(Math.PI * Math.min(1, (1 - o.pat) * 1.6 + 0.15)) * Math.min(1, o.pat * 2.5) : 0;   // halka hız patlaması
+  if (pt > 0.02) { serit(o.iz, 1, 24 * pt + 8, 'rgba(255,215,122,' + (0.22 * pt).toFixed(2) + ')'); serit(o.iz2, 1, 16 * pt + 4, 'rgba(255,159,207,' + (0.2 * pt).toFixed(2) + ')'); }
   serit(o.iz, 1, 15 + 6 * fin, fin > 0.5 ? 'rgba(255,215,122,.13)' : 'rgba(255,159,207,.12)');
   serit(o.iz, 0.62, 8, 'rgba(201,162,255,.22)');
   serit(o.iz, 0.32, 3.5, 'rgba(255,250,235,.5)');
