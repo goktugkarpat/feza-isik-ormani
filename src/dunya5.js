@@ -5,6 +5,7 @@ const DN5={sky:null,heartSky:null,vig:null,atlas:[],blooms:[],mount:[],falls:[],
 const DN5_COL=['#cf2458','#d58057','#4d9d91','#7546ad','#ac267d','#338f9a','#8739ac','#cc4969'];
 // Kristal/tekne modülleri daha sonra yüklenir; ilk dokunuşta yeni ışık tuvali açılmaz.
 const DN5_TOUCH_GLOWS=['#ffd8a8','#ffc065','#f56d98','#b67be3','#58d2c6','#ffdc79','#ffbf58','#fa6684','#b87be4','#53d6c8','#ffdb72','#ffb58c','#ffc994','#ffe0af','#ffb48e'];
+const DN5_WORLD_GLOWS=['#ffd3aa','#eab195','#94d9dc','#ffc8a1','#ffbf91','#ffc28e','#ffe0a4','#ffcf88','#ffd49b'];
 const DN5_FALL_COLS=[30,75,127,153,211,286,449,474,531,580],DN5_BLOOM_COLS=[.5,24,44,82,119,148,197,239,283,439,473,513,544,589];
 const DN5_LANDMARKS=[88,215,457,547];
 const DN5_PAR_F=[.06,.13,.24],DN5_PAR_STEP=[710,540,420],DN5_PAR_BASE=[660,730,780],DN5_PAR_ALPHA=[.48,.5,.65];
@@ -377,6 +378,14 @@ function dn5Lava(tm){
  // Thin reflections stretch vertically below the real falls. They shear with
  // the current, retaining red molten depth between the pale hot seams.
  for(let q=Math.floor(left/310);q<=Math.ceil(right/310);q++)for(let j=0;j<5;j++){const xx=q*310+Math.sin(tm*.8+j*.75+q)*15,yy=817+j*14,w=(1-j/6)*(30+Math.sin(q*1.7)*9);g.strokeStyle=j%2?'rgba(255,214,133,.23)':'rgba(248,151,94,.3)';g.lineWidth=2.8-j*.35;g.beginPath();g.moveTo(xx-w,yy);g.quadraticCurveTo(xx,yy+2.5,xx+w,yy);g.stroke();}
+ // A few dust-sized flecks lift from the seams. This analytic field has at
+ // most 29 world anchors, no spawning list, and stays below the boat's faces.
+ g.globalCompositeOperation='lighter';
+ for(let q=Math.max(56,Math.floor(left/210));q<=Math.min(82,Math.ceil(right/210));q++){
+  const u=(tm*.15+q*.381966)%1,x=q*210+Math.sin(q*2.7)*43+Math.sin(tm*.5+q)*12,y=793-u*61,a=Math.sin(u*Math.PI)*.25;
+  dn5Glow('#ffdb72',x,y,3.6,5.3,a);g.globalAlpha=a*.85;g.fillStyle='#ffe7ac';g.beginPath();g.ellipse(x,y,.45,1.15,.24,0,6.283);g.fill();
+ }
+ g.globalAlpha=1;g.globalCompositeOperation='source-over';
  for(const a of DN5.riverBloom){const age=now-a.t;if(age<0||age>7)continue;const u=age/7;g.globalCompositeOperation='lighter';dn5Glow('#ffcf88',a.x,808,90+age*65,20+age*8,(1-u)*.11);g.globalCompositeOperation='source-over';}g.globalAlpha=1;
 }
 function dn5Plants(tm){
@@ -398,8 +407,15 @@ function dn5Background(tm){
 function dn5World(tm){if(!dn5Ready())return;dn5Terrain();dn5Plants(tm);g.globalCompositeOperation='source-over';g.globalAlpha=1;}
 const dn5R=rng(5337),DN5_DUST=Array.from({length:70},(_,i)=>({x:dn5R()*6500,y:dn5R()*1300,z:.25+dn5R()*1.1,ph:dn5R()*6.283,r:.7+dn5R()*1.7,col:DN5_COL[i%8],sp:.5+dn5R()}));
 function dn5Motes(tm,zMin,zMax){
- if(!dn5Ready())return;const vw=W/S,vh=H/S;g.setTransform(S,0,0,S,0,0);g.globalCompositeOperation='lighter';
- for(let i=0;i<DN5_DUST.length;i++){const p=DN5_DUST[i];if(p.z<zMin||p.z>=zMax)continue;const x=((p.x-cam.x*p.z+Math.sin(tm*.25+p.ph)*22)%(vw+100)+vw+100)%(vw+100)-50,y=((p.y-cam.y*p.z-tm*p.sp*7+Math.sin(tm*.2+p.ph)*12)%(vh+100)+vh+100)%(vh+100)-50,a=(.25+.16*Math.sin(tm*1.4+p.ph))*(p.z>.8?.9:.6);dn5Glow(p.col,x,y,p.r*5,p.r*5,a*.65);g.fillStyle=p.col;g.globalAlpha=a;g.beginPath();g.ellipse(x,y,p.r*.55,p.r,Math.sin(tm+p.ph)*.3,0,6.283);g.fill();}
+ if(!dn5Ready())return;const vw=W/S,vh=H/S,px=(Number.isFinite(P.rx)?P.rx:P.x)-cam.x,py=(Number.isFinite(P.ry)?P.ry:P.y)-cam.y-32,mini=typeof KR5!=='undefined'?KR5.aktif:null;g.setTransform(S,0,0,S,0,0);g.globalCompositeOperation='lighter';
+ for(let i=0;i<DN5_DUST.length;i++){
+  const p=DN5_DUST[i];if(p.z<zMin||p.z>=zMax)continue;const x=((p.x-cam.x*p.z+Math.sin(tm*.25+p.ph)*22)%(vw+100)+vw+100)%(vw+100)-50,y=((p.y-cam.y*p.z-tm*p.sp*7+Math.sin(tm*.2+p.ph)*12)%(vh+100)+vh+100)%(vh+100)-50;
+  let a=(.25+.16*Math.sin(tm*1.4+p.ph))*(p.z>.8?.9:.6);
+  // Foreground dust yields around the child and the five trace pearls; the
+  // background layer may still shine through the open spaces in the wings.
+  if(p.z>=.75){const dx=(x-px)/57,dy=(y-py)/76,d=dx*dx+dy*dy;if(d<1)a*=.13+.87*smooth(d);if(mini){const mx=(x-(mini.x-cam.x))/365,my=(y-(mini.y-250-cam.y))/260,md=mx*mx+my*my;if(md<1)a*=.1+.9*smooth(md);}}
+  dn5Glow(p.col,x,y,p.r*5,p.r*5,a*.65);g.fillStyle=p.col;g.globalAlpha=a;g.beginPath();g.ellipse(x,y,p.r*.55,p.r,Math.sin(tm+p.ph)*.3,0,6.283);g.fill();
+ }
  g.globalAlpha=1;g.globalCompositeOperation='source-over';
 }
 function dn5Petals(tm){
@@ -446,5 +462,5 @@ function dn5Foreground(tm){
 }
 function dn5Vignette(){if(!dn5Ready())return;dn5Sky();g.setTransform(1,0,0,1,0,0);g.globalAlpha=1;g.drawImage(DN5.vig,0,0,W,H);}
 function dn5Isit(){
- if(!dn5Ready())return false;dn5Sky();if(DN5.prep<10){dn5Flora(DN5.prep++);return false;}if(DN5.prep<14){dn5Mountain(DN5.prep++-10);return false;}if(DN5.prep<18){dn5Chunk(DN5.prep++-14);return false;}if(DN5.prep<26){glow(DN5_COL[DN5.prep++-18]);return false;}if(DN5.prep<31&&typeof vk5Warm==='function'){if(!vk5Warm())return false;DN5.prep=31;return false;}if(DN5.prep<34){dn5Fall(DN5.prep++-31);return false;}if(DN5.prep<36){dn5CraterWall(DN5.prep++-34);return false;}if(DN5.prep<38){dn5Bloom(DN5.prep++-36);return false;}if(DN5.prep<40){dn5MoltenArt(DN5.prep++-38);return false;}if(DN5.prep<46){dn5RockArt(DN5.prep++-40);return false;}if(DN5.prep<61){glow(DN5_TOUCH_GLOWS[DN5.prep++-46]);return false;}if(DN5.prep<63){dn5RelicArt(DN5.prep++-61);return false;}if(typeof ANKA!=='undefined'&&!ANKA.hazir&&!ANKA.isit())return false;DN5.warm=true;return true;
+ if(!dn5Ready())return false;dn5Sky();if(DN5.prep<10){dn5Flora(DN5.prep++);return false;}if(DN5.prep<14){dn5Mountain(DN5.prep++-10);return false;}if(DN5.prep<18){dn5Chunk(DN5.prep++-14);return false;}if(DN5.prep<26){glow(DN5_COL[DN5.prep++-18]);return false;}if(DN5.prep<31&&typeof vk5Warm==='function'){if(!vk5Warm())return false;DN5.prep=31;return false;}if(DN5.prep<34){dn5Fall(DN5.prep++-31);return false;}if(DN5.prep<36){dn5CraterWall(DN5.prep++-34);return false;}if(DN5.prep<38){dn5Bloom(DN5.prep++-36);return false;}if(DN5.prep<40){dn5MoltenArt(DN5.prep++-38);return false;}if(DN5.prep<46){dn5RockArt(DN5.prep++-40);return false;}if(DN5.prep<61){glow(DN5_TOUCH_GLOWS[DN5.prep++-46]);return false;}if(DN5.prep<63){dn5RelicArt(DN5.prep++-61);return false;}if(DN5.prep<63+DN5_WORLD_GLOWS.length){glow(DN5_WORLD_GLOWS[DN5.prep++-63]);return false;}if(typeof ANKA!=='undefined'&&!ANKA.hazir&&!ANKA.isit())return false;DN5.warm=true;return true;
 }

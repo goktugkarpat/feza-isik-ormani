@@ -60,18 +60,20 @@ TUR.kaydet('korOyuncakYaprak', {
 TUR.kaydet('korTerazi', {
   kur(o) {
     o.tilt = 0; o.age = 0; o.baseY = o.y; o.parts = [];
-    for (let i = 0; i < 4; i++) o.parts.push(ao5Part(o, i, o.x + (i - 1.5) * 140, o.y, 148, true));
+    for (let i = 0; i < 4; i++) { const q = ao5Part(o, i, o.x + (i - 1.5) * 140, o.y, 148, true); q.arm = (i - 1.5) * 140; o.parts.push(q); }
   },
   guncelle(o, dt) {
     if (!ao5Playing(dt)) return; o.age += dt; let standing = false;
-    if (!P.ucus && P.ground) for (const q of o.parts) if (Math.abs(P.x - q.x) < 82 && Math.abs(P.y - (q.y - 12)) < 28) { standing = true; break; }
+    if (!P.ucus && P.ground) for (const q of o.parts) if (typeof OYUN !== 'undefined' ? OYUN.ustundeki === q : Math.abs(P.x - q.x) < q.cisim.w / 2 + 11 && Math.abs(P.y - (q.y - q.cisim.h)) < 2) { standing = true; break; }
     const target = standing ? clamp((P.x - o.x) / 220, -1, 1) * .26 : 0;
     o.tilt += (target - o.tilt) * (1 - Math.exp(-dt * 3.4));
-    for (const q of o.parts) { const before = q.y; q.y = o.baseY + (q.x - o.x) * o.tilt + 12; q.cisim.dy = q.y - before; }
+    const cs = Math.cos(o.tilt), sn = Math.sin(o.tilt);
+    for (const q of o.parts) { const bx = q.x, by = q.y; q.x = o.x + q.arm * cs; q.y = o.baseY + q.arm * sn + 12; q.cisim.dx = q.x - bx; q.cisim.dy = q.y - by; }
   },
   ciz(o, tm) {
     g.save(); g.strokeStyle = '#3b334f'; g.lineWidth = 15; g.lineCap = 'round';
-    g.beginPath(); g.moveTo(o.x - 242, o.baseY - 242 * o.tilt + 22); g.lineTo(o.x + 242, o.baseY + 242 * o.tilt + 22); g.stroke();
+    const dx = 242 * Math.cos(o.tilt), dy = 242 * Math.sin(o.tilt);
+    g.beginPath(); g.moveTo(o.x - dx, o.baseY - dy + 22); g.lineTo(o.x + dx, o.baseY + dy + 22); g.stroke();
     g.strokeStyle = '#a17782'; g.lineWidth = 7; g.stroke(); g.strokeStyle = '#e6bd91'; g.lineWidth = 1.3; g.stroke();
     g.fillStyle = '#3e3d59'; g.strokeStyle = '#7fa9a6'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(o.x - 54, o.baseY + 120); g.lineTo(o.x - 13, o.baseY + 25); g.quadraticCurveTo(o.x, o.baseY + 9, o.x + 13, o.baseY + 25); g.lineTo(o.x + 54, o.baseY + 120); g.closePath(); g.fill(); g.stroke();
     g.fillStyle = '#e6b97c'; g.beginPath(); g.arc(o.x, o.baseY + 22, 9, 0, Math.PI * 2); g.fill();

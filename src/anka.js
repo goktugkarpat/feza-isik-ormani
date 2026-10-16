@@ -3,8 +3,8 @@
 'use strict';
 const ANKA={
  art:[],warm:0,hazir:false,
- izSag:Object.freeze([{x:22,y:-35},{x:86,y:-93},{x:160,y:-112},{x:223,y:-76},{x:248,y:-15}]),
- isit(){if(this.warm<8){an5Art(this.warm++);return false;}this.hazir=true;return true;},
+ izSag:Object.freeze([{x:22,y:-35},{x:82,y:-76},{x:143,y:-99},{x:204,y:-102},{x:259,y:-79}]),
+ isit(){if(this.warm<12){an5Art(this.warm++);return false;}this.hazir=true;return true;},
  ciz(ctx,x,y,size,tm,opt){an5Draw(ctx,x,y,size,tm,opt);}
 };
 const AN5_PI=Math.PI*2;
@@ -18,23 +18,30 @@ function an5Feather(q,x,y,tx,ty,w,pale,variant){
  q.strokeStyle=pale?'#fff4d7':'#ffd190';q.lineWidth=.7;q.beginPath();q.moveTo(x,y);q.quadraticCurveTo(x+dx*.55+nx*w*.08,y+dy*.55+ny*w*.08,tx-dx*.045,ty-dy*.045);q.stroke();
  q.strokeStyle=pale?'rgba(71,136,137,.25)':'rgba(111,43,78,.3)';q.lineWidth=.5;for(let j=2;j<7;j++){const u=j/8,bw=Math.sin(u*Math.PI)*w*.62,px=x+dx*u,py=y+dy*u;q.beginPath();q.moveTo(px+nx*bw-dx*.035,py+ny*bw-dy*.035);q.lineTo(px,py);q.lineTo(px-nx*bw*.65+dx*.035,py-ny*bw*.65+dy*.035);q.stroke();}
 }
-function an5Wing(pale,far){
- const a=an5Canvas(280,210),q=a.q;q.translate(16,95);
- const gr=q.createLinearGradient(0,-30,210,15);gr.addColorStop(0,pale?'#bbd5cb':far?'#74295f':'#a72c58');gr.addColorStop(.45,pale?'#e4ead5':far?'#b74384':'#e75d54');gr.addColorStop(1,pale?'#fff0cf':'#f6c06c');q.fillStyle=gr;q.strokeStyle=pale?'#609594':'#79304e';q.lineWidth=1.2;
- q.beginPath();q.moveTo(0,0);q.bezierCurveTo(15,-18,32,-45,49,-53);q.quadraticCurveTo(59,-64,67,-58);q.bezierCurveTo(89,-73,116,-82,138,-77);q.quadraticCurveTo(156,-75,166,-64);q.bezierCurveTo(190,-56,203,-39,208,-24);q.quadraticCurveTo(220,-7,226,20);q.bezierCurveTo(208,10,181,-13,155,-28);q.quadraticCurveTo(112,-29,87,-23);q.quadraticCurveTo(41,-9,0,20);q.closePath();q.fill();q.stroke();
- const tips=[[226,20],[214,44],[192,62],[166,76],[141,78],[115,70],[89,57],[65,41]];
- for(let i=0;i<tips.length;i++){const t=tips[i],rootX=173-i*18.8,rootY=-34-Math.sin(i/7*Math.PI)*10+i*2.8;an5Feather(q,rootX,rootY,t[0],t[1],17.8-i*.3,pale,(i+far)%2);}
- // The shoulder coverts are separate overlapping paper folds, not one flat wing.
- for(let row=1;row>=0;row--)for(let j=0;j<6;j++){
-  const x=25+j*25+row*9,y=-28-Math.sin(j/6*Math.PI)*32+row*14,tx=x+15+row*3,ty=y+34+row*7;
-  an5Feather(q,x,y,tx,ty,10.5+row*1.1,pale,(j+row+far)%2);
+function an5Wing(pale,far,outer){
+ const a=an5Canvas(310,260),q=a.q;q.translate(20,145);
+ // A bent shoulder and a long, separate hand give the wing its living shape.
+ // Primary tips are unequal and swept back; air remains between their ends.
+ if(outer){
+  const tips=[[232,-112],[251,-82],[259,-43],[249,-1],[229,38],[201,67],[168,79]];
+  for(let i=tips.length-1;i>=0;i--){const p=tips[i];an5Feather(q,110+i*3.2,-62+i*4.8,p[0],p[1],14.5+i*.85,pale,(i+far)%2);}
+  for(let j=4;j>=0;j--){const x=107+j*14,y=-65+j*3.2;an5Feather(q,x,y,x+48+j*2,y+13+j*6,11,pale,(j+far)%2);}
+  q.strokeStyle=pale?'#fff2d8':'#ffe0a0';q.lineWidth=1.05;q.beginPath();q.moveTo(112,-63);q.bezierCurveTo(147,-71,185,-76,222,-66);q.stroke();
+ }else{
+  const gr=q.createLinearGradient(0,-22,150,10);gr.addColorStop(0,pale?'#b4cfc6':far?'#752d64':'#a33460');gr.addColorStop(.49,pale?'#e4ead5':far?'#ab4b83':'#e47361');gr.addColorStop(1,pale?'#fff0cf':'#f6c06c');q.fillStyle=gr;q.strokeStyle=pale?'#609594':'#79304e';q.lineWidth=1.1;
+  q.beginPath();q.moveTo(-1,6);q.bezierCurveTo(22,-7,36,-35,58,-44);q.bezierCurveTo(82,-57,99,-65,124,-65);q.quadraticCurveTo(149,-64,157,-45);q.quadraticCurveTo(140,-24,112,-7);q.bezierCurveTo(86,7,43,31,8,30);q.closePath();q.fill();q.stroke();
+  for(let j=6;j>=0;j--){const x=26+j*15,y=-12-j*6.1,tx=45+j*17.3,ty=48+Math.sin(j*.4)*23;an5Feather(q,x,y,tx,ty,12.3+j*.55,pale,(j+far)%2);}
+  // Two overlapping diagonal rows are shoulder coverts, with their own bends.
+  for(let row=1;row>=0;row--)for(let j=0;j<6;j++){
+   const x=14+j*20+row*6,y=-7-j*8.2+row*13;an5Feather(q,x,y,x+29+row*5,y+20+row*7,9+row*1.6,pale,(j+row+far)%2);
+  }
+  q.strokeStyle=pale?'#fff2d8':'#ffe0a0';q.lineWidth=1.1;q.beginPath();q.moveTo(2,-1);q.bezierCurveTo(25,-9,37,-34,60,-41);q.bezierCurveTo(80,-53,102,-63,123,-64);q.stroke();
  }
- q.strokeStyle=pale?'#fff2d8':'#ffe0a0';q.lineWidth=1.15;q.beginPath();q.moveTo(1,-2);q.bezierCurveTo(24,-33,44,-53,64,-58);q.bezierCurveTo(90,-76,115,-80,138,-77);q.bezierCurveTo(168,-72,189,-55,201,-41);q.stroke();
  return a.c;
 }
 function an5Art(i){
  if(ANKA.art[i])return ANKA.art[i];let a,q;
- if(i===0||i===1||i===2){ANKA.art[i]=an5Wing(i===2,i===1?1:0);return ANKA.art[i];}
+ if(i===0||i===1||i===2||i>=8&&i<=10){const v=i>=8?i-8:i;ANKA.art[i]=an5Wing(v===2,v===1?1:0,i>=8);return ANKA.art[i];}
  if(i===3){
   a=an5Canvas(150,210);q=a.q;q.translate(75,132);
   const gr=q.createLinearGradient(-35,-84,34,44);gr.addColorStop(0,'#b13a5d');gr.addColorStop(.3,'#e36951');gr.addColorStop(.7,'#f5a65a');gr.addColorStop(1,'#9f3453');q.fillStyle=gr;q.strokeStyle='#712d4c';q.lineWidth=1.4;q.beginPath();q.moveTo(0,-101);q.bezierCurveTo(-25,-96,-34,-48,-33,-16);q.bezierCurveTo(-36,16,-15,40,0,46);q.bezierCurveTo(21,39,37,12,33,-16);q.bezierCurveTo(32,-50,22,-94,0,-101);q.fill();q.stroke();
@@ -54,16 +61,36 @@ function an5Art(i){
   a=an5Canvas(62,260);q=a.q;q.translate(31,13);an5Feather(q,0,0,i===5?13:-10,232,i===5?19:15,false,i%2);
   // A flame-shaped gold eye is a feather marking, never a flashing light.
   q.fillStyle='#ffdf8a';q.beginPath();q.moveTo(10,175);q.bezierCurveTo(-4,189,-5,208,10,221);q.bezierCurveTo(25,207,26,190,10,175);q.fill();q.fillStyle='#f39158';q.beginPath();q.moveTo(10,186);q.quadraticCurveTo(-1,205,10,214);q.quadraticCurveTo(21,204,10,186);q.fill();q.strokeStyle='#ffe9af';q.lineWidth=.7;q.beginPath();q.moveTo(10,181);q.quadraticCurveTo(-4,203,10,219);q.stroke();
- }else{
+ }else if(i===7){
   a=an5Canvas(260,260);q=a.q;const h=q.createRadialGradient(130,130,8,130,130,125);h.addColorStop(0,'rgba(255,201,112,.28)');h.addColorStop(.45,'rgba(239,123,84,.11)');h.addColorStop(1,'rgba(228,91,104,0)');q.fillStyle=h;q.fillRect(0,0,260,260);
+ }else{
+  a=an5Canvas(26,26);q=a.q;const h=q.createRadialGradient(13,13,0,13,13,12);h.addColorStop(0,'rgba(255,244,195,.9)');h.addColorStop(.23,'rgba(255,208,129,.57)');h.addColorStop(1,'rgba(255,187,104,0)');q.fillStyle=h;q.fillRect(0,0,26,26);
  }
  ANKA.art[i]=a.c;return a.c;
 }
+function an5WingLayer(q,outer,material,far){
+ const offset=outer?8:0;
+ if(material<.999){q.save();q.globalAlpha*=.45+(1-material)*.12;q.drawImage(an5Art(offset+2),-20,-145,310,260);q.restore();}
+ if(material>.001){q.save();if(material<.999){q.beginPath();q.rect(-22,-147,312*material,264);q.clip();}q.drawImage(an5Art(offset+(far?1:0)),-20,-145,310,260);q.restore();}
+}
 function an5DrawWing(q,side,tm,open,material,still,far){
- const flap=still?0:Math.sin(tm*2.05+(far?.22:0))*.065,fold=(1-open)*1.04;
- q.save();q.translate(side*22,-35);q.scale(side,1);q.rotate(fold+flap*(.35+open*.65));q.scale(.26+open*.74,.9+open*.1);
- if(material<.999){q.globalAlpha*=.37+(1-material)*.16;q.drawImage(an5Art(2),-16,-95,280,210);q.globalAlpha/= .37+(1-material)*.16;}
- if(material>.001){q.save();if(material<.999){q.beginPath();q.rect(-18,-98,280*material,212);q.clip();}q.drawImage(an5Art(far?1:0),-16,-95,280,210);q.restore();}q.restore();
+ const phase=tm*2.05+(far?.2:0),flap=still?0:Math.sin(phase)*(.025+open*.11),fold=(1-open),wrist=still?0:Math.sin(phase-.72)*open*.09;
+ q.save();q.translate(side*22,-35);q.scale(side,1);q.rotate(fold*.92+flap);q.scale(.34+open*.66,.9+open*.1);
+ q.save();q.translate(116,-60);q.rotate(fold*.55+wrist);q.scale(.8+open*.2,1);q.translate(-116,60);an5WingLayer(q,true,material,far);q.restore();
+ an5WingLayer(q,false,material,far);q.restore();
+}
+function an5FeatherDust(q,x,y,size,face,tm,open,joy){
+ // Twelve analytic specks are the feather's own warm pigment, never a fire
+ // emitter. Their short lives and soft edges leave face and play targets clear.
+ const player=typeof P!=='undefined'&&Number.isFinite(P.x)&&Number.isFinite(P.y),alpha=q.globalAlpha;
+ q.save();
+ for(let i=0;i<12;i++){
+  const u=(tm*(.16+i%3*.014)+i*.381966)%1,sd=i%2?1:-1,wing=i<8,px=wing?sd*(145+u*94)*(.45+open*.55):sd*(8+u*37),py=wing?-16+u*85-open*37:117+u*112;
+  let a=Math.sin(u*Math.PI)*(.13+joy*.12);
+  if(player){const dx=(x+px*size*face-P.x)/63,dy=(y+py*size-(P.y-31))/78;if(dx*dx+dy*dy<1)a*=.15;}
+  const r=3.2+(i%3)*.65;q.globalAlpha=alpha*a;q.drawImage(an5Art(11),px-r,py-r,r*2,r*2);
+ }
+ q.restore();
 }
 function an5Draw(q,x,y,size,tm,opt){
  if(!q||!Number.isFinite(x)||!Number.isFinite(y)||!(size>0)||!Number.isFinite(tm))return;opt=opt||{};const alpha=Number.isFinite(opt.alpha)?clamp(opt.alpha,0,1):1;if(alpha<.002)return;
@@ -71,8 +98,9 @@ function an5Draw(q,x,y,size,tm,opt){
  q.save();q.translate(x,y);q.scale(size*face,size);q.globalAlpha*=alpha;
  q.save();q.globalAlpha*=.6+joy*.2;q.drawImage(an5Art(7),-150,-175,300,300);q.restore();
  // Long pennants are articulated independently, with no particle simulation.
- for(let i=0;i<7;i++){const sd=i-3,sway=still?0:Math.sin(tm*1.35-i*.43)*.042,short=1-Math.abs(sd)*.095,trail=pose==='glide'?.92:pose==='lift'?.46:0;q.save();q.translate(sd*4,26);q.rotate(trail-sd*.105+sway);q.scale(.65+short*.25,(.65+short*.32)*(asleep?.77:1));q.drawImage(an5Art(i%2?6:5),-31,-13,62,260);q.restore();}
+ for(let i=0;i<7;i++){const sd=i-3,sway=still?0:Math.sin(tm*1.35-i*.46)*.067+Math.sin(tm*.61+i*.7)*.014,short=1-Math.abs(sd)*.095,trail=pose==='glide'?.92:pose==='lift'?.46:0;q.save();q.translate(sd*4,26);q.rotate(trail-sd*.112+sway);q.scale(.65+short*.25,(.65+short*.32)*(asleep?.77:1)*(1+(still?0:Math.sin(tm*1.35-i*.46)*.013)));q.drawImage(an5Art(i%2?6:5),-31,-13,62,260);q.restore();}
  an5DrawWing(q,-1,tm,open,1,still,true);an5DrawWing(q,1,tm,open,right,still,false);
+ if(!still&&asleep<.2)an5FeatherDust(q,x,y,size,face,tm,open,joy);
  // Copper feet tuck into the plumage during flight, and gently grasp a perch.
  q.strokeStyle='#c88756';q.lineWidth=3;for(let s=-1;s<=1;s+=2){const fx=s*17,fy=48+(1-open)*8;q.beginPath();q.moveTo(s*15,30);q.quadraticCurveTo(s*18,40,fx,fy);q.lineTo(fx+s*8,fy+3);q.moveTo(fx,fy);q.lineTo(fx-s*6,fy+5);q.stroke();q.strokeStyle='#ffe0a0';q.lineWidth=.85;q.beginPath();q.moveTo(s*15,33);q.lineTo(fx,fy);q.stroke();q.strokeStyle='#c88756';q.lineWidth=3;}
  q.drawImage(an5Art(3),-75,-132,150,210);
