@@ -2811,6 +2811,9 @@ const AU = (() => {
     OLAY.on('volkanFinalBasla', () => { if (!bolum5()) return; vFinal = true; vMini = false; olaySes('volkanFinalBasla'); });
     OLAY.on('volkanTamam', () => { if (bolum5()) olaySes('volkanTamam'); });
     OLAY.on('denizati', () => { if (typeof BOLUM_NO !== 'undefined' && BOLUM_NO === 4) { denizDostSay++; olaySes('denizZafer'); } });
+    OLAY.on('ahtapotTamam', () => { if (bolum4()) olaySes('inciUyan'); });
+    OLAY.on('vatozBasla', () => { if (bolum4()) olaySes('denizHamle'); });
+    OLAY.on('vatozBitti', () => { if (bolum4()) olaySes('denizati'); });
     OLAY.on('denizHamle', () => olaySes('denizHamle'));
     OLAY.on('suAkinti', e => olaySes('suAkinti', e));
     OLAY.on('vatozKemer', e => olaySes('vatozKemer', e));
@@ -3033,6 +3036,9 @@ const AU = (() => {
   // ───────────────────────── zamanlayıcı ─────────────────────────
   const ILERI = 0.7;
   function tick() {
+    // Otomatik oynatma engelindeyken ses saati durur. Burada önceden ölçü
+    // planlamak, dokunuştan sonra bitmiş başlık/uyku sahnesini çaldırırdı.
+    if (!ac || (!test && ac.state !== 'running')) return;
     const t = zaman();
     const d = okuFn();
     d0 = d;
@@ -3140,7 +3146,10 @@ const AU = (() => {
     const durum = ac && ac.state;
     if (durum === sonSesDurum) return;
     sonSesDurum = durum;
-    if (durum === 'running' && typeof OLAY !== 'undefined') OLAY.emit('sesHazir', { state: durum });
+    if (durum === 'running') {
+      tick();   // İlk işitilen ölçü, kilit açıldığı andaki gerçek sahneye ait.
+      if (typeof OLAY !== 'undefined') OLAY.emit('sesHazir', { state: durum });
+    }
   }
   function uyandir() {
     const a = ac;

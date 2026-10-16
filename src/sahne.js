@@ -22,6 +22,16 @@ function shSus() { if (typeof SES === 'undefined') return; try { if (SES.sus) SE
 function shSfx(ad, v) { try { if (typeof AU !== 'undefined' && AU && AU.sfx) AU.sfx(ad, v || 0); } catch (e) {} }
 function shBir(k, at, ad, v) { if (!sh.sesler['s_' + k] && sh.t >= at) { sh.sesler['s_' + k] = 1; shSfx(ad, v); shAn(k); } }   // zamanı gelince bir kez
 function shAn(ad) { if (sh.anlar[ad]) return; sh.anlar[ad] = 1; try { OLAY.emit('sahneAn', { ad, mod: sh.mod }); } catch (e) {} }
+// Deniz'in ilk final özeti dünyadaki kutlamaya aittir; sabah akışı bu
+// kaydı yeniden istemez. İnci'nin ilk kısa sözüne yer bırak, sonra bir kez anlat.
+const shInciOzetleri = new WeakSet();
+OLAY.on('inciSahne', e => {
+  if (typeof BOLUM_NO === 'undefined' || BOLUM_NO !== 4 || DURUM !== 'oyun' || !e || !e.o || shInciOzetleri.has(e.o) || typeof omZamanla !== 'function') return;
+  shInciOzetleri.add(e.o);
+  omZamanla(0.7 + shSure('p_i_inci_uyan') + 0.7, () => {
+    if (DURUM === 'oyun' && !e.o.done && e.o.dnz && e.o.dnz.faz === 'uyan') shSoyle('a_i_final1');
+  });
+});
 
 // ── renk paletleri: gece / sabah ──
 const SH_GECE = {

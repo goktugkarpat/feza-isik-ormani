@@ -706,6 +706,7 @@ function dnzRideIsikCiz(o, tm) {
 function dnzRideBasla(o) {
   if (o.done || o.faz !== 'bekle' || DNZ.oct && !DNZ.oct.done || DNZ.ati.some(q => !q.done)) { o.dokundu = false; return; }
   o.faz = 'binis'; o.t = 0; o.rx = P.x; o.ry0 = P.y; o.mx = o.kx - 70; o.my = o.ky + 14; o.px0 = P.x; o.py0 = P.y; P.ucus = o; P.vx = P.vy = 0; P.kilit = 0; DNZ.aktif = null; dnzSoz('p_i_vatoz');
+  OLAY.emit('vatozBasla', { o });
 }
 function dnzRideAdim(o, dt, input) {
   if (DURUM !== 'oyun' || dt <= 0) return;

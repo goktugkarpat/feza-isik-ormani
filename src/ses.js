@@ -230,8 +230,23 @@ const SES = (() => {
   const sesBuyukAsama = () => { const b = sesBuyuk(); return Math.max(sesAsama, b && b.uyandi ? 3 : 0, (b && b.pf && b.pf.asama) || 0); };
   let sesZipladi = false; OLAY.on('ziplama', () => { sesZipladi = true; });
   const agacYandi = () => (typeof BOLUM_NO !== 'undefined' && BOLUM_NO === 2) ? false : !!(typeof TREE !== 'undefined' && TREE && TREE.done);
+  const SES_MINI_ALAN = { p_sarki1: 'sk', p_sarki2: 'sk', p_takim1: 'tk', p_takim2: 'tk', p_b_sekil1: 'skl', p_b_sekil2: 'skl' };
+  function sesMiniNesne(k) {
+    const alan = SES_MINI_ALAN[k];
+    const aktif = alan === 'sk' ? (typeof skAktif !== 'undefined' && skAktif) : alan === 'tk' ? (typeof tkAkt !== 'undefined' && tkAkt) : (typeof SKL !== 'undefined' && SKL.akt);
+    if (aktif && aktif[alan]) return aktif;
+    const p = gP(); let en = null, uzak = Infinity;
+    for (const o of gN()) if (o[alan]) { const d = p ? Math.abs(o.x - p.x) : 0; if (d < uzak) { en = o; uzak = d; } }
+    return en;
+  }
+  function sesMiniSuruyor(s) {
+    const o = s.mini, k = o && o[SES_MINI_ALAN[s.k]];
+    return !!(k && !o.done && !k.bitti && k.durum !== 'bitti');
+  }
   // her talimatın "hâlâ yerinde mi?" koşulu (çalma anında bakılır)
   const KOSUL = {
+    p_sarki1: sesMiniSuruyor, p_sarki2: sesMiniSuruyor,
+    p_takim1: sesMiniSuruyor, p_takim2: sesMiniSuruyor,
     p_v_mini: () => (typeof V5 === 'undefined' || !V5.mini) && (typeof KR5 === 'undefined' || !KR5.o || KR5.o.kr5.totalFed < 6),
     p_v_mini_yardim: () => typeof KR5 !== 'undefined' && !!KR5.aktif && KR5.o.kr5.phase === 'feed' && KR5.o.kr5.totalFed < 6,
     p_v_sal: () => typeof V5 === 'undefined' || !V5.sal,
@@ -264,7 +279,8 @@ const SES = (() => {
     p_b_ucus: () => !sesUcusBitti,
     p_b_ucus2: () => sesUcusta() && !(sesSonCal.p_b_selam != null && sesSaat() - sesSonCal.p_b_selam < 8),   // selam az önce söylendiyse uçuş cümlesi atlanır
     p_b_selam: () => sesUcusta() && !(sesSonCal.p_b_ucus2 != null && sesSaat() - sesSonCal.p_b_ucus2 < 4),
-    p_b_sekil1: s => !sesIleride('b_sekil1', 10, s),
+    p_b_sekil1: s => sesMiniSuruyor(s) && !sesIleride('b_sekil1', 10, s),
+    p_b_sekil2: sesMiniSuruyor,
     p_dost1: () => sesDostUygun(), p_dost2: () => sesDostUygun(), p_dost3: () => sesDostUygun(),
     p_dost_orman: () => sesDostUygun(), p_dost_yildiz: () => sesDostUygun(), p_dost_bulut: () => sesDostUygun(),
   };
@@ -336,6 +352,20 @@ const SES = (() => {
       s.sesBekT = sesSaat(); s.sesDeneT = sesSaat() + (neden === 'çözme' ? .5 : 0);
       sesSira.unshift(s); sesNot('ses bekle', s.k, neden);
     } else sesNot('at', s.k, sesGecerli(s));
+  }
+  function sesSiraHazirla(s) {
+    if (s.cozBek) return;
+    s.cozBek = true;
+    sesCozumle(s.k).then(buf => {
+      s.cozBek = false;
+      if (!sesSira.includes(s)) return;   // sahne değişti veya istek iptal edildi
+      if (!buf) {
+        s.cozHata = (s.cozHata || 0) + 1;
+        s.sesDeneT = sesSaat() + Math.min(8, .5 * Math.pow(2, Math.min(4, s.cozHata - 1)));
+        sesNot('ses bekle', s.k, 'çözme');
+      } else s.sesDeneT = 0;
+      sesTik();
+    });
   }
   function sesOnceden() {     // cümleleri boşta önceden çöz (ilk konuşmada gecikme olmasın)
     if (!window.VOICE_MP3) return;
@@ -427,6 +457,7 @@ const SES = (() => {
       if (sesSonCal[k] != null && t - sesSonCal[k] < SES_AYNI_ARA) { sesNot('at', k, 'aynısı az önce'); return; }   // seyrek kalsın
     }
     const s = { k, oncelik, acil: oncelik >= 3 ? 0 : b.acil, konu: b.konu, t, son: t + omur, kez: 0, bas: 0, sure: sesSure(k), o, yer, tek };
+    if (SES_MINI_ALAN[k]) s.mini = sesMiniNesne(k);   // başka bir etkinlik eski talimatı yeniden geçerli kılmasın
     // aynı konudaki eski cümleler geçersiz (yalnız en yeni aşama söylenir)
     if (s.konu) {
       const ks = KONU_SIRA[k] || 9;
@@ -509,10 +540,17 @@ const SES = (() => {
     if (sesKaynak) {
       try {
         const now = sesKaynak.ac.currentTime;
-        sesKaynak.g.gain.cancelScheduledValues(now);
-        sesKaynak.g.gain.setValueAtTime(Math.max(0.0001, sesKaynak.g.gain.value), now);
-        sesKaynak.g.gain.exponentialRampToValueAtTime(0.0001, now + 0.045);
-        sesKaynak.s.stop(now + 0.05);
+        if (sesKaynak.ac.state !== 'running') {
+          // Askıdaki saat ilerlemez: geleceğe stop koymak dönüşte eski sözü sızdırır.
+          sesKaynak.s.stop(now);
+          if (sesKaynak.s.disconnect) sesKaynak.s.disconnect();
+          if (sesKaynak.g.disconnect) sesKaynak.g.disconnect();
+        } else {
+          sesKaynak.g.gain.cancelScheduledValues(now);
+          sesKaynak.g.gain.setValueAtTime(Math.max(0.0001, sesKaynak.g.gain.value), now);
+          sesKaynak.g.gain.exponentialRampToValueAtTime(0.0001, now + 0.045);
+          sesKaynak.s.stop(now + 0.05);
+        }
       } catch (e) {}
     }
     sesBitti();
@@ -535,11 +573,20 @@ const SES = (() => {
     sesSira = sesSira.filter(s => { const n = sesGecerli(s); if (n) sesNot('at', s.k, n); return !n; });
     if (!sesSira.length) return;
     sesSira.sort(sesSirala);
-    const s = sesSira[0];
-    if (sesSesli(s.k) && !hazir) { sesCozumle(s.k); return; }
-    if (s.sesDeneT && sesSaat() < s.sesDeneT) return;
-    if (sesSaat() < sesSonBitis + sesAra(s)) return;
-    sesSira.shift();
+    let i = -1;
+    for (let j = 0; j < sesSira.length; j++) {
+      const aday = sesSira[j];
+      if (aday.sesDeneT && sesSaat() < aday.sesDeneT) continue;
+      if (sesSesli(aday.k)) {
+        if (!baglam) continue;
+        if (!sesBuf[aday.k]) { sesSiraHazirla(aday); continue; }
+        if (!hazir) continue;
+      }
+      if (sesSaat() < sesSonBitis + sesAra(aday)) continue;
+      i = j; break;
+    }
+    if (i < 0) return;
+    const s = sesSira.splice(i, 1)[0];
     sesBaslat(s);
   }
   function sesBaslat(s) {
@@ -588,7 +635,7 @@ const SES = (() => {
     });
   }
   setInterval(sesTik, 100);
-  OLAY.on('sesHazir', () => { sesTik(); });
+  OLAY.on('sesHazir', () => { for (const s of sesSira) s.sesDeneT = 0; sesTik(); });
 
   // oyun olaylarından durum
   OLAY.on('aydinlat', g => { sesAydinG[g || 'gol'] = true; });

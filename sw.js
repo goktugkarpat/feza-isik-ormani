@@ -1,15 +1,18 @@
 // İnternetsiz çalışma: ilk açılıştan sonra oyun (kod, gömülü sesler, simgeler) cihazda saklanır.
 // Dosya eklenirse SRC listesine ekle; önemli değişiklikte CACHE sürümünü artır.
-const CACHE = 'feza-piril-v73-yavru-kuslar';
+const CACHE = 'feza-piril-v74-ses-surekliligi';
 const SRC = ['ortak', 'kapi', 'bolum', 'dunya', 'feza', 'piril', 'pofuduk', 'sahne', 'arayuz', 'sarki', 'bolum2', 'dunya2', 'yildiz', 'takim', 'dunya3', 'bulut', 'kuzu', 'sekil', 'ucus', 'bolum3', 'bolum4', 'dunya4', 'deniz', 'inci', 'bolum5', 'dunya5', 'volkan', 'kristal', 'lavsal', 'muzik', 'ses', 'oyun'];
 const CORE = ['./', './index.html', './sesler.js', './manifest.webmanifest', ...SRC.map(n => './src/' + n + '.js')];
 const ICONS = ['./icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];   // eksik simge kurulumu durdurmasın
 const FRESH = /(\/|index\.html)$/;   // sayfa önce ağ, diğer dosyalar önce önbellek
+// Yeni oyun önbelleği eski HTTP/CDN dosyalarıyla dolmasın. Çalışırken
+// ignoreSearch ile aynı dosyayı buluruz; her sürüm ağdan kendi kodunu alır.
+const kurulumIstegi = u => { const url = new URL(u, self.location.href); url.searchParams.set('surum', CACHE); return new Request(url.href, { cache: 'reload' }); };
 
 self.addEventListener('install', e => e.waitUntil((async () => {
   const c = await caches.open(CACHE);
-  await c.addAll(CORE);
-  for (const u of ICONS) { try { await c.add(u); } catch (err) {} }
+  await c.addAll(CORE.map(kurulumIstegi));
+  for (const u of ICONS) { try { await c.add(kurulumIstegi(u)); } catch (err) {} }
   self.skipWaiting();
 })()));
 self.addEventListener('activate', e => e.waitUntil((async () => {
