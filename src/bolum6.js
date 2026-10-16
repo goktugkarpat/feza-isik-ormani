@@ -47,7 +47,7 @@ const BOLUM={
  halka:{x0:nx(262),x1:nx(394),yUst:200,yAlt:700,inisX:nx(396),inisY:yuzey(396)},
  kopru:{x0:402*T,x1:408*T,y:yuzey(401)},
  avlu:{x:nx(497),y:yuzey(497)},
- fenerTop:12,halkaTop:8,
+ fenerTop:12,halkaTop:12,
  kamera:[{x0:0,x1:30*T,zoom:.95,yOfs:-20},{x0:38*T,x1:66*T,zoom:.86,yOfs:-90},
   {x0:66*T,x1:90*T,zoom:.92,yOfs:-30},{x0:93*T,x1:126*T,zoom:.86,yOfs:-90},
   {x0:135*T,x1:198*T,zoom:.86,yOfs:-80},{x0:205*T,x1:252*T,zoom:.82,yOfs:-120},
@@ -84,6 +84,18 @@ bl6Soz(30,'p_f_midilli',44);
 // ── İsteğe bağlı ışık tohumları: dam yollarının ve balkonların küçük sürprizleri. ──
 for(const [c,y] of [[45,11*T],[62,12*T],[100,11*T],[121,11*T],[148,13*T],[171,10*T],[190,11*T],[216,8*T],[236,8*T],[248,9*T],[446,7*T],[465,7*T]])
  nesne('tohum',c,y,{r:46});
+
+// ── Dekor imzaları (yalnız görüntü; dunya6.js çizer, çarpışma/oynanış yok). Her bölgenin kendine özgü bir köşesi olsun. ──
+// fiskiye: meydanın ışıklı havuzu (sütun). kedi: [sütun, dam satırı, renk] terasın korkuluğunda uyuyan kediler (fener ışığı
+// gelince uyanır). baykus: [sütun, sur satırı] sur mazgalında uyuklayan baykuşlar. bayrak: rüzgârda dalgalanan uzun flamalı direkler.
+// kapicik: istinat duvarındaki minik peri kapıları (yanında küçük fener; ışık gelince pencereleri yanar).
+const DEKOR6={
+ fiskiye:[162],
+ kedi:[[54,11,0],[109,11,1],[180,10,2],[99,11,2]],
+ baykus:[[233,8],[456,7]],
+ bayrak:[18,88,137,201,432],
+ kapicik:[9,43,61,97,124,171,191,214,244,415,450]
+};
 
 const FLOWERS=[];
 const TREE=null;

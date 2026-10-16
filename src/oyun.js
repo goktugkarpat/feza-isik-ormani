@@ -789,6 +789,7 @@ OLAY.on('senlikFinal', e => {
   if (typeof V6 !== 'undefined') V6.final = true;
   lightTarget = 1; omHepsiniBirak(); jumpPressed = false; P.buf = 0;
   const o = e && (e.o || (e.tip ? e : null)), sure = e && isFinite(e.duration) ? e.duration : 22;
+  omDk.o6 = o && isFinite(o.x) && isFinite(o.y) ? o : null;   // şenlik kadrajı (om6Final): avlu zemini
   if (o || (e && e.box)) omDikkat('senlikFinal', sure + 2, () => { const b = e.box || { x0: o.x - 420, y0: o.y - 540, x1: o.x + 420, y1: o.y + 85 }; omDkEkle(b.x0, b.y0, b.x1, b.y1); }, 1, .6);
   omZamanla(5, () => { if (DURUM === 'oyun' && typeof SES !== 'undefined' && SES.soyle) SES.soyle('a_f_final1'); });
   omZamanla(sure + 1.5, () => omFinalPlanla(2));   // yedek: kutlama 'senlikTamam' yayınlamazsa da sabah gelsin
@@ -949,12 +950,18 @@ function omOlcek() { S = H / VH * cam.zoom; VW = W / S; }
 // normale döner. Kutu her karede yeniden hesaplanır (hareket eden şeyler). Finalde (ağaç yandı) kalıcıdır: yanan ağaç + Feza +
 // kutlayan grup. Yakınlık yalnız uzaklaşabilir (en çok zMin'e kadar); finalde kutuya göre ayarlanır (en çok temel yakınlık).
 const omDk = { fn: null, ad: '', bitis: 0, guc: 1, zMin: 0.66, w: 0, wv: 0, final: false, gorulen: {},
-  x0: 0, x1: 0, y0: 0, y1: 0, fezaYok: false, cx: 0, cy: 0, zf: 1 };
+  x0: 0, x1: 0, y0: 0, y1: 0, fezaYok: false, cx: 0, cy: 0, zf: 1, o6: null };
 function omDikkat(ad, sure, fn, guc, zMin) {
   if (omDk.final && ad !== 'final') return;
   if (omDk.fn && omDk.ad !== ad && now < omDk.bitis && (omDk.guc || 1) > (guc || 1)) return;   // daha güçlü bir an sürüyor
   omDk.fn = fn; omDk.ad = ad; omDk.bitis = now + sure; omDk.guc = guc || 1; omDk.zMin = zMin || 0.66;
 }
+// Bölüm 6 avlu finali (şenlik): kamera dünyanın tepesinin (-40) üstüne çıkabilir (gök ekran-uzayında, dunya6 arka planı)
+// ve kutudan bağımsız yakınlaşabilir; böylece dikey ekranda da kutlama (fişekler, gök, kale, dans, Feza) kadrajı doldurur,
+// avlu duvarı (zeminin altı) ekranın en çok ~%22'si olur. Yalnız BOLUM_NO 6 + V6.final + 'senlikFinal' dikkat anında.
+const OM6_GOK = 520, OM6_GEN = 520, OM6_DUVAR = 0.22;   // zeminin üstünde gösterilecek gök yüksekliği, en az görünen genişlik, duvar payı
+function om6Final() { return BOLUM_NO === 6 && typeof V6 !== 'undefined' && !!V6 && !!V6.final && omDk.ad === 'senlikFinal' && !!omDk.o6; }
+function om6FinalZoom(asp) { return clamp(Math.min(VH * (1 - OM6_DUVAR) / OM6_GOK, VH * asp / OM6_GEN), 0.6, OM_TABAN_ZOOM); }
 function omDkEkle(x0, y0, x1, y1) {
   omDk.x0 = Math.min(omDk.x0, x0); omDk.x1 = Math.max(omDk.x1, x1); omDk.y0 = Math.min(omDk.y0, y0); omDk.y1 = Math.max(omDk.y1, y1);
 }
@@ -1014,6 +1021,7 @@ function omDikkatHesap(dt, snap, px, py) {
   if (omDk.final) zf = clamp(zf, 0.7, OM_TABAN_ZOOM);
   else if (omDk.ad === 'hayvan' && omFirlatT > 0 && now - omFirlatT > 0.9) zf = clamp(zf, 0.62, 1.0);   // fırlatma yayı: Feza'ya yaklaş (tabandan büyük de olabilir)
   else zf = clamp(Math.min(zf, omZ.hz), omDk.ad === 'hayvan' ? 0.6 : omDk.zMin, omZ.hz);   // hayvan sahnesinde (dikey ekran dahil) daha çok uzaklaşılabilir   // yalnız uzaklaş
+  if (om6Final()) zf = Math.max(zf, om6FinalZoom(asp));   // Bölüm 6 şenliği: dikeyde yakınlaş (yatayda değişmez: oradaki değer zaten büyük)
   omDk.zf = zf;
   omDk.cx = (omDk.x0 + omDk.x1) / 2; omDk.cy = (omDk.y0 - 50 + omDk.y1 + 45) / 2;
   const w = smooth(omDk.w);
@@ -1183,6 +1191,7 @@ function stepCam(dt, snap) {
   const dw = omDk.w > 0 ? smooth(omDk.w) : 0;
   if (dw > 0) {
     let dx = omDk.cx - VW / 2, dy = omDk.cy - VHg / 2;
+    if (om6Final()) dy = Math.min(omDk.o6.y - VHg * (1 - OM6_DUVAR), omDk.y0 - 50);   // şenlik: avlu zemini ekranın alttan ~%22'sinde, fişeklerin tepesi görünür
     if (!omDk.fezaYok) { dx = clamp(dx, px - VW * (1 - omC.kenar), px - VW * omC.kenar); dy = clamp(dy, py - VHg * 0.9, py - 100 - VHg * 0.04); }
     tx = lerp(tx, clamp(dx, 0, maxX), dw); ty = lerp(ty, dy, dw); st = Math.max(st, lerp(st, 0.45, dw));
   }
@@ -1205,7 +1214,8 @@ function stepCam(dt, snap) {
     tx = clamp(DENIZ.ahtapot.x - VW / 2, 0, maxX);
     ty = DENIZ.ahtapot.y - 55 - VHg / 2; st = .35;
   }
-  ty = clamp(ty, -40, BOLUM_NO === 4 ? Math.max(-40, yMax) : yMax);
+  const yUst = dw > 0 && om6Final() ? -40 - VHg * 0.5 * dw : -40;   // dünyanın tepesi; yalnız Bölüm 6 şenliğinde göğe doğru daha yukarı çıkılabilir (dikkat sönerken yumuşakça geri)
+  ty = clamp(ty, yUst, BOLUM_NO === 4 ? Math.max(-40, yMax) : yMax);
   if (snap) { omC.x = tx; omC.y = ty; omC.vx = omC.vy = 0; }
   else if (dt > 0) {
     omC.x = omSD(omC.x, tx, omC.vx, 0.3, dt); omC.vx = omSdV;
@@ -1220,7 +1230,7 @@ function stepCam(dt, snap) {
       else if (omC.y > ky1) { omC.y = lerp(omC.y, ky1, 1 - Math.exp(-dt * 16)); if (omC.y > ky1 + 20) omC.y = ky1 + 20; }
     }
   }
-  omC.x = clamp(omC.x, 0, maxX); omC.y = clamp(omC.y, -40, BOLUM_NO === 4 ? Math.max(-40, yMax) : yMax);
+  omC.x = clamp(omC.x, 0, maxX); omC.y = clamp(omC.y, yUst, BOLUM_NO === 4 ? Math.max(-40, yMax) : yMax);
   // sarsıntı: Büyük Pofuduk sekmesinde (sarsK 1) ve sevinç zıplamasının inişinde ('sarsinti', daha hafif); minik ve yumuşak
   let sx = 0, sy = 0;
   if (omC.sars > 0) {
