@@ -134,19 +134,20 @@ const SES = (() => {
     "a_i_final2": "Sabah Feza yatağında gözlerini açmış. Güneş, odasına deniz gibi ışıklar çizmiş. Pırıl da ona tatlı tatlı göz kırpmış.",
     "a_i_final3": "Ve her gece, yeni bir rüya onları bekliyormuş...",
     "p_v_uyku": "Bu gece, Uyuyan Yanardağ'a gidiyoruz!",
-    "p_v_giris": "Bak Feza, dağ usulca nefes alıyor! Kor Çiçeği uyumuş. Işık bahçelerini canlandırıp onu uyandıralım.",
+    "p_v_giris": "Kor Çiçeği uyumuş, Feza. Işık bahçelerini canlandıralım; dağın sıcacık kalbine gidelim.",
     "p_v_buhar": "Bu yumuşacık buhar bizi yukarı taşıyor! Taşlara zıpla, sıcak rüzgârda süzül!",
-    "p_v_mini": "Yavru kuşlar acıkmış! Meyveyi kuşlara sürükle, onları doyuralım.",
-    "p_v_mini_yardim": "Meyveyi aç yavru kuşa sürükle.",
-    "p_v_kristal_son": "Yaşasın, kuşlar doydu! Şimdi kayığımıza gidelim.",
-    "p_v_sal": "Işık nehrinde yolculuğa çıkıyoruz! Parmağınla yukarıya, aşağıya yol göster; salımız sıcak buharda süzülsün. Ben yanındayım!",
-    "p_v_sal_son": "Ne güzel süzüldük! Işık kuşlarımız da bizimle geldi. Hadi, Kor Çiçeği'ni bulalım!",
-    "p_v_kalp": "İşte dağın kalbi: Kor Çiçeği! Bahçelerimiz uyandı. Şimdi yaklaş, çiçeğe dokunalım.",
-    "p_v_bahce": "Bak, taşların arasından ışık çiçekleri açılıyor! Dağ yeniden renkleniyor.",
+    "p_v_mini": "Bak, kocaman bir Anka yumurtası! Parmağınla yumurtayı okşa, onu ısıtalım.",
+    "p_v_mini_yardim": "Yumurtayı okşa, içindeki Anka uyansın.",
+    "p_v_anka_kanat": "Anka'nın kanadını renklendirelim! Parmağınla parlayan tüylerin üzerinden geç.",
+    "p_v_kristal_son": "Merhaba, Anka! Kanatların ışıl ışıl oldu. Hadi, kayığımıza gidelim!",
+    "p_v_sal": "Anka da bizimle geliyor! Kayığımıza parmağınla yukarıya, aşağıya yol göster. Işık çiçeklerinin arasından geçelim!",
+    "p_v_sal_son": "Anka'yla dağın kalbine geldik! Kor Çiçeği çok yakında.",
+    "p_v_kalp": "İşte Kor Çiçeği! Anka da yanımızda. Yaklaşalım, birlikte uyandıralım.",
+    "p_v_bahce": "Dokunduğun çiçeklerden sıcak bir ışık yayıldı! Bak, bahçe canlanıyor.",
     "p_dost_volkan": "Bu dağın şarkısı ne kadar güzel! Seninle keşfetmeyi çok seviyorum.",
-    "a_v_final1": "Feza ile Pırıl, uyuyan dağın şarkısını bulmuşlar. Kor Çiçeği açılınca, gökyüzüne altın ışık kuşları yükselmiş. Bütün bahçeler yeniden canlanmış.",
+    "a_v_final1": "Feza ile Pırıl, Anka'yı uyandırmış; lav nehrinde onunla birlikte yol almışlar. Kor Çiçeği açılınca, bütün yanardağ bir ışık bahçesine dönüşmüş.",
     "a_v_final2": "Sabah Feza, sıcacık yatağında gözlerini açmış. Gün ışığı, yorganına altın desenler çizmiş. Pırıl da ona tatlı tatlı göz kırpmış.",
-    "a_v_final3": "Ve o güzel dağın şarkısı, Feza'nın rüyalarında hep yaşayacakmış."
+    "a_v_final3": "Ve Anka'nın sıcacık ışığı, Feza'nın rüyalarında hep parlayacakmış."
 }/*SESLER-SON*/;
 
   const sesSaat = () => performance.now() / 1000;
@@ -162,7 +163,7 @@ const SES = (() => {
     if (anlatici(k)) return { oncelik: 3, acil: 0, omur: 1e9, konu: null };
     if (ovguMu(k)) return { oncelik: 0, acil: 0, omur: 1.5, konu: null };
     if (k === 'p_yol') return { oncelik: 1, acil: 0, omur: 3, konu: null };
-    if (k === 'p_v_mini_yardim') return { oncelik: 2, acil: 1, omur: 8, konu: null };
+    if (k === 'p_v_mini_yardim' || k === 'p_v_anka_kanat') return { oncelik: 2, acil: 1, omur: 8, konu: null };
     if (k === 'p_v_kristal_son' || k === 'p_v_sal_son' || k === 'p_v_bahce') return { oncelik: 2, acil: 1, omur: 8, konu: null };
     if (/^p_kurtar/.test(k) || /^p_yardim/.test(k)) return { oncelik: 2, acil: 2, omur: 3, konu: 'kurtar' };
     if (k === 'p_buyuk_kalk' || k === 'p_agac') return { oncelik: 2, acil: 2, omur: 12, konu: 'buyuk' };
@@ -247,8 +248,9 @@ const SES = (() => {
   const KOSUL = {
     p_sarki1: sesMiniSuruyor, p_sarki2: sesMiniSuruyor,
     p_takim1: sesMiniSuruyor, p_takim2: sesMiniSuruyor,
-    p_v_mini: () => (typeof V5 === 'undefined' || !V5.mini) && (typeof KR5 === 'undefined' || !KR5.o || KR5.o.kr5.totalFed < 6),
-    p_v_mini_yardim: () => typeof KR5 !== 'undefined' && !!KR5.aktif && KR5.o.kr5.phase === 'feed' && KR5.o.kr5.totalFed < 6,
+    p_v_mini: () => (typeof V5 === 'undefined' || !V5.mini) && (typeof KR5 === 'undefined' || !KR5.o || !KR5.o.kr5 || /^(wait|arrive|egg)$/.test(KR5.o.kr5.phase)),
+    p_v_mini_yardim: () => typeof KR5 !== 'undefined' && !!KR5.aktif && !!KR5.o.kr5 && KR5.o.kr5.phase === 'egg',
+    p_v_anka_kanat: () => typeof KR5 !== 'undefined' && !!KR5.aktif && !!KR5.o.kr5 && KR5.o.kr5.phase === 'trace' && KR5.o.kr5.traceN < 5,
     p_v_sal: () => typeof V5 === 'undefined' || !V5.sal,
     p_v_kalp: () => typeof V5 === 'undefined' || !V5.final,
     p_i_denizati: () => typeof DNZ === 'undefined' || DNZ.ati.some(o => !o.done),

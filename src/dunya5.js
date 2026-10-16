@@ -1,11 +1,12 @@
 /* dunya5.js — Uyuyan Yanardağ: katmanlı kâğıt peyzaj, mürekkep mavisi bazalt,
    altın mercan lav ve sıcak ışık bahçeleri. Büyük resimler yalnız önbellekte boyanır. */
 'use strict';
-const DN5={sky:null,heartSky:null,vig:null,atlas:[],blooms:[],mount:[],falls:[],walls:[],molten:[],rocks:[],chunks:new Map(),prep:0,finT:null,finX:0,last:-1,life:[],warm:false,mx0:0,my0:0,mk:1};
+const DN5={sky:null,heartSky:null,vig:null,atlas:[],blooms:[],mount:[],falls:[],walls:[],molten:[],rocks:[],relics:[],chunks:new Map(),prep:0,finT:null,finX:0,last:-1,life:[],warm:false,mx0:0,my0:0,mk:1,ankaT:null,riverBloom:[]};
 const DN5_COL=['#cf2458','#d58057','#4d9d91','#7546ad','#ac267d','#338f9a','#8739ac','#cc4969'];
 // Kristal/tekne modülleri daha sonra yüklenir; ilk dokunuşta yeni ışık tuvali açılmaz.
 const DN5_TOUCH_GLOWS=['#ffd8a8','#ffc065','#f56d98','#b67be3','#58d2c6','#ffdc79','#ffbf58','#fa6684','#b87be4','#53d6c8','#ffdb72','#ffb58c','#ffc994','#ffe0af','#ffb48e'];
 const DN5_FALL_COLS=[30,75,127,153,211,286,449,474,531,580],DN5_BLOOM_COLS=[.5,24,44,82,119,148,197,239,283,439,473,513,544,589];
+const DN5_LANDMARKS=[88,215,457,547];
 const DN5_PAR_F=[.06,.13,.24],DN5_PAR_STEP=[710,540,420],DN5_PAR_BASE=[660,730,780],DN5_PAR_ALPHA=[.48,.5,.65];
 const DN5_RIVERS=[
  [337,109,322,166,292,173,294,232,292,282,229,319,185,408],
@@ -95,10 +96,12 @@ function dn5Approach(){return smooth(clamp((cam.x+VW*.5-35*T)/(355*T),0,1));}
 function dn5Inside(){return smooth(clamp((cam.x+VW*.5-345*T)/(135*T),0,1));}
 OLAY.on('korUyandi',o=>{if(o)DN5.life.push({x:o.x,y:o.y,t:now,v:o.sira||0});});
 OLAY.on('volkanFinalBasla',o=>{if(DN5.finT===null){DN5.finT=now;DN5.finX=o&&Number.isFinite(o.x)?o.x:BOLUM.kor.x;}});
+OLAY.on('volkanMiniTamam',o=>{if(o&&o.phoenix&&DN5.ankaT===null)DN5.ankaT=now;});
+OLAY.on('lavSalCicek',o=>{if(o&&DN5.riverBloom.length<3)DN5.riverBloom.push({x:o.x,y:o.y,t:now});});
 function dn5Sky(){
  if(DN5.sky)return;
  const cv=DN5.sky=dn5Cv(768,600),c=cv.getContext('2d'),R=rng(9513);
- const bg=c.createLinearGradient(0,0,0,600);bg.addColorStop(0,'#2c3154');bg.addColorStop(.28,'#615477');bg.addColorStop(.53,'#956a91');bg.addColorStop(.73,'#c38a9b');bg.addColorStop(1,'#e3ad97');c.fillStyle=bg;c.fillRect(0,0,768,600);
+ const bg=c.createLinearGradient(0,0,0,600);bg.addColorStop(0,'#282c53');bg.addColorStop(.28,'#614377');bg.addColorStop(.53,'#a45886');bg.addColorStop(.73,'#d97b80');bg.addColorStop(1,'#edac84');c.fillStyle=bg;c.fillRect(0,0,768,600);
  const halo=c.createRadialGradient(530,310,4,530,310,400);halo.addColorStop(0,'rgba(255,208,156,.22)');halo.addColorStop(.35,'rgba(240,142,113,.11)');halo.addColorStop(1,'rgba(240,142,113,0)');c.fillStyle=halo;c.fillRect(0,0,768,600);
  // Delicate handmade paper grain and long watercolour brush clouds.
  for(let j=0;j<30;j++){const y=70+R()*310,x=R()*768,w=80+R()*260,h=3+R()*11;c.fillStyle=j%3?'rgba(255,226,210,.055)':'rgba(88,79,126,.06)';c.beginPath();c.ellipse(x,y,w,h,-.025,0,6.283);c.fill();}
@@ -107,7 +110,7 @@ function dn5Sky(){
  // The crater interior has the same dusk, with deeper cool values instead of a
  // milky wash. It is a second cached paper painting blended during the ascent.
  DN5.heartSky=dn5Cv(768,600);const hc=DN5.heartSky.getContext('2d'),hg=hc.createLinearGradient(0,0,0,600);
- hg.addColorStop(0,'#24334f');hg.addColorStop(.35,'#485370');hg.addColorStop(.7,'#8b758e');hg.addColorStop(1,'#bd9295');hc.fillStyle=hg;hc.fillRect(0,0,768,600);
+ hg.addColorStop(0,'#242e50');hg.addColorStop(.35,'#484771');hg.addColorStop(.7,'#9a5f86');hg.addColorStop(1,'#cc878b');hc.fillStyle=hg;hc.fillRect(0,0,768,600);
  for(let j=0;j<64;j++){const x=R()*768,y=R()*370;hc.fillStyle=j%4?'rgba(242,218,191,.19)':'rgba(183,220,215,.29)';hc.beginPath();hc.ellipse(x,y,.5+R()*.6,.7+R()*.8,0,0,6.283);hc.fill();}
  for(let j=0;j<8000;j++){const x=R()*768,y=R()*600;hc.fillStyle=j%2?'rgba(255,230,206,.025)':'rgba(22,34,61,.025)';hc.fillRect(x,y,.8,.7);}
  DN5.vig=dn5Cv(200,160);const v=DN5.vig.getContext('2d'),gr=v.createRadialGradient(105,70,48,105,70,125);gr.addColorStop(0,'rgba(25,29,62,0)');gr.addColorStop(.6,'rgba(25,29,62,.01)');gr.addColorStop(1,'rgba(25,29,62,.32)');v.fillStyle=gr;v.fillRect(0,0,200,160);
@@ -321,7 +324,29 @@ function dn5Backdrop(tm){
 function dn5Arch(c,x,y,w,h,col){
  c.strokeStyle=col;c.lineWidth=w*.11;c.lineCap='round';c.beginPath();c.moveTo(x-w*.5,y);c.bezierCurveTo(x-w*.58,y-h*.8,x-w*.22,y-h,x,y-h);c.bezierCurveTo(x+w*.25,y-h,x+w*.58,y-h*.76,x+w*.5,y);c.stroke();c.strokeStyle='rgba(221,190,184,.22)';c.lineWidth=1.2;c.beginPath();c.moveTo(x-w*.55,y);c.bezierCurveTo(x-w*.64,y-h*.76,x-w*.25,y-h*1.05,x,y-h*1.05);c.bezierCurveTo(x+w*.28,y-h*1.04,x+w*.62,y-h*.76,x+w*.55,y);c.stroke();
 }
+function dn5RelicArt(v){
+ if(DN5.relics[v])return DN5.relics[v];const cv=dn5Cv(960,760),c=cv.getContext('2d');c.scale(2,2);const R=rng(91871+v*77);
+ // A few authored silhouettes replace a corridor of interchangeable shrubs.
+ // Their dark bronze feather inlays are scenery, unlike the round pearl toys.
+ for(let j=0;j<5;j++){
+  const x=95+j*74,y=355,w=42+R()*17,h=145+Math.sin(j*.8+v)*75+v*17,lean=(j-2)*12;
+  const gr=c.createLinearGradient(x-w,y-h,x+w,y);gr.addColorStop(0,'#81718a');gr.addColorStop(.18,v?'#4b4165':'#534060');gr.addColorStop(.7,'#303850');gr.addColorStop(1,'#3c3b59');c.fillStyle=gr;
+  c.beginPath();c.moveTo(x-w,y);c.lineTo(x-w*.83+lean,y-h*.68);c.quadraticCurveTo(x-w*.5+lean,y-h*.94,x+lean,y-h);c.quadraticCurveTo(x+w*.45+lean,y-h*.92,x+w*.55+lean,y-h*.65);c.lineTo(x+w,y);c.closePath();c.fill();
+  c.fillStyle='rgba(25,28,48,.32)';c.beginPath();c.moveTo(x+lean,y-h);c.lineTo(x+w*.55+lean,y-h*.65);c.lineTo(x+w,y);c.lineTo(x+w*.2,y);c.closePath();c.fill();
+  c.strokeStyle='rgba(216,158,151,.38)';c.lineWidth=1.05;c.beginPath();c.moveTo(x-w*.8+lean,y-h*.65);c.quadraticCurveTo(x-w*.45+lean,y-h*.94,x+lean,y-h+1);c.stroke();
+  // Mineral veins describe a long feather, sunk into the basalt face.
+  c.save();c.translate(x+lean*.5,y-h*.47);c.rotate((j-2)*.1);c.strokeStyle='#b1837f';c.lineWidth=1.1;c.beginPath();c.moveTo(0,42);c.bezierCurveTo(-27,17,-25,-35,0,-58);c.bezierCurveTo(25,-33,28,13,0,42);c.stroke();c.strokeStyle='#d4a382';c.lineWidth=.7;c.beginPath();c.moveTo(0,39);c.quadraticCurveTo(-2,-14,0,-54);c.stroke();for(let z=0;z<5;z++){const yy=-33+z*13,ww=Math.sin((z+1)/6*Math.PI)*16;c.beginPath();c.moveTo(-ww,yy-7);c.lineTo(0,yy+5);c.lineTo(ww,yy-7);c.stroke();}c.restore();
+  for(let k=0;k<3;k++){const yy=y-h*.18-k*h*.23;c.strokeStyle='rgba(205,152,145,.14)';c.lineWidth=.7;c.beginPath();c.moveTo(x-w*.6,yy);c.lineTo(x-3,yy-5);c.lineTo(x+w*.4,yy+3);c.stroke();}
+ }
+ if(v===1){c.strokeStyle='#a14c70';c.lineWidth=5;c.beginPath();c.moveTo(47,330);c.bezierCurveTo(87,112,380,80,436,330);c.stroke();c.strokeStyle='#d58a89';c.lineWidth=1.2;c.stroke();for(let j=0;j<7;j++){const x=99+j*47,y=209-Math.sin(j/6*Math.PI)*66;c.save();c.translate(x,y);c.rotate((j-3)*.17+Math.PI);c.drawImage(dn5Flora(j%2?4:1),-23,-55,46,60);c.restore();}}
+ for(let j=0;j<38;j++){const x=43+R()*390,y=320+R()*40;c.fillStyle=j%2?'#8c667f':'#c17988';c.beginPath();c.ellipse(x,y,1+R()*3,.7+R()*1.2,0,0,6.283);c.fill();}
+ DN5.relics[v]=cv;return cv;
+}
 function dn5Midground(tm){
+ const landmarks=DN5_LANDMARKS,f0=.56;
+ g.setTransform(S,0,0,S,-cam.x*S*f0,-cam.y*S*.64);
+ for(let j=0;j<landmarks.length;j++){const x=nx(landmarks[j])*f0;if(x<cam.x*f0-500||x>cam.x*f0+W/S+500)continue;g.globalAlpha=.57;g.drawImage(dn5RelicArt(j%2),x-340,755-538,680,538);}
+ g.globalAlpha=1;
  const f=.52,left=cam.x*f-350,right=cam.x*f+W/S+350;g.setTransform(S,0,0,S,-cam.x*S*f,-cam.y*S*.64);
  for(let q=Math.floor(left/660);q<=Math.ceil(right/660);q++){const R=rng(q*591+875),x=q*660+R()*180,bm=dn5Biome(x/f),base=785+R()*70,k=.75+R()*.3;g.globalAlpha=.56;
   if(bm===1||bm===2){dn5Arch(g,x,base,370*k,410*k,bm===2?'#465f7f':'#59617c');for(let j=0;j<4;j++){const yy=base-370*k+Math.sin(j*.8)*28;g.save();g.translate(x+(j-1.5)*56*k,yy);g.rotate(Math.PI+Math.sin(tm*.21+q+j)*.02);g.drawImage(dn5Flora((j+q+40)%10),-110*k,-225*k,220*k,251*k);g.restore();}}
@@ -348,7 +373,11 @@ function dn5Lava(tm){
  // Mineral islands of cooled lavender crust glide past long golden seams.
  for(let q=Math.floor((left-180)/180);q<=Math.ceil((right+180)/180);q++){const R=rng(q*51+619),x=q*180+Math.sin(tm*.1+q)*12,y=835+R()*210,w=100+R()*105,h=18+R()*30;g.fillStyle=q%3?'rgba(137,98,119,.2)':'rgba(98,91,122,.26)';g.beginPath();g.moveTo(x-w*.5,y);g.lineTo(x-w*.28,y-h*.5);g.lineTo(x+w*.32,y-h*.38);g.lineTo(x+w*.5,y);g.lineTo(x+w*.2,y+h*.42);g.lineTo(x-w*.35,y+h*.3);g.closePath();g.fill();g.strokeStyle='rgba(255,222,167,.65)';g.lineWidth=1.2;g.beginPath();g.moveTo(x-w*.5,y+4);g.quadraticCurveTo(x,y+h*.9,x+w*.5,y+4);g.stroke();}
  g.globalCompositeOperation='lighter';for(let q=Math.floor(left/270);q<=Math.ceil(right/270);q++){const x=q*270;dn5Glow('#ffc28e',x,827,250,130,.21+.02*Math.sin(tm*.7+q));dn5Glow('#ffe0a4',x,801,160,18,.26);}
- g.globalCompositeOperation='source-over';g.strokeStyle='rgba(255,239,191,.58)';g.lineWidth=1;for(let j=0;j<7;j++){const yy=823+j*25;g.beginPath();for(let x=left;x<=right+15;x+=15){const y=yy+Math.sin(x*.011+tm*(j%2?.25:-.3)+j)*4;if(x===left)g.moveTo(x,y);else g.lineTo(x,y);}g.stroke();}g.globalAlpha=1;
+ g.globalCompositeOperation='source-over';g.strokeStyle='rgba(255,239,191,.58)';g.lineWidth=1;for(let j=0;j<7;j++){const yy=823+j*25;g.beginPath();for(let x=left;x<=right+15;x+=15){const y=yy+Math.sin(x*.011+tm*(j%2?.25:-.3)+j)*4;if(x===left)g.moveTo(x,y);else g.lineTo(x,y);}g.stroke();}
+ // Thin reflections stretch vertically below the real falls. They shear with
+ // the current, retaining red molten depth between the pale hot seams.
+ for(let q=Math.floor(left/310);q<=Math.ceil(right/310);q++)for(let j=0;j<5;j++){const xx=q*310+Math.sin(tm*.8+j*.75+q)*15,yy=817+j*14,w=(1-j/6)*(30+Math.sin(q*1.7)*9);g.strokeStyle=j%2?'rgba(255,214,133,.23)':'rgba(248,151,94,.3)';g.lineWidth=2.8-j*.35;g.beginPath();g.moveTo(xx-w,yy);g.quadraticCurveTo(xx,yy+2.5,xx+w,yy);g.stroke();}
+ for(const a of DN5.riverBloom){const age=now-a.t;if(age<0||age>7)continue;const u=age/7;g.globalCompositeOperation='lighter';dn5Glow('#ffcf88',a.x,808,90+age*65,20+age*8,(1-u)*.11);g.globalCompositeOperation='source-over';}g.globalAlpha=1;
 }
 function dn5Plants(tm){
  const left=cam.x-180,right=cam.x+VW+180;g.setTransform(S,0,0,S,-cam.x*S,-cam.y*S);
@@ -417,5 +446,5 @@ function dn5Foreground(tm){
 }
 function dn5Vignette(){if(!dn5Ready())return;dn5Sky();g.setTransform(1,0,0,1,0,0);g.globalAlpha=1;g.drawImage(DN5.vig,0,0,W,H);}
 function dn5Isit(){
- if(!dn5Ready())return false;dn5Sky();if(DN5.prep<10){dn5Flora(DN5.prep++);return false;}if(DN5.prep<14){dn5Mountain(DN5.prep++-10);return false;}if(DN5.prep<18){dn5Chunk(DN5.prep++-14);return false;}if(DN5.prep<26){glow(DN5_COL[DN5.prep++-18]);return false;}if(DN5.prep<31&&typeof vk5Warm==='function'){if(!vk5Warm())return false;DN5.prep=31;return false;}if(DN5.prep<34){dn5Fall(DN5.prep++-31);return false;}if(DN5.prep<36){dn5CraterWall(DN5.prep++-34);return false;}if(DN5.prep<38){dn5Bloom(DN5.prep++-36);return false;}if(DN5.prep<40){dn5MoltenArt(DN5.prep++-38);return false;}if(DN5.prep<46){dn5RockArt(DN5.prep++-40);return false;}if(DN5.prep<61){glow(DN5_TOUCH_GLOWS[DN5.prep++-46]);return false;}DN5.warm=true;return true;
+ if(!dn5Ready())return false;dn5Sky();if(DN5.prep<10){dn5Flora(DN5.prep++);return false;}if(DN5.prep<14){dn5Mountain(DN5.prep++-10);return false;}if(DN5.prep<18){dn5Chunk(DN5.prep++-14);return false;}if(DN5.prep<26){glow(DN5_COL[DN5.prep++-18]);return false;}if(DN5.prep<31&&typeof vk5Warm==='function'){if(!vk5Warm())return false;DN5.prep=31;return false;}if(DN5.prep<34){dn5Fall(DN5.prep++-31);return false;}if(DN5.prep<36){dn5CraterWall(DN5.prep++-34);return false;}if(DN5.prep<38){dn5Bloom(DN5.prep++-36);return false;}if(DN5.prep<40){dn5MoltenArt(DN5.prep++-38);return false;}if(DN5.prep<46){dn5RockArt(DN5.prep++-40);return false;}if(DN5.prep<61){glow(DN5_TOUCH_GLOWS[DN5.prep++-46]);return false;}if(DN5.prep<63){dn5RelicArt(DN5.prep++-61);return false;}if(typeof ANKA!=='undefined'&&!ANKA.hazir&&!ANKA.isit())return false;DN5.warm=true;return true;
 }

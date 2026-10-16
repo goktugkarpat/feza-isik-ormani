@@ -1,7 +1,7 @@
 /* volkan.js — Yanardağın yaşayan bahçeleri, sıcak buhar oyuncakları ve Kor Çiçeği.
    Korku, hasar, zaman sınırı yok. Her tamamlanma olayı yalnız bir kez üretilir. */
 'use strict';
-const VK5={sprites:[],podiums:[],petals:[],pearlPetals:[],birds:[],buds:[],vents:[],steps:[],leaves:new Map(),heart:null,seed:null,warm:0,final:null,point:{x:0,y:0},hitPoint:{x:0,y:0}};
+const VK5={sprites:[],podiums:[],petals:[],pearlPetals:[],birds:[],buds:[],vents:[],steps:[],leaves:new Map(),heart:null,seed:null,warm:0,final:null,point:{x:0,y:0},hitPoint:{x:0,y:0},ankaPose:{pose:'perch',face:-1,joy:0,alpha:1,kanatAc:1,kanatSag:1}};
 const VK5_COL=['#e83d68','#9a3fc1','#c92e8a'];
 const VK5_GLOW_COL=['#f3ad65','#ecb06d','#efa65e','#eaa266','#ffc87b','#e83d68','#9a3fc1','#c92e8a'];
 const VK5_LEAF_COL=['#e83d68','#9a3fc1','#c92e8a','#b72f63','#7c3ea6','#a33491','#577e88','#5a8392','#447a88','#7857a4','#7e49a3','#993454','#536c86','#406e7b','#5e8392','#829d9d','#9ebfaf','#657b87','#d5ad9f','#8c8199','#8facac','#c4afbf','#b8c9bc','#98b6ac','#aab9ad'];
@@ -143,8 +143,10 @@ function vk5GardenEnd(o){
 function vk5WakeNode(o,n,source){
  if(o.done||n.done)return false;n.done=true;n.t=now;n.waking=false;n.wakeAge=0;n.sicak=1;n.activationSource=source;burst(n.x,n.y-82,12,[VK5_PEARL_LEAF[o.sira],'#f3d39c','#bddfce'],65,1.1,3.2);vk5Sfx('cicek',source==='help'?.28:.45);OLAY.emit('volkanKristal',{index:n.note,notes:[0,4,7],source:'bahce',interaction:source});if(o.nodes.every(n=>n.done))vk5GardenEnd(o);return true;
 }
-function vk5TapNode(o,n){
- if(o.done||n.done)return false;n.sicak=1;if(n.waking)return true;n.waking=true;n.wakeAge=0;n.wakeFromX=D.x+(n.x>D.x?13:-13);n.wakeFromY=D.y-10;n.wakeDuration=clamp(Math.hypot(n.x-D.x,n.y-82-D.y)/700,.4,.95);OLAY.emit('volkanBahceDokun',{o,node:n,index:n.note});return true;
+function vk5TapNode(o,n,source){
+ if(o.done||n.done)return false;n.sicak=1;if(n.waking)return true;n.waking=true;n.wakeAge=0;n.wakeSource=source||'touch';n.wakeFromX=D.x+(n.x>D.x?13:-13);n.wakeFromY=D.y-10;
+ if(o.sira===2&&typeof V5!=='undefined'&&V5.sal){n.wakeFromX=P.x+130;n.wakeFromY=P.y-180;}
+ n.wakeDuration=clamp(Math.hypot(n.x-n.wakeFromX,n.y-82-n.wakeFromY)/700,.4,.95);OLAY.emit('volkanBahceDokun',{o,node:n,index:n.note,source:n.wakeSource});return true;
 }
 // This module is loaded for dream five only. Merge drawing hooks while retaining
 // the shared seed pickup/update/save contract and the other dreams' artwork.
@@ -166,11 +168,13 @@ TUR.kaydet('tohum',{
 TUR.kaydet('korBahce',{
  kur(o){o.sira=o.sira||0;o.done=false;o.open=0;o.age=0;o.active=false;o.helper=0;o.nodes=o.nodes||[{x:o.x-120,y:o.y,note:0},{x:o.x,y:o.y,note:1},{x:o.x+120,y:o.y,note:2}];for(const n of o.nodes){n.done=false;n.t=-100;n.sicak=0;n.waking=false;n.wakeAge=0;n.wakeDuration=.4;n.wakeFromX=n.x;n.wakeFromY=n.y-82;}},
  guncelle(o,dt){
-  if(!(dt>0)||!Number.isFinite(dt)||DURUM!=='oyun')return;for(const n of o.nodes){n.sicak=Math.max(0,n.sicak-dt*2.2);if(n.waking&&!n.done){n.wakeAge+=dt;if(n.wakeAge>=n.wakeDuration)vk5WakeNode(o,n,'touch');}}if(o.done){o.open=Math.min(1,o.open+dt*.23);return;}
+  if(!(dt>0)||!Number.isFinite(dt)||DURUM!=='oyun')return;for(const n of o.nodes){n.sicak=Math.max(0,n.sicak-dt*2.2);if(n.waking&&!n.done){n.wakeAge+=dt;if(n.wakeAge>=n.wakeDuration)vk5WakeNode(o,n,n.wakeSource||'touch');}}if(o.done){o.open=Math.min(1,o.open+dt*.23);return;}
   const near=P.x>o.nodes[0].x-220&&P.x<o.nodes[o.nodes.length-1].x+300;if(!near)return;o.active=true;o.age+=dt;
-  for(const n of o.nodes){if(n.done)continue;const dx=Math.abs(P.x-n.x),dy=Math.abs(P.y-n.y);if((dx<84&&dy<210)||(P.x>n.x+110&&P.x<n.x+750))vk5WakeNode(o,n,'approach');}
+  // İlk bahçe yakın dokunuşa cevap verir. Sonrakilerde uzaktan yürüyüp
+  // geçmek görünmez puan vermez; görünen tomurcuk veya yardımlaşma gerekir.
+  for(const n of o.nodes){if(n.done)continue;const dx=Math.abs(P.x-n.x),dy=Math.abs(P.y-n.y);if(o.sira!==1&&dx<56&&dy<100)vk5TapNode(o,n,'approach');}
   // Pırıl gently reaches a missed bud when a child waits at the exit; no backtracking.
-  if(o.age>17){o.helper+=dt;if(o.helper>2.5){const n=o.nodes.find(n=>!n.done);if(n)vk5WakeNode(o,n,'help');o.helper=0;}}
+  if(o.age>14){o.helper+=dt;if(o.helper>2.5){const n=o.nodes.find(n=>!n.done&&!n.waking);if(n)vk5TapNode(o,n,'help');o.helper=0;}}
   if(o.nodes.every(n=>n.done))vk5GardenEnd(o);
  },
  ciz(o,tm){
@@ -184,6 +188,12 @@ TUR.kaydet('korBahce',{
   for(let j=0;j<o.nodes.length;j++)vk5Node(o,o.nodes[j],j,tm,col,o.sira,j===focus);g.restore();
   if(o.done){const age=now-o.end;if(age<2.2){g.globalCompositeOperation='lighter';vk5Glow(col,o.x,o.y-55,80+age*25,40+age*12,Math.sin(age/2.2*Math.PI)*.08);g.globalCompositeOperation='source-over';}}
  }
+});
+// İkinci bahçenin bacasına gerçekten basmak çiçeğe sıcak nefes taşır.
+// Yalnız uzaktan geçmek veya başka bir taşı sektirmek sayılmaz.
+OLAY.on('buharZip', e => {
+ if(!e||typeof BOLUM_NO==='undefined'||BOLUM_NO!==5)return;
+ for(const o of NESNELER)if(o.tip==='korBahce'&&o.sira===1&&!o.done)for(const n of o.nodes)if(!n.done&&Math.abs(e.x-n.x)<95)vk5TapNode(o,n,'steam');
 });
 // A real flower tap is optional: ordinary walking and gentle late help remain
 // valid. Only the visible flower face owns this event; every other canvas touch
@@ -203,7 +213,7 @@ TUR.kaydet('buharBaca',{
   // One invitation per visit: standing still must not trap a child in an endless
   // automatic jumping loop. Walking away and back makes the toy available again.
   if(Math.abs(P.x-o.x)>o.w*.75)o.armed=true;
-  if(DURUM==='oyun'&&!P.ucus&&P.fade<=0&&o.armed&&o.cool<=0&&P.ground&&Math.abs(P.x-o.x)<o.w*.43&&Math.abs(P.y-o.y)<24){P.vy=-Math.sqrt(2*2200*Math.min(180,o.h*.7));P.ground=false;P.dj=true;P.bounce=true;P.jumpT=0;P.air=0;P.coyote=0;o.armed=false;o.cool=2.8;o.pressure=1;burst(o.x,o.y-8,9,['#e6dfd5','#bfe4d6','#ffdcaf'],50,.7,3);OLAY.emit('buharZip',o);}
+  if(DURUM==='oyun'&&!P.ucus&&P.fade<=0&&o.armed&&o.cool<=0&&P.ground&&Math.abs(P.x-o.x)<o.w*.43&&Math.abs(P.y-o.y)<24){P.vy=-Math.sqrt(2*2200*clamp(o.h*.9,150,320));P.ground=false;P.dj=true;P.bounce=true;P.jumpT=0;P.air=0;P.coyote=0;o.armed=false;o.cool=2.8;o.pressure=1;burst(o.x,o.y-8,9,['#e6dfd5','#bfe4d6','#ffdcaf'],50,.7,3);OLAY.emit('buharZip',o);}
  },
  ciz(o,tm){
   const pulse=.5+.5*Math.sin(tm*1.2+o.ph),p=o.pressure,s=o.w/150,v=Math.abs(Math.floor(o.x/T))%3,mouth=o.y-36*s;
@@ -254,6 +264,14 @@ function vk5Begin(o){
  if(typeof omHepsiniBirak==='function')omHepsiniBirak();if(typeof V5!=='undefined')V5.final=true;
  OLAY.emit('volkanFinalBasla',{o,duration:26,box:{x0:Math.min(o.x-390,P.x-100,D.x-70),x1:Math.max(o.x+390,P.x+100,D.x+70),y0:Math.min(o.y-500,D.y-80),y1:Math.max(o.y+85,P.y+30)}});lightTarget=1;
 }
+function vk5FinalPhoenix(o,tm){
+ if(typeof ANKA==='undefined'||typeof ANKA.ciz!=='function'||typeof V5==='undefined'||!V5.mini||!V5.sal)return;
+ const a=o.started?o.age:0,u=vk5Ease((a-2)/8),leave=vk5Ease((a-21)/5),opt=VK5.ankaPose;
+ opt.pose=o.started?'lift':'perch';opt.joy=o.started?Math.min(1,a/8):.25;opt.alpha=1-leave*.9;opt.face=-1;opt.kanatAc=opt.kanatSag=1;
+ const xx=o.x+255-u*195+leave*310,yy=o.y-85-u*245-leave*210+Math.sin(tm*.8)*3;
+ ANKA.ciz(g,xx,yy,.62+u*.2,tm,opt);
+ if(o.started&&a>5&&a<22){g.save();g.strokeStyle='#f4ce8a';g.lineWidth=1.4;g.globalAlpha=Math.sin(clamp((a-5)/17,0,1)*Math.PI)*.45;g.beginPath();g.moveTo(xx,yy+70);g.bezierCurveTo(xx-90,yy+125,o.x+50,o.y-290,o.x,o.y-218);g.stroke();g.restore();}
+}
 TUR.kaydet('korCicegi',{
  kur(o){o.started=false;o.done=false;o.age=0;o.glow=0;},
  dokun(o){if(vk5FinalReady())vk5Begin(o);else o.dokundu=false;},
@@ -276,11 +294,11 @@ TUR.kaydet('korCicegi',{
   const seed=1+Math.sin(tm*1.1)*.025;g.globalAlpha=vk5Ease(opening*2);g.drawImage(vk5HeartArt(),cx-23*seed,cy-80*seed,46*seed,62*seed);g.globalAlpha=1;g.globalCompositeOperation='lighter';vk5Glow('#eaa266',cx,cy-49,92+opening*25,80,.02+heart*.045);vk5Glow('#ffc87b',cx,cy-48,26+heart*8,30+heart*8,.035+heart*.16);g.globalCompositeOperation='source-over';
   if(ready)vk5Pollen(cx,cy-60,tm,.3,.55);
   if(opening>.02){g.strokeStyle='rgba(251,231,187,.55)';g.lineWidth=1;for(let j=0;j<9;j++){const ang=(j-4)*.29,ln=40+heart*32;g.beginPath();g.moveTo(cx,cy-8);g.quadraticCurveTo(cx+Math.sin(ang)*ln,cy-35,cx+Math.sin(ang)*ln,cy-15-Math.cos(ang)*ln);g.stroke();g.fillStyle='#fff0c3';g.beginPath();g.ellipse(cx+Math.sin(ang)*ln,cy-15-Math.cos(ang)*ln,2.3,3.4,ang,0,6.283);g.fill();}}
-  g.restore();
+  g.restore();vk5FinalPhoenix(o,tm);
   if(o.started){g.globalCompositeOperation='lighter';for(let j=0;j<36;j++){const u=((a*.065+j/36)%1),rad=38+u*(130+lift*150),ang=j*2.399+tm*.15,x=cx+Math.cos(ang)*rad,y=cy-40-u*(160+lift*330)+Math.sin(ang)*40,fade=Math.sin(u*Math.PI)*heart;vk5Glow(DN5_COL[j%8],x,y,11+u*4,10,fade*.5);g.fillStyle='#fff1ca';g.globalAlpha=fade*.7;g.beginPath();g.ellipse(x,y,1.4,3,-ang,0,6.283);g.fill();}g.globalAlpha=1;g.globalCompositeOperation='source-over';
    // The narrator's golden birds are real folded silhouettes, with articulated
    // wings, distinct from the tiny light seeds already rising around the flower.
-   if(a>=14)for(let j=0;j<9;j++){
+   if(a>=14)for(let j=0;j<5;j++){
     const u=(a-14-j*.34)/11.5;if(u<=0||u>=1)continue;const side=j%2?1:-1,up=vk5Ease(u),x=cx+side*(14+up*(105+j*15))+Math.sin(u*5.2+j)*up*24,y=cy-48-up*(290+j%3*40)-Math.sin(u*Math.PI)*22,alpha=Math.min(1,u/.1,(1-u)/.16);
     vk5FinalBird(x,y,.43+(j%3)*.045,tm,j*.91,side,alpha*.96);
    }

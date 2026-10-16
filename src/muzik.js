@@ -1649,7 +1649,28 @@ const AU = (() => {
       ton(t + .1, 'sine', NOTE(n), NOTE(n + 2), .2, .006, .045, pan, 1, sfxG);
       ton(t + .34, 'sine', NOTE(n + 7) * .97, NOTE(n + 7), .25, .005, .06, pan, 1, sfxG);
     },
+    ankaYumurta(t, e) {
+      // Kabuğun sıcaklığı: çok hafif bir kâğıt nefesi ve alçak, yuvarlak taş sesi.
+      const u = cl(e && Number.isFinite(e.progress) ? e.progress : e && Number.isFinite(e.warm) ? e.warm : .3, 0, 1);
+      gur(t, .22, 'bandpass', 430, 1050, .6, .004, .045, 0, 0);
+      korTasi(u < .4 ? 65 : u < .75 ? 69 : 72, t + .045, .012, -.12 + u * .24, sfxG, false);
+    },
+    ankaTuy(t, e) {
+      // Beş gerçek tüy, tek yükselen Anka cümlesi. Sürtme başına çan yağmuru yok.
+      const i = cl(e && Number.isFinite(e.index) ? e.index | 0 : 0, 0, 4), n = [65, 69, 72, 77, 81][i], pan = (i - 2) * .17;
+      arp(n, t + .025, .027, pan, 1.15, sfxG);
+      korTasi(n + 12, t + .08, .015, pan * .7, sfxG, false);
+      gur(t, .16, 'bandpass', 650, 1450, .6, .0035, .035, pan, 0);
+    },
+    ankaUyanis(t) {
+      // Uyanış bir patlama değil: katlanan geniş kanatlar ve sıcak, nefesli bir motif.
+      gur(t, 1.15, 'bandpass', 320, 1250, .6, .01, .32, 0, 1);
+      kabar([53, 60, 65, 69, 76], t + .15, 1.1, .55, 2.0, .016, sfxG, false);
+      [65, 69, 72, 77, 81].forEach((n, i) => arp(n, t + .2 + i * .2, .025, -.3 + i * .15, 1.5, sfxG));
+      ton(t + .62, 'sine', NOTE(77) * .97, NOTE(81), .48, .006, .14, .12, 1, sfxG);
+    },
     volkanMiniTamam(t, e) {
+      if (e && e.phoenix) { korTasi(77, t + .08, .023, 0, sfxG, false); return; }
       if (e && e.yavru) { kabar([53, 60, 65, 69, 76], t + .1, .8, .45, 1.7, .013, sfxG, false); return; }
       [65, 69, 72, 77, 81].forEach((n, i) => korTasi(n, t + i * .14, .04, -.35 + i * .17, sfxG, true));
       kabar([53, 60, 65, 69, 76], t + .45, .7, .4, 2.0, .018, sfxG, true);
@@ -2740,7 +2761,7 @@ const AU = (() => {
     if (!ac || !SFX[ad]) return;
     if (ac.state !== 'running' && !test) return;
     const t = zaman() + 0.012 + (gecik || 0);
-    const enAz = ad === 'adim' ? 0.1 : ad === 'horlama' ? 1 : ad === 'fener' || ad === 'sarki' || ad === 'isiltiTopla' || ad === 'vatozKemer' ? 0.03 : ad === 'denizHamle' ? 0.15 : ad === 'suAkinti' ? 0.75 : ad === 'sekilOv' ? 0.12 : ad === 'kuzuMee' ? 0.6 : ad === 'ucusIn' || ad === 'ucusBasla' || ad === 'gokkusagiTamam' || ad === 'gokkusagiBasla' || ad === 'kayma' || ad === 'pirilBuyu' || ad === 'isiltiTamam' ? 1.5 : 0.09;
+    const enAz = ad === 'ankaYumurta' ? .55 : ad === 'ankaTuy' ? .13 : ad === 'ankaUyanis' ? 8 : ad === 'adim' ? 0.1 : ad === 'horlama' ? 1 : ad === 'fener' || ad === 'sarki' || ad === 'isiltiTopla' || ad === 'vatozKemer' ? 0.03 : ad === 'denizHamle' ? 0.15 : ad === 'suAkinti' ? 0.75 : ad === 'sekilOv' ? 0.12 : ad === 'kuzuMee' ? 0.6 : ad === 'ucusIn' || ad === 'ucusBasla' || ad === 'gokkusagiTamam' || ad === 'gokkusagiBasla' || ad === 'kayma' || ad === 'pirilBuyu' || ad === 'isiltiTamam' ? 1.5 : 0.09;
     if (sonCal[ad] && t - sonCal[ad] < enAz) return;
     sonCal[ad] = t;
     SFX[ad](t, v == null ? 1 : v);
@@ -2773,7 +2794,7 @@ const AU = (() => {
       setTimeout(() => { if (performance.now() - kirpT > 700) cal('parilti', 1); }, 60);
       return;
     }
-    let ad = AD[k] || (bolum5() && /^(bolum5Basla|korUyandi|buharZip|volkanKristal|volkanCicekSec|volkanCicekNefes|volkanCicekAc|volkanYemTut|volkanYavruBesle|volkanYavruUctu|volkanMiniTamam|lavSalBasla|lavSalAn|lavSalBitti|volkanFinalBasla|volkanTamam)$/.test(k) ? k : null); if (!ad || !ac) return;
+    let ad = AD[k] || (bolum5() && /^(bolum5Basla|korUyandi|buharZip|volkanKristal|volkanCicekSec|volkanCicekNefes|volkanCicekAc|volkanYemTut|volkanYavruBesle|volkanYavruUctu|ankaYumurta|ankaTuy|ankaUyanis|volkanMiniTamam|lavSalBasla|lavSalAn|lavSalBitti|volkanFinalBasla|volkanTamam)$/.test(k) ? k : null); if (!ad || !ac) return;
     if (ad === 'su' && bolum3()) ad = 'bulutDus';   // Bölüm 3'te su yok
     if (ad === 'zipla' && bolum4()) ad = 'suAkinti'; // Bölüm 4'te zıplama yerine ışıklı akıntı süzülüşü
     if (v == null && (ad === 'isiltiTopla' || ad === 'kuzuRenk' || ad === 'gokkusagiParca')) v = { oto: 1 };   // sıra verilmediyse kendi sayacımız
@@ -2795,7 +2816,7 @@ const AU = (() => {
     OLAY.on('korUyandi', e => { if (!bolum5()) return; vBahce = Math.min(3, vBahce + 1); olaySes('korUyandi', e); });
     OLAY.on('buharZip', e => { if (bolum5()) olaySes('buharZip', e); });
     OLAY.on('volkanMiniBasla', () => { if (bolum5()) vMini = true; });
-    // Bahçeler ve salın küçük taş sesleri korunur; yeni çiçek uçuşunda normal dünya teması sürer.
+    // Bahçeler ve Anka etkinliğinde normal dünya bestesi korunur; yalnız gerçek eylemler cevap verir.
     OLAY.on('volkanKristal', e => { if (bolum5()) olaySes('volkanKristal', e); });
     OLAY.on('volkanCicekSec', e => { if (bolum5()) olaySes('volkanCicekSec', e); });
     OLAY.on('volkanCicekNefes', e => { if (bolum5()) olaySes('volkanCicekNefes', e); });
@@ -2803,6 +2824,9 @@ const AU = (() => {
     OLAY.on('volkanYemTut', e => { if (bolum5()) olaySes('volkanYemTut', e); });
     OLAY.on('volkanYavruBesle', e => { if (bolum5()) olaySes('volkanYavruBesle', e); });
     OLAY.on('volkanYavruUctu', e => { if (bolum5()) olaySes('volkanYavruUctu', e); });
+    OLAY.on('ankaYumurta', e => { if (bolum5()) olaySes('ankaYumurta', e); });
+    OLAY.on('ankaTuy', e => { if (!bolum5()) return; vMiniAsama = 2; olaySes('ankaTuy', e); });
+    OLAY.on('ankaUyanis', e => { if (!bolum5()) return; vMiniAsama = 3; olaySes('ankaUyanis', e); });
     OLAY.on('volkanMiniAsama', e => { if (bolum5()) vMiniAsama = e && e.stage || 1; });
     OLAY.on('volkanMiniTamam', e => { if (!bolum5()) return; vMini = false; vMiniAsama = 3; olaySes('volkanMiniTamam', e); });
     OLAY.on('lavSalBasla', () => { if (!bolum5()) return; vSal = true; vSalT0 = zaman(); olaySes('lavSalBasla'); });

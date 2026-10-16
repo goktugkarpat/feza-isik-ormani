@@ -20,8 +20,8 @@ Korkutucu hiçbir şey yoktur, kaybetmek yoktur. Feza okuma bilmediği için her
    vatozun sırtında ışıklı kemerlerden geçme ve Büyük İnci’yi uyandırma. Denizatı dostları finalde birlikte dans eder;
    mercan bahçeleri ve deniz canlıları harekete tepki verir. Her yöne yüzülür; kaybetmek ve oksijen sınırı yoktur.
 5. **Uyuyan Yanardağ** (sıcak akşam ışığı) — Bazalt patikalarda üç ışık bahçesini canlandırma, yumuşak buharla yükselme ve
-   üç acıkmış Güneşkuşu yavrusunu ışık meyveleriyle besleme. Katlanmış taş sal üzerinde lav nehrinden geçilir; beslenen üç yavru ve
-   büyük Güneşkuşu yolculuğa katılır. Sonunda Kor Çiçeği açılır ve dağ yeniden renklenir. Yeni müzik, sıcak taş tınıları ve
+   kocaman bir Anka yumurtasını okşayarak uyandırma. Feza parmağıyla Anka'nın eksik kanadını renklendirir; ışıl ışıl dostu
+   lav nehrindeki kayığa eşlik eder. Yolculuktaki büyük ışık çiçeklerine yön vermek çevreyi değiştirir. Sonunda Kor Çiçeği açılır ve dağ yeniden renklenir. Yeni müzik, sıcak taş tınıları ve
    Türkçe seslendirmeler bu rüya için hazırlandı; lav yolculuğunda düşmek, yanmak veya kaybetmek yoktur.
 
 **Pofuduklar** ormanın ışığını karınlarında taşıyan tüylü orman dostlarıdır. Üstlerine zıplamak onları gıdıklayıp ışıklarını uyandırır:
@@ -41,15 +41,15 @@ onları yalnızca ışık şarkısı uyandırır.
 - **Rüyalara dönüş:** her bölümün sağ üstündeki ev/geri simgesini 1,2 saniye basılı tut. Kısa dokunmak çıkış yapmaz; tamamlanan rüyalar korunur.
 - **İnci Denizi:** ekranı basılı tutarak her yöne yüz. Sol alttaki balık düğmesi kısa bir yüzme hamlesi yapar; ahtapotun kabukları parmakla sürüklenir veya kabuğa ve eşleşen yuvaya sırayla dokunulur.
 - **Uyuyan Yanardağ'ın bahçeleri:** kırmızı bitkiler arasındaki yuvarlak, inci beyazı/turkuaz tomurcuklara dokun veya yanlarından yürü. Üç bahçede de bu iki yol çalışır; Pırıl geride kalan tomurcuklar için yardımcı olur.
-- **Güneşkuşu yavruları:** büyük sarı meyveyi acıkmış yavrunun ağzına sürükleyip bırak. Önce meyveye, sonra yavruya dokunmak da çalışır. Her yavru iki lokmayla doyar; lokmayı yerken yanakları ve karnı hareket eder, kanatlarını denemeye başlar. Üçü de doyunca anneleriyle uçarlar; sonra lav yolculuğunda Feza'ya eşlik ederler. Yanlış sıra, kaybetme ve yazılı görev yoktur. Yanlış bırakılan meyve sepete döner; çocuk beklerse Pırıl göstererek yardımcı olur.
-- **Lav nehri:** sal 35 saniyelik yolculukta kendisi ilerler. Parmağını yukarıda veya aşağıda tutarak nehrin akışı içinde yol göster; ışıklı kemerlerin, lav şelalelerinin ve kuşların tadını çıkar. Bütün ışıkları yakalamak gerekmez.
+- **Anka'nın uyanışı:** büyük fildişi yumurtayı parmağınla okşa veya ona dokun; kabuğu ısınır, çatlar ve Anka açılır. Sonra kanadın iki ucundan birindeki parlayan tüyden başlayıp geniş tüy yayının üzerinden geç. Beş tüy renklenince Anka kanatlarını açıp Feza'ya bir tüy armağan eder. Yazı, nota bilgisi ve renk eşleştirmesi yoktur; Pırıl bekleyen çocuğa görünür biçimde yardımcı olur.
+- **Lav nehri:** kayık 35 saniyelik yolculukta kendisi ilerler, Anka ona eşlik eder. Parmağını yukarıda veya aşağıda tutarak nehrin akışı içinde yol göster; büyük inci beyazı ışık çiçeklerinin yanından geçmek onları açar. Yakındaki çiçeğe dokunmak da kayığı oraya yönlendirir. Kaçırılan çiçek veya ışık ilerlemeyi engellemez; kaçırılan hedefler toplanmış sayılmaz.
 - **Zıplamak:** sol alttaki büyük yuvarlak düğmeye bas. Havadayken bir daha basınca Pırıl Feza'yı yukarı iter.
 - **Işık çiçekleri:** Feza dokununca açılır, çevre renklenir. Pırıl karanlık göllere ışık üfler, nilüfer yaprakları çıkar.
 - **Pofuduklar:** uyuyan Pofuduğun üstüne zıplayınca hapşırıp uyanır ve Feza'nın peşine takılır; bazıları zıplatma minderi ya da basamak olur.
 - **Takılırsa:** Pırıl yolu gösterir; suya düşerse ya da bir yerde zorlanırsa Pırıl onu taşır.
 - **Saklı yollar:** parlayan yaprak kemerlerinin ardında ışık tohumları saklıdır.
 - Klavye (ebeveyn için): **oklar / A–D** yürür, **Boşluk / W / ↑** zıplar. İnci Denizi’nde **oklar / W–A–S–D** her yöne yüzdürür, **Boşluk** hızlandırır.
-  Yanardağın salında **↑/↓ veya W/S** yön verir; yavru oyununda **←/→** kuşu seçer, **Boşluk veya E** önce meyveyi alır, ikinci basışta seçili aç kuşa götürür.
+  Yanardağın kayığında **↑/↓ veya W/S** yön verir; Anka etkinliğinde **Boşluk veya E** yumurtayı ısıtır, sonra sıradaki tüye renk verir.
 
 ## Ebeveyn için notlar
 
