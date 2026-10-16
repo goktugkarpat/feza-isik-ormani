@@ -65,12 +65,13 @@
   // Bölüm seçimi: ?bolum=N > başlıktan seçim bayrağı (sessionStorage) > 1. Yalnız biri yüklenir (aynı adları tanımlarlar).
   var BOLUM_NO = 1;
   var V5 = { bahce: 0, mini: false, sal: false, final: false };
+  var V6 = { fener: 0, fenerTop: 12, midilli: 0, mini: false, kopru: false, final: false };   // Bölüm 6 (Şenlik Kalesi) genel durumu
   try {
     var bq = /[?&]bolum=(\d)/.exec(location.search);
-    var bs = bq ? +bq[1] : +(sessionStorage.getItem('fezaIsikSec') || 1);   // başlık sayfası her zaman Bölüm 1; Bölüm 2/3 seçim ekranından (oturum bayrağı + yenileme)
-    BOLUM_NO = (bs === 2 || bs === 3 || bs === 4 || bs === 5) ? bs : 1;
+    var bs = bq ? +bq[1] : +(sessionStorage.getItem('fezaIsikSec') || 1);   // başlık sayfası her zaman Bölüm 1; Bölüm 2-6 seçim ekranından (oturum bayrağı + yenileme)
+    BOLUM_NO = (bs >= 2 && bs <= 6) ? bs : 1;
   } catch (e) {}
-  document.write('<script src="src/' + (BOLUM_NO === 5 ? 'bolum5' : BOLUM_NO === 4 ? 'bolum4' : BOLUM_NO === 3 ? 'bolum3' : BOLUM_NO === 2 ? 'bolum2' : 'bolum') + '.js"><\/script>');
+  document.write('<script src="src/' + (BOLUM_NO === 6 ? 'bolum6' : BOLUM_NO === 5 ? 'bolum5' : BOLUM_NO === 4 ? 'bolum4' : BOLUM_NO === 3 ? 'bolum3' : BOLUM_NO === 2 ? 'bolum2' : 'bolum') + '.js"><\/script>');
 </script>
 <script src="src/dunya.js"></script>
 <script src="src/feza.js"></script>
@@ -92,6 +93,9 @@
 <script src="src/inci.js"></script>
 <script>
   if (BOLUM_NO === 5) ['anka', 'dunya5', 'volkan', 'atesoyun', 'kristal', 'lavsal'].forEach(function(n) {
+    document.write('<script src="src/' + n + '.js"><\/script>');
+  });
+  if (BOLUM_NO === 6) ['anka', 'dunya6', 'midilli', 'senlik', 'halka'].forEach(function(n) {   // Şenlik Kalesi (anka: finalde misafir Anka'yı çizmek için)
     document.write('<script src="src/' + n + '.js"><\/script>');
   });
 </script>

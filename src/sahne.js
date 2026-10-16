@@ -1468,7 +1468,7 @@ function shOnPlanCiz() {
 }
 function shOnPlan(a) {
   if (a <= 0.01) return;
-  const ad = sh.tema === 'volkan' ? 'onPlanV' : sh.tema === 'deniz' ? 'onPlanI' : sh.tema === 'bulut' ? 'onPlanB' : 'onPlan', OP = shHazir(ad);
+  const ad = sh.tema === 'senlik' ? 'onPlanF' : sh.tema === 'volkan' ? 'onPlanV' : sh.tema === 'deniz' ? 'onPlanI' : sh.tema === 'bulut' ? 'onPlanB' : 'onPlan', OP = shHazir(ad);
   const z = sh.zoom, zf = 1 + (z - 1) * 1.35, ox = (sh.tx - sh.fx * z) * 1.35, oy = (sh.ty - sh.fy * z) * 1.35;
   g.setTransform(zf, 0, 0, zf, ox + (W - W * zf) * 0.5 * 0, oy);
   g.globalAlpha = a; g.drawImage(OP, 0, 0); g.globalAlpha = 1;
@@ -1493,7 +1493,7 @@ function shGirisCiz(tm, dt) {
   const pr = shPirilYer(t, P, tm);
   // 1) orman fonu, 2) erimeyen oda (dalgalı ışık halkasının dışı)
   shResimT();
-  if (halka > 0) { g.drawImage(fon, 0, 0); if (sh.tema === 'deniz') { shDenizDalga(tm, halka); shResimT(); } if (sh.tema === 'bulut') { shBulutKayan(tm, halka); shResimT(); } }
+  if (halka > 0) { g.drawImage(fon, 0, 0); if (sh.tema === 'deniz') { shDenizDalga(tm, halka); shResimT(); } if (sh.tema === 'bulut') { shBulutKayan(tm, halka); shResimT(); } if (sh.tema === 'senlik') { sh6Canli(0, 0, W, H, tm, halka, 0); shResimT(); } }
   if (halka < 1) {
     if (halka <= 0) g.drawImage(sh.oda, 0, 0);
     else {
@@ -1542,9 +1542,9 @@ function shGirisCiz(tm, dt) {
   if (m > 0 && m < 1 && dt > 0) {
     const r = Math.random;
     if (lamba > 0.03 && lamba < 0.97) { const L = shLambaYer(lamba); if (r() < dt * 26) shZerreEkle(L.x + (r() - 0.5) * 2, L.y + (r() - 0.5) * 2, (r() - 0.5) * 3, (r() - 0.3) * 3, lamba < 0.5 || B3 ? '#ffd9a0' : '#cfe6ff', 1.0 + r() * 0.6, 0.5 + r() * 0.5); }
-    if (perde > 0.08 && perde < 0.92 && r() < dt * 40) { const yon = r() < 0.5 ? -1 : 1; shZerreEkle((yon < 0 ? SH_PEN.x0 - 4.5 : SH_PEN.x1 + 4.5) - yon * r() * 7, lerp(6, 52, r()), (r() - 0.5) * 1.5, 1.5 + r() * 2.5, B3 ? (r() < 0.5 ? '#ffd0e4' : '#fff0d0') : sh.tema === 'gol' ? (r() < 0.5 ? '#ffe9a8' : '#cfe0ff') : r() < 0.5 ? '#9ff0d0' : '#7fe8ff', 1.6 + r(), 0.6 + r() * 0.5); }
+    if (perde > 0.08 && perde < 0.92 && r() < dt * 40) { const yon = r() < 0.5 ? -1 : 1; shZerreEkle((yon < 0 ? SH_PEN.x0 - 4.5 : SH_PEN.x1 + 4.5) - yon * r() * 7, lerp(6, 52, r()), (r() - 0.5) * 1.5, 1.5 + r() * 2.5, B3 ? (r() < 0.5 ? '#ffd0e4' : '#fff0d0') : sh.tema === 'senlik' ? (r() < 0.5 ? '#ffd6ee' : '#ffe6a0') : sh.tema === 'gol' ? (r() < 0.5 ? '#ffe9a8' : '#cfe0ff') : r() < 0.5 ? '#9ff0d0' : '#7fe8ff', 1.6 + r(), 0.6 + r() * 0.5); }
     if (cerceve > 0.05 && cerceve < 0.95 && r() < dt * 30) shZerreEkle(lerp(SH_YATAK.x0 - 2, SH_YATAK.x1 + 2, r()), lerp(62, 74, r()), (r() - 0.5) * 1.5, -2 - r() * 3, r() < 0.5 ? '#c9b2ff' : '#ffe0ff', 1.4 + r(), 0.5 + r() * 0.5);
-    if (hali > 0.02 && hali < 0.75 && r() < dt * 36) { const qi = Math.floor(r() * SH_MANTAR.length), q = SH_MANTAR[qi]; shZerreEkle(SH_HALI.x + q[0] + (r() - 0.5), SH_HALI.y + q[1], (r() - 0.5) * 2.5, -3 - r() * 4, B3 ? SH_GK[qi % 7] : sh.tema === 'gol' ? (r() < 0.6 ? '#ffb6d9' : '#fff0f8') : r() < 0.6 ? '#5fd8ff' : '#e0fdff', 1.2 + r() * 0.8, 0.5 + r() * 0.6); }
+    if (hali > 0.02 && hali < 0.75 && r() < dt * 36) { const qi = Math.floor(r() * SH_MANTAR.length), q = SH_MANTAR[qi]; shZerreEkle(SH_HALI.x + q[0] + (r() - 0.5), SH_HALI.y + q[1], (r() - 0.5) * 2.5, -3 - r() * 4, B3 ? SH_GK[qi % 7] : sh.tema === 'senlik' ? SH6_RENK[qi % 5] : sh.tema === 'gol' ? (r() < 0.6 ? '#ffb6d9' : '#fff0f8') : r() < 0.6 ? '#5fd8ff' : '#e0fdff', 1.2 + r() * 0.8, 0.5 + r() * 0.6); }
     if (batt > 0.15 && batt < 0.9 && r() < dt * 22) shZerreEkle(lerp(-60, 15, r()), lerp(60, 84, r()), (r() - 0.5) * 2, -1.5 - r() * 2.5, B3 ? (r() < 0.5 ? '#ffe0ee' : '#fff0c8') : r() < 0.5 ? '#b9ffd8' : '#d9c6ff', 1.6 + r(), 0.5 + r() * 0.5);
   }
   // Feza: önce gözleri açık; yavaşça uykuya dalar (iç çeker), Pırıl kollarında. Ormanda uyanıp doğrulur.
@@ -1677,17 +1677,20 @@ function shGirisAcilis(tm, t, P) {
 function shFk(k) {
   try {
     const b = sh.fBolum || (typeof BOLUM_NO !== 'undefined' ? BOLUM_NO : 1);
-    if (b >= 2 && typeof SES !== 'undefined' && SES.LINES) { const k2 = (b === 5 ? 'a_v_' : b === 4 ? 'a_i_' : b === 3 ? 'a_b_' : 'a_y_') + k.slice(2); if (SES.LINES[k2] || (window.VOICE_DUR && VOICE_DUR[k2])) return k2; }
+    if (b >= 2 && typeof SES !== 'undefined' && SES.LINES) { const k2 = (b === 6 ? 'a_f_' : b === 5 ? 'a_v_' : b === 4 ? 'a_i_' : b === 3 ? 'a_b_' : 'a_y_') + k.slice(2); if (SES.LINES[k2] || (window.VOICE_DUR && VOICE_DUR[k2])) return k2; }
   } catch (e) {}
   return k;
 }
+// Bölüm 6: ilk final cümlesi dünyadaki kutlamada söylendiyse sabaha durmadan geçilir (Bölüm 4/5 gibi)
+function shF6Hizli() { return (sh.fBolum || 1) === 6 && !!sh.f6Ozet; }
 function shFinalPlan() {
   const d1 = shSure(shFk('a_final1')), d2 = shSure(shFk('a_final2')), d3 = shSure(shFk('a_final3'));
   const P = { s1: 0.6 };
   P.isik = P.s1 + Math.max(d1 + 0.8, 4.6);   // altın ışık dolmaya başlar
   P.dolu = P.isik + 2.6;                     // ekran tamamen ışık → oda
   P.oda = P.dolu + 5.0;                      // ışık bir süre çiçek açar (müziğin doruğu), sonra sabah odası belirir
-  if ((sh.fBolum || 1) === 4 || (sh.fBolum || 1) === 5) { P.isik = .35; P.dolu = P.isik + 1.8; P.oda = P.dolu + .35; }   // inci kutlaması dünyada tamamlandı; sabaha durmadan geç
+  if ((sh.fBolum || 1) === 4 || (sh.fBolum || 1) === 5 || shF6Hizli()) { P.isik = .35; P.dolu = P.isik + 1.8; P.oda = P.dolu + .35; }   // inci kutlaması dünyada tamamlandı; sabaha durmadan geç
+  P.f6Hizli = shF6Hizli();
   P.s2 = P.oda + 1.6;
   P.yak = P.s2 + Math.max(d2 * 0.45, 2.6);   // Feza peluş Pırıl'ı yanağına kaldırır, kamera iki yüze yaklaşır
   // Bölüm 3: anlatıcı "Pencereden bakmış ki..." derken pencerede gökkuşağı çizilir, kamera pencereye döner;
@@ -1703,7 +1706,7 @@ function shFinalPlan() {
 function shFinalGuncelle(dt) {
   const t = sh.t, P = sh.plan;
   const ses = (k, at) => { if (!sh.sesler[k] && t >= at) { sh.sesler[k] = 1; shSoyle(k); } };
-  if ((sh.fBolum || 1) !== 4 && (sh.fBolum || 1) !== 5) ses(shFk('a_final1'), P.s1);   // deniz ve yanardağ son sözü dünyadaki kutlama içinde söylendi
+  if ((sh.fBolum || 1) !== 4 && (sh.fBolum || 1) !== 5 && !sh.plan.f6Hizli) { if ((sh.fBolum || 1) === 6) sh.f6Ozet = 1; ses(shFk('a_final1'), P.s1); }   // deniz ve yanardağ son sözü dünyadaki kutlama içinde söylendi
   ses(shFk('a_final2'), P.s2); ses(shFk('a_final3'), P.s3);
   shAn('kutlama');
   shBir('kus0', P.isik + 0.6, 'sabahKus', 0); shBir('kus1', P.isik + 2.2, 'sabahKus', 1); shBir('kus2', P.dolu + 1.2, 'sabahKus', 2);   // ışık dolarken kuşlar
@@ -1757,6 +1760,7 @@ function shSabahCiz(tm, t, P, sonKirp) {
   const fb = sh.fBolum || 1, b2 = fb === 2, b3 = fb === 3;
   if (fb === 4) shDenizSabah(tm);
   if (fb === 4) shSabahPencere(tm, true);
+  else if (fb === 6) sh6Sabah(tm, P ? shEase(shSeg(t, P.oda - 1.2, P.oda + 1.4)) : 1);   // kamera yaklaşmadan pencerede görünsün
   else if (fb === 5) sh5Sabah(tm, P ? shEase(shSeg(t, P.oda + .6, P.oda + 3.5)) : 1);
   else if (b3) { shSabahGokkusagi(tm, P ? shSeg(t, P.gk, P.gk + 2.6) : 1); shSabahPencere(tm, true); }
   else if (b2) shSabahPencere(tm);
@@ -1794,6 +1798,7 @@ function shSabahCiz(tm, t, P, sonKirp) {
     g.setTransform(1, 0, 0, 1, 0, 0);
     if (ca > 0.003) { g.fillStyle = `rgba(185,200,255,${ca})`; g.fillRect(0, 0, W, H); }
     if (wa > 0.003) { g.globalCompositeOperation = 'lighter'; g.fillStyle = `rgba(255,200,125,${wa})`; g.fillRect(0, 0, W, H); g.globalCompositeOperation = 'source-over'; } }
+  if (fb === 6) sh6Hatira(tm, P ? shEase(shSeg(t, P.oda + 1.5, P.oda + 4.5)) : 1);
   shSabahTozu(tm, b3 ? 3 : b2 ? 2 : 1);
   shZerreler(tm, 0.75, false);
 }
@@ -2157,7 +2162,7 @@ setTimeout(function shIsit() {
   if (!(W > 2 && H > 2)) { setTimeout(shIsit, 400); return; }   // tuval henüz boyutlanmadı: biraz sonra yine dene
   shGeceHazirla();
 }, 1200);
-function shGeceHazirla() { const k = () => DURUM === 'baslik' || sh.mod === 'giris' || sh.mod === 'secim'; shOnceden('oda', k); if (sh.mod !== 'secim' && !(sh.plan && sh.plan.dogrudan) && sh.mod !== 'giris') { shOnceden(sh.fon || 'orman', k); shOnceden(sh.tema === 'volkan' ? 'onPlanV' : sh.tema === 'deniz' ? 'onPlanI' : sh.tema === 'bulut' ? 'onPlanB' : 'onPlan', k); } }
+function shGeceHazirla() { const k = () => DURUM === 'baslik' || sh.mod === 'giris' || sh.mod === 'secim'; shOnceden('oda', k); if (sh.mod !== 'secim' && !(sh.plan && sh.plan.dogrudan) && sh.mod !== 'giris') { shOnceden(sh.fon || 'orman', k); shOnceden(sh.tema === 'senlik' ? 'onPlanF' : sh.tema === 'volkan' ? 'onPlanV' : sh.tema === 'deniz' ? 'onPlanI' : sh.tema === 'bulut' ? 'onPlanB' : 'onPlan', k); } }
 
 // ══════════════════ YILDIZ GÖLÜ FONU (kısa uyku girişinde oda buraya erir) ══════════════════
 function shGolAdim() {
@@ -2300,7 +2305,7 @@ function shPencerePembe(a, tm) {
 // Her baloncuk: önbellekte DURAĞAN iç resim (shBalonIc) + her karede çizilen CANLI katman (shIkonCanli: ışık küreleri,
 // yıldız ışıltısı, kayan bulutlar, kuzucuk) + önbellekte cam kabuk (shBalonCam). Baloncuklar Pırıl'dan doğar, nefes alır,
 // süzülür; dokununca jöle gibi esner, sonra büyüyüp ekranı doldurarak rüyaya akar.
-const SH_BALON_RENK = { orman: '#ffe6a8', gol: '#a8b8ff', bulut: '#ffc8e0', deniz: '#9fe6ff', dag: '#ffd9a0', volkan: '#ffba87' };
+const SH_BALON_RENK = { orman: '#ffe6a8', gol: '#a8b8ff', bulut: '#ffc8e0', deniz: '#9fe6ff', dag: '#ffd9a0', volkan: '#ffba87', senlik: '#e2b6ff' };
 const SH_SEC_SURE = 1.6;   // dokunuştan onSec'e (sn)
 const shEaseOut = t => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
 const shEaseBack = t => { t = clamp(t, 0, 1); const c = 1.5; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
@@ -2334,6 +2339,7 @@ function shKuzu(x, cx, cy, r, yon, goz) {
 function shIkonCiz(x, ad, d) {   // DURAĞAN iç resim, d×d kare; çağıran daireyle keser (canlı parçalar shIkonCanli'de)
   let gr;
   if (ad === 'volkan') { sh5Fon(x, d, d); return; }
+  if (ad === 'senlik') { sh6Fon(x, d, d); return; }
   if (ad === 'deniz') { shDenizResim(x, d); return; }
   if (ad === 'orman') {   // gece ormanı: katmanlı siluetler, ay ışığı hüzmesi, ışıklı ağaç, parlayan çiçek
     gr = x.createLinearGradient(0, 0, 0, d); gr.addColorStop(0, '#0e2a66'); gr.addColorStop(0.4, '#2a74a8'); gr.addColorStop(0.75, '#5cc4b8'); gr.addColorStop(1, '#a8f0c8');
@@ -2433,6 +2439,7 @@ const SH_GOL_YILDIZ = [[0.2, 0.17, 0.05], [0.42, 0.09, 0.034], [0.34, 0.33, 0.04
 function shIkonCanli(ad, ox, oy, q, tm, a, i0, hov) {
   hov = hov || 0;
   if (ad === 'volkan') { sh5Canli(ox,oy,q,tm,a,hov); return; }
+  if (ad === 'senlik') { sh6Canli(ox, oy, q, q, tm, a, hov); return; }
   const hovAmp = 1 + 0.35 * hov;
   const U = (u, v) => [ox + u * q, oy + v * q];
   if (ad === 'deniz') {
@@ -2992,8 +2999,8 @@ const SAHNE = {
     opt = opt || {};
     const bolum = opt.bolum || 1, kisa = opt.kisa === true || (bolum >= 2 && opt.kisa !== false);
     shBalonBirak();
-    sh.dan = sh.mod === 'secim' || kisa; sh.kisa = kisa; sh.fon = bolum === 5 ? 'volkan' : bolum === 4 ? 'deniz' : bolum === 1 ? 'orman' : bolum === 3 ? 'bulut' : 'gol'; sh.secBitti = null;
-    sh.tema = bolum === 5 ? 'volkan' : bolum === 4 ? 'deniz' : bolum === 3 ? 'bulut' : bolum === 2 ? 'gol' : null; sh.uykuK = bolum === 5 ? 'p_v_uyku' : bolum === 4 ? 'p_i_uyku' : bolum === 3 ? 'p_b_uyku' : 'p_y_uyku';
+    sh.dan = sh.mod === 'secim' || kisa; sh.kisa = kisa; sh.fon = bolum === 6 ? 'senlik' : bolum === 5 ? 'volkan' : bolum === 4 ? 'deniz' : bolum === 1 ? 'orman' : bolum === 3 ? 'bulut' : 'gol'; sh.secBitti = null;
+    sh.tema = bolum === 6 ? 'senlik' : bolum === 5 ? 'volkan' : bolum === 4 ? 'deniz' : bolum === 3 ? 'bulut' : bolum === 2 ? 'gol' : null; sh.uykuK = bolum === 6 ? 'p_f_uyku' : bolum === 5 ? 'p_v_uyku' : bolum === 4 ? 'p_i_uyku' : bolum === 3 ? 'p_b_uyku' : 'p_y_uyku';
     shOlc(); sh.mod = 'giris'; sh.t = 0; sh.nefesFaz = 0;  sh.kirpK = 0; sh.kalkis = null; sh.bitti = bitince; sh.atla = -1; sh.sesler = {}; sh.nefesN = -1; sh.zz.length = 0; sh.tam = false;
     sh.anlar = {}; sh.parca.length = 0; sh.camOturdu = 0; sh.izlendi = 0;
     sh.gBolum = bolum; sh.atlanabilir = shDahaOnce(bolum);   // atla düğmesi: bu rüya daha önce oynandıysa (her bölümde)
@@ -3087,6 +3094,267 @@ function sh5Canli(ox,oy,q,tm,a,hov) {
 SH_ONBELLEK.push('volkan','onPlanV');
 SH_KUR.volkan=()=>{const A={c:shTuval(),W,H,adim:[]};A.adim.push(()=>sh5Fon(A.c.getContext('2d'),W,H));return A;};
 SH_KUR.onPlanV=()=>{const A={c:shTuval(),W,H,adim:[]};A.adim.push(()=>{const x=A.c.getContext('2d');x.fillStyle='#302b4caa';for(let i=0;i<7;i++){const px=i*W/6;x.beginPath();x.moveTo(px-W*.08,H);x.quadraticCurveTo(px-W*.04,H*.83,px,H*(.87+(i%3)*.03));x.lineTo(px+W*.08,H);x.fill();}});return A;};
+
+// ══════════════════ BÖLÜM 6: ŞENLİK KALESİ ══════════════════
+// Seçim baloncuğu ve odadan rüyaya geçiş aynı resmi paylaşır: alacakaranlıkta mor-lacivert gök, bulutların üstünde bayraklı
+// masal kalesi, kuleler arasında ışık bayrakları, yuvarlak çatılı uyuyan kasaba ve tepede ışıklı küçük bir midilli.
+// Durağan kısım (sh6Fon) önbellekte; havai fişekler, dalgalanan bayraklar, yanıp sönen bayrak ışıkları ve midillinin
+// ışıltısı her karede (sh6Canli) çizilir. İkisi aynı ölçüleri (sh6Olcu) kullanır; resim w×h, nesneler kısa kenara (s) göre.
+const SH6_RENK = ['#ffd36b', '#ff9ed2', '#9fe6ff', '#c6a8ff', '#a8f0c0'];   // şenlik pastelleri (fişek, bayrak, ışık)
+function sh6Olcu(w, h) {
+  const s = Math.min(w, h), cx = w * 0.6, by = h * 0.6;
+  // bayrak dizileri: ana kuleden yan kulelere sarkan iki ip [x0, y0, x1, y1, sarkma]
+  const ip = [[cx - s * 0.07, by - s * 0.27, cx - s * 0.19, by - s * 0.19, s * 0.045], [cx + s * 0.07, by - s * 0.27, cx + s * 0.19, by - s * 0.19, s * 0.045],
+    [cx - s * 0.19, by - s * 0.12, cx + s * 0.19, by - s * 0.12, s * 0.05]];
+  return { s, cx, by, ip,
+    tepe: [[cx, by - s * 0.5, 1.25], [cx - s * 0.19, by - s * 0.37, 1], [cx + s * 0.19, by - s * 0.37, 1]],   // bayrak direği uçları [x, y, boy]
+    fisek: [[w * 0.24, h * 0.34], [w * 0.92, h * 0.44], [w * 0.45, h * 0.11]],                      // havai fişek patlama yerleri
+    mid: { x: w * 0.26, y: h * 0.9, u: s * 0.085 } };                                                       // midilli (toynak tabanı, gövde boyu)
+}
+const sh6IpNokta = (q, u) => [lerp(q[0], q[2], u), lerp(q[1], q[3], u) + Math.sin(u * Math.PI) * q[4]];
+// küçük midilli (sağa bakar; (0,0) toynak tabanı, u gövde boyu): açık leylak gövde, pembe-turkuaz yele, mutlu kapalı göz
+function sh6Midilli(x, px, py, u) {
+  x.save(); x.translate(px, py); x.scale(u, u); x.lineCap = 'round'; x.lineJoin = 'round';
+  const halo = x.createRadialGradient(0, -0.7, 0, 0, -0.7, 1.3); halo.addColorStop(0, 'rgba(255,236,250,0.5)'); halo.addColorStop(1, 'rgba(255,220,250,0)');
+  x.fillStyle = halo; x.fillRect(-1.4, -2, 2.8, 2.4);
+  x.strokeStyle = '#c9b4ea'; x.lineWidth = 0.13;   // arka bacaklar (biraz koyu)
+  for (const bx of [-0.25, 0.32]) { x.beginPath(); x.moveTo(bx, -0.5); x.lineTo(bx + 0.03, -0.04); x.stroke(); }
+  x.strokeStyle = '#d98fc0'; x.lineWidth = 0.15;   // kuyruk
+  x.beginPath(); x.moveTo(-0.45, -0.68); x.bezierCurveTo(-0.85, -0.78, -0.8, -0.3, -0.62, -0.22); x.stroke();
+  x.strokeStyle = '#8fdcf0'; x.lineWidth = 0.08; x.beginPath(); x.moveTo(-0.47, -0.66); x.bezierCurveTo(-0.76, -0.7, -0.72, -0.4, -0.58, -0.3); x.stroke();
+  const gv = x.createLinearGradient(0, -1, 0, -0.3); gv.addColorStop(0, '#fdf7ff'); gv.addColorStop(1, '#dccbf4'); x.fillStyle = gv;
+  x.beginPath(); x.ellipse(0, -0.62, 0.5, 0.25, 0, 0, Math.PI * 2); x.fill();   // gövde
+  x.beginPath(); x.moveTo(0.22, -0.78); x.quadraticCurveTo(0.42, -1.05, 0.5, -1.2); x.lineTo(0.72, -1.08); x.quadraticCurveTo(0.56, -0.8, 0.46, -0.52); x.closePath(); x.fill();   // boyun
+  x.beginPath(); x.ellipse(0.66, -1.13, 0.22, 0.14, 0.45, 0, Math.PI * 2); x.fill();   // baş
+  x.beginPath(); x.moveTo(0.52, -1.24); x.lineTo(0.56, -1.42); x.lineTo(0.64, -1.25); x.fill();   // kulak
+  x.strokeStyle = '#efe4ff'; x.lineWidth = 0.13;   // ön bacaklar
+  for (const bx of [-0.12, 0.42]) { x.beginPath(); x.moveTo(bx, -0.5); x.lineTo(bx, -0.04); x.stroke(); }
+  x.fillStyle = '#b79ad8'; for (const bx of [-0.25, 0.32, -0.12, 0.42]) { x.beginPath(); x.ellipse(bx + 0.01, -0.03, 0.08, 0.04, 0, 0, Math.PI * 2); x.fill(); }   // toynaklar
+  x.strokeStyle = '#ff9ed2'; x.lineWidth = 0.12;   // yele: pembe + turkuaz tutamlar
+  x.beginPath(); x.moveTo(0.5, -1.27); x.quadraticCurveTo(0.3, -1.1, 0.22, -0.8); x.stroke();
+  x.strokeStyle = '#9fe6ff'; x.lineWidth = 0.07; x.beginPath(); x.moveTo(0.46, -1.2); x.quadraticCurveTo(0.33, -1.02, 0.27, -0.84); x.stroke();
+  x.fillStyle = '#ffb3dc'; x.beginPath(); x.ellipse(0.47, -1.3, 0.09, 0.05, -0.5, 0, Math.PI * 2); x.fill();   // perçem
+  x.strokeStyle = '#5b4a7a'; x.lineWidth = 0.035; x.beginPath(); x.arc(0.71, -1.17, 0.045, 0.2, Math.PI - 0.2); x.stroke();   // gülen kapalı göz
+  x.fillStyle = 'rgba(255,150,190,0.5)'; x.beginPath(); x.arc(0.76, -1.08, 0.04, 0, Math.PI * 2); x.fill();   // yanak
+  x.restore();
+}
+function sh6Fon(x, w, h) {
+  const O = sh6Olcu(w, h), s = O.s, cx = O.cx, by = O.by, r = rng(61);
+  // gök: yukarıda lacivert, ufukta mor-pembe alacakaranlık
+  let gr = x.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#171a48'); gr.addColorStop(0.32, '#33296a'); gr.addColorStop(0.55, '#6a4588'); gr.addColorStop(0.72, '#b979a8'); gr.addColorStop(1, '#efb3a0');
+  x.fillStyle = gr; x.fillRect(0, 0, w, h);
+  gr = x.createRadialGradient(cx, by - s * 0.15, 0, cx, by - s * 0.15, s * 0.6); gr.addColorStop(0, 'rgba(255,196,214,0.35)'); gr.addColorStop(1, 'rgba(255,170,200,0)'); x.fillStyle = gr; x.fillRect(0, 0, w, h);
+  x.fillStyle = '#fff6dc';
+  for (let i = 0; i < 46; i++) { x.globalAlpha = 0.25 + r() * 0.6; x.beginPath(); x.arc(r() * w, r() * h * 0.5, Math.max(0.6, s * (0.002 + r() * 0.003)), 0, Math.PI * 2); x.fill(); }
+  x.globalAlpha = 1;
+  // hilal ay (sol üstte, yumuşak haleli)
+  const ax = w * 0.24, ay = h * 0.16, ar = s * 0.045;
+  gr = x.createRadialGradient(ax, ay, 0, ax, ay, ar * 3.2); gr.addColorStop(0, 'rgba(255,240,210,0.35)'); gr.addColorStop(1, 'rgba(255,240,210,0)'); x.fillStyle = gr; x.fillRect(ax - ar * 4, ay - ar * 4, ar * 8, ar * 8);
+  x.save(); x.beginPath(); x.arc(ax, ay, ar, 0, Math.PI * 2); x.clip(); x.fillStyle = '#fff3d2'; x.beginPath(); x.rect(ax - ar, ay - ar, ar * 2, ar * 2); x.arc(ax + ar * 0.42, ay - ar * 0.2, ar * 0.86, 0, Math.PI * 2); x.fill('evenodd'); x.restore();
+  // uzak tepeler
+  for (let k = 0; k < 2; k++) {
+    x.fillStyle = k ? '#4a3a7c' : '#5d4789'; x.beginPath(); x.moveTo(0, h);
+    for (let i = 0; i <= 20; i++) x.lineTo(i / 20 * w, by - s * (0.06 - k * 0.04) + Math.sin(i * 0.9 + k * 2.3) * s * 0.025);
+    x.lineTo(w, h); x.fill();
+  }
+  // kalenin tepesi
+  x.fillStyle = '#3d2f6c'; x.beginPath(); x.ellipse(cx, by + s * 0.05, s * 0.36, s * 0.085, 0, Math.PI, 0); x.lineTo(cx + s * 0.36, h); x.lineTo(cx - s * 0.36, h); x.fill();
+  // ── kale: soluk leylak taş, pembe konik çatılar, altın pencereler ──
+  const tas = x.createLinearGradient(cx - s * 0.2, 0, cx + s * 0.2, 0); tas.addColorStop(0, '#e6d4f2'); tas.addColorStop(0.55, '#c3acde'); tas.addColorStop(1, '#8f78b8');
+  const cati = (x0, x1, yb, yt, c1, c2) => {   // konik çatı: hafif kavisli kenarlar, sağ yarısı gölgede
+    const m = (x0 + x1) / 2; x.fillStyle = c1; x.beginPath(); x.moveTo(x0, yb); x.quadraticCurveTo(m - (x1 - x0) * 0.12, yb - (yb - yt) * 0.45, m, yt); x.quadraticCurveTo(m + (x1 - x0) * 0.12, yb - (yb - yt) * 0.45, x1, yb); x.closePath(); x.fill();
+    x.fillStyle = c2; x.beginPath(); x.moveTo(m, yt); x.quadraticCurveTo(m + (x1 - x0) * 0.12, yb - (yb - yt) * 0.45, x1, yb); x.lineTo(m + (x1 - x0) * 0.12, yb); x.closePath(); x.fill();
+    x.fillStyle = 'rgba(80,40,90,0.35)'; x.fillRect(x0 - s * 0.004, yb - s * 0.006, x1 - x0 + s * 0.008, s * 0.012);
+  };
+  const pencere = (px, py, pw, ph) => {   // kemerli altın pencere
+    x.fillStyle = '#ffd98a'; x.beginPath(); x.moveTo(px - pw / 2, py + ph / 2); x.lineTo(px - pw / 2, py - ph / 2 + pw / 2); x.arc(px, py - ph / 2 + pw / 2, pw / 2, Math.PI, 0); x.lineTo(px + pw / 2, py + ph / 2); x.fill();
+  };
+  // arka kulecikler
+  for (const sd of [-1, 1]) { const tx = cx + sd * s * 0.11; x.fillStyle = '#a58fc8'; x.fillRect(tx - s * 0.025, by - s * 0.24, s * 0.05, s * 0.14); cati(tx - s * 0.035, tx + s * 0.035, by - s * 0.24, by - s * 0.34, '#c973a6', '#a65a8c'); }
+  // sur duvarı ve mazgallar
+  x.fillStyle = tas; x.fillRect(cx - s * 0.2, by - s * 0.13, s * 0.4, s * 0.16);
+  for (let i = 0; i < 11; i++) { const mx = cx - s * 0.2 + i * s * 0.04; x.fillRect(mx, by - s * 0.155, s * 0.022, s * 0.03); }
+  // ana kule
+  x.fillStyle = tas; x.fillRect(cx - s * 0.075, by - s * 0.3, s * 0.15, s * 0.2);
+  for (let i = 0; i < 4; i++) x.fillRect(cx - s * 0.085 + i * s * 0.05, by - s * 0.32, s * 0.03, s * 0.03);
+  cati(cx - s * 0.095, cx + s * 0.095, by - s * 0.31, by - s * 0.46, '#ef8fbd', '#c96b9b');
+  // yan kuleler (yuvarlak gövde: yan gölge)
+  for (const sd of [-1, 1]) {
+    const tx = cx + sd * s * 0.19;
+    const tg = x.createLinearGradient(tx - s * 0.045, 0, tx + s * 0.045, 0); tg.addColorStop(0, '#e9dbf5'); tg.addColorStop(0.6, '#bea6da'); tg.addColorStop(1, '#8a72b3');
+    x.fillStyle = tg; x.fillRect(tx - s * 0.045, by - s * 0.21, s * 0.09, s * 0.24);
+    cati(tx - s * 0.06, tx + s * 0.06, by - s * 0.21, by - s * 0.335, '#ef8fbd', '#c96b9b');
+    pencere(tx, by - s * 0.14, s * 0.022, s * 0.04); pencere(tx, by - s * 0.06, s * 0.018, s * 0.03);
+  }
+  // bayrak direkleri (bayraklar canlı katmanda dalgalanır)
+  x.strokeStyle = '#f3e3c0'; x.lineWidth = Math.max(1, s * 0.005); x.lineCap = 'round';
+  for (const [tx, ty] of O.tepe) { x.beginPath(); x.moveTo(tx, ty); x.lineTo(tx, ty + s * 0.05); x.stroke(); x.fillStyle = '#ffe9a8'; x.beginPath(); x.arc(tx, ty, s * 0.006, 0, Math.PI * 2); x.fill(); }
+  // pencereler, yuvarlak gül pencere, kapı
+  pencere(cx - s * 0.035, by - s * 0.21, s * 0.026, s * 0.05); pencere(cx + s * 0.035, by - s * 0.21, s * 0.026, s * 0.05);
+  x.fillStyle = '#ffe3a0'; x.beginPath(); x.arc(cx, by - s * 0.265, s * 0.016, 0, Math.PI * 2); x.fill();
+  for (const px of [-0.15, -0.1, 0.1, 0.15]) pencere(cx + px * s, by - s * 0.07, s * 0.016, s * 0.028);
+  x.fillStyle = '#5a3f6e'; x.beginPath(); x.moveTo(cx - s * 0.04, by + s * 0.03); x.lineTo(cx - s * 0.04, by - s * 0.03); x.arc(cx, by - s * 0.03, s * 0.04, Math.PI, 0); x.lineTo(cx + s * 0.04, by + s * 0.03); x.fill();
+  x.fillStyle = '#ffcf86'; x.beginPath(); x.moveTo(cx - s * 0.03, by + s * 0.03); x.lineTo(cx - s * 0.03, by - s * 0.03); x.arc(cx, by - s * 0.03, s * 0.03, Math.PI, 0); x.lineTo(cx + s * 0.03, by + s * 0.03); x.fill();
+  // pencerelerin sıcak ışığı
+  x.globalCompositeOperation = 'lighter';
+  gr = x.createRadialGradient(cx, by - s * 0.15, 0, cx, by - s * 0.15, s * 0.3); gr.addColorStop(0, 'rgba(255,205,130,0.22)'); gr.addColorStop(1, 'rgba(255,190,120,0)'); x.fillStyle = gr; x.fillRect(cx - s * 0.3, by - s * 0.45, s * 0.6, s * 0.6);
+  x.globalCompositeOperation = 'source-over';
+  // bayrak dizileri: ince ip + üçgen flamalar (ışıkları canlı katmanda yanıp söner)
+  for (let j = 0; j < O.ip.length; j++) {
+    const q = O.ip[j], n = 7;
+    x.strokeStyle = 'rgba(70,45,90,0.7)'; x.lineWidth = Math.max(0.8, s * 0.0025); x.beginPath();
+    for (let i = 0; i <= 16; i++) { const [px, py] = sh6IpNokta(q, i / 16); if (i) x.lineTo(px, py); else x.moveTo(px, py); } x.stroke();
+    for (let i = 0; i < n; i++) {
+      const [px, py] = sh6IpNokta(q, (i + 0.5) / n), fw = s * 0.011, fh = s * 0.026;
+      x.fillStyle = SH6_RENK[(i + j * 2) % 5]; x.beginPath(); x.moveTo(px - fw, py); x.lineTo(px + fw, py); x.lineTo(px, py + fh); x.closePath(); x.fill();
+    }
+  }
+  // kalenin önünde bulut denizi (kale bulutların arasında süzülüyor gibi)
+  // kabarık bulut öbekleri: farklı boy ve yükseklikte toplar, üstlerinde sola-yukarı kaymış açık ışık
+  const bulut = (y0, n, r0, r1, col, acik, sd) => {
+    const q = rng(sd), T = [];
+    for (let i = 0; i <= n; i++) T.push([(i + (q() - 0.5) * 0.7) / n * w * 1.1 - w * 0.05, y0 + (q() - 0.5) * s * 0.06, s * (r0 + q() * (r1 - r0))]);
+    x.fillStyle = col; x.beginPath(); for (const [px, py, pr] of T) { x.moveTo(px + pr * 1.25, py); x.ellipse(px, py, pr * 1.25, pr, 0, 0, Math.PI * 2); } x.rect(-2, y0 + s * 0.01, w + 4, h); x.fill();
+    x.save(); x.clip(); x.fillStyle = acik; x.globalAlpha = 0.4; x.beginPath(); for (const [px, py, pr] of T) { x.moveTo(px + pr * 1.05, py - pr * 0.3); x.ellipse(px, py - pr * 0.3, pr * 1.05, pr * 0.72, 0, 0, Math.PI * 2); } x.fill(); x.restore();
+  };
+  bulut(by + s * 0.06, Math.ceil(w / s * 16), 0.02, 0.05, '#93709f', '#e4b2d0', 4);
+  bulut(by + s * 0.15, Math.ceil(w / s * 12), 0.025, 0.06, '#6d5690', '#a988bf', 9);
+  // ön kasaba: yuvarlak çatılı masal evleri, pencerelerde altın ışık
+  const yT = h * 0.86, ev = rng(23);
+  for (let px = -s * 0.04; px < w + s * 0.1;) {
+    const ew = s * (0.085 + ev() * 0.05), eh = s * (0.06 + ev() * 0.05), ex = px + ew / 2, ey = yT - eh + s * 0.02 * ev(), tur = ev();
+    x.fillStyle = ev() < 0.5 ? '#3a2d63' : '#33285a'; x.fillRect(px, ey, ew, h - ey);
+    x.fillStyle = ['#4f3a7c', '#5a3a72', '#45396f'][Math.floor(ev() * 3)]; x.beginPath();
+    if (tur < 0.45) x.ellipse(ex, ey, ew * 0.58, eh * 0.55, 0, Math.PI, 0);   // kubbe çatı
+    else { x.moveTo(px - ew * 0.08, ey); x.quadraticCurveTo(ex - ew * 0.1, ey - eh * 0.4, ex, ey - eh * 0.85); x.quadraticCurveTo(ex + ew * 0.1, ey - eh * 0.4, px + ew * 1.08, ey); }   // sivri masal çatısı
+    x.fill();
+    const pn = ev() < 0.5 ? 1 : 2;
+    for (let k = 0; k < pn; k++) { const wx = px + ew * (pn === 1 ? 0.5 : 0.3 + k * 0.4), wy = ey + eh * 0.35; x.fillStyle = 'rgba(255,200,120,0.25)'; x.beginPath(); x.arc(wx, wy, s * 0.02, 0, Math.PI * 2); x.fill(); pencere(wx, wy, s * 0.014, s * 0.022); }
+    px += ew * (0.92 + ev() * 0.15);
+  }
+  // midillinin çimenli tepeciği ve ışıklı midilli
+  const M = O.mid;
+  x.fillStyle = '#2f4a6e'; x.beginPath(); x.ellipse(M.x, h * 1.02, s * 0.2, h * 1.02 - M.y + s * 0.012, 0, Math.PI, 0); x.fill();
+  x.fillStyle = '#3f6688'; x.beginPath(); x.ellipse(M.x, h * 1.02 + s * 0.006, s * 0.19, h * 1.02 - M.y + s * 0.006, 0, Math.PI * 1.15, Math.PI * 1.85); x.lineTo(M.x, h); x.fill();
+  sh6Midilli(x, M.x, M.y + s * 0.004, M.u);
+}
+function sh6Canli(ox, oy, w, h, tm, a, hov) {
+  if (a <= 0.01) return;
+  hov = hov || 0;
+  const O = sh6Olcu(w, h), s = O.s, hz = 1 + 0.35 * hov;
+  g.save(); g.lineCap = 'round';
+  // 1) havai fişekler: yükselen ışık izi, sonra pastel ışık çiçeği (yavaşça aşağı süzülüp söner)
+  g.globalCompositeOperation = 'lighter';
+  for (let j = 0; j < O.fisek.length; j++) {
+    const per = 3.1 + j * 0.45, u = (tm * hz / per + j * 0.37) % 1, fx = ox + O.fisek[j][0], fy = oy + O.fisek[j][1], col = SH6_RENK[(j * 2 + Math.floor(tm * hz / per + j * 0.37)) % 5];
+    if (u < 0.2) {   // yükseliş
+      const e = u / 0.2, yy = fy + s * 0.28 * (1 - shEaseOut(e));
+      g.globalAlpha = a * 0.7; g.fillStyle = '#fff1c8'; g.beginPath(); g.arc(fx, yy, Math.max(1, s * 0.005), 0, Math.PI * 2); g.fill();
+      g.globalAlpha = a * 0.25; g.fillRect(fx - Math.max(0.5, s * 0.002), yy, Math.max(1, s * 0.004), s * 0.05);
+      continue;
+    }
+    const e = (u - 0.2) / 0.8, R = s * (0.085 + 0.02 * (j % 2)) * shEaseOut(Math.min(1, e * 1.6)), dus = e * e * s * 0.035, al = a * Math.pow(1 - e, 1.4);
+    if (e < 0.18) shParilti(fx, fy, s * 0.05 * (1 - e / 0.18), a * (1 - e / 0.18));
+    g.strokeStyle = col; g.lineWidth = Math.max(1, s * 0.0045); dglow(col, fx, fy + dus, R * 1.3, al * 0.18);
+    for (let k = 0; k < 12; k++) {
+      const an = k / 12 * Math.PI * 2 + j, cx = fx + Math.cos(an) * R, cy = fy + Math.sin(an) * R + dus;
+      g.globalAlpha = al * 0.6; g.beginPath(); g.moveTo(fx + Math.cos(an) * R * 0.6, fy + Math.sin(an) * R * 0.6 + dus * 0.6); g.lineTo(cx, cy); g.stroke();
+      dglow(col, cx, cy, s * 0.02, al * 0.55);
+      g.globalAlpha = al * (0.8 + 0.2 * Math.sin(tm * 9 + k)); g.fillStyle = k % 3 ? col : '#fff8e0'; g.beginPath(); g.arc(cx, cy, Math.max(1, s * 0.007), 0, Math.PI * 2); g.fill();
+    }
+  }
+  // 2) bayrak ışıkları: ip boyunca minik ampuller, sırayla yanıp söner
+  for (let j = 0; j < O.ip.length; j++) {
+    const q = O.ip[j];
+    for (let i = 0; i <= 7; i++) {
+      const [px, py] = sh6IpNokta(q, i / 7), tw = 0.55 + 0.45 * Math.sin(tm * 2.4 * hz - i * 0.9 + j * 1.7);
+      dglow(i % 2 ? '#ffe2a0' : '#ffc6e6', ox + px, oy + py, s * 0.022, a * 0.5 * tw);
+      g.globalAlpha = a * (0.6 + 0.4 * tw); g.fillStyle = '#fff6d8'; g.beginPath(); g.arc(ox + px, oy + py, Math.max(0.8, s * 0.0045), 0, Math.PI * 2); g.fill();
+    }
+  }
+  g.globalCompositeOperation = 'source-over';
+  // 3) kule tepelerinde dalgalanan flamalar
+  for (let j = 0; j < O.tepe.length; j++) {
+    const [tx0, ty0, boy] = O.tepe[j], tx = ox + tx0, ty = oy + ty0, L = s * 0.06 * boy, fh = s * 0.026 * boy;
+    const dal = (k) => Math.sin(tm * 3.6 * hz - k * 2.2 + j) * fh * 0.28;
+    g.globalAlpha = a; g.fillStyle = ['#ff8fbf', '#ffd36b', '#9fe6ff'][j];
+    g.beginPath(); g.moveTo(tx, ty); g.quadraticCurveTo(tx + L * 0.5, ty + dal(0.5) - fh * 0.05, tx + L, ty + fh * 0.45 + dal(1));
+    g.quadraticCurveTo(tx + L * 0.5, ty + fh + dal(0.5), tx, ty + fh); g.closePath(); g.fill();
+    g.globalAlpha = a * 0.35; g.fillStyle = '#ffffff'; g.beginPath(); g.moveTo(tx, ty + fh * 0.15); g.quadraticCurveTo(tx + L * 0.45, ty + fh * 0.2 + dal(0.5), tx + L * 0.8, ty + fh * 0.42 + dal(0.9)); g.lineTo(tx, ty + fh * 0.4); g.fill();
+  }
+  // 4) midillinin yelesinde ışıltı, toynaklarından yükselen yıldız tozu
+  const M = O.mid, mx = ox + M.x, my = oy + M.y;
+  g.globalCompositeOperation = 'lighter';
+  dglow('#ffd6f4', mx + M.u * 0.3, my - M.u * 0.8, M.u * 1.3, a * (0.22 + 0.08 * Math.sin(tm * 1.7)));
+  for (let i = 0; i < 5; i++) {
+    const u = (tm * (0.35 + i * 0.05) * hz + i * 0.23) % 1, px = mx + M.u * (-0.3 + i * 0.18 + Math.sin(tm + i * 2) * 0.08), py = my - M.u * (0.1 + u * 1.3);
+    shParilti(px, py, M.u * (0.1 + 0.08 * (i % 2)), a * Math.sin(u * Math.PI) * 0.85);
+  }
+  shParilti(mx + M.u * 0.42, my - M.u * 1.15, M.u * 0.22 * (0.6 + 0.4 * Math.sin(tm * 2.6)), a * 0.6);
+  g.restore(); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+}
+// uyku → rüya geçişinin ön planı: köşelerde koyu çatı/çalı siluetleri, üstte sarkan bir flama dizisi (paralaksla kayar)
+function sh6OnPlan() {
+  const c = shTuval(), x = c.getContext('2d'), s = Math.min(W, H), r = rng(7);
+  x.fillStyle = '#2a2148cc';
+  for (const sd of [-1, 1]) for (let i = 0; i < 4; i++) {
+    const px = sd < 0 ? W * (0.0 + i * 0.05) : W * (1 - i * 0.05), rr = s * (0.06 + r() * 0.05);
+    x.beginPath(); x.ellipse(px, H * (1.0 - (i % 2) * 0.02), rr * 1.3, rr, 0, Math.PI, 0); x.fill();
+  }
+  x.lineCap = 'round'; x.strokeStyle = 'rgba(60,40,80,0.65)'; x.lineWidth = Math.max(1, s * 0.003);
+  const q = [-W * 0.05, H * 0.03, W * 1.05, H * 0.03, H * 0.075];
+  x.beginPath(); for (let i = 0; i <= 24; i++) { const [px, py] = sh6IpNokta(q, i / 24); if (i) x.lineTo(px, py); else x.moveTo(px, py); } x.stroke();
+  const n = Math.max(9, Math.round(W / s * 9));
+  for (let i = 0; i < n; i++) {
+    const [px, py] = sh6IpNokta(q, (i + 0.5) / n), fw = s * 0.018, fh = s * 0.045;
+    x.globalAlpha = 0.8; x.fillStyle = SH6_RENK[i % 5]; x.beginPath(); x.moveTo(px - fw, py); x.lineTo(px + fw, py); x.lineTo(px, py + fh); x.closePath(); x.fill();
+  }
+  x.globalAlpha = 1;
+  return c;
+}
+SH_ONBELLEK.push('senlik', 'onPlanF');
+SH_KUR.senlik = () => { const A = { c: shTuval(), W, H, adim: [] }; A.adim.push(() => sh6Fon(A.c.getContext('2d'), W, H)); return A; };
+SH_KUR.onPlanF = () => { const A = { c: null, W, H, adim: [() => { A.c = sh6OnPlan(); }] }; return A; };
+// Bölüm 6 sabahı (son rüya): pencereden uzak tepede bayraklı kale, bayrakları sabah rüzgârında dalgalanır; yatağın üstünde
+// altı rüyanın altı küçük hatıra ışığı (her balonun rengi) yavaşça döner. a: 0..1 beliriş
+function sh6Sabah(tm, a) {
+  if (a <= 0.01) return;
+  shOdaT(); g.save(); shPencereYol(g, 0); g.clip(); g.globalAlpha = a;
+  g.fillStyle = '#c3b4d6'; g.beginPath(); g.ellipse(29, 50, 18, 6.5, 0, Math.PI, 0); g.fill();   // tepe
+  const cx = 29, by = 44.2;
+  g.fillStyle = '#d9cce6'; g.fillRect(cx - 4.2, by - 2.6, 8.4, 3);   // sur
+  g.fillRect(cx - 1.4, by - 6, 2.8, 4);   // ana kule
+  for (const sd of [-1, 1]) g.fillRect(cx + sd * 4 - 0.9, by - 4.3, 1.8, 4.6);   // yan kuleler
+  g.fillStyle = '#eba6c4';
+  const cati = (m, yb, yt, yw) => { g.beginPath(); g.moveTo(m - yw, yb); g.lineTo(m, yt); g.lineTo(m + yw, yb); g.closePath(); g.fill(); };
+  cati(cx, by - 6, by - 9, 1.8); cati(cx - 4, by - 4.3, by - 6.6, 1.25); cati(cx + 4, by - 4.3, by - 6.6, 1.25);
+  g.fillStyle = '#ffd98a'; g.fillRect(cx - 0.5, by - 0.9, 1, 1.2);
+  const flama = (fx, fy, col, k) => { const d = Math.sin(tm * 3 + k) * 0.25; g.fillStyle = col; g.beginPath(); g.moveTo(fx, fy); g.quadraticCurveTo(fx + 0.8, fy + d, fx + 1.6, fy + 0.35 + d); g.lineTo(fx, fy + 0.8); g.fill(); };
+  g.strokeStyle = '#efe2c8'; g.lineWidth = 0.15;
+  for (const [fx, fy, col, k] of [[cx, by - 9, '#ff8fbf', 0], [cx - 4, by - 6.6, '#ffc94d', 1.3], [cx + 4, by - 6.6, '#7fd6f0', 2.4]]) { g.beginPath(); g.moveTo(fx, fy + 0.6); g.lineTo(fx, fy - 1); g.stroke(); flama(fx, fy - 1, col, k); }
+  g.restore(); g.globalAlpha = 1;
+}
+// altı rüyanın hatıra ışıkları (orman, göl, bulut, deniz, yanardağ, şenlik): odanın eşyalarının önünde, yatağın üstünde süzülür
+function sh6Hatira(tm, a) {
+  if (a <= 0.01) return;
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  const k = sh.k0 * sh.zoom, R = ['orman', 'gol', 'bulut', 'deniz', 'volkan', 'senlik'], hx = SH_FEZA.x + 7, hy = 38.5;   // Feza ile Pırıl'ın başlarının üstünde
+  for (let i = 0; i < 6; i++) {
+    const an = tm * 0.22 + i * Math.PI / 3, nf = 0.5 + 0.5 * Math.sin(tm * 1.3 + i * 1.9);
+    const px = shEkranX(hx + Math.cos(an) * 13), py = shEkranY(hy + Math.sin(an) * 2 + Math.sin(tm * 0.8 + i) * 0.7), col = SH_BALON_RENK[R[i]];
+    const ak = a * (0.75 + 0.25 * Math.sin(an));   // arkadakiler biraz soluk
+    g.globalCompositeOperation = 'source-over'; dglow(col, px, py, k * (3 + 0.6 * nf), ak * 0.8);   // aydınlık duvarda da rengi seçilsin
+    g.globalAlpha = ak * 0.85; g.fillStyle = col; g.beginPath(); g.arc(px, py, k * 0.42, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1;
+    g.globalCompositeOperation = 'lighter'; dglow('#ffffff', px, py, k * 0.5, ak * 0.6);
+  }
+  g.globalCompositeOperation = 'source-over';
+}
+// Son sözün ilk cümlesi ('a_f_final1') dünyadaki şenlik kutlamasının içinde söylenir (oyun.js, senlikFinal + 5 sn; Bölüm 4/5 gibi);
+// o zaman sabah akışı durmadan kalan ikisini anlatır. Kutlama bir sebeple erken kesilirse sabah sahnesi bu cümleyi kendisi söyler.
+OLAY.on('senlikFinal', () => {
+  if (typeof BOLUM_NO === 'undefined' || BOLUM_NO !== 6 || typeof omZamanla !== 'function') return;
+  omZamanla(5.05, () => { if (DURUM === 'oyun' && !sh.mod) sh.f6Ozet = 1; });
+});
 
 // İnci Denizi rüya baloncuğu ve uyku geçişi aynı sualtı sanatını paylaşır; durağan doku önbellekte kalır.
 function shDenizResim(x, d) {

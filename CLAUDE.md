@@ -19,3 +19,4 @@
 - Ebeveyn kısayolu: seçim ekranında sol üst köşe 3 sn = kayıtları sıfırla.
 - Cihaz profili (`OM_MASA`, `?cihaz=pc|tablet`): dokunmatikte yoğunluk en çok 1,5 ve 60 fps kilidi; masaüstünde monitörün gerçek çözünürlüğü ve en çok 120 fps.
 - 60 fps kilidi (ProMotion): `oyun.js` `omDongu` yenileme aralığını ölçer; 120 Hz'de her ikinci rAF'ta, 75-100 Hz ve 144 Hz+'ta zaman tabanlı çizer, 60 Hz ve altında hiç kare düşürmez. Fizik/animasyon gerçek zaman damgasıyla ilerler (hız her Hz'de aynı). Test kancaları: `OYUN.lim`, `OYUN.kareSay`, `OYUN.kareMs`.
+- Bölüm 6 (Şenlik Kalesi, son rüya): `bolum6.js`, `dunya6.js`, `midilli.js` (ortak `midilliCiz`), `senlik.js` (fener, midilli, şövalye, kale köprüsü, avlu finali), `halka.js` (halka kapma mini oyunu); durum `V6`, ses harfi `f`. Sözleşme ve dosya ayrıntısı: `src/BOLUM6.md`. Seçim ekranı 6 balonu destekler (`shSecimYer`).
