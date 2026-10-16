@@ -316,6 +316,7 @@ const SES = (() => {
   const sesBuf = {}, sesCoz = {};
   let sesSira = [], sesCalan = null, sesKaynak = null, sesBitisZ = null;
   const sesSoylendi = {}, sesSonCal = {}, SES_AYNI_ARA = 20, tekrarli = k => k === 'p_secim' || ovguMu(k) || k === 'p_yol' || /^p_kurtar/.test(k) || /^p_yardim/.test(k);
+  let sesOyunIlk = false, sesOncedenDene = 0;
   let sesSonBitis = -1e9, sesSonSure = 0, sesSonOvgu = -1e9, sesOvguGecmis = [], sesYardimN = 0;
   const kayit = [];
   const sesNot = (ne, k, neden) => { kayit.push([+sesSaat().toFixed(2), ne, k, neden || '']); if (kayit.length > 400) kayit.shift(); };
@@ -369,14 +370,16 @@ const SES = (() => {
       sesTik();
     });
   }
-  function sesOnceden() {     // cümleleri boşta önceden çöz (ilk konuşmada gecikme olmasın)
+  function sesOnceden() {     // cümleleri boşta önceden çöz (ilk konuşmada gecikme olmasın); bu bölümün cümleleri önce
     if (!window.VOICE_MP3) return;
-    const ks = Object.keys(LINES).filter(k => VOICE_MP3[k]);
+    const bn = typeof BOLUM_NO !== 'undefined' ? BOLUM_NO : 1, harf = { 2: 'y', 3: 'b', 4: 'i', 5: 'v' }[bn] || '';
+    const baska = k => { const m = /^[pa]_([ybiv])_/.exec(k); return m && m[1] !== harf ? 1 : 0; };
+    const ks = Object.keys(LINES).filter(k => VOICE_MP3[k]).sort((a, b) => baska(a) - baska(b));
     let i = 0;
     const adim = () => { if (i >= ks.length) return; sesCozumle(ks[i++]).then(() => setTimeout(adim, 30)); };
-    adim();
+    if (typeof AU !== 'undefined' && AU.baglam && AU.baglam()) adim();
+    else if (++sesOncedenDene < 40) setTimeout(sesOnceden, 500);   // ses bağlamı henüz yok: sonra yeniden dene
   }
-
   function sesOvguSec(k) {     // son çalınan üç övgüyü tekrarlama
     if (k !== 'p_aferin' && !sesOvguGecmis.includes(k)) return k;
     const ks = Object.keys(LINES).filter(x => /^p_aferin\d/.test(x) && !sesOvguGecmis.includes(x));
@@ -386,6 +389,7 @@ const SES = (() => {
   const sesSirala = (a, b) => (b.oncelik >= 3) - (a.oncelik >= 3) || b.acil - a.acil || b.oncelik - a.oncelik || a.t - b.t;
   // önceki cümle bittikten sonra ne kadar nefes payı
   function sesAra(s) {
+    if (sesOyunIlk) return 0.3;   // bölüm başı: ilk cümle uzun nefes payı beklemesin
     if (s.oncelik >= 3) return 0.25;
     if (s.acil >= 2) return 0.35;
     if (s.oncelik <= 0) return 0.5;
@@ -621,6 +625,7 @@ const SES = (() => {
           src.onended = () => { if (sesCalan === s) sesBitti(); };
         } catch (e) { if (typeof AU !== 'undefined' && AU.kis) AU.kis(false); sesGeriBeklet(s, 'başlatma'); return; }
       }
+      sesOyunIlk = false;
       s.sure = sure; s.bas = sesSaat() + 0.12;
       sesSoylendi[s.k] = 1; if (s.tek) sesSoylendi[s.tek] = 1; sesSonCal[s.k] = sesSaat();
       if (ovguMu(s.k)) { sesSonOvgu = sesSaat(); sesOvguGecmis.push(s.k); if (sesOvguGecmis.length > 3) sesOvguGecmis.shift(); }
@@ -675,6 +680,7 @@ const SES = (() => {
   OLAY.on('gokkusagiBasla', () => { sesGokBasladi = true; soyle('p_b_bitti', { oncelik: 3 }); });
   OLAY.on('sekil', e => { if (!(e && e.hayvan === 'feza')) setTimeout(() => soyle('p_b_sekil3'), 1200); });   // Feza şeklinde sekil.js 'p_b_sekil4' der; söylendiyse tekrar edilmez
   // Uzun sessizlikte küçük dostça sözler (en çok 3 kez, en az 90 sn arayla; Feza oynarken, uçuş/sahne dışında, kimse konuşmuyorken)
+  OLAY.on('durum', d => { sesOyunIlk = d === 'oyun'; });   // oyuna girilince ilk cümle çalınca (sesBaslat) kapanır
   let sesDostN = 0, sesDostT = -1e9, sesHareketT = sesSaat(), sesOyunT = -1e9;
   OLAY.on('durum', d => { if (d === 'oyun' && sesOyunT < 0) sesOyunT = sesSaat(); });
   function sesDostUygun() {

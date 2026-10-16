@@ -162,8 +162,26 @@ function readInput() {
 // Uçuş girdisi (tek nesne, her karede yeniden yazılır): eksenY -1 yukarı .. +1 aşağı (klavye), eksenX (-1..1), basili (parmak var mı),
 // hedefY / hedefX: parmağın DÜNYA koordinatı (yoksa null)
 const OM_UCUS_GIRDI = { eksenY: 0, eksenX: 0, basili: false, hedefY: null, hedefX: null };
+// Rüya seçilince sayfa yenilenir ve tarayıcı sesi yeniden kilitler: anlatım dokunuşa kadar susup sonra birden gelirdi.
+// Yenilemeyle başlayan bölümde ilk dokunuşa kadar karanlıkta yumuşak bir ışık bekler (en çok 20 sn), sonra anlatımla birlikte başlar.
+let omKilitIste = false, omKilitBitti = false, omSesBekliyor = false;
+function omKilitBekle() {
+  if (omSesBekliyor) return true;
+  if (!omKilitIste || omKilitBitti) return false;
+  omKilitBitti = true;
+  if (typeof SESSIZ !== 'undefined' && SESSIZ) return false;
+  if (typeof AU !== 'undefined' && AU && typeof AU.start === 'function') { try { AU.start(); } catch (e) { omHata('AU.start', e); } }
+  const ac = typeof AU !== 'undefined' && AU && AU.baglam && AU.baglam();
+  if (!ac || ac.state === 'running') return false;
+  omSesBekliyor = true;
+  const git = () => { if (!omSesBekliyor) return; omSesBekliyor = false; begin(); };
+  OLAY.on('sesHazir', git); setTimeout(git, 20000);
+  return true;
+}
 function begin() {
-  if (started) return; started = true; startT = now;
+  if (started) return;
+  if (omKilitBekle()) return;
+  started = true; startT = now;
   if (typeof AU !== 'undefined' && AU && typeof AU.start === 'function') { try { AU.start(); } catch (e) { omHata('AU.start', e); } }
   try { localStorage.setItem('fezaIsikSon', String(BOLUM_NO)); } catch (e) {}   // başlıkta son oynanan bölüm parlak durur
   DURUM = 'giris'; OLAY.emit('durum', DURUM);
@@ -1397,6 +1415,11 @@ function omPerdeCiz(dt) {
   if (omPerde.a <= 0.002) return;
   const e = omPerde.a * omPerde.a * (3 - 2 * omPerde.a);
   g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = e; g.fillStyle = '#050a18'; g.fillRect(0, 0, W, H); g.globalAlpha = 1;
+  if (omSesBekliyor) {   // dokunuşu bekleyen yumuşak ışık (yazı yok)
+    const u = now * 1.6, r = Math.min(W, H) * (0.1 + 0.018 * Math.sin(u)), gr = g.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, r * 2.4);
+    gr.addColorStop(0, 'rgba(255,236,170,0.85)'); gr.addColorStop(0.35, 'rgba(206,176,255,0.38)'); gr.addColorStop(1, 'rgba(206,176,255,0)');
+    g.globalCompositeOperation = 'lighter'; g.fillStyle = gr; g.fillRect(0, 0, W, H); g.globalCompositeOperation = 'source-over';
+  }
 }
 // kayıt: 'fezaIsikTamam' (JSON dizi), 'fezaIsikSon'; eski anahtarlar göç: Bitti1 / Bolum=2 → [1] tamam
 function omTamamOku() {
@@ -1677,7 +1700,7 @@ window.OYUN = { P, D, NESNELER, get FLOWERS() { return typeof FLOWERS !== 'undef
   ucusGirdi: OM_UCUS_GIRDI, get ucusKamera() { return omUc.w; }, omDikkat, omDkEkle };   // ucusGirdi: P.ucus.adim'e giden girdi; ucusKamera: uçuş kamerası ağırlığı   // coz: uyarlanır çözünürlük durumu (log, yenileme...)
 // ?atla / ?bolum=N (test) ve Bölüm 1→2 geçişinden sonraki yeniden yükleme: başlık ekranı atlanır (ses, ilk dokunuşta açılır)
 let omOtoBasla = Q.has('atla') || Q.has('bolum');
-try { const sq = sessionStorage.getItem('fezaIsikSec'); if (sq === '2' || sq === '3' || sq === '4' || sq === '5') { sessionStorage.removeItem('fezaIsikSec'); omOtoBasla = true; omPerde.a = omPerde.hedef = 1; } } catch (e) {}   // başlıktan rüya seçildi
-try { if (sessionStorage.getItem('fezaGecis') === '1') { sessionStorage.removeItem('fezaGecis'); omOtoBasla = true; omPerde.a = omPerde.hedef = 1; } } catch (e) {}   // ilk kareden karanlık: yeniden yükleme görünmez
+try { const sq = sessionStorage.getItem('fezaIsikSec'); if (sq === '2' || sq === '3' || sq === '4' || sq === '5') { sessionStorage.removeItem('fezaIsikSec'); omOtoBasla = true; omKilitIste = true; omPerde.a = omPerde.hedef = 1; } } catch (e) {}   // başlıktan rüya seçildi
+try { if (sessionStorage.getItem('fezaGecis') === '1') { sessionStorage.removeItem('fezaGecis'); omOtoBasla = true; omKilitIste = true; omPerde.a = omPerde.hedef = 1; } } catch (e) {}   // ilk kareden karanlık: yeniden yükleme görünmez
 if (omOtoBasla) begin();
 else if (typeof SAHNE !== 'undefined' && SAHNE && typeof SAHNE.secim === 'function') omSecimBaslat();   // başlık = yatak başı seçim sahnesi
