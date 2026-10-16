@@ -1,10 +1,12 @@
 /* volkan.js — Yanardağın yaşayan bahçeleri, sıcak buhar oyuncakları ve Kor Çiçeği.
    Korku, hasar, zaman sınırı yok. Her tamamlanma olayı yalnız bir kez üretilir. */
 'use strict';
-const VK5={sprites:[],podiums:[],petals:[],birds:[],buds:[],vents:[],steps:[],leaves:new Map(),heart:null,seed:null,warm:0,final:null,point:{x:0,y:0},hitPoint:{x:0,y:0}};
+const VK5={sprites:[],podiums:[],petals:[],pearlPetals:[],birds:[],buds:[],vents:[],steps:[],leaves:new Map(),heart:null,seed:null,warm:0,final:null,point:{x:0,y:0},hitPoint:{x:0,y:0}};
 const VK5_COL=['#e83d68','#9a3fc1','#c92e8a'];
 const VK5_GLOW_COL=['#f3ad65','#ecb06d','#efa65e','#eaa266','#ffc87b','#e83d68','#9a3fc1','#c92e8a'];
 const VK5_LEAF_COL=['#e83d68','#9a3fc1','#c92e8a','#b72f63','#7c3ea6','#a33491','#577e88','#5a8392','#447a88','#7857a4','#7e49a3','#993454','#536c86','#406e7b','#5e8392','#829d9d','#9ebfaf','#657b87','#d5ad9f','#8c8199','#8facac','#c4afbf','#b8c9bc','#98b6ac','#aab9ad'];
+const VK5_PEARL_LEAF=['#368f8c','#44a79c','#337e89'];
+VK5_LEAF_COL.push(...VK5_PEARL_LEAF);
 const vk5Ease=v=>smooth(clamp(v,0,1));
 function vk5Say(k){if(typeof SES!=='undefined'&&SES.soyle)SES.soyle(k);}
 function vk5Sfx(k,v){if(typeof AU!=='undefined'&&AU.sfx)AU.sfx(k,v);}
@@ -38,6 +40,10 @@ function vk5Petal(v){
  if(VK5.petals[v])return VK5.petals[v];const cv=vk5Cv(260,540),c=cv.getContext('2d');c.scale(2,2);const colors=[['#ff8290','#d82962','#5e214e'],['#d76bd0','#8c2bab','#3c1e63'],['#ec4f9b','#aa247a','#481d59']],co=colors[v%3],gr=c.createLinearGradient(-15,25,105,225);gr.addColorStop(0,co[0]);gr.addColorStop(.42,co[1]);gr.addColorStop(1,co[2]);c.fillStyle=gr;c.beginPath();c.moveTo(65,255);c.bezierCurveTo(24,207,-1,91,65,9);c.bezierCurveTo(135,89,110,211,65,255);c.fill();c.strokeStyle='#3a244d';c.lineWidth=1.6;c.stroke();
  c.save();c.beginPath();c.moveTo(65,255);c.bezierCurveTo(24,207,-1,91,65,9);c.bezierCurveTo(135,89,110,211,65,255);c.clip();c.fillStyle='rgba(255,206,192,.09)';c.beginPath();c.moveTo(65,9);c.lineTo(65,255);c.bezierCurveTo(45,207,34,92,65,9);c.fill();c.strokeStyle='rgba(255,195,202,.23)';c.lineWidth=.75;for(let j=0;j<8;j++){const y=58+j*22;c.beginPath();c.moveTo(65,y+18);c.quadraticCurveTo(40,y+3,26+j*.8,y-23);c.moveTo(65,y+18);c.quadraticCurveTo(91,y+3,102-j*.8,y-23);c.stroke();}c.restore();c.strokeStyle='rgba(255,204,202,.52)';c.lineWidth=.9;c.beginPath();c.moveTo(65,250);c.quadraticCurveTo(60,118,65,12);c.stroke();c.strokeStyle='rgba(255,184,172,.43)';c.beginPath();c.moveTo(65,9);c.bezierCurveTo(12,80,26,180,52,226);c.stroke();VK5.petals[v]=cv;return cv;
 }
+function vk5PearlPetal(v){
+ if(VK5.pearlPetals[v])return VK5.pearlPetals[v];const cv=vk5Cv(260,540),c=cv.getContext('2d');c.scale(2,2);const gr=c.createLinearGradient(22,30,105,232);gr.addColorStop(0,'#fff0cf');gr.addColorStop(.38,v===1?'#e5efd9':'#f1e8cc');gr.addColorStop(.55,'#a7d5c3');gr.addColorStop(1,'#338e8c');c.fillStyle=gr;c.strokeStyle='#357d82';c.lineWidth=1.8;c.beginPath();c.moveTo(65,255);c.bezierCurveTo(23,214,-6,93,34,32);c.bezierCurveTo(53,3,80,3,97,34);c.bezierCurveTo(137,102,105,218,65,255);c.fill();c.stroke();
+ c.fillStyle='rgba(255,244,214,.42)';c.beginPath();c.moveTo(64,15);c.bezierCurveTo(28,36,25,137,65,247);c.lineTo(65,15);c.fill();c.fillStyle='rgba(47,138,140,.21)';c.beginPath();c.moveTo(67,16);c.bezierCurveTo(106,77,99,179,65,247);c.lineTo(66,92);c.closePath();c.fill();c.strokeStyle='#58b2a4';c.lineWidth=1.3;c.beginPath();c.moveTo(65,248);c.bezierCurveTo(60,170,61,76,65,19);c.stroke();c.strokeStyle='rgba(66,150,143,.46)';c.lineWidth=.7;for(let j=0;j<7;j++){const y=58+j*24;c.beginPath();c.moveTo(65,y+19);c.quadraticCurveTo(39,y+3,32+j*.4,y-13);c.moveTo(65,y+19);c.quadraticCurveTo(93,y+3,100-j*.4,y-13);c.stroke();}c.strokeStyle='#f7d99e';c.lineWidth=1.1;c.beginPath();c.moveTo(37,32);c.bezierCurveTo(18,76,25,154,44,203);c.stroke();VK5.pearlPetals[v]=cv;return cv;
+}
 function vk5Stone(v){
  if(VK5.sprites[v])return VK5.sprites[v];const cv=vk5Cv(560,320),c=cv.getContext('2d');c.scale(2,2);const R=rng(937+v*53),color=['#3c3b60','#364660','#4e315d'][v%3];
  // Sculpted basalt garden basin, warm mineral inlay and a small ring of pebbles.
@@ -51,17 +57,22 @@ function vk5HeartArt(){
  if(VK5.heart)return VK5.heart;const cv=vk5Cv(120,160),c=cv.getContext('2d');c.scale(2,2);const gr=c.createLinearGradient(11,10,47,70);gr.addColorStop(0,'#ffe092');gr.addColorStop(.35,'#f7b450');gr.addColorStop(1,'#aa5c48');c.fillStyle=gr;c.strokeStyle='#733956';c.lineWidth=2.5;c.beginPath();c.moveTo(30,5);c.bezierCurveTo(13,22,5,45,16,61);c.quadraticCurveTo(30,79,45,59);c.bezierCurveTo(54,41,46,22,30,5);c.fill();c.stroke();c.fillStyle='#ffd783';c.beginPath();c.moveTo(30,10);c.lineTo(22,43);c.lineTo(30,66);c.lineTo(38,42);c.closePath();c.fill();c.strokeStyle='#ffecb5';c.lineWidth=1.2;c.beginPath();c.moveTo(28,14);c.quadraticCurveTo(19,38,25,54);c.stroke();c.strokeStyle='#c47d45';c.lineWidth=.8;for(let j=0;j<4;j++){c.beginPath();c.moveTo(30,27+j*8);c.lineTo(38-j,35+j*6);c.stroke();}VK5.heart=cv;return cv;
 }
 function vk5PodiumArt(v){
- if(VK5.podiums[v])return VK5.podiums[v];const cv=vk5Cv(220,150),c=cv.getContext('2d');c.scale(2,2);const co=v===1?'#593852':'#4c3b58',gr=c.createLinearGradient(25,27,80,65);gr.addColorStop(0,'#947189');gr.addColorStop(.3,co);gr.addColorStop(1,'#2d2c45');c.fillStyle='rgba(30,25,48,.2)';c.beginPath();c.ellipse(55,62,47,8,0,0,6.283);c.fill();c.fillStyle=gr;c.beginPath();c.moveTo(8,34);c.lineTo(25,23);c.lineTo(65,20);c.lineTo(101,31);c.lineTo(96,51);c.lineTo(70,63);c.lineTo(29,59);c.lineTo(12,47);c.closePath();c.fill();c.fillStyle='#735267';c.beginPath();c.ellipse(55,32,43,12,0,0,6.283);c.fill();c.fillStyle='#3f3049';c.beginPath();c.ellipse(55,31,34,7,0,0,6.283);c.fill();c.strokeStyle='#de9c79';c.lineWidth=1.3;c.beginPath();c.ellipse(55,32,40,10,0,0,6.283);c.stroke();c.strokeStyle='#b76b70';c.lineWidth=.8;for(let j=0;j<7;j++){const x=23+j*10;c.beginPath();c.moveTo(x,43+Math.sin(j)*3);c.lineTo(x+3,49);c.lineTo(x-1,55);c.stroke();}c.fillStyle='#e7b27b';for(let j=0;j<5;j++){const x=30+j*13,y=35+Math.sin(j*.9)*3;c.beginPath();c.moveTo(x,y-2);c.lineTo(x+1.8,y);c.lineTo(x,y+2);c.lineTo(x-1.8,y);c.closePath();c.fill();}VK5.podiums[v]=cv;return cv;
+ if(VK5.podiums[v])return VK5.podiums[v];const cv=vk5Cv(220,150),c=cv.getContext('2d');c.scale(2,2);const gr=c.createLinearGradient(25,24,80,67);gr.addColorStop(0,'#83bbaf');gr.addColorStop(.24,v===1?'#356d79':'#2e777a');gr.addColorStop(.72,'#254f63');gr.addColorStop(1,'#253b54');c.fillStyle='rgba(24,43,58,.24)';c.beginPath();c.ellipse(55,64,49,8,0,0,6.283);c.fill();c.fillStyle=gr;c.beginPath();c.moveTo(7,34);c.lineTo(23,22);c.lineTo(66,18);c.lineTo(103,31);c.lineTo(97,52);c.lineTo(72,64);c.lineTo(29,60);c.lineTo(11,47);c.closePath();c.fill();
+ c.fillStyle='#5f9e9b';c.beginPath();c.ellipse(55,31,44,12,0,0,6.283);c.fill();c.fillStyle='#294f60';c.beginPath();c.ellipse(55,30,34,7,0,0,6.283);c.fill();c.strokeStyle='#9ad8c1';c.lineWidth=1.4;c.beginPath();c.ellipse(55,31,41,10,0,0,6.283);c.stroke();c.fillStyle='rgba(156,218,197,.17)';c.beginPath();c.moveTo(23,22);c.lineTo(35,37);c.lineTo(29,60);c.lineTo(11,47);c.lineTo(7,34);c.closePath();c.fill();c.strokeStyle='#58b7a9';c.lineWidth=1;for(let j=0;j<6;j++){const x=24+j*12;c.beginPath();c.moveTo(x,43+Math.sin(j)*3);c.lineTo(x+2,49);c.lineTo(x-1,55);c.stroke();}c.strokeStyle='#deb77a';c.lineWidth=.8;c.beginPath();c.ellipse(55,31,36.5,7.8,0,0,6.283);c.stroke();c.fillStyle='#edc987';for(let j=0;j<5;j++){const x=30+j*13,y=35+Math.sin(j*.9)*3;c.beginPath();c.moveTo(x,y-1.8);c.lineTo(x+1.4,y);c.lineTo(x,y+1.8);c.lineTo(x-1.4,y);c.closePath();c.fill();}VK5.podiums[v]=cv;return cv;
 }
 function vk5BudArt(v,opened){
- const key=v*2+(opened?1:0);if(VK5.buds[key])return VK5.buds[key];const cv=vk5Cv(200,220),c=cv.getContext('2d');c.scale(2,2);c.translate(50,52);const co=v===0?['#fa6b87','#d63161','#68274e']:v===1?['#c56be0','#8e30b8','#412455']:['#f25aa5','#c12986','#582451'];
- c.fillStyle=co[2];c.beginPath();c.ellipse(0,7,32,32,0,0,6.283);c.fill();
- for(let layer=0;layer<2;layer++)for(let j=0;j<(opened?8:6);j++){
-  const count=opened?8:6,len=(layer?28:42)*(opened?1:1-v*.04),ww=layer?15:21;c.save();c.rotate(j*6.283/count+layer*.38+v*.12);const gr=c.createLinearGradient(-ww,-len,ww,6);gr.addColorStop(0,co[0]);gr.addColorStop(.42,co[1]);gr.addColorStop(1,co[2]);c.fillStyle=gr;c.strokeStyle=v===1?'#663570':'#79314f';c.lineWidth=1.25;c.beginPath();c.moveTo(0,11);c.bezierCurveTo(-ww,-len*.12,-ww*.96,-len*.68,0,-len);c.bezierCurveTo(ww*.94,-len*.72,ww,-len*.12,0,11);c.fill();c.stroke();c.fillStyle='rgba(76,27,62,.14)';c.beginPath();c.moveTo(0,-len);c.lineTo(0,11);c.quadraticCurveTo(ww*.8,-len*.2,0,-len);c.fill();c.strokeStyle='rgba(255,193,201,.4)';c.lineWidth=.65;c.beginPath();c.moveTo(0,4);c.lineTo(0,-len+3);c.stroke();c.restore();
+ const key=v*2+(opened?1:0);if(VK5.buds[key])return VK5.buds[key];const cv=vk5Cv(240,260),c=cv.getContext('2d');c.scale(2,2);c.translate(60,62);const edge=v===1?'#367e8b':'#337f7b',teal=v===1?'#7ec5c5':'#7bc8b1';
+ if(opened){
+  // Wide, rounded pearl petals are unlike the pointed ruby landscape lilies.
+  for(let j=0;j<7;j++){c.save();c.rotate(j*6.283/7+.12);const gr=c.createLinearGradient(-20,-51,18,8);gr.addColorStop(0,'#fff0d3');gr.addColorStop(.36,'#eee8cf');gr.addColorStop(.67,teal);gr.addColorStop(1,edge);c.fillStyle=gr;c.strokeStyle=edge;c.lineWidth=1.25;c.beginPath();c.moveTo(-3,9);c.bezierCurveTo(-23,-6,-29,-31,-20,-44);c.bezierCurveTo(-13,-55,7,-59,19,-46);c.bezierCurveTo(34,-28,19,-5,3,9);c.closePath();c.fill();c.stroke();c.fillStyle='rgba(255,245,216,.44)';c.beginPath();c.moveTo(0,-52);c.quadraticCurveTo(-17,-37,-9,-18);c.lineTo(0,7);c.closePath();c.fill();c.strokeStyle='#6bb4a3';c.lineWidth=.85;c.beginPath();c.moveTo(0,5);c.quadraticCurveTo(-4,-28,0,-50);c.moveTo(-1,-15);c.lineTo(-15,-32);c.moveTo(-2,-23);c.lineTo(14,-38);c.stroke();c.restore();}
+ }else{
+  // A sleepy rounded cocoon, with visibly overlapping folded paper lobes.
+  for(let j=0;j<3;j++){c.save();c.translate((j-1)*15,j===1?-8:1);c.rotate((j-1)*.27);const gr=c.createLinearGradient(-21,-45,21,38);gr.addColorStop(0,'#fbefd2');gr.addColorStop(.4,j===1?'#f5e7ca':'#dce9d3');gr.addColorStop(.7,teal);gr.addColorStop(1,edge);c.fillStyle=gr;c.strokeStyle=edge;c.lineWidth=1.4;c.beginPath();c.moveTo(0,39);c.bezierCurveTo(-25,30,-33,-12,-22,-34);c.bezierCurveTo(-11,-57,15,-52,24,-30);c.bezierCurveTo(36,-4,25,27,0,39);c.fill();c.stroke();c.fillStyle='rgba(255,244,212,.35)';c.beginPath();c.moveTo(-2,-48);c.bezierCurveTo(-21,-29,-21,6,0,33);c.lineTo(0,-46);c.fill();c.strokeStyle='#67b7aa';c.lineWidth=.9;c.beginPath();c.moveTo(0,34);c.bezierCurveTo(-2,11,0,-19,-2,-44);c.stroke();c.restore();}
  }
- c.fillStyle='#99485c';c.beginPath();c.arc(0,0,14,0,6.283);c.fill();const seed=c.createLinearGradient(-9,-11,9,12);seed.addColorStop(0,'#ffe3a0');seed.addColorStop(.47,'#f8c76c');seed.addColorStop(1,'#dc974e');c.fillStyle=seed;c.beginPath();c.arc(0,0,11.7,0,6.283);c.fill();c.fillStyle='#ffe8ab';c.beginPath();c.moveTo(-7,-7);c.lineTo(1,-10);c.lineTo(5,-3);c.lineTo(-3,2);c.closePath();c.fill();c.strokeStyle='#ba7955';c.lineWidth=.65;for(let j=0;j<5;j++){const a=j*6.283/5+.25;c.beginPath();c.moveTo(Math.cos(a)*6,Math.sin(a)*6);c.lineTo(Math.cos(a)*8.7,Math.sin(a)*8.7);c.stroke();}
- if(!opened){c.strokeStyle='rgba(255,190,120,.78)';c.lineWidth=1.1;for(let j=0;j<6;j++){c.save();c.rotate(j*6.283/6+v*.12);c.beginPath();c.moveTo(-13,-25);c.quadraticCurveTo(-8,-37,0,-40);c.stroke();c.restore();}}
- else{c.strokeStyle='#e8b47f';c.lineWidth=.85;for(let j=0;j<8;j++){const a=j*6.283/8;c.beginPath();c.moveTo(Math.cos(a)*11,Math.sin(a)*11);c.quadraticCurveTo(Math.cos(a)*21,Math.sin(a)*19,Math.cos(a)*26,Math.sin(a)*23);c.stroke();c.fillStyle='#e8b47f';c.beginPath();c.ellipse(Math.cos(a)*26,Math.sin(a)*23,1.3,2.1,a,0,6.283);c.fill();}}
+ // A warm seed face, never an eye-like gold slit or a white beacon.
+ c.fillStyle='#428b83';c.beginPath();c.ellipse(0,opened?0:2,opened?20:19,opened?17:15,0,0,6.283);c.fill();const seed=c.createLinearGradient(-13,-12,14,17);seed.addColorStop(0,'#ffe5a3');seed.addColorStop(.46,'#f2c574');seed.addColorStop(1,'#cf9356');c.fillStyle=seed;c.beginPath();c.ellipse(0,opened?0:2,opened?16:15.5,opened?14:12.5,0,0,6.283);c.fill();c.fillStyle='rgba(255,238,184,.5)';c.beginPath();c.ellipse(-5,opened?-6:-3,6,3.4,-.4,0,6.283);c.fill();c.strokeStyle='#6f654d';c.lineCap='round';c.lineWidth=1.25;
+ for(let side=-1;side<=1;side+=2){const x=side*6;c.beginPath();if(opened){c.moveTo(x-2.8,1);c.quadraticCurveTo(x,-3,x+2.8,1);}else{c.moveTo(x-3,1);c.quadraticCurveTo(x,4,x+3,1);}c.stroke();}c.lineWidth=.9;c.beginPath();c.moveTo(-3.1,7);c.quadraticCurveTo(0,opened?10.5:8.4,3.1,7);c.stroke();
+ c.fillStyle='#c8906c';c.globalAlpha=.5;c.beginPath();c.ellipse(-11,5,2.4,1.2,0,0,6.283);c.ellipse(11,5,2.4,1.2,0,0,6.283);c.fill();c.globalAlpha=1;
  VK5.buds[key]=cv;return cv;
 }
 function vk5LeafArt(col){
@@ -91,7 +102,7 @@ function vk5StepArt(v){
  c.strokeStyle='rgba(213,175,163,.38)';c.lineWidth=.7;for(let j=0;j<9;j++){const xx=38+j*18;c.beginPath();c.moveTo(xx,39+Math.sin(j)*3);c.lineTo(xx+4,47);c.lineTo(xx-2,53);c.stroke();}VK5.steps[v]=cv;return cv;
 }
 function vk5Warm(){
- if(VK5.warm<3){vk5Petal(VK5.warm++);return false;}if(VK5.warm<6){const v=VK5.warm++-3;vk5Stone(v);vk5PodiumArt(v);return false;}if(VK5.warm<9){vk5BirdArt(VK5.warm++-6);return false;}if(VK5.warm<15){const i=VK5.warm++-9;vk5BudArt(Math.floor(i/2),!!(i%2));return false;}
+ if(VK5.warm<3){const v=VK5.warm++;vk5Petal(v);vk5PearlPetal(v);return false;}if(VK5.warm<6){const v=VK5.warm++-3;vk5Stone(v);vk5PodiumArt(v);return false;}if(VK5.warm<9){vk5BirdArt(VK5.warm++-6);return false;}if(VK5.warm<15){const i=VK5.warm++-9;vk5BudArt(Math.floor(i/2),!!(i%2));return false;}
  if(VK5.warm<15+VK5_LEAF_COL.length){vk5LeafArt(VK5_LEAF_COL[VK5.warm++-15]);return false;}const next=15+VK5_LEAF_COL.length;if(VK5.warm===next){vk5HeartArt();vk5SeedArt();VK5.warm++;return false;}if(VK5.warm<next+4){vk5VentArt(VK5.warm++-next-1);return false;}if(VK5.warm<next+7){vk5StepArt(VK5.warm++-next-4);return false;}if(VK5.warm<next+11){const i=(VK5.warm++-next-7)*2;glow(VK5_GLOW_COL[i]);glow(VK5_GLOW_COL[i+1]);return false;}return true;
 }
 function vk5Leaf(x,y,ang,len,w,col,alpha){
@@ -108,23 +119,29 @@ function vk5TapFlight(n,hx,hy,tm){
 }
 function vk5Node(o,n,index,tm,col,variant,focused){
  const age=n.done?Math.max(0,now-n.t):99,k=n.done?vk5Ease(age/1.35):0,x=n.x,y=n.y,near=clamp(1-Math.abs(P.x-x)/350,0,1),p=vk5GardenPosition(o,index,tm,VK5.point),hx=p.x,hy=p.y,invite=!n.done&&focused?(.5+.5*Math.sin(tm*2.25+n.note*.35))*(.35+near*.65):0;
- g.drawImage(vk5PodiumArt(variant),x-55,y-32,110,75);
- g.lineCap='round';g.strokeStyle='#493047';g.lineWidth=5;g.beginPath();g.moveTo(x,y-4);g.bezierCurveTo(x-12,y-18,hx+9,hy+19,hx,hy);g.stroke();g.strokeStyle=variant===1?'#7857a4':'#577e88';g.lineWidth=2.6;g.stroke();
- for(let j=0;j<3;j++)vk5Leaf(x+(j%2?2:-2),y-12-j*17,(j%2?1:-1)*(.85+k*.12+invite*.09),29+k*8,9,j%2?'#577e88':variant===1?'#7c3ea6':'#b72f63',1);
- const rebound=n.done?Math.sin(Math.min(age,1.2)*14)*Math.exp(-age*3.8)*.13:invite*.035+(n.sicak||0)*.045,scale=(1-k*.06)*(1+rebound);
- g.save();g.translate(hx,hy);g.rotate(Math.sin(tm*.7+n.note)*.028+clamp((P.x-x)/220,-1,1)*near*.045-k*.26);g.scale(scale,scale*(1-k*.18));
- if(!n.done)for(let j=0;j<3;j++){g.save();g.translate(0,9);g.rotate((j-1)*(1.15+invite*.16));g.drawImage(vk5Petal(variant),-14,-52-invite*6,28,58+invite*6);g.restore();}
- g.globalAlpha=1-k;g.drawImage(vk5BudArt(variant,false),-50,-52,100,110);if(k>.001){g.globalAlpha=k;g.drawImage(vk5BudArt(variant,true),-55,-57.2,110,121);}g.restore();
- if(!n.done&&focused){vk5Pollen(hx,hy,tm,n.note*.17,.28+invite*.24);g.globalCompositeOperation='lighter';vk5Glow('#f3ad65',hx,hy,27,29,.045+invite*.055);g.globalCompositeOperation='source-over';}
+ g.drawImage(vk5PodiumArt(variant),x-60,y-33,120,81.8);
+ g.lineCap='round';g.strokeStyle='#254e5d';g.lineWidth=5.5;g.beginPath();g.moveTo(x,y-4);g.bezierCurveTo(x-12,y-18,hx+9,hy+19,hx,hy);g.stroke();g.strokeStyle='#66b4a3';g.lineWidth=2.6;g.stroke();
+ for(let j=0;j<3;j++)vk5Leaf(x+(j%2?2:-2),y-12-j*17,(j%2?1:-1)*(.85+k*.23+invite*.16),31+k*9,10,VK5_PEARL_LEAF[(variant+j)%3],1);
+ const rebound=n.done?Math.sin(Math.min(age,1.2)*14)*Math.exp(-age*3.8)*.13:invite*.035+(n.sicak||0)*.045,scale=1+rebound;
+ g.save();g.translate(hx,hy);g.rotate(Math.sin(tm*.7+n.note)*.024+clamp((P.x-x)/220,-1,1)*near*.045-k*.08);g.scale(scale,scale*(1+invite*.025));
+ // Closed lobes reach out individually; on waking they unfold sideways rather
+ // than merely changing tint. The open flower has a broad, calm new silhouette.
+ if(k<.98)for(let j=0;j<3;j++){g.save();g.translate(0,18);g.rotate((j-1)*(.61+invite*.13+k*1.12));g.globalAlpha=1-k;g.drawImage(vk5PearlPetal(variant),-17,-67-invite*5,34,72+invite*5);g.restore();}
+ if(k<.999){g.save();g.scale(1-k*.33,1-k*.12);g.globalAlpha=1-k;g.drawImage(vk5BudArt(variant,false),-60,-62,120,130);g.restore();}
+ if(k>.001){g.save();g.scale(.46+k*.54,.34+k*.66);g.globalAlpha=k;g.drawImage(vk5BudArt(variant,true),-75,-77.5,150,162.5);g.restore();}g.restore();
+ if(!n.done&&focused){
+  // A small rising trail lives on the real stem; no floating tutorial symbol.
+  g.save();g.fillStyle='#f1c47c';for(let j=0;j<5;j++){const u=(tm*.3+j*.2+n.note*.13)%1,xx=x+(hx-x)*u+Math.sin(u*Math.PI)*(12+invite*7)*Math.sin(tm*.7+j),yy=y-17+(hy-y+10)*u;g.globalAlpha=Math.sin(u*Math.PI)*(.42+invite*.32);g.beginPath();g.ellipse(xx,yy,1.4,2.3,Math.sin(u*3),0,6.283);g.fill();}g.restore();
+  vk5Pollen(hx,hy,tm,n.note*.17,.22+invite*.2);g.globalCompositeOperation='lighter';vk5Glow('#f3ad65',hx,hy,25,27,.025+invite*.035);g.globalCompositeOperation='source-over';}
  vk5TapFlight(n,hx,hy,tm);
  if(n.done&&age<1.4){g.globalCompositeOperation='lighter';vk5Glow('#f3ad65',hx,hy,20,20,Math.sin(age/1.4*Math.PI)*.14);g.globalCompositeOperation='source-over';}
 }
 function vk5GardenPower(o){let a=0;for(const n of o.nodes)if(n.done)a++;return a/o.nodes.length;}
 function vk5GardenEnd(o){
- if(o.done)return;o.done=true;o.end=now;o.open=0;if(typeof V5!=='undefined')V5.bahce=Math.min(BOLUM.korTop,V5.bahce+1);lightTarget=Math.max(lightTarget,.42+(typeof V5!=='undefined'?V5.bahce:1)*.13);burst(o.x,o.y-90,34,[VK5_COL[o.sira],'#ffe4b3','#ffffff'],105,2.1,5);o.index=o.sira;OLAY.emit('korUyandi',o);if(typeof dragonHappy==='function')dragonHappy(o);
+ if(o.done)return;o.done=true;o.end=now;o.open=0;if(typeof V5!=='undefined')V5.bahce=Math.min(BOLUM.korTop,V5.bahce+1);lightTarget=Math.max(lightTarget,.42+(typeof V5!=='undefined'?V5.bahce:1)*.13);burst(o.x,o.y-90,34,[VK5_PEARL_LEAF[o.sira],'#f6d59b','#bce2c4'],105,2.1,5);o.index=o.sira;OLAY.emit('korUyandi',o);if(typeof dragonHappy==='function')dragonHappy(o);
 }
 function vk5WakeNode(o,n,source){
- if(o.done||n.done)return false;n.done=true;n.t=now;n.waking=false;n.wakeAge=0;n.sicak=1;n.activationSource=source;burst(n.x,n.y-82,12,[VK5_COL[o.sira],'#ffe3b1','#ffffff'],65,1.1,3.2);vk5Sfx('cicek',source==='help'?.28:.45);OLAY.emit('volkanKristal',{index:n.note,notes:[0,4,7],source:'bahce',interaction:source});if(o.nodes.every(n=>n.done))vk5GardenEnd(o);return true;
+ if(o.done||n.done)return false;n.done=true;n.t=now;n.waking=false;n.wakeAge=0;n.sicak=1;n.activationSource=source;burst(n.x,n.y-82,12,[VK5_PEARL_LEAF[o.sira],'#f3d39c','#bddfce'],65,1.1,3.2);vk5Sfx('cicek',source==='help'?.28:.45);OLAY.emit('volkanKristal',{index:n.note,notes:[0,4,7],source:'bahce',interaction:source});if(o.nodes.every(n=>n.done))vk5GardenEnd(o);return true;
 }
 function vk5TapNode(o,n){
  if(o.done||n.done)return false;n.sicak=1;if(n.waking)return true;n.waking=true;n.wakeAge=0;n.wakeFromX=D.x+(n.x>D.x?13:-13);n.wakeFromY=D.y-10;n.wakeDuration=clamp(Math.hypot(n.x-D.x,n.y-82-D.y)/700,.4,.95);OLAY.emit('volkanBahceDokun',{o,node:n,index:n.note});return true;
@@ -247,14 +264,16 @@ TUR.kaydet('korCicegi',{
   if(o.age>=26){o.done=true;if(typeof V5!=='undefined')V5.final=true;OLAY.emit('volkanTamam',o);}
  },
  ciz(o,tm){
-  const a=o.started?o.age:0,opening=vk5Ease((a-1)/8),heart=vk5Ease((a-4)/5),lift=vk5Ease((a-10)/7),ready=!o.started&&vk5FinalReady(),invite=ready?(.5+.5*Math.sin(tm*1.9))*.035:0,cx=o.x,cy=o.y-155-opening*40;g.save();
+  const a=o.started?o.age:0,opening=vk5Ease((a-1)/8),heart=vk5Ease((a-4)/5),lift=vk5Ease((a-10)/7),reveal=vk5Ease((opening-.22)/.55),ready=!o.started&&vk5FinalReady(),invite=ready?(.5+.5*Math.sin(tm*1.9))*.035:0,cx=o.x,cy=o.y-155-opening*40;g.save();
   // Broad mineral dais anchors the flower in this landscape.
-  g.drawImage(vk5Stone(2),cx-220,o.y-58,440,126);g.strokeStyle='#2d2d48';g.lineWidth=11;g.lineCap='round';g.beginPath();g.moveTo(cx,o.y-3);g.bezierCurveTo(cx-25,o.y-70,cx+23,cy+40,cx,cy);g.stroke();g.strokeStyle='#447a88';g.lineWidth=6.5;g.stroke();g.strokeStyle='rgba(217,166,172,.62)';g.lineWidth=1.2;g.beginPath();g.moveTo(cx-2,o.y-2);g.bezierCurveTo(cx-27,o.y-80,cx+19,cy+45,cx-3,cy);g.stroke();
+  g.drawImage(vk5Stone(2),cx-220,o.y-58,440,126);g.drawImage(vk5PodiumArt(2),cx-100,o.y-38,200,136.4);g.strokeStyle='#2d2d48';g.lineWidth=11;g.lineCap='round';g.beginPath();g.moveTo(cx,o.y-3);g.bezierCurveTo(cx-25,o.y-70,cx+23,cy+40,cx,cy);g.stroke();g.strokeStyle='#447a88';g.lineWidth=6.5;g.stroke();g.strokeStyle='rgba(163,219,196,.62)';g.lineWidth=1.2;g.beginPath();g.moveTo(cx-2,o.y-2);g.bezierCurveTo(cx-27,o.y-80,cx+19,cy+45,cx-3,cy);g.stroke();
   for(let j=0;j<6;j++){const side=j%2?1:-1,yy=o.y-24-Math.floor(j/2)*31;vk5Leaf(cx,yy,side*(.8+opening*.3)+Math.sin(tm*.45+j)*.015,65+opening*25,17,j%3?'#406e7b':'#5e8392',1);}
-  // Three interlaced rings open slowly; each petal retains its folded paper seam.
-  for(let layer=0;layer<3;layer++){const count=layer===0?9:7;for(let j=0;j<count;j++){const ang=(j-(count-1)*.5)*(layer===0?.07+opening*.24+invite:.06+opening*.21+invite*.5),osc=Math.sin(tm*.45+j*.8+layer)*.012*opening,k=(layer===0?.78:layer===1?.62:.47)*(1+.04*Math.sin(tm*.3+layer)*opening);g.save();g.translate(cx,cy+layer*12);g.rotate(ang+osc);g.scale(k*(.72+opening*.28),k);g.globalAlpha=1;g.drawImage(vk5Petal((layer+j%2)%3),-65,-255,130,270);g.restore();}}
+  // The same pearl-and-teal sleeping material marks the final invitation.
+  // Its opening reveals the volcano's rich crimson/gold inner crown.
+  for(let layer=0;layer<3;layer++){const count=layer===0?9:7;for(let j=0;j<count;j++){const ang=(j-(count-1)*.5)*(layer===0?.07+opening*.24+invite:.06+opening*.21+invite*.5),osc=Math.sin(tm*.45+j*.8+layer)*.012*opening,k=(layer===0?.78:layer===1?.62:.47)*(1+.04*Math.sin(tm*.3+layer)*opening),v=(layer+j%2)%3;g.save();g.translate(cx,cy+layer*12);g.rotate(ang+osc);g.scale(k*(.72+opening*.28),k);if(reveal<.999){g.globalAlpha=1-reveal;g.drawImage(vk5PearlPetal(v),-65,-255,130,270);}if(reveal>.001){g.globalAlpha=reveal;g.drawImage(vk5Petal(v),-65,-255,130,270);}g.restore();}}
+  if(opening<.95){g.save();g.globalAlpha=1-vk5Ease(opening/.95);g.translate(cx,cy-57);g.scale(1+invite,1+invite*.7);g.drawImage(vk5BudArt(2,false),-55,-56.8,110,119.2);g.restore();}
   // Small molten seed, real gold facets: keep the ruby/violet pigment intact.
-  const seed=1+Math.sin(tm*1.1)*.025;g.drawImage(vk5HeartArt(),cx-23*seed,cy-80*seed,46*seed,62*seed);g.globalCompositeOperation='lighter';vk5Glow('#eaa266',cx,cy-49,92+opening*25,80,.035+heart*.035);vk5Glow('#ffc87b',cx,cy-48,26+heart*8,30+heart*8,.1+heart*.1);g.globalCompositeOperation='source-over';
+  const seed=1+Math.sin(tm*1.1)*.025;g.globalAlpha=vk5Ease(opening*2);g.drawImage(vk5HeartArt(),cx-23*seed,cy-80*seed,46*seed,62*seed);g.globalAlpha=1;g.globalCompositeOperation='lighter';vk5Glow('#eaa266',cx,cy-49,92+opening*25,80,.02+heart*.045);vk5Glow('#ffc87b',cx,cy-48,26+heart*8,30+heart*8,.035+heart*.16);g.globalCompositeOperation='source-over';
   if(ready)vk5Pollen(cx,cy-60,tm,.3,.55);
   if(opening>.02){g.strokeStyle='rgba(251,231,187,.55)';g.lineWidth=1;for(let j=0;j<9;j++){const ang=(j-4)*.29,ln=40+heart*32;g.beginPath();g.moveTo(cx,cy-8);g.quadraticCurveTo(cx+Math.sin(ang)*ln,cy-35,cx+Math.sin(ang)*ln,cy-15-Math.cos(ang)*ln);g.stroke();g.fillStyle='#fff0c3';g.beginPath();g.ellipse(cx+Math.sin(ang)*ln,cy-15-Math.cos(ang)*ln,2.3,3.4,ang,0,6.283);g.fill();}}
   g.restore();

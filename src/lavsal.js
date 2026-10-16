@@ -339,22 +339,25 @@ function ls5Sunbird(o,tm){
   if(o.faz!=='yol'||o.routeU<.32||o.routeU>.84)return;
   const age=journey*27,arrive=smooth(clamp(journey/.185,0,1)),leave=smooth(clamp((journey-.74)/.26,0,1));
   const x=o.mx+lerp(VW*.65,215,arrive)-leave*260,y=o.my-165-Math.sin(age*.45)*22-leave*170;
-  const sc=(1.48+arrive*.35)*(1-leave*.48),wing=20+Math.sin(tm*1.7)*24;
+  const sc=(1.48+arrive*.35)*(1-leave*.48),wing=20+Math.sin(tm*1.7)*24,farWing=20+Math.sin(tm*1.7+.48)*22;
   dglow('#ffe0af',x,y,115,.12*(1-leave));
   g.save();g.translate(x,y);g.scale(sc,sc);g.globalAlpha=Math.min(1,age/2)*(1-leave);
   ls5Poly(g,[[-64,9],[-18,-8],[30,-2],[60,-15],[49,4],[11,17],[-44,19]],'#f4c19f');
   ls5Poly(g,[[-18,0],[-39,-wing*.55],[-69,-wing-16],[-82,-wing-5],[-65,-wing+11],[-43,-1],[17,9]],'#f0cc9e');
   ls5Poly(g,[[-18,0],[-69,-wing-16],[-39,-wing*.55],[17,9]],'#ffe5b1');
   ls5Poly(g,[[-69,-wing-16],[-82,-wing-5],[-65,-wing+11],[-43,-1],[17,9]],'#c386aa');
-  ls5Poly(g,[[-12,2],[14,-wing*.65],[31,-wing-34],[49,-wing-27],[65,-wing-12],[52,-wing+3],[30,0],[15,13]],'#dc9ab7');
-  ls5Poly(g,[[31,-wing-34],[32,-wing-9],[15,13],[49,-wing-27]],'#ffe5ac');
-  ls5Poly(g,[[49,-wing-27],[65,-wing-12],[52,-wing+3],[15,13]],'#efbaad');
-  ls5Poly(g,[[32,-wing-9],[43,-wing+1],[30,0],[15,13]],'#bd77a1');
+  ls5Poly(g,[[-12,2],[14,-farWing*.65],[31,-farWing-34],[49,-farWing-27],[65,-farWing-12],[52,-farWing+3],[30,0],[15,13]],'#dc9ab7');
+  ls5Poly(g,[[31,-farWing-34],[32,-farWing-9],[15,13],[49,-farWing-27]],'#ffe5ac');
+  ls5Poly(g,[[49,-farWing-27],[65,-farWing-12],[52,-farWing+3],[15,13]],'#efbaad');
+  ls5Poly(g,[[32,-farWing-9],[43,-farWing+1],[30,0],[15,13]],'#bd77a1');
   ls5Poly(g,[[-57,10],[-102,3],[-81,21],[-46,19]],'#d0a4bb');
   ls5Poly(g,[[48,-3],[57,-27],[69,-30],[78,-24],[76,-11],[61,0]],'#f6d6b5');
   ls5Poly(g,[[76,-21],[91,-16],[76,-13]],'#e3a883');
-  g.fillStyle='#67566e';g.beginPath();g.arc(71,-23,1.3,0,Math.PI*2);g.fill();
-  g.strokeStyle='rgba(255,229,188,.85)';g.lineWidth=.8;g.beginPath();g.moveTo(-68,-wing-14);g.lineTo(1,8);g.lineTo(32,-wing-30);g.moveTo(1,8);g.lineTo(48,-wing-24);g.moveTo(1,8);g.lineTo(-65,-wing+8);g.moveTo(-62,10);g.lineTo(15,13);g.lineTo(54,-4);g.stroke();
+  const blink=Math.pow(Math.max(0,Math.cos(tm*.73)),38);
+  g.fillStyle='#493f5a';g.beginPath();g.ellipse(71,-23,1.65,Math.max(.3,1.8*(1-blink)),0,0,Math.PI*2);g.fill();
+  if(blink<.4){g.fillStyle='#fff2d4';g.beginPath();g.arc(71.45,-23.5,.48,0,Math.PI*2);g.fill();}
+  g.fillStyle='rgba(235,142,156,.55)';g.beginPath();g.ellipse(69,-18.5,3,1.4,.15,0,Math.PI*2);g.fill();
+  g.strokeStyle='rgba(255,229,188,.85)';g.lineWidth=.8;g.beginPath();g.moveTo(-68,-wing-14);g.lineTo(1,8);g.lineTo(32,-farWing-30);g.moveTo(1,8);g.lineTo(48,-farWing-24);g.moveTo(1,8);g.lineTo(-65,-wing+8);g.moveTo(-62,10);g.lineTo(15,13);g.lineTo(54,-4);g.stroke();
   g.strokeStyle='rgba(149,82,112,.45)';g.lineWidth=.65;g.beginPath();g.moveTo(49,-17);g.quadraticCurveTo(57,-4,66,-8);g.stroke();g.restore();
   for(let i=0;i<4;i++){const u=(tm*.18+i/4)%1;ls5Star(x-90-u*90,y+20+Math.sin(i*2+tm)*18,4,tm*.4+i,LS5_RENK[i],Math.sin(u*Math.PI)*.65*(1-leave));}
 }
@@ -365,10 +368,12 @@ function ls5DrawWake(o,tm){
     for(let i=0;i<26;i++){const t=i/25,xx=o.mx-70-t*350,yy=o.my+24+j*9+Math.sin(t*11-tm*4.4+j)*8*amp;if(i)g.lineTo(xx,yy);else g.moveTo(xx,yy);}g.stroke();
   }
   // Des poissons de papier jouent sous la coque et deviennent oiseaux dans la vapeur.
-  const progress=o.routeU||0,birds=o.faz==='yol'&&progress>.19?Math.min(6,1+Math.floor((progress-.19)/.1)):0;
+  // The very same three youngsters Feza fed return to accompany the boat.
+  const progress=o.routeU||0,birds=o.faz==='yol'&&progress>.19?Math.min(3,1+Math.floor((progress-.19)/.1)):0;
   for(let i=0;i<birds;i++){
     const settle=clamp((progress-.19-i*.1)/.04,0,1),bx=o.mx-120-i*37+Math.sin(tm*1.1+i)*18,by=o.my-92-Math.sin(tm*.8+i*.7)*29-i%2*35;
-    ls5Bird(bx,by,.68+Math.sin(i*2)*.1,tm+i,LS5_RENK[i%5],settle*.95);
+    if(typeof kr5DrawTravelBird==='function')kr5DrawTravelBird(i,bx,by,.55+Math.sin(i*2)*.06,tm+i,settle*.95);
+    else ls5Bird(bx,by,.68+Math.sin(i*2)*.1,tm+i,LS5_RENK[i%5],settle*.95);
   }
 }
 function ls5DrawBoat(o,tm){

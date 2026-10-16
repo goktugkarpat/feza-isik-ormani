@@ -1629,7 +1629,28 @@ const AU = (() => {
       gur(t, .32, 'bandpass', 700, 1600, .65, .009, .018, pan, 1);
       korTasi(77, t + .08, .026, pan, sfxG, false);
     },
-    volkanMiniTamam(t) {
+    volkanYemTut(t) {
+      // Altın meyvenin kâğıt sapını tutma: kısa, yumuşak bir hışırtı.
+      gur(t, .13, 'bandpass', 650, 1800, .55, .006, .014, 0, 0);
+    },
+    volkanYavruBesle(t, e) {
+      const i = cl(e && Number.isFinite(e.index) ? e.index | 0 : 0, 0, 2), pan = (i - 1) * .32;
+      const full = !!(e && e.babyFed >= 2), n = [65, 69, 72][i];
+      // Minik bir lokma ve boğuk, mutlu ötüş; tınlama veya keskin cıvıltı yok.
+      gur(t, .14, 'bandpass', 360, 850, .7, .009, .012, pan, 0);
+      ton(t + .025, 'sine', 190, 135, .11, .008, .018, pan, 0, sfxG);
+      ton(t + .17, 'sine', NOTE(n) * .94, NOTE(n) * 1.05, .17, .008, .035, pan, 1, sfxG);
+      if (full) ton(t + .38, 'sine', NOTE(n + 7) * .97, NOTE(n + 7), .22, .006, .055, pan, 1, sfxG);
+    },
+    volkanYavruUctu(t, e) {
+      const i = cl(e && Number.isFinite(e.index) ? e.index | 0 : 0, 0, 2), pan = (i - 1) * .32, n = [65, 69, 72][i];
+      gur(t, .22, 'bandpass', 700, 1550, .5, .005, .05, pan, 0);
+      gur(t + .2, .22, 'bandpass', 900, 1800, .5, .004, .055, pan, 0);
+      ton(t + .1, 'sine', NOTE(n), NOTE(n + 2), .2, .006, .045, pan, 1, sfxG);
+      ton(t + .34, 'sine', NOTE(n + 7) * .97, NOTE(n + 7), .25, .005, .06, pan, 1, sfxG);
+    },
+    volkanMiniTamam(t, e) {
+      if (e && e.yavru) { kabar([53, 60, 65, 69, 76], t + .1, .8, .45, 1.7, .013, sfxG, false); return; }
       [65, 69, 72, 77, 81].forEach((n, i) => korTasi(n, t + i * .14, .04, -.35 + i * .17, sfxG, true));
       kabar([53, 60, 65, 69, 76], t + .45, .7, .4, 2.0, .018, sfxG, true);
     },
@@ -2752,7 +2773,7 @@ const AU = (() => {
       setTimeout(() => { if (performance.now() - kirpT > 700) cal('parilti', 1); }, 60);
       return;
     }
-    let ad = AD[k] || (bolum5() && /^(bolum5Basla|korUyandi|buharZip|volkanKristal|volkanCicekSec|volkanCicekNefes|volkanCicekAc|volkanMiniTamam|lavSalBasla|lavSalAn|lavSalBitti|volkanFinalBasla|volkanTamam)$/.test(k) ? k : null); if (!ad || !ac) return;
+    let ad = AD[k] || (bolum5() && /^(bolum5Basla|korUyandi|buharZip|volkanKristal|volkanCicekSec|volkanCicekNefes|volkanCicekAc|volkanYemTut|volkanYavruBesle|volkanYavruUctu|volkanMiniTamam|lavSalBasla|lavSalAn|lavSalBitti|volkanFinalBasla|volkanTamam)$/.test(k) ? k : null); if (!ad || !ac) return;
     if (ad === 'su' && bolum3()) ad = 'bulutDus';   // Bölüm 3'te su yok
     if (ad === 'zipla' && bolum4()) ad = 'suAkinti'; // Bölüm 4'te zıplama yerine ışıklı akıntı süzülüşü
     if (v == null && (ad === 'isiltiTopla' || ad === 'kuzuRenk' || ad === 'gokkusagiParca')) v = { oto: 1 };   // sıra verilmediyse kendi sayacımız
@@ -2779,8 +2800,11 @@ const AU = (() => {
     OLAY.on('volkanCicekSec', e => { if (bolum5()) olaySes('volkanCicekSec', e); });
     OLAY.on('volkanCicekNefes', e => { if (bolum5()) olaySes('volkanCicekNefes', e); });
     OLAY.on('volkanCicekAc', e => { if (bolum5()) olaySes('volkanCicekAc', e); });
+    OLAY.on('volkanYemTut', e => { if (bolum5()) olaySes('volkanYemTut', e); });
+    OLAY.on('volkanYavruBesle', e => { if (bolum5()) olaySes('volkanYavruBesle', e); });
+    OLAY.on('volkanYavruUctu', e => { if (bolum5()) olaySes('volkanYavruUctu', e); });
     OLAY.on('volkanMiniAsama', e => { if (bolum5()) vMiniAsama = e && e.stage || 1; });
-    OLAY.on('volkanMiniTamam', () => { if (!bolum5()) return; vMini = false; vMiniAsama = 3; olaySes('volkanMiniTamam'); });
+    OLAY.on('volkanMiniTamam', e => { if (!bolum5()) return; vMini = false; vMiniAsama = 3; olaySes('volkanMiniTamam', e); });
     OLAY.on('lavSalBasla', () => { if (!bolum5()) return; vSal = true; vSalT0 = zaman(); olaySes('lavSalBasla'); });
     OLAY.on('lavSalAn', e => { if (bolum5()) olaySes('lavSalAn', e); });
     OLAY.on('lavSalBitti', () => { if (!bolum5()) return; vSal = false; olaySes('lavSalBitti'); });
@@ -3111,10 +3135,33 @@ const AU = (() => {
     olaylariBagla();
   }
 
+  let sonSesDurum = null;
+  function sesDurumuBildir() {
+    const durum = ac && ac.state;
+    if (durum === sonSesDurum) return;
+    sonSesDurum = durum;
+    if (durum === 'running' && typeof OLAY !== 'undefined') OLAY.emit('sesHazir', { state: durum });
+  }
+  function uyandir() {
+    const a = ac;
+    if (!a || test || document.hidden || a.state === 'closed') return;
+    if (a.state === 'running') { sesDurumuBildir(); return; }
+    // İlk otomatik açılışta resume bekleyebilir: sonraki gerçek dokunuşta
+    // yeniden çağırmak gerekir. Bekleyen Promise, dokunuşun önünü kesmesin.
+    try { const p = a.resume && a.resume(); if (p && p.then) p.then(sesDurumuBildir, () => {}); } catch (_) {}
+    try { const b = a.createBuffer(1, 1, 22050), s = a.createBufferSource(); s.buffer = b; s.connect(a.destination); s.start(0); } catch (_) {}
+    sesDurumuBildir();
+  }
+  function uyut() {
+    if (!ac || test || ac.state === 'closed') return;
+    try { const p = ac.suspend && ac.suspend(); if (p && p.catch) p.catch(() => {}); } catch (_) {}
+    sesDurumuBildir();
+  }
   function start() {
     // ?sessiz&sesdene: motor çalışır ama çıkış tamamen kapalı (sessiz deneme)
     const dene = typeof Q !== 'undefined' && Q.has && Q.has('sesdene');
-    if (ac || (typeof SESSIZ !== 'undefined' && SESSIZ && !dene)) return;
+    if (typeof SESSIZ !== 'undefined' && SESSIZ && !dene) return;
+    if (ac) { uyandir(); return; }
     sessizDeneme = !!(typeof SESSIZ !== 'undefined' && SESSIZ);
     // iPad: sessiz anahtarı açıkken de çalsın (iOS 17+: medya oturumu 'playback')
     try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
@@ -3125,14 +3172,13 @@ const AU = (() => {
     if (typeof DURUM !== 'undefined') durumDegisti(DURUM);
     setInterval(tick, 80); tick();
     requestAnimationFrame(adimDongu);
-    // iPad: dokunuşla sesin kilidini aç (ör. ?atla ile dokunmadan başladıysa)
-    const ac2 = ac;
-    const ac3 = () => {
-      if (ac2.state !== 'running') { ac2.resume && ac2.resume().catch(() => {}); try { const b = ac2.createBuffer(1, 1, 22050), s = ac2.createBufferSource(); s.buffer = b; s.connect(ac2.destination); s.start(0); } catch (e) {} }
-    };
-    for (const ev of ['pointerdown', 'touchend', 'keydown', 'touchstart']) addEventListener(ev, ac3, { passive: true });
-    document.addEventListener('visibilitychange', () => { if (document.hidden) ac2.suspend && ac2.suspend(); else ac2.resume && ac2.resume().catch(() => {}); });
-    ac3();
+    // Capture: mini oyun canvas olayını durdursa da gerçek dokunuş sesi açar.
+    // iPad'de parmak kalkışı da ayrı bir geçerli kullanıcı hareketidir.
+    for (const ev of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'keydown']) addEventListener(ev, uyandir, { passive: true, capture: true });
+    document.addEventListener('visibilitychange', () => { if (document.hidden) uyut(); else uyandir(); });
+    addEventListener('pagehide', uyut); addEventListener('pageshow', uyandir);
+    if (ac.addEventListener) ac.addEventListener('statechange', sesDurumuBildir);
+    uyandir();
   }
 
   // çevrimdışı deneme (OfflineAudioContext): AU._dene(ctx, sure, senaryo(t) → {durum, bolge, light, uyku}, olaylar)

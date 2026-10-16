@@ -136,9 +136,9 @@ const SES = (() => {
     "p_v_uyku": "Bu gece, Uyuyan Yanardağ'a gidiyoruz!",
     "p_v_giris": "Bak Feza, dağ usulca nefes alıyor! Kor Çiçeği uyumuş. Işık bahçelerini canlandırıp onu uyandıralım.",
     "p_v_buhar": "Bu yumuşacık buhar bizi yukarı taşıyor! Taşlara zıpla, sıcak rüzgârda süzül!",
-    "p_v_mini": "Gel, birlikte uçalım! Büyük tomurcuklara dokun, çiçekler açılsın.",
-    "p_v_mini_yardim": "Büyük tomurcuğa dokun. Bak, çiçek açacak!",
-    "p_v_kristal_son": "Bütün çiçekler açıldı! Şimdi kayığımıza gidelim.",
+    "p_v_mini": "Yavru kuşlar acıkmış! Meyveyi kuşlara sürükle, onları doyuralım.",
+    "p_v_mini_yardim": "Meyveyi aç yavru kuşa sürükle.",
+    "p_v_kristal_son": "Yaşasın, kuşlar doydu! Şimdi kayığımıza gidelim.",
     "p_v_sal": "Işık nehrinde yolculuğa çıkıyoruz! Parmağınla yukarıya, aşağıya yol göster; salımız sıcak buharda süzülsün. Ben yanındayım!",
     "p_v_sal_son": "Ne güzel süzüldük! Işık kuşlarımız da bizimle geldi. Hadi, Kor Çiçeği'ni bulalım!",
     "p_v_kalp": "İşte dağın kalbi: Kor Çiçeği! Bahçelerimiz uyandı. Şimdi yaklaş, çiçeğe dokunalım.",
@@ -232,8 +232,8 @@ const SES = (() => {
   const agacYandi = () => (typeof BOLUM_NO !== 'undefined' && BOLUM_NO === 2) ? false : !!(typeof TREE !== 'undefined' && TREE && TREE.done);
   // her talimatın "hâlâ yerinde mi?" koşulu (çalma anında bakılır)
   const KOSUL = {
-    p_v_mini: () => (typeof V5 === 'undefined' || !V5.mini) && (typeof KR5 === 'undefined' || !KR5.o || KR5.o.kr5.selected < KR5.o.kr5.flowers.length),
-    p_v_mini_yardim: () => typeof KR5 !== 'undefined' && !!KR5.aktif && KR5.o.kr5.phase === 'play' && KR5.o.kr5.selected < KR5.o.kr5.flowers.length,
+    p_v_mini: () => (typeof V5 === 'undefined' || !V5.mini) && (typeof KR5 === 'undefined' || !KR5.o || KR5.o.kr5.totalFed < 6),
+    p_v_mini_yardim: () => typeof KR5 !== 'undefined' && !!KR5.aktif && KR5.o.kr5.phase === 'feed' && KR5.o.kr5.totalFed < 6,
     p_v_sal: () => typeof V5 === 'undefined' || !V5.sal,
     p_v_kalp: () => typeof V5 === 'undefined' || !V5.final,
     p_i_denizati: () => typeof DNZ === 'undefined' || DNZ.ati.some(o => !o.done),
@@ -280,6 +280,9 @@ const SES = (() => {
   function sesGecerli(s) {
     if (sesSaat() > s.son) return 'süre doldu';
     if (sesEskidi[sesTaban(s.k)]) return 'olay eskitti';
+    const durum = typeof DURUM !== 'undefined' ? DURUM : 'oyun';
+    if (s.k === 'p_secim' && durum !== 'baslik') return 'seçim bitti';
+    if (/^(a_giris\d|p_[ybiv]_uyku)$/.test(s.k) && durum !== 'giris') return 'uyku sahnesi bitti';
     if (anlatici(s.k)) return '';
     if (!sesSert(s)) return 'oyun bitti';
     if (agacYandi() && !ovguMu(s.k)) return 'ağaç yandı';
@@ -318,7 +321,21 @@ const SES = (() => {
         const p = ac.decodeAudioData(sesBase64(VOICE_MP3[k]), b => { sesBuf[k] = b; res(b); }, () => res(null));
         if (p && p.then) p.then(b => { sesBuf[k] = b; res(b); }, () => res(null));
       } catch (e) { res(null); }
-    });
+    }).then(b => { if (!b) delete sesCoz[k]; return b; });
+  }
+  const sesSesli = k => !SESSIZ && !!(window.VOICE_MP3 && VOICE_MP3[k]);
+  function sesBeklemeSuresi(s, bekle) {
+    const t = sesSaat();
+    if (s.sesBekT != null) s.son += Math.max(0, t - s.sesBekT);
+    s.sesBekT = bekle ? t : null;
+  }
+  function sesGeriBeklet(s, neden) {
+    if (sesCalan !== s) return;
+    sesCalan = null;
+    if (!sesGecerli(s)) {
+      s.sesBekT = sesSaat(); s.sesDeneT = sesSaat() + (neden === 'çözme' ? .5 : 0);
+      sesSira.unshift(s); sesNot('ses bekle', s.k, neden);
+    } else sesNot('at', s.k, sesGecerli(s));
   }
   function sesOnceden() {     // cümleleri boşta önceden çöz (ilk konuşmada gecikme olmasın)
     if (!window.VOICE_MP3) return;
@@ -511,10 +528,16 @@ const SES = (() => {
   function sesTik() {
     if (sesCalan) { if (!sesSert(sesCalan) && !sesCalan.bitti) { sesCalan.bitti = 1; sesYumusakKes('oyun bitti', null, true); } return; }
     if (!sesSira.length) return;
+    const baglam = typeof AU !== 'undefined' && AU.baglam && AU.baglam();
+    const hazir = baglam && baglam.state === 'running';
+    // Kilitli ses cümleyi sessizlikte tüketmesin. Yer/konu/sahne koşulları yine denetlenir.
+    for (const s of sesSira) if (sesSesli(s.k)) sesBeklemeSuresi(s, !hazir);
     sesSira = sesSira.filter(s => { const n = sesGecerli(s); if (n) sesNot('at', s.k, n); return !n; });
     if (!sesSira.length) return;
     sesSira.sort(sesSirala);
     const s = sesSira[0];
+    if (sesSesli(s.k) && !hazir) { sesCozumle(s.k); return; }
+    if (s.sesDeneT && sesSaat() < s.sesDeneT) return;
     if (sesSaat() < sesSonBitis + sesAra(s)) return;
     sesSira.shift();
     sesBaslat(s);
@@ -523,17 +546,16 @@ const SES = (() => {
     sesCalan = s;
     sesCozumle(s.k).then(buf => {
       if (sesCalan !== s) return;
-      if (!sesSert(s)) { sesNot('at', s.k, 'oyun bitti'); sesCalan = null; sesTik(); return; }
+      const gecersiz = sesGecerli(s);
+      if (gecersiz) { sesNot('at', s.k, gecersiz); sesCalan = null; sesTik(); return; }
+      let ac = null;
+      if (sesSesli(s.k)) {
+        ac = typeof AU !== 'undefined' && AU.baglam && AU.baglam();
+        if (!buf || !ac || ac.state !== 'running') { sesGeriBeklet(s, !buf ? 'çözme' : 'kilitli'); return; }
+      }
       const sure = buf ? buf.duration : sesSure(s.k);
       const kim = sesKim(s.k);
-      s.sure = sure; s.bas = sesSaat() + 0.12;
-      sesSoylendi[s.k] = 1; if (s.tek) sesSoylendi[s.tek] = 1; sesSonCal[s.k] = sesSaat();
-      if (ovguMu(s.k)) { sesSonOvgu = sesSaat(); sesOvguGecmis.push(s.k); if (sesOvguGecmis.length > 3) sesOvguGecmis.shift(); }
-      sesNot('cal', s.k, (s.bas - s.t).toFixed(1) + ' sn bekledi');
-      if (typeof ARAYUZ !== 'undefined' && ARAYUZ.altyazi) ARAYUZ.altyazi(LINES[s.k], sure + 0.6, kim);
-      OLAY.emit('konusma', { anahtar: s.k, kim, sure });
-      let ac = null;
-      if (buf && !SESSIZ && typeof AU !== 'undefined' && AU.baglam) ac = AU.baglam();
+      let sesSonu = 0;
       if (ac) {
         try {
           const src = ac.createBufferSource(), gg = ac.createGain();
@@ -546,14 +568,27 @@ const SES = (() => {
           AU.kis(true, kim);
           src.start(tStart);   // müzik önce kısılsın
           sesKaynak = { s: src, g: gg, ac };
+          sesSonu = tStart + sure + .3;
           src.onended = () => { if (sesCalan === s) sesBitti(); };
-        } catch (e) { ac = null; }
+        } catch (e) { if (typeof AU !== 'undefined' && AU.kis) AU.kis(false); sesGeriBeklet(s, 'başlatma'); return; }
       }
+      s.sure = sure; s.bas = sesSaat() + 0.12;
+      sesSoylendi[s.k] = 1; if (s.tek) sesSoylendi[s.tek] = 1; sesSonCal[s.k] = sesSaat();
+      if (ovguMu(s.k)) { sesSonOvgu = sesSaat(); sesOvguGecmis.push(s.k); if (sesOvguGecmis.length > 3) sesOvguGecmis.shift(); }
+      sesNot('cal', s.k, (s.bas - s.t).toFixed(1) + ' sn bekledi');
+      if (typeof ARAYUZ !== 'undefined' && ARAYUZ.altyazi) ARAYUZ.altyazi(LINES[s.k], sure + 0.6, kim);
+      OLAY.emit('konusma', { anahtar: s.k, kim, sure });
       // yedek zamanlayıcı (onended gelmezse / sessiz modda)
-      sesBitisZ = setTimeout(() => { if (sesCalan === s) sesBitti(); }, (sure + (ac ? 0.6 : 0.12)) * 1000);
+      const bitis = () => {
+        if (sesCalan !== s) return;
+        if (ac && (ac.state !== 'running' || ac.currentTime < sesSonu)) { sesBitisZ = setTimeout(bitis, 250); return; }
+        sesBitti();
+      };
+      sesBitisZ = setTimeout(bitis, (sure + (ac ? 0.6 : 0.12)) * 1000);
     });
   }
   setInterval(sesTik, 100);
+  OLAY.on('sesHazir', () => { sesTik(); });
 
   // oyun olaylarından durum
   OLAY.on('aydinlat', g => { sesAydinG[g || 'gol'] = true; });

@@ -20,7 +20,7 @@ Korkutucu hiçbir şey yoktur, kaybetmek yoktur. Feza okuma bilmediği için her
    vatozun sırtında ışıklı kemerlerden geçme ve Büyük İnci’yi uyandırma. Denizatı dostları finalde birlikte dans eder;
    mercan bahçeleri ve deniz canlıları harekete tepki verir. Her yöne yüzülür; kaybetmek ve oksijen sınırı yoktur.
 5. **Uyuyan Yanardağ** (sıcak akşam ışığı) — Bazalt patikalarda üç ışık bahçesini canlandırma, yumuşak buharla yükselme ve
-   altı büyük tomurcuğa dokunup Pırıl'ın uçuşunu ve ışık nefesiyle çiçekleri açmasını izleme. Katlanmış taş sal üzerinde lav nehrinden geçilir; ışıklardan origami kuşlar doğar,
+   üç acıkmış Güneşkuşu yavrusunu ışık meyveleriyle besleme. Katlanmış taş sal üzerinde lav nehrinden geçilir; beslenen üç yavru ve
    büyük Güneşkuşu yolculuğa katılır. Sonunda Kor Çiçeği açılır ve dağ yeniden renklenir. Yeni müzik, sıcak taş tınıları ve
    Türkçe seslendirmeler bu rüya için hazırlandı; lav yolculuğunda düşmek, yanmak veya kaybetmek yoktur.
 
@@ -40,8 +40,8 @@ onları yalnızca ışık şarkısı uyandırır.
 - **Yürümek:** ekranın herhangi bir yerine parmağını koyup tut; Feza o tarafa yürür. Parmak yakınsa yavaş, uzaksa koşar.
 - **Rüyalara dönüş:** her bölümün sağ üstündeki ev/geri simgesini 1,2 saniye basılı tut. Kısa dokunmak çıkış yapmaz; tamamlanan rüyalar korunur.
 - **İnci Denizi:** ekranı basılı tutarak her yöne yüz. Sol alttaki balık düğmesi kısa bir yüzme hamlesi yapar; ahtapotun kabukları parmakla sürüklenir veya kabuğa ve eşleşen yuvaya sırayla dokunulur.
-- **Uyuyan Yanardağ'ın bahçeleri:** görünen canlı renkli tomurcuklara dokun veya yanlarından yürü. Üç bahçede de bu iki yol çalışır; Pırıl geride kalan tomurcuklar için yardımcı olur.
-- **Pırıl'la çiçek uçuşu:** altı büyük tomurcuğun her birine bir kez dokun. Pırıl seçtiğin çiçeğe uçar, ışık üfler; çiçek açılır ve içinden bir kâğıt kuşu çıkar. Hızlı dokunuşlar sıraya alınır, kaybolmaz. Açılmış veya sıraya alınmış çiçeğe tekrar dokunmak gerekmez. Doğru sıra, nota, dolum sayacı ve kaybetme yoktur. Hepsi açılınca kısa kutlamadan sonra kıyıya inilir; sağa yürüyerek devam edilir. Çocuk beklerse Pırıl yardımcı olur.
+- **Uyuyan Yanardağ'ın bahçeleri:** kırmızı bitkiler arasındaki yuvarlak, inci beyazı/turkuaz tomurcuklara dokun veya yanlarından yürü. Üç bahçede de bu iki yol çalışır; Pırıl geride kalan tomurcuklar için yardımcı olur.
+- **Güneşkuşu yavruları:** büyük sarı meyveyi acıkmış yavrunun ağzına sürükleyip bırak. Önce meyveye, sonra yavruya dokunmak da çalışır. Her yavru iki lokmayla doyar; lokmayı yerken yanakları ve karnı hareket eder, kanatlarını denemeye başlar. Üçü de doyunca anneleriyle uçarlar; sonra lav yolculuğunda Feza'ya eşlik ederler. Yanlış sıra, kaybetme ve yazılı görev yoktur. Yanlış bırakılan meyve sepete döner; çocuk beklerse Pırıl göstererek yardımcı olur.
 - **Lav nehri:** sal 35 saniyelik yolculukta kendisi ilerler. Parmağını yukarıda veya aşağıda tutarak nehrin akışı içinde yol göster; ışıklı kemerlerin, lav şelalelerinin ve kuşların tadını çıkar. Bütün ışıkları yakalamak gerekmez.
 - **Zıplamak:** sol alttaki büyük yuvarlak düğmeye bas. Havadayken bir daha basınca Pırıl Feza'yı yukarı iter.
 - **Işık çiçekleri:** Feza dokununca açılır, çevre renklenir. Pırıl karanlık göllere ışık üfler, nilüfer yaprakları çıkar.
@@ -49,11 +49,12 @@ onları yalnızca ışık şarkısı uyandırır.
 - **Takılırsa:** Pırıl yolu gösterir; suya düşerse ya da bir yerde zorlanırsa Pırıl onu taşır.
 - **Saklı yollar:** parlayan yaprak kemerlerinin ardında ışık tohumları saklıdır.
 - Klavye (ebeveyn için): **oklar / A–D** yürür, **Boşluk / W / ↑** zıplar. İnci Denizi’nde **oklar / W–A–S–D** her yöne yüzdürür, **Boşluk** hızlandırır.
-  Yanardağın salında **↑/↓ veya W/S** yön verir; çiçek uçuşunda **Boşluk veya E** sıradaki seçilmemiş tomurcuğu seçer.
+  Yanardağın salında **↑/↓ veya W/S** yön verir; yavru oyununda **←/→** kuşu seçer, **Boşluk veya E** önce meyveyi alır, ikinci basışta seçili aç kuşa götürür.
 
 ## Ebeveyn için notlar
 
 - **Sessiz açmak:** adrese `?sessiz` ekle. Açılışı atlamak için `?atla`, altyazı için `?altyazi`.
+- **Sesli açılış:** tarayıcı sesi ilk dokunuşa kadar kilitlerse müzik ve geçerli açılış konuşması o dokunuşta devam eder; konuşma ses bağlamı hazır olmadan söylenmiş sayılmaz. Sekmeye geri dönüldüğünde aynı ses bağlamı sürdürülür.
 - **Doğrudan bir rüyayı açmak:** `?bolum=1`, `?bolum=2`, `?bolum=3`, `?bolum=4` veya `?bolum=5`.
   Beşinde de yatak animasyonu tamamlanınca oyun doğrudan başlar; ayrıca oda dönüşümü, ikinci uyanış, ışıkla belirme veya kontrol beklemesi yoktur.
   Ormanın yatak girişi yaklaşık 13,4 saniye, diğer rüyalarınki 7,85 saniyedir. Yatağı da atlayan sessiz deneme: `?sessiz&atla&bolum=5`.

@@ -380,6 +380,29 @@ function dn5Petals(tm){
  if(DN5.finT!==null){const age=now-DN5.finT,f=Math.max(0,Math.min(1,age/7));for(let j=0;j<28;j++){const a=j*.91+tm*.2,r=80+j*7,x=DN5.finX+Math.cos(a)*r,y=BOLUM.kor.y-140-Math.sin(a)*r*.4-(age*19+j*17)%400;dn5Glow(DN5_COL[j%8],x,y,14,9,f*.48);}}
  g.globalCompositeOperation='source-over';g.globalAlpha=1;
 }
+// Scenery yields to an actual play target as well as the child. Screen-world
+// coordinates share the current S scale; no extra canvases or per-frame lists.
+function dn5PlayClearance(x,y,rx,ry){
+ let a=1;
+ if(typeof VK5!=='undefined'&&typeof vk5GardenPosition==='function')for(const o of NESNELER){
+  if(o.tip==='korCicegi'&&!o.started&&typeof vk5FinalReady==='function'&&vk5FinalReady()){
+   const dx=(x-(o.x-cam.x))/(rx+130),dy=(y-(o.y-215-cam.y))/(ry+165),d=dx*dx+dy*dy;
+   if(d<1)a=Math.min(a,.12+.88*smooth(d));
+  }
+  if(o.tip!=='korBahce'||o.done||o.x<cam.x-1200||o.x>cam.x+VW+1200)continue;
+  for(let i=0;i<o.nodes.length;i++){
+   const n=o.nodes[i];if(n.done)continue;
+   const p=vk5GardenPosition(o,i,now,VK5.point),dx=(x-(p.x-cam.x))/(rx+66),dy=(y-(p.y-cam.y))/(ry+76),d=dx*dx+dy*dy;
+   if(d<1)a=Math.min(a,.12+.88*smooth(d));
+  }
+ }
+ if(typeof KR5!=='undefined'&&KR5.aktif){
+  const o=KR5.aktif,dx=Math.abs(x-(o.x-cam.x)),dy=Math.abs(y-(o.y-215-cam.y));
+  const k=(1-smooth(clamp((dx-325)/(rx+80),0,1)))*(1-smooth(clamp((dy-220)/(ry+65),0,1)));
+  a=Math.min(a,1-k*.91);
+ }
+ return a;
+}
 function dn5Foreground(tm){
  if(!dn5Ready())return;const f=1.08,vh=H/S,left=cam.x*f-160,right=cam.x*f+W/S+160;g.setTransform(S,0,0,S,-cam.x*S*f,0);
  for(let q=Math.floor(left/590);q<=Math.ceil(right/590);q++){const R=rng(q*71+881),x=q*590+R()*130,y=vh+65,k=.42+R()*.2,worldx=x/f,near=Math.abs(worldx-P.x)<140;g.save();g.translate(x,y);g.rotate(Math.sin(tm*.35+q)*.025);g.globalAlpha=near?.12:dn5Biome(worldx)===3?.14:.34;g.drawImage(dn5Flora((Math.abs(q)*3+5)%10),-140*k,-300*k,280*k,320*k);g.restore();}g.globalAlpha=1;
@@ -388,7 +411,7 @@ function dn5Foreground(tm){
  const bf=1.035,cols=DN5_BLOOM_COLS,px=(Number.isFinite(P.rx)?P.rx:P.x)-cam.x,py=(Number.isFinite(P.ry)?P.ry:P.y)-cam.y;g.setTransform(S,0,0,S,-cam.x*S*bf,0);
  for(let j=0;j<cols.length;j++){
   const wx=nx(cols[j]),x=wx*bf;if(x<cam.x*bf-165||x>cam.x*bf+W/S+165)continue;const k=.79+(j%3)*.09,dx=Math.abs(x-cam.x*bf-px),dy=Math.abs(vh+65-175*k-(py-34));
-  const overlap=(1-smooth(clamp((dx-48*k-20)/(70*k),0,1)))*(1-smooth(clamp((dy-46*k-27)/(40*k),0,1))),alpha=.98-overlap*.8;
+  const overlap=(1-smooth(clamp((dx-48*k-20)/(70*k),0,1)))*(1-smooth(clamp((dy-46*k-27)/(40*k),0,1))),alpha=(.98-overlap*.8)*dn5PlayClearance(x-cam.x*bf,vh+65-170*k,125*k,155*k);
   g.save();g.translate(x,vh+65);g.rotate(Math.sin(tm*.37+j)*.016+Math.sin(tm*.17+j*1.7)*.005);g.scale(1+Math.sin(tm*.49+j)*.006,1);g.globalAlpha=alpha;g.drawImage(dn5Bloom(j%2),-155*k,-310*k,310*k,320*k);g.restore();
  }g.globalAlpha=1;
 }
