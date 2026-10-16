@@ -69,10 +69,15 @@ function vk5BudArt(v,opened){
   // A sleepy rounded cocoon, with visibly overlapping folded paper lobes.
   for(let j=0;j<3;j++){c.save();c.translate((j-1)*15,j===1?-8:1);c.rotate((j-1)*.27);const gr=c.createLinearGradient(-21,-45,21,38);gr.addColorStop(0,'#fbefd2');gr.addColorStop(.4,j===1?'#f5e7ca':'#dce9d3');gr.addColorStop(.7,teal);gr.addColorStop(1,edge);c.fillStyle=gr;c.strokeStyle=edge;c.lineWidth=1.4;c.beginPath();c.moveTo(0,39);c.bezierCurveTo(-25,30,-33,-12,-22,-34);c.bezierCurveTo(-11,-57,15,-52,24,-30);c.bezierCurveTo(36,-4,25,27,0,39);c.fill();c.stroke();c.fillStyle='rgba(255,244,212,.35)';c.beginPath();c.moveTo(-2,-48);c.bezierCurveTo(-21,-29,-21,6,0,33);c.lineTo(0,-46);c.fill();c.strokeStyle='#67b7aa';c.lineWidth=.9;c.beginPath();c.moveTo(0,34);c.bezierCurveTo(-2,11,0,-19,-2,-44);c.stroke();c.restore();}
  }
- // A warm seed face, never an eye-like gold slit or a white beacon.
- c.fillStyle='#428b83';c.beginPath();c.ellipse(0,opened?0:2,opened?20:19,opened?17:15,0,0,6.283);c.fill();const seed=c.createLinearGradient(-13,-12,14,17);seed.addColorStop(0,'#ffe5a3');seed.addColorStop(.46,'#f2c574');seed.addColorStop(1,'#cf9356');c.fillStyle=seed;c.beginPath();c.ellipse(0,opened?0:2,opened?16:15.5,opened?14:12.5,0,0,6.283);c.fill();c.fillStyle='rgba(255,238,184,.5)';c.beginPath();c.ellipse(-5,opened?-6:-3,6,3.4,-.4,0,6.283);c.fill();c.strokeStyle='#6f654d';c.lineCap='round';c.lineWidth=1.25;
- for(let side=-1;side<=1;side+=2){const x=side*6;c.beginPath();if(opened){c.moveTo(x-2.8,1);c.quadraticCurveTo(x,-3,x+2.8,1);}else{c.moveTo(x-3,1);c.quadraticCurveTo(x,4,x+3,1);}c.stroke();}c.lineWidth=.9;c.beginPath();c.moveTo(-3.1,7);c.quadraticCurveTo(0,opened?10.5:8.4,3.1,7);c.stroke();
- c.fillStyle='#c8906c';c.globalAlpha=.5;c.beginPath();c.ellipse(-11,5,2.4,1.2,0,0,6.283);c.ellipse(11,5,2.4,1.2,0,0,6.283);c.fill();c.globalAlpha=1;
+ // Botanical centres: overlapping folds when closed, a pollen rosette on opening.
+ // No eyes, mouth or cheeks; the light and unfolding petals invite the child.
+ if(opened){
+  const seed=c.createRadialGradient(-3,-4,1,0,0,17);seed.addColorStop(0,'#fff0bc');seed.addColorStop(.4,'#f1cc7e');seed.addColorStop(1,'#ae8258');c.fillStyle=seed;c.beginPath();c.ellipse(0,0,15,13,0,0,6.283);c.fill();
+  c.strokeStyle='#ddc381';c.lineWidth=.8;for(let j=0;j<11;j++){const a=j*2.399,r=4+Math.sqrt(j/10)*13,xx=Math.cos(a)*r,yy=Math.sin(a)*r*.86;c.beginPath();c.moveTo(xx*.55,yy*.55);c.lineTo(xx,yy);c.stroke();c.fillStyle=j%3?'#fff0b9':'#e6aa62';c.beginPath();c.ellipse(xx,yy,1.6,2,a,0,6.283);c.fill();}
+ }else{
+  c.strokeStyle='rgba(53,126,125,.65)';c.lineWidth=1.1;c.lineCap='round';c.beginPath();c.moveTo(-10,24);c.bezierCurveTo(-17,4,-9,-19,-2,-39);c.moveTo(9,24);c.bezierCurveTo(17,3,9,-21,2,-39);c.stroke();
+  c.strokeStyle='rgba(255,243,204,.65)';c.lineWidth=1;c.beginPath();c.moveTo(-7,17);c.quadraticCurveTo(-11,0,-5,-19);c.stroke();
+ }
  VK5.buds[key]=cv;return cv;
 }
 function vk5LeafArt(col){
@@ -114,6 +119,26 @@ function vk5GardenPosition(o,index,tm,out){
 function vk5Pollen(x,y,tm,phase,strength){
  if(strength<=.01)return;g.save();g.fillStyle='#edb872';for(let j=0;j<5;j++){const u=(tm*.22+j/5+phase)%1,a=j*2.399+tm*.27,xx=x+Math.cos(a)*(29+u*26),yy=y+14-u*75;g.globalAlpha=Math.sin(u*Math.PI)*strength;g.save();g.translate(xx,yy);g.rotate(a);g.beginPath();g.moveTo(0,-2.1);g.quadraticCurveTo(2.5,-1,1.4,2.1);g.lineTo(-1.1,.9);g.closePath();g.fill();g.restore();}g.restore();
 }
+function vk5BloomFx(x,y,age,variant,groundY){
+ // Fixed, short-lived paths: no emitters, blur, canvas allocation or growing lists.
+ if(age<0||age>3.2)return;const u=vk5Ease(age/2.8),fade=1-vk5Ease((age-1.35)/1.85),pulse=Math.sin(Math.min(1,age/1.15)*Math.PI),col=VK5_GLOW_COL[variant%3];
+ g.save();g.globalCompositeOperation='lighter';g.lineCap='round';
+ vk5Glow('#ffc87b',x,y,32+pulse*13,28+pulse*12,pulse*.2);
+ if(Number.isFinite(groundY)){
+  const r=25+u*145;vk5Glow(col,x,groundY,r,r*.1,fade*.09);g.strokeStyle='#f5d49a';g.globalAlpha=fade*.32;g.lineWidth=1.2;g.beginPath();g.ellipse(x,groundY,r,r*.11,0,0,6.283);g.stroke();g.globalAlpha=1;
+ }
+ // Two curved threads carry warm pollen away from the unfolding corolla.
+ for(let side=-1;side<=1;side+=2){
+  const head=clamp(age/2.1,0,1),tail=Math.max(0,head-.34);g.globalAlpha=fade*.42;g.strokeStyle=side<0?'#ffe2a6':'#ace3ce';g.lineWidth=1.1;g.beginPath();
+  for(let j=0;j<=8;j++){const q=tail+(head-tail)*j/8,xx=x+side*(Math.sin(q*1.7)*83)+Math.sin(q*5)*7,yy=y+8-q*102+Math.sin(q*Math.PI)*18;j?g.lineTo(xx,yy):g.moveTo(xx,yy);}g.stroke();
+ }
+ for(let j=0;j<12;j++){
+  const q=(age-j*.055)/2.25;if(q<=0||q>=1)continue;const a=j*2.399,spread=Math.sin(q*Math.PI*.7),xx=x+Math.cos(a)*spread*(35+j%4*15)+Math.sin(q*5+a)*8,yy=y+Math.sin(a)*q*23-q*(50+j%4*17),alpha=Math.sin(q*Math.PI)*fade;
+  g.globalAlpha=alpha*.8;g.fillStyle=j%3?'#ffe5aa':'#c3ead4';g.save();g.translate(xx,yy);g.rotate(a+q);g.beginPath();g.ellipse(0,0,1.2,2.5,0,0,6.283);g.fill();g.restore();
+  if(j%3===0)vk5Glow('#ffc87b',xx,yy,5,5,alpha*.23);
+ }
+ g.restore();
+}
 function vk5TapFlight(n,hx,hy,tm){
  if(!n.waking)return;const u=vk5Ease(clamp(n.wakeAge/n.wakeDuration,0,1)),sx=n.wakeFromX,sy=n.wakeFromY,mx=(sx+hx)*.5,my=Math.min(sy,hy)-38;g.save();g.lineCap='round';g.strokeStyle='rgba(239,169,112,.3)';g.lineWidth=1.1;g.beginPath();for(let j=0;j<=10;j++){const t=u*j/10,m=1-t,x=m*m*sx+2*m*t*mx+t*t*hx,y=m*m*sy+2*m*t*my+t*t*hy;j?g.lineTo(x,y):g.moveTo(x,y);}g.stroke();for(let j=0;j<5;j++){const t=Math.max(0,u-j*.035),m=1-t,x=m*m*sx+2*m*t*mx+t*t*hx,y=m*m*sy+2*m*t*my+t*t*hy;g.globalAlpha=(1-j/6)*.85;g.fillStyle=j%2?'#eaaa72':'#ed7a86';g.save();g.translate(x,y);g.rotate(tm*.8+j);g.beginPath();g.moveTo(0,-3.5);g.lineTo(2.3,0);g.lineTo(0,3.5);g.lineTo(-1.7,0);g.closePath();g.fill();g.restore();}g.restore();
 }
@@ -134,7 +159,7 @@ function vk5Node(o,n,index,tm,col,variant,focused){
   g.save();g.fillStyle='#f1c47c';for(let j=0;j<5;j++){const u=(tm*.3+j*.2+n.note*.13)%1,xx=x+(hx-x)*u+Math.sin(u*Math.PI)*(12+invite*7)*Math.sin(tm*.7+j),yy=y-17+(hy-y+10)*u;g.globalAlpha=Math.sin(u*Math.PI)*(.42+invite*.32);g.beginPath();g.ellipse(xx,yy,1.4,2.3,Math.sin(u*3),0,6.283);g.fill();}g.restore();
   vk5Pollen(hx,hy,tm,n.note*.17,.22+invite*.2);g.globalCompositeOperation='lighter';vk5Glow('#f3ad65',hx,hy,25,27,.025+invite*.035);g.globalCompositeOperation='source-over';}
  vk5TapFlight(n,hx,hy,tm);
- if(n.done&&age<1.4){g.globalCompositeOperation='lighter';vk5Glow('#f3ad65',hx,hy,20,20,Math.sin(age/1.4*Math.PI)*.14);g.globalCompositeOperation='source-over';}
+ if(n.done){vk5BloomFx(hx,hy,age,variant,y-3);vk5Pollen(hx,hy,tm,n.note*.17,.16);}
 }
 function vk5GardenPower(o){let a=0;for(const n of o.nodes)if(n.done)a++;return a/o.nodes.length;}
 function vk5GardenEnd(o){

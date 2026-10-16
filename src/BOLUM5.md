@@ -8,7 +8,7 @@ Lav nehri ve tekne korunur. Anka teknenin yerine geçmez; uyanıştan sonra yolc
 
 `index.html` yalnız `BOLUM_NO === 5` için `anka`, `dunya5`, `volkan`, `atesoyun`, `kristal`, `lavsal` modüllerini yükler.
 Harita `bolum5.js`, ortak motor `oyun.js` dosyasındadır. Klasik scriptler ve yerel gömülü MP3'ler `file://` ile çalışır.
-`sw.js` sürümü `feza-piril-v76-anka-kanatlari`; 41 oyun/simge önbellek girdisi vardır. Yeni kurulum sürümlü reload
+`sw.js` sürümü `feza-piril-v77-isik-cicekleri`; 41 oyun/simge önbellek girdisi vardır. Yeni kurulum sürümlü reload
 isteklerini kullanır; yalnız Feza/Pırıl'ın eski önbellekleri temizlenir, aynı sitedeki diğer oyunlar korunur.
 
 ## Rota ve bahçeler
@@ -21,6 +21,8 @@ isteklerini kullanır; yalnız Feza/Pırıl'ın eski önbellekleri temizlenir, a
 - İkinci bahçenin gerçek buhar bacasına basmak sıcak nefesi yakındaki tomurcuğa taşır. Doğrudan tomurcuğa dokunma da geçerlidir.
 - Bahçede bekleyen çocuk için gecikmiş yardım, Pırıl'dan tomurcuğa görünen ışık uçuşuyla gelir. Görünmez tamamlama yoktur.
 - Buhar bacalarının yüksekliği gerçek itişi değiştirir. Baca üzerinde beklemek sonsuz otomatik zıplama döngüsü oluşturmaz.
+- Bahçe ve tekne çiçeklerinde yüz yoktur: kapalı yaprak kıvrımları açılışta altın polen göbeğine dönüşür.
+  Açılınca kısa, kıvrımlı ışık izleri ve yüzeye yayılan ince bir ışık dalgası görünür. Efekt sabit sayılıdır, 3,2 saniyede söner.
 
 ## Anka etkinliği
 
