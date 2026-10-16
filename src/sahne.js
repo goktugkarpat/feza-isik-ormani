@@ -2629,13 +2629,19 @@ function shBalonCam(d, col) {   // sedef sabun köpüğü gibi cam kabuk: sedefl
   x.strokeStyle = 'rgba(255,255,255,0.55)'; x.lineWidth = d * 0.014; x.beginPath(); x.arc(m, m, R * 0.86, 0.2, 1.25); x.stroke();
   return sh.balon[key] = c;
 }
-// düzen: [{x,y,d}] ekran pikseli; 1-5 balon. Tek sırada hafif yay (ortadakiler yukarıda), dikey ekranda daha geniş alan
+// düzen: [{x,y,d}] ekran pikseli; 1-6 balon. Tek sırada hafif yay (ortadakiler yukarıda), dikey ekranda daha geniş alan
 function shSecimYer(n) {
   const yatay = W > H * 1.1, mn = Math.min(W, H), asagi = shSecGuvenli.asagi;
   if (n === 5) {
     const fs=Math.min(H*.1,W*.088),top=H*(yatay?.025:.035)+fs*1.62;
     if(yatay){const d=Math.min(W*.16,H*.28), y=top+d*.62+asagi;return [0,1,2,3,4].map(i=>({x:W*(.115+i*.1925),y:y+Math.abs(i-2)*d*.055,d}));}
     const d=Math.min(W*.27,H*.145), y=top+d*.62+asagi;return [0,1,2,3,4].map(i=>({x:W*(i<3?.19+i*.31:.34+(i-3)*.32),y:y+(i<3?0:d*1.14),d}));
+  }
+  if (n === 6) {   // yatay: tek sıra (biraz küçük, yüzün üstündeki bantta); dikey: 3+3, alt sıra Feza'nın yüzüne inmez
+    const fs = Math.min(H * 0.1, W * 0.088), top = H * (yatay ? 0.025 : 0.035) + fs * 1.62;
+    if (yatay) { const d = Math.min(W * 0.13, H * 0.235), y = top + d * 0.62 + asagi; return [0, 1, 2, 3, 4, 5].map(i => ({ x: W * (0.11 + i * 0.156), y: y + Math.abs(i - 2.5) * d * 0.035, d })); }
+    const d = Math.min(W * 0.27, H * 0.14), y = top + d * 0.62 + asagi;
+    return [0, 1, 2, 3, 4, 5].map(i => ({ x: W * (0.19 + (i % 3) * 0.31), y: y + (i < 3 ? 0 : d * 1.14), d }));
   }
   if (n === 4) {
     const fs = Math.min(H * 0.1, W * 0.088), top = H * (yatay ? 0.025 : 0.035) + fs * 1.62;
@@ -2696,7 +2702,7 @@ function shBalonBirak() { if (sh.balon) for (const k in sh.balon) shBirak(sh.bal
 function shSecimBaslat(opts, onSec) {
   shOlc();
   sh.mod = 'secim'; sh.t = 0; sh.sonGorunum = false; sh.tam = true; sh.kisa = false; sh.dan = false; sh.anlar = {}; sh.sesler = {}; sh.parca.length = 0; sh.zz.length = 0; sh.tema = null;
-  sh.sec = { opts: (opts || []).slice(0, 5), onSec, secili: null, ts: 0, gec: 0, dok: 0, nab: -9, nabX: 0, nabY: 0, pos: [], hi: null };
+  sh.sec = { opts: (opts || []).slice(0, 6), onSec, secili: null, ts: 0, gec: 0, dok: 0, nab: -9, nabX: 0, nabY: 0, pos: [], hi: null };
   sh.plan = null; sh.bitti = null;
   sh.odaSabah = shBirak(sh.odaSabah); sh.odaYakin = shBirak(sh.odaYakin); if (shDus) { shBirak(shDus.c); shDus = null; }
   if (shKopya) shKopya = shBirak(shKopya);
